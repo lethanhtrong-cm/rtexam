@@ -45,7 +45,8 @@ export function formatDate(dateData) {
 const menuExamsToggle = document.getElementById('menuExamsToggle');
 const submenuExams = document.getElementById('submenuExams');
 const submenuItems = document.querySelectorAll('.submenu-item');
-const standardMenuItems = document.querySelectorAll('.sidebar-menu .menu-item:not(#menuExamsToggle)');
+// Chỉ lấy các menu chuẩn có data-target (vd: Lịch sử)
+const standardMenuItems = document.querySelectorAll('.sidebar-menu .menu-item[data-target]');
 const tabPanes = document.querySelectorAll('.tab-pane');
 const currentTabTitle = document.getElementById("currentTabTitle");
 
@@ -58,13 +59,13 @@ const tabTitleMap = {
 
 // Hàm Reset Active toàn bộ menu
 function clearAllMenuActives() {
-    menuExamsToggle.classList.remove('active');
+    if(menuExamsToggle) menuExamsToggle.classList.remove('active');
     submenuItems.forEach(m => m.classList.remove('active'));
     standardMenuItems.forEach(m => m.classList.remove('active'));
 }
 
 // Xử lý bật/tắt Accordion "Kho Đề Thi"
-if (menuExamsToggle) {
+if (menuExamsToggle && submenuExams) {
     menuExamsToggle.addEventListener('click', () => {
         menuExamsToggle.classList.toggle('expanded');
         submenuExams.classList.toggle('expanded');
@@ -73,65 +74,74 @@ if (menuExamsToggle) {
 
 // Xử lý Click vào Sub-menu (MRI, CT, X quang...)
 submenuItems.forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
         clearAllMenuActives();
-        menuExamsToggle.classList.add('active'); // Giữ cho thẻ cha sáng lên
+        if(menuExamsToggle) menuExamsToggle.classList.add('active'); // Giữ cho thẻ cha sáng lên
         item.classList.add('active'); // Đánh dấu thẻ con
 
         tabPanes.forEach(pane => pane.classList.remove('active'));
         
         const targetId = item.getAttribute('data-target');
-        document.getElementById(targetId).classList.add('active');
-        currentTabTitle.textContent = tabTitleMap[targetId];
-
-        // Ghi chú: Logic set currentTechnique và lọc dữ liệu sẽ được bắt event bên dashboard-exams.js
+        const targetTab = document.getElementById(targetId);
+        if(targetTab) {
+            targetTab.classList.add('active');
+            currentTabTitle.textContent = tabTitleMap[targetId] || 'Kho Đề Thi';
+        }
     });
 });
 
 // Xử lý Click vào Standard Menu (Ví dụ: Lịch sử làm bài)
 standardMenuItems.forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
         clearAllMenuActives();
         item.classList.add('active');
 
         tabPanes.forEach(pane => pane.classList.remove('active'));
         
         const targetId = item.getAttribute('data-target');
-        document.getElementById(targetId).classList.add('active');
-        currentTabTitle.textContent = tabTitleMap[targetId] || 'Bảng Điều Khiển';
+        const targetTab = document.getElementById(targetId);
+        if(targetTab) {
+            targetTab.classList.add('active');
+            currentTabTitle.textContent = tabTitleMap[targetId] || 'Bảng Điều Khiển';
+        }
     });
 });
-
 
 // Logic Dropdown Menu ở Topbar
 const userMenuToggle = document.getElementById('userMenuToggle');
 const userDropdown = document.getElementById('userDropdown');
 const btnManageProfile = document.getElementById('btnManageProfile');
 
-userMenuToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    userDropdown.classList.toggle('show');
-});
+if (userMenuToggle && userDropdown) {
+    userMenuToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.classList.toggle('show');
+    });
 
-document.addEventListener('click', (e) => {
-    if (!userMenuToggle.contains(e.target)) {
-        userDropdown.classList.remove('show');
-    }
-});
+    document.addEventListener('click', (e) => {
+        if (!userMenuToggle.contains(e.target)) {
+            userDropdown.classList.remove('show');
+        }
+    });
+}
 
 // Khi bấm "Quản lý Hồ Sơ" trong Dropdown Menu
-btnManageProfile.addEventListener('click', () => {
-    clearAllMenuActives();
-    tabPanes.forEach(pane => pane.classList.remove('active'));
-    
-    document.getElementById('tab-profile').classList.add('active');
-    currentTabTitle.textContent = tabTitleMap['tab-profile'];
-});
+if (btnManageProfile) {
+    btnManageProfile.addEventListener('click', () => {
+        clearAllMenuActives();
+        tabPanes.forEach(pane => pane.classList.remove('active'));
+        
+        const profileTab = document.getElementById('tab-profile');
+        if(profileTab) {
+            profileTab.classList.add('active');
+            currentTabTitle.textContent = tabTitleMap['tab-profile'];
+        }
+    });
+}
 
 // =========================================================================
 // 4. XỬ LÝ THÔNG TIN AUTHENTICATION & ĐỒNG BỘ UI TOPBAR
 // =========================================================================
-
 const topbarVipContainer = document.getElementById('topbar-vip-container');
 if (topbarVipContainer) {
     topbarVipContainer.addEventListener('click', (e) => {
@@ -140,8 +150,11 @@ if (topbarVipContainer) {
             clearAllMenuActives();
             tabPanes.forEach(pane => pane.classList.remove('active'));
             
-            document.getElementById('tab-vip').classList.add('active');
-            currentTabTitle.textContent = tabTitleMap['tab-vip'];
+            const vipTab = document.getElementById('tab-vip');
+            if (vipTab) {
+                vipTab.classList.add('active');
+                currentTabTitle.textContent = tabTitleMap['tab-vip'];
+            }
         }
     });
 }
@@ -151,23 +164,42 @@ function renderAuthInfo(user) {
     const name = user.displayName || "Người dùng ẩn danh";
     const fallbackPhotoUrl = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0056b3&color=fff`;
 
-    document.getElementById("topbarName").textContent = name;
-    document.getElementById("topbarAvatar").src = fallbackPhotoUrl;
+    const els = {
+        topbarName: document.getElementById("topbarName"),
+        topbarAvatar: document.getElementById("topbarAvatar"),
+        displayEmail: document.getElementById("displayEmail"),
+        paymentEmail: document.getElementById("paymentEmail"),
+        displayName: document.getElementById("displayName"),
+        userAvatar: document.getElementById("userAvatar"),
+        inputName: document.getElementById("inputName")
+    };
 
-    document.getElementById("displayEmail").textContent = email;
-    document.getElementById("paymentEmail").textContent = email; 
-    document.getElementById("displayName").textContent = name;
-    document.getElementById("userAvatar").src = fallbackPhotoUrl;
-    document.getElementById("inputName").value = user.displayName || "";
+    if(els.topbarName) els.topbarName.textContent = name;
+    if(els.topbarAvatar) els.topbarAvatar.src = fallbackPhotoUrl;
+    if(els.displayEmail) els.displayEmail.textContent = email;
+    if(els.paymentEmail) els.paymentEmail.textContent = email; 
+    if(els.displayName) els.displayName.textContent = name;
+    if(els.userAvatar) els.userAvatar.src = fallbackPhotoUrl;
+    if(els.inputName) els.inputName.value = user.displayName || "";
 }
 
 function setVipInactive() {
-    document.getElementById("vipStatusBadge").textContent = "Chưa kích hoạt";
-    document.getElementById("vipStatusBadge").className = "status-badge status-unactive";
-    document.getElementById("vipStatusTab3").textContent = "Chưa kích hoạt VIP";
-    document.getElementById("vipStatusTab3").className = "status-badge status-unactive";
-    document.getElementById("vipStartDate").textContent = "Không xác định";
-    document.getElementById("vipEndDate").textContent = "Không xác định";
+    const badges = [
+        document.getElementById("vipStatusBadge"),
+        document.getElementById("vipStatusTab3")
+    ];
+    
+    badges.forEach(b => {
+        if(b) {
+            b.textContent = "Chưa kích hoạt";
+            b.className = "status-badge status-unactive";
+        }
+    });
+
+    const vipStart = document.getElementById("vipStartDate");
+    const vipEnd = document.getElementById("vipEndDate");
+    if(vipStart) vipStart.textContent = "Không xác định";
+    if(vipEnd) vipEnd.textContent = "Không xác định";
     
     const statAccount = document.getElementById("statAccountStatus");
     if (statAccount) statAccount.textContent = "Thường";
@@ -197,19 +229,25 @@ async function fetchUserData(user) {
             }
 
             if (currentUserData.avatarBase64) {
-                document.getElementById("userAvatar").src = currentUserData.avatarBase64;
-                document.getElementById("topbarAvatar").src = currentUserData.avatarBase64; 
+                const ua = document.getElementById("userAvatar");
+                const ta = document.getElementById("topbarAvatar");
+                if(ua) ua.src = currentUserData.avatarBase64;
+                if(ta) ta.src = currentUserData.avatarBase64; 
             }
 
             if (currentUserData.isVip) {
-                document.getElementById("vipStatusBadge").textContent = "Đã kích hoạt VIP";
-                document.getElementById("vipStatusBadge").className = "status-badge status-active";
-                document.getElementById("vipStatusTab3").textContent = "VIP Hoạt động";
-                document.getElementById("vipStatusTab3").className = "status-badge status-active";
-                document.getElementById("vipStartDate").textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
-                document.getElementById("vipEndDate").textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
+                const b1 = document.getElementById("vipStatusBadge");
+                const b2 = document.getElementById("vipStatusTab3");
+                if(b1) { b1.textContent = "Đã kích hoạt VIP"; b1.className = "status-badge status-active"; }
+                if(b2) { b2.textContent = "VIP Hoạt động"; b2.className = "status-badge status-active"; }
                 
-                document.getElementById("statAccountStatus").textContent = "VIP";
+                const vipStart = document.getElementById("vipStartDate");
+                const vipEnd = document.getElementById("vipEndDate");
+                if(vipStart) vipStart.textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
+                if(vipEnd) vipEnd.textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
+                
+                const statAccount = document.getElementById("statAccountStatus");
+                if (statAccount) statAccount.textContent = "VIP";
 
                 if (topbarVipContainer) {
                     topbarVipContainer.innerHTML = `
@@ -251,13 +289,19 @@ onAuthStateChanged(auth, async (user) => {
 // =========================================================================
 // 5. CÁC SỰ KIỆN TƯƠNG TÁC CƠ BẢN
 // =========================================================================
-document.getElementById("btnLogout").addEventListener("click", () => {
-    signOut(auth).catch((error) => {
-        console.error("Lỗi đăng xuất:", error);
-        alert("Đã xảy ra lỗi khi đăng xuất!");
+const btnLogout = document.getElementById("btnLogout");
+if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+        signOut(auth).catch((error) => {
+            console.error("Lỗi đăng xuất:", error);
+            alert("Đã xảy ra lỗi khi đăng xuất!");
+        });
     });
-});
+}
 
-document.getElementById("btnConfirmPayment").addEventListener("click", () => {
-    alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt VIP cho bạn trong thời gian sớm nhất!");
-});
+const btnConfirmPayment = document.getElementById("btnConfirmPayment");
+if (btnConfirmPayment) {
+    btnConfirmPayment.addEventListener("click", () => {
+        alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt VIP cho bạn trong thời gian sớm nhất!");
+    });
+}
