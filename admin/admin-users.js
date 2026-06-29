@@ -12,13 +12,13 @@ let currentSearchQuery = "";
 let currentFilterStatus = "all";
 
 // =========================================================================
-// 1. LẮNG NGHE DỮ LIỆU REAL-TIME TỪ FIRESTORE (ONSNAPSHOT)
+// 1. LẮNG NGHE DỮ LIỆU REAL-TIME TỪ FIRESTORE (ONSNAPSHOT) - ĐÃ FIX LỖI
 // =========================================================================
 export function initRealtimeUserListener() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    // Thiết lập onSnapshot lắng nghe trực tiếp collection "users"
+    // Thiết lập onSnapshot lắng nghe trực tiếp sự thay đổi của collection "users"
     onSnapshot(collection(db, "users"), (snapshot) => {
         cachedUsers = [];
         
@@ -32,14 +32,13 @@ export function initRealtimeUserListener() {
             const email = user.email || 'Chưa cập nhật';
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
-            const isOnline = user.isOnline || false; // Trường trạng thái trực tuyến giả định
+            const isOnline = user.isOnline || false; // Trạng thái trực tuyến realtime
 
             totalUsersCount++;
-            if (isVip && !isBanned) totalVipsCount++; // VIP hoạt động (không bị khóa)
-            if (isVip) totalVipCount++;
-            if (isOnline && !isBanned) totalOnlineCount++; // Đếm số người đang online thật
+            if (isVip) totalVipCount++; // Đã sửa lỗi đồng bộ tên biến tại đây
+            if (isOnline && !isBanned) totalOnlineCount++; 
 
-            // Phân loại trạng thái phục vụ bộ lọc Frontend
+            // Phân loại trạng thái phục vụ bộ lọc Frontend công cụ
             let statusKey = 'normal';
             if (isBanned) statusKey = 'banned';
             else if (isVip) statusKey = 'vip';
@@ -54,7 +53,7 @@ export function initRealtimeUserListener() {
             });
         });
 
-        // Cập nhật số liệu Real-time lên 3 thẻ Stats Cards ngoài giao diện HTML
+        // Cập nhật số liệu Real-time lên các thẻ Stats Cards ngoài giao diện HTML
         const totalUsersEl = document.getElementById('totalUsers');
         const totalVipUsersEl = document.getElementById('totalVipUsers');
         const totalOnlineUsersEl = document.getElementById('totalOnlineUsers');
@@ -63,22 +62,31 @@ export function initRealtimeUserListener() {
         if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipCount;
         if (totalOnlineUsersEl) totalOnlineUsersEl.innerText = totalOnlineCount;
 
-        // Tiến hành render vẽ lại bảng dữ liệu học viên
+        // Tiến hành render kết xuất lại danh sách học viên
         renderUserList();
     }, (error) => {
-        console.error("Lỗi lắng nghe dữ liệu users Real-time:", error);
-        tbody.innerHTML = '<tr><td colspan="4" class="loading-text" style="color:red">❌ Lỗi kết nối đồng bộ học viên Real-time.</td></tr>';
+        // Bổ sung callback xử lý lỗi (Error Handler) theo đúng yêu cầu bảo mật UI
+        console.error("Lỗi kết nối Firestore Real-time:", error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="loading-text" style="color: #ef4444; font-weight: 500;">
+                    ❌ Có lỗi xảy ra khi tải dữ liệu từ Cloud Firestore.<br>
+                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra lại cấu hình Security Rules trong Firebase Console.</span>
+                </td>
+            </tr>
+        `;
+        showToast("Không thể đồng bộ danh sách học viên Real-time", "error");
     });
 }
 
 // =========================================================================
-// 2. HÀM KẾT XUẤT DANH SÁCH USER (BỔ SUNG AVATAR & MODERN BUTTONS)
+// 2. HÀM KẾT XUẤT DANH SÁCH USER (AVATAR VÀ MODERN BUTTONS)
 // =========================================================================
 export function renderUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    // Lọc dữ liệu bộ nhớ đệm theo từ khóa tìm kiếm và trạng thái dropdown
+    // Lọc dữ liệu bộ nhớ đệm theo từ khóa tìm kiếm và tình trạng bộ lọc
     const filteredUsers = cachedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
         const matchStatus = currentFilterStatus === "all" || user.statusKey === currentFilterStatus;
@@ -89,11 +97,10 @@ export function renderUserList() {
     let stt = 1;
 
     if (filteredUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-message">Không tìm thấy học viên nào khớp với bộ lọc hiện tại.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-message">Không tìm thấy thành viên nào khớp với điều kiện tìm kiếm.</td></tr>';
         return;
     }
 
-    // Vòng lặp render chuỗi HTML mới có chứa cấu trúc Avatar và nút bấm cao cấp
     filteredUsers.forEach(user => {
         let badgeClass = 'badge-normal';
         let badgeText = 'Thường';
@@ -106,10 +113,10 @@ export function renderUserList() {
             badgeText = 'VIP 👑';
         }
 
-        // Tách chữ cái đầu tiên của Email để làm ký tự đại diện cho hình Avatar hình tròn
+        // Tách chữ cái đầu tiên của địa chỉ Email để hiển thị Avatar vòng tròn đại diện
         const firstLetter = user.email.charAt(0);
 
-        // Thiết lập trạng thái hiển thị và màu sắc riêng biệt cho hệ thống nút bấm hành động mới
+        // Chuẩn hóa cấu trúc style và text cho hệ thống nút bấm hành động nâng cấp
         const vipBtnClass = user.isVip ? 'btn-user-vip-off' : 'btn-user-vip-on';
         const vipBtnText = user.isVip ? '💎 Tắt VIP' : '👑 Kích VIP';
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
@@ -147,7 +154,7 @@ export function renderUserList() {
     });
 }
 
-// Hàm phụ hỗ trợ tạo màu nền ngẫu nhiên/cố định cho Avatar theo chữ cái đầu của email
+// Tạo bảng màu cố định tinh tế phối cho Avatar theo ký tự chữ cái đầu
 function getAvatarColor(letter) {
     const charCode = letter.toUpperCase().charCodeAt(0) || 65;
     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
@@ -163,22 +170,23 @@ async function handleToggleVip(userId, currentVipStatus) {
         const newVipStatus = !currentVipStatus;
         await updateDoc(userRef, { isVip: newVipStatus });
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
-        // Không cần gọi load lại, onSnapshot tự động cập nhật UI realtime
     } catch (error) {
-        showToast("Lỗi cập nhật trạng thái quyền VIP học viên", "error");
+        console.error("Lỗi cập nhật VIP:", error);
+        showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
     }
 }
 
 async function handleToggleBan(userId, currentBannedStatus) {
-    const actionText = currentBannedStatus ? 'mở khóa' : 'khóa viễn viễn';
-    if (!confirm(`Hệ thống cảnh báo: Bạn có chắc chắn muốn thực hiện lệnh ${actionText} tài khoản học sinh này?`)) return;
+    const actionText = currentBannedStatus ? 'mở khóa' : 'khóa vĩnh viễn';
+    if (!confirm(`Hệ thống cảnh báo: Bạn có chắc chắn thực hiện lệnh ${actionText} tài khoản học viên này không?`)) return;
 
     try {
         const userRef = doc(db, "users", userId);
         const newBannedStatus = !currentBannedStatus;
         await updateDoc(userRef, { isBanned: newBannedStatus });
-        showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản học viên!`, "success");
+        showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
     } catch (error) {
+        console.error("Lỗi thay đổi trạng thái khóa:", error);
         showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
     }
 }
@@ -200,7 +208,7 @@ async function handleViewHistory(userEmail) {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-            historyBody.innerHTML = '<tr><td colspan="3" class="empty-message">Học viên này chưa thực hiện bài thi trắc nghiệm nào trên hệ thống.</td></tr>';
+            historyBody.innerHTML = '<tr><td colspan="3" class="empty-message">Thành viên này chưa làm bài thi trắc nghiệm nào trên hệ thống.</td></tr>';
             return;
         }
 
@@ -231,8 +239,8 @@ async function handleViewHistory(userEmail) {
         historyBody.innerHTML = htmlContent;
 
     } catch (error) {
-        console.error("Lỗi khi truy vấn kết quả thi results:", error);
-        historyBody.innerHTML = '<tr><td colspan="3" class="empty-message" style="color:red">❌ Thất bại khi tải lịch sử bài làm.</td></tr>';
+        console.error("Lỗi tải lịch sử results:", error);
+        historyBody.innerHTML = '<tr><td colspan="3" class="empty-message" style="color:red">❌ Thất bại khi truy vấn lịch sử bài làm học viên.</td></tr>';
     }
 }
 
@@ -240,19 +248,19 @@ async function handleViewHistory(userEmail) {
 // 4. ĐĂNG KÝ CÁC SỰ KIỆN KHỞI TẠO BAN ĐẦU
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Khởi động trình kết nối Real-time lắng nghe tự động Firestore
+    // Kích hoạt trình kết nối lắng nghe Real-time Firestore ngay khi DOM sẵn sàng
     initRealtimeUserListener();
 
-    // Sự kiện nhập từ khóa tìm kiếm Email thành viên
+    // Lắng nghe sự kiện tìm kiếm nhập ký tự Email học viên
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.trim().toLowerCase();
-            renderUserList(); // Chạy bộ lọc cục bộ tức thì
+            renderUserList(); // Chạy bộ lọc mượt mà cục bộ từ cache
         });
     }
 
-    // Sự kiện thay đổi dropdown phân loại trạng thái học viên
+    // Lắng nghe sự kiện thay đổi dropdown lọc phân loại
     const filterSelect = document.getElementById('filterSelect');
     if (filterSelect) {
         filterSelect.addEventListener('change', (e) => {
@@ -261,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Áp dụng kỹ thuật Event Delegation (Ủy quyền sự kiện) trên bảng danh sách User
+    // Cơ chế Event Delegation xử lý tập trung hành động click trên thân bảng
     const usersBody = document.getElementById('usersTableBody');
     if (usersBody) {
         usersBody.addEventListener('click', (e) => {
@@ -276,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Sự kiện đóng Modal xem lịch sử điểm thi của học sinh
+    // Cơ chế đóng cửa sổ Modal Lịch sử thi
     const closeHistoryBtn = document.getElementById('closeHistoryModalBtn');
     if (closeHistoryBtn) {
         closeHistoryBtn.onclick = () => {
