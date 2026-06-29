@@ -1,148 +1,161 @@
-import { db, formatDate } from "./dashboard-core.js";
-import { collection, getDocs, query, where, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { db, formatDate, safeRedirect } from "./dashboard-core.js";
+import { collection, query, where, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Biến cục bộ lưu trữ trạng thái trong Module
+let userEmail = null;
+let examVipMap = {};
+
+// DOM Elements
+const historyTableBody = document.getElementById("historyTableBody");
+const statCompletedExams = document.getElementById("statCompletedExams");
+const statAvgScore = document.getElementById("statAvgScore");
+
+// Expose safeRedirect ra window scope để phục vụ cho sự kiện onclick="safeRedirect(...)" từ HTML
+window.safeRedirect = safeRedirect;
 
 // =========================================================================
-// 1. BIẾN TOÀN CỤC LƯU TRỮ
+// 1. LẮNG NGHE CÁC SỰ KIỆN ĐỒNG BỘ TỪ HỆ THỐNG MODULES
 // =========================================================================
-let currentUserUid = null;
-const historyTableBody = document.getElementById('historyTableBody');
 
-// =========================================================================
-// 2. LẮNG NGHE SỰ KIỆN AUTHENTICATION TỪ CORE
-// =========================================================================
+// Lắng nghe sự kiện Auth sẵn sàng để lấy Email người dùng
 document.addEventListener("authReady", (e) => {
-    const { user } = e.detail;
-    currentUserUid = user.uid;
+    userEmail = e.detail.user.email;
+});
+
+// Lắng nghe sự kiện cấu hình Kho đề thi sẵn sàng để lấy bản đồ VIP/Free của các Đề thi
+document.addEventListener("examsReady", async (e) => {
+    const allExamsData = e.detail.allExamsData;
     
-    // Bắt đầu tải lịch sử làm bài khi đã có thông tin user
-    loadHistory(currentUserUid);
+    // Tạo map tra cứu nhanh trạng thái VIP của đề thi theo Id
+    examVipMap = {};
+    allExamsData.forEach(exam => {
+        examVipMap[exam.id] = exam.isVip;
+    });
+
+    // Tiến hành tải lịch sử thi ngay khi có đầy đủ dữ liệu Email và Bản đồ phân quyền Đề thi
+    if (userEmail) {
+        await fetchHistory(userEmail);
+    }
 });
 
 // =========================================================================
-// 3. HÀM TẢI LỊCH SỬ LÀM BÀI TỪ FIRESTORE
+// 2. TẢI DỮ LIỆU LỊCH SỬ LÀM BÀI & CẬP NHẬT QUICK STATS
 // =========================================================================
-async function loadHistory(uid) {
-    if (!historyTableBody) return;
-
+async function fetchHistory(email) {
     try {
         const resultsRef = collection(db, "results");
-        // Query lấy lịch sử: chỉ lấy của user hiện tại, sắp xếp thời gian nộp bài mới nhất lên đầu
-        const q = query(resultsRef, where("userId", "==", uid), orderBy("submitTime", "desc"));
-        const snapshot = await getDocs(q);
+        const q = query(resultsRef, where("email", "==", email));
+        const querySnapshot = await getDocs(q);
 
-        if (snapshot.empty) {
-            historyTableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
-                        <i class="fa-solid fa-folder-open" style="font-size: 2rem; margin-bottom: 10px; display: block; opacity: 0.5;"></i>
-                        Bạn chưa có lịch sử làm bài nào. Hãy chọn một đề thi và bắt đầu thử sức nhé!
-                    </td>
-                </tr>
-            `;
+        // Nếu người dùng chưa từng nộp bài thi nào
+        if (querySnapshot.empty) {
+            historyTableBody.innerHTML = `<tr><td colspan="6" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>`;
+            if (statCompletedExams) statCompletedExams.textContent = "0";
+            if (statAvgScore) statAvgScore.textContent = "0.0";
             return;
         }
 
-        historyTableBody.innerHTML = ""; // Xóa text "Đang tải..."
+        const resultsArray = [];
+        let totalScoreSum = 0;
 
-        snapshot.forEach(documentSnapshot => {
-            const data = documentSnapshot.data();
-            const resultId = documentSnapshot.id;
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            resultsArray.push({ id: doc.id, ...data });
             
-            // Lấy thông tin an toàn với fallback
-            const examTitle = data.examTitle || data.examId || "Đề thi không xác định";
-            const startTime = data.startTime ? formatDate(data.startTime) : "Không xác định";
-            const submitTime = data.submitTime ? formatDate(data.submitTime) : "Không xác định";
-            const score = data.score !== undefined ? parseFloat(data.score).toFixed(1) : "0.0";
-            const correctCount = data.correctCount || 0;
-            const totalQuestions = data.totalQuestions || 0;
+            // Tính lũy kế tổng điểm để làm Quick Stats
+            const currentScore = data.score !== undefined ? parseFloat(data.score) : 0;
+            totalScoreSum += currentScore;
+        });
 
-            // Đổi màu badge số câu đúng nếu làm đúng trên 50%
-            const isPass = totalQuestions > 0 && correctCount >= (totalQuestions / 2);
-            const badgeClass = isPass ? "status-active" : "status-unactive";
+        // --- CẬP NHẬT SỐ LIỆU CHO 2 THẺ THỐNG KÊ NHANH (QUICK STATS) ---
+        const totalSubmitted = resultsArray.length;
+        const averageScoreResult = totalSubmitted > 0 ? (totalScoreSum / totalSubmitted).toFixed(1) : "0.0";
 
-            const tr = document.createElement('tr');
+        // Ghi đè dữ liệu thật vào vị trí đang chạy hiệu ứng Skeleton Loading
+        if (statCompletedExams) statCompletedExams.textContent = totalSubmitted;
+        if (statAvgScore) statAvgScore.textContent = averageScoreResult;
+
+        // Sắp xếp danh sách lịch sử thi theo thời gian nộp bài mới nhất lên trên đầu
+        resultsArray.sort((a, b) => {
+            const dateA = a.timestamp && typeof a.timestamp.toDate === 'function' ? a.timestamp.toDate() : new Date(a.timestamp || a.submittedAt || 0);
+            const dateB = b.timestamp && typeof b.timestamp.toDate === 'function' ? b.timestamp.toDate() : new Date(b.timestamp || b.submittedAt || 0);
+            return dateB - dateA;
+        });
+
+        // Render dữ liệu ra bảng lịch sử
+        historyTableBody.innerHTML = ""; 
+        
+        resultsArray.forEach((data) => {
+            const tr = document.createElement("tr");
+            const quizId = data.examId || data.examCode || "Không rõ";
+            const score = data.score !== undefined ? data.score : 0;
+            const correctAnswers = data.correctAnswers !== undefined ? data.correctAnswers : 0;
+            
+            // Đối chiếu bản đồ phân quyền để hiển thị Badge tương ứng cho bài làm
+            const isVipExam = examVipMap[quizId] === true;
+            const badgeHtml = isVipExam ? `<span style="background:#ffc107;color:#856404;padding:2px 5px;border-radius:4px;font-size:0.75rem;">VIP</span>` 
+                                        : `<span style="background:#e2e3e5;color:#383d41;padding:2px 5px;border-radius:4px;font-size:0.75rem;">Free</span>`;
+
+            // Định dạng chuỗi thời gian làm bài
+            let timeSpentStr = "Không rõ";
+            if (data.timeSpent !== undefined) {
+                const totalSeconds = parseInt(data.timeSpent, 10);
+                const m = Math.floor(totalSeconds / 60);
+                const s = totalSeconds % 60;
+                timeSpentStr = `${m}p ${s}s`;
+            }
+            
+            // Định dạng chuỗi thời gian nộp bài bài thi
+            let submitTime = "Không xác định";
+            if (data.timestamp || data.submittedAt) {
+                submitTime = formatDate(data.timestamp || data.submittedAt);
+            }
+
             tr.innerHTML = `
-                <td style="font-weight: 600; color: var(--primary-blue); text-align: left;">${examTitle}</td>
-                <td>${startTime}</td>
+                <td><strong>${quizId}</strong> ${badgeHtml}</td>
+                <td>${timeSpentStr}</td>
                 <td>${submitTime}</td>
-                <td><span class="status-badge ${badgeClass}">${correctCount} / ${totalQuestions}</span></td>
-                <td style="font-weight: bold; font-size: 1.1rem; color: var(--danger-red);">${score}</td>
+                <td>${correctAnswers} câu</td>
+                <td style="color: var(--primary-blue); font-weight: bold;">${score}</td>
                 <td>
-                    <button class="btn-review" data-id="${resultId}" title="Xem lại chi tiết bài làm"><i class="fa-solid fa-eye"></i></button>
-                    <button class="btn-delete-history" data-id="${resultId}" title="Xóa lịch sử này"><i class="fa-solid fa-trash"></i></button>
+                    <button class="btn-review" onclick="safeRedirect('quiz.html?resultId=${data.id}')">
+                        <i class="fa-solid fa-eye"></i> Xem lại
+                    </button>
+                    <button class="btn-delete-history" data-id="${data.id}">
+                        <i class="fa-solid fa-trash"></i> Xóa
+                    </button>
                 </td>
             `;
             historyTableBody.appendChild(tr);
         });
 
-        // Gắn sự kiện cho các nút vừa tạo
-        attachHistoryActions();
-
     } catch (error) {
-        console.error("Lỗi khi tải lịch sử:", error);
-        
-        // Bắt lỗi phổ biến: Thiếu Composite Index trong Firestore
-        if (error.message.includes("requires an index")) {
-            console.warn("VUI LÒNG CLICK VÀO LINK TRONG CONSOLE ĐỂ TẠO INDEX CHO FIRESTORE.");
-            historyTableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align: center; color: var(--danger-red); padding: 20px;">
-                        Lỗi truy xuất dữ liệu: Hệ thống đang thiếu cấu hình Index. Quản trị viên vui lòng kiểm tra Console (F12) để cấp quyền Index.
-                    </td>
-                </tr>
-            `;
-        } else {
-            historyTableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align: center; color: var(--danger-red); padding: 20px;">
-                        Đã xảy ra lỗi khi tải lịch sử làm bài. Vui lòng kiểm tra kết nối mạng và thử lại sau.
-                    </td>
-                </tr>
-            `;
-        }
+        console.error("Lỗi khi tải hoặc xử lý bảng lịch sử làm bài:", error);
+        historyTableBody.innerHTML = `<tr><td colspan="6" class="loading-text" style="color: red;">Lỗi khi tải dữ liệu lịch sử!</td></tr>`;
     }
 }
 
 // =========================================================================
-// 4. GẮN SỰ KIỆN CHO CÁC NÚT TRONG BẢNG LỊCH SỬ
+// 3. ỦY QUYỀN SỰ KIỆN (EVENT DELEGATION): XÓA BẢN GHI LỊCH SỬ THI
 // =========================================================================
-function attachHistoryActions() {
-    // Xóa lịch sử
-    const deleteBtns = document.querySelectorAll('.btn-delete-history');
-    deleteBtns.forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const resultId = e.currentTarget.getAttribute('data-id');
-            
-            if (confirm("Bạn có chắc chắn muốn xóa lịch sử bài làm này? Hành động này không thể hoàn tác.")) {
-                try {
-                    const btnElement = e.currentTarget;
-                    btnElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
-                    btnElement.disabled = true;
-
-                    await deleteDoc(doc(db, "results", resultId));
-                    
-                    // Tải lại bảng lịch sử sau khi xóa thành công
-                    loadHistory(currentUserUid);
-                    alert("Đã xóa kết quả thành công!");
-                } catch (error) {
-                    console.error("Lỗi khi xóa lịch sử:", error);
-                    alert("Không thể xóa kết quả lúc này. Vui lòng thử lại.");
-                    e.currentTarget.innerHTML = `<i class="fa-solid fa-trash"></i>`;
-                    e.currentTarget.disabled = false;
+historyTableBody.addEventListener('click', async (e) => {
+    const deleteBtn = e.target.closest('.btn-delete-history');
+    if (deleteBtn) {
+        const docId = deleteBtn.getAttribute('data-id');
+        if (confirm("Bạn có chắc chắn muốn xóa kết quả bài thi này khỏi lịch sử hệ thống?")) {
+            try {
+                // Thực hiện thao tác xóa tài liệu trên Firestore kết nối qua core
+                await deleteDoc(doc(db, "results", docId));
+                alert("Đã xóa kết quả bài thi thành công!");
+                
+                // Tải lại bảng lịch sử làm bài sau khi xóa thành công để đồng bộ giao diện và Quick Stats
+                if (userEmail) {
+                    await fetchHistory(userEmail);
                 }
+            } catch (error) {
+                console.error("Lỗi khi xóa kết quả bài làm:", error);
+                alert("Đã xảy ra lỗi hệ thống khi thực hiện xóa: " + error.message);
             }
-        });
-    });
-
-    // Xem lại bài làm
-    const reviewBtns = document.querySelectorAll('.btn-review');
-    reviewBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const resultId = e.currentTarget.getAttribute('data-id');
-            // Tạm thời hiển thị alert, sau này bạn có thể chuyển hướng sang trang review
-            alert(`Tính năng xem lại chi tiết bài làm (ID: ${resultId}) đang được phát triển. Dữ liệu của bạn vẫn đang được lưu trữ an toàn.`);
-            // Mở khóa dòng code dưới nếu bạn đã có trang review.html:
-            // window.location.href = `review.html?resultId=${resultId}`;
-        });
-    });
-}
+        }
+    }
+});
