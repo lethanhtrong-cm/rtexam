@@ -1,43 +1,73 @@
 import { db, safeRedirect } from "./dashboard-core.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Biến toàn cục trong phạm vi Module
+// =========================================================================
+// 1. BIẾN TOÀN CỤC & TRẠNG THÁI BỘ LỌC ĐA LỚP
+// =========================================================================
 export let allExamsData = []; 
 let currentUserData = null;
 let currentView = 'grid'; 
 
-// =========================================================================
-// BIẾN TRẠNG THÁI LƯU BỘ LỌC HIỆN TẠI
-// =========================================================================
-let currentTechnique = 'all'; // Kỹ thuật (MRI, CT, X quang...)
-let currentLevel = 'all';     // Cấp độ (Khó, TB, Dễ)
-let currentTime = 'all';      // Thời gian (15, 30, 45)
+// Biến trạng thái của Bộ lọc
+let currentTechnique = 'all'; // Lấy từ Sidebar
+let currentLevel = 'all';     // Lấy từ Pill Buttons
+let currentTime = 'all';      // Lấy từ Pill Buttons
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
 const sortFilter = document.getElementById('sortFilter');
 const viewBtns = document.querySelectorAll('.view-btn');
 
-// Nút bấm UI Lọc (Pill Buttons & Sub-menus)
+// Các phần tử lọc mới
+const subMenuItems = document.querySelectorAll('.sub-menu-item');
 const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
 const timePills = document.querySelectorAll('#timeFilter .pill-btn');
-const sidebarSubMenus = document.querySelectorAll('.sub-menu-item');
 
 // =========================================================================
-// 1. LẮNG NGHE SỰ KIỆN AUTH READY
+// 2. LẮNG NGHE SỰ KIỆN AUTH READY ĐỂ KHỞI CHẠY DỮ LIỆU
 // =========================================================================
 document.addEventListener("authReady", async (e) => {
     currentUserData = e.detail.currentUserData;
     setupToolbarEvents(); 
-    setupFilterEvents(); // Đăng ký sự kiện click cho các bộ lọc
+    setupFilterEvents(); // Khởi tạo sự kiện cho các bộ lọc
     await loadAggregatedExamData(); 
 });
 
 // =========================================================================
-// 2. CẤU HÌNH SỰ KIỆN TOOLBAR & FILTERS
+// 3. CẤU HÌNH SỰ KIỆN LỌC & TOOLBAR
 // =========================================================================
+function setupFilterEvents() {
+    // 1. Sự kiện lọc theo Kỹ thuật (Sidebar)
+    subMenuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            currentTechnique = e.currentTarget.getAttribute('data-technique');
+            renderExams();
+        });
+    });
+
+    // 2. Hàm setup chung cho Pill Buttons (Cấp độ & Thời gian)
+    function setupPillEvents(pills, stateKey) {
+        pills.forEach(pill => {
+            pill.addEventListener('click', (e) => {
+                // Xóa active của nhóm pill tương ứng
+                pills.forEach(p => p.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                
+                // Cập nhật biến trạng thái
+                if (stateKey === 'level') currentLevel = e.currentTarget.getAttribute('data-level');
+                if (stateKey === 'time') currentTime = e.currentTarget.getAttribute('data-time');
+                
+                renderExams(); // Kích hoạt render lại
+            });
+        });
+    }
+
+    setupPillEvents(levelPills, 'level');
+    setupPillEvents(timePills, 'time');
+}
+
 function setupToolbarEvents() {
-    // Sự kiện Thay đổi Bộ lọc Select (Sort & VIP)
+    // Sự kiện Thay đổi Dropdown (Sắp xếp / Free-Pro)
     sortFilter.removeEventListener('change', handleSortFilterChange);
     sortFilter.addEventListener('change', handleSortFilterChange);
 
@@ -60,44 +90,11 @@ function handleSortFilterChange() {
     renderExams();
 }
 
-function setupFilterEvents() {
-    // 1. Sidebar Sub-menus (Kỹ thuật Y khoa)
-    sidebarSubMenus.forEach(menu => {
-        menu.addEventListener('click', (e) => {
-            currentTechnique = e.currentTarget.getAttribute('data-technique');
-            renderExams(); // Kích hoạt Render lại
-        });
-    });
-
-    // 2. Level Pills (Cấp độ Khó/Dễ)
-    levelPills.forEach(pill => {
-        pill.addEventListener('click', (e) => {
-            levelPills.forEach(p => p.classList.remove('active')); // Reset active
-            const target = e.currentTarget;
-            target.classList.add('active'); // Set active
-            currentLevel = target.getAttribute('data-level');
-            renderExams();
-        });
-    });
-
-    // 3. Time Pills (Thời gian giới hạn)
-    timePills.forEach(pill => {
-        pill.addEventListener('click', (e) => {
-            timePills.forEach(p => p.classList.remove('active')); // Reset active
-            const target = e.currentTarget;
-            target.classList.add('active'); // Set active
-            currentTime = target.getAttribute('data-time');
-            renderExams();
-        });
-    });
-}
-
 // =========================================================================
-// 3. TẢI VÀ TỔNG HỢP DỮ LIỆU TỪ 3 COLLECTIONS TRÊN FIRESTORE
+// 4. TẢI VÀ TỔNG HỢP SIÊU DỮ LIỆU TỪ FIRESTORE
 // =========================================================================
 async function loadAggregatedExamData() {
     try {
-        // Lấy danh sách questions để đếm số lượng câu hỏi
         const questionsRef = collection(db, "questions");
         const qSnap = await getDocs(questionsRef);
         const examMap = {}; 
@@ -111,7 +108,7 @@ async function loadAggregatedExamData() {
             }
         });
 
-        // Lấy Metadata cấu hình của đề thi (isVip, timeLimit, level, technique...)
+        // Lấy cấu hình metadata (isVip, timeLimit, level, technique...)
         const examsConfigRef = collection(db, "exams");
         const eSnap = await getDocs(examsConfigRef);
         eSnap.forEach((doc) => {
@@ -123,13 +120,12 @@ async function loadAggregatedExamData() {
                 examMap[eId].attemptCount = conf.attemptCount || 0;
                 examMap[eId].createdAt = conf.createdAt ? (typeof conf.createdAt.toMillis === 'function' ? conf.createdAt.toMillis() : new Date(conf.createdAt).getTime()) : 0;
                 
-                // MỚI: Bổ sung các Metadata để phục vụ Filtering
+                // Fetch siêu dữ liệu phân loại
                 examMap[eId].technique = conf.technique || "Hỗn hợp";
                 examMap[eId].level = conf.level || "Trung bình";
             }
         });
 
-        // Lấy danh sách feedback để tính số sao trung bình
         const feedbacksRef = collection(db, "feedbacks");
         const fSnap = await getDocs(feedbacksRef);
         const ratingMap = {}; 
@@ -145,7 +141,7 @@ async function loadAggregatedExamData() {
             }
         });
 
-        // Chuẩn hóa và gộp dữ liệu hoàn chỉnh, bù đắp trường khuyết
+        // Chuẩn hóa dữ liệu
         Object.keys(examMap).forEach(eId => {
             if (examMap[eId].timeLimit === undefined) examMap[eId].timeLimit = 15;
             if (examMap[eId].isVip === undefined) examMap[eId].isVip = false;
@@ -166,7 +162,6 @@ async function loadAggregatedExamData() {
 
         allExamsData = Object.values(examMap);
 
-        // Phát thêm sự kiện thông báo dữ liệu exam đã sẵn sàng
         const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
         document.dispatchEvent(examsReadyEvent);
 
@@ -179,7 +174,7 @@ async function loadAggregatedExamData() {
 }
 
 // =========================================================================
-// 4. XỬ LÝ RENDER GIAO DIỆN VÀ LỌC DỮ LIỆU ĐA LỚP
+// 5. PIPELINE LỌC DỮ LIỆU & RENDER GIAO DIỆN
 // =========================================================================
 function renderExams() {
     if (allExamsData.length === 0) {
@@ -187,57 +182,66 @@ function renderExams() {
         return;
     }
 
-    // Tạo bản sao từ mảng dữ liệu gốc để áp dụng chuỗi bộ lọc
     let displayData = [...allExamsData];
 
-    // --- BỘ LỌC 1: KỸ THUẬT (Từ Sidebar) ---
+    // LỚP LỌC 1: Kỹ thuật (Từ Sidebar)
     if (currentTechnique !== 'all') {
         displayData = displayData.filter(exam => exam.technique === currentTechnique);
     }
 
-    // --- BỘ LỌC 2: CẤP ĐỘ (Từ Pill Buttons) ---
+    // LỚP LỌC 2: Cấp độ (Từ Pill button)
     if (currentLevel !== 'all') {
         displayData = displayData.filter(exam => exam.level === currentLevel);
     }
 
-    // --- BỘ LỌC 3: THỜI GIAN LÀM BÀI (Từ Pill Buttons) ---
+    // LỚP LỌC 3: Thời gian (Từ Pill button)
     if (currentTime !== 'all') {
-        displayData = displayData.filter(exam => exam.timeLimit === parseInt(currentTime));
+        const timeTarget = parseInt(currentTime);
+        displayData = displayData.filter(exam => exam.timeLimit === timeTarget);
     }
 
-    // --- BỘ LỌC 4: LOẠI ĐỀ (VIP/Free từ Select Box) ---
+    // LỚP LỌC 4: Trạng thái Dropdown (VIP/Free)
     const filterType = sortFilter.value;
     if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
     else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
 
-    // --- BƯỚC 5: SẮP XẾP ---
+    // LỚP LỌC 5: Sắp xếp
     if (filterType === 'highest_rating') displayData.sort((a, b) => b.rating - a.rating);
     else if (filterType === 'most_attempts') displayData.sort((a, b) => b.attemptCount - a.attemptCount);
     else displayData.sort((a, b) => b.createdAt - a.createdAt); 
 
-    // Làm sạch Container
+    // Bắt đầu Render UI
     examListContainer.innerHTML = "";
+    const isUserVip = currentUserData && currentUserData.isVip === true;
 
-    // Kiểm tra xem có kết quả sau khi lọc không
     if (displayData.length === 0) {
-        examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi nào khớp với bộ lọc hiện tại của bạn. Vui lòng thử lại.</div>';
+        examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi nào phù hợp với các bộ lọc hiện tại.</div>';
         return;
     }
 
-    const isUserVip = currentUserData && currentUserData.isVip === true;
-
     displayData.forEach(exam => {
         const isExamVip = exam.isVip;
+        
+        // Badge PRO hoặc Free
         const badgeHtml = isExamVip 
-            ? `<span class="course-badge badge-vip"><i class="fa-solid fa-crown"></i> VIP</span>`
+            ? `<span class="course-badge badge-vip"><i class="fa-solid fa-crown"></i> PRO</span>`
             : `<span class="course-badge badge-free">Free</span>`;
         
+        // Nút Call to Action
         let buttonHtml = '';
         if (isExamVip && !isUserVip) {
-            buttonHtml = `<button class="btn-locked" onclick="goToUpgrade()"><i class="fa-solid fa-lock"></i> Đề VIP - Nạp để mở</button>`;
+            buttonHtml = `<button class="btn-pro-locked" onclick="goToUpgrade()"><i class="fa-solid fa-gem"></i> Nâng cấp tài khoản Pro</button>`;
         } else {
             buttonHtml = `<button class="btn-primary" onclick="goToQuiz('${exam.id}')">Vào thi ngay</button>`;
         }
+
+        // Tags hiển thị Cấp độ & Kỹ thuật
+        const tagsHtml = `
+            <div class="card-tags">
+                <span class="meta-tag"><i class="fa-solid fa-tag"></i> ${exam.technique}</span>
+                <span class="meta-tag"><i class="fa-solid fa-signal"></i> ${exam.level}</span>
+            </div>
+        `;
 
         const card = document.createElement('div');
         card.className = 'course-card';
@@ -246,11 +250,7 @@ function renderExams() {
             <div class="card-body">
                 <div style="flex: 1;">
                     <h3 class="card-title">${exam.id}</h3>
-                    <!-- Hiển thị Tag thuộc tính để User dễ nhận diện tại sao đề này xuất hiện -->
-                    <div class="card-tags">
-                        <span class="meta-tag"><i class="fa-solid fa-layer-group"></i> ${exam.technique}</span>
-                        <span class="meta-tag"><i class="fa-solid fa-signal"></i> ${exam.level}</span>
-                    </div>
+                    ${tagsHtml}
                     <div class="card-stats">
                         <div class="stat-item"><i class="fa-solid fa-file-circle-question"></i> ${exam.questionCount} câu hỏi</div>
                         <div class="stat-item"><i class="fa-solid fa-stopwatch"></i> ${exam.timeLimit} phút</div>
@@ -268,13 +268,27 @@ function renderExams() {
 }
 
 // =========================================================================
-// 5. EXPOSE FUNCTIONS RA WINDOW SCOPE ĐỂ PHỤC VỤ THEO ONCLICK TỪ HTML THÔ
+// 6. EXPOSE FUNCTIONS ĐỂ HTML THUẦN CÓ THỂ GỌI SỰ KIỆN CLICK
 // =========================================================================
 window.goToQuiz = function(examId) {
     safeRedirect(`quiz.html?examId=${examId}`);
 };
 
+// Hàm xử lý sự kiện bấm Nâng cấp từ thẻ Đề thi
 window.goToUpgrade = function() {
-    const vipTabButton = document.querySelector('.menu-item[data-target="tab-vip"]');
-    if (vipTabButton) vipTabButton.click();
+    // 1. Tắt active toàn bộ Tab Nội Dung
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    tabPanes.forEach(pane => pane.classList.remove('active'));
+    
+    // 2. Tắt active toàn bộ Menu Sidebar để reset trạng thái
+    document.querySelectorAll('.sidebar-menu .menu-item').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.sub-menu-item').forEach(m => m.classList.remove('active'));
+    
+    // 3. Mở hiển thị Tab VIP/PRO
+    const proTab = document.getElementById('tab-vip');
+    if (proTab) proTab.classList.add('active');
+    
+    // 4. Cập nhật Tiêu đề trang
+    const currentTabTitle = document.getElementById("currentTabTitle");
+    if(currentTabTitle) currentTabTitle.textContent = 'Quản Lý Gói Pro';
 };
