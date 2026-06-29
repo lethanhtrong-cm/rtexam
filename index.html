@@ -159,6 +159,36 @@
             cursor: pointer;
         }
 
+        /* --- CSS HỆ THỐNG THÔNG BÁO LỖI (MỚI) --- */
+        .sys-msg {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            text-align: center;
+            display: none; /* Mặc định ẩn */
+        }
+        .sys-msg.error {
+            background-color: #fef2f2;
+            color: #ef4444;
+            border: 1px solid #fecaca;
+            display: block;
+        }
+        .sys-msg.success {
+            background-color: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+            display: block;
+        }
+
+        /* --- CSS HIỆU ỨNG SPINNER (MỚI) --- */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .spinner-icon {
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
         /* Nút xác nhận chung (Đăng nhập / Đăng ký) */
         .btn-submit {
             width: 100%;
@@ -172,14 +202,22 @@
             cursor: pointer;
             transition: background-color 0.3s ease, transform 0.1s ease;
             margin-top: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        .btn-submit:hover {
+        .btn-submit:hover:not(:disabled) {
             background-color: #1d4ed8;
         }
         
-        .btn-submit:active {
+        .btn-submit:active:not(:disabled) {
             transform: scale(0.98);
+        }
+
+        .btn-submit:disabled, .btn-google:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
 
         /* Nút đăng nhập Google */
@@ -200,13 +238,13 @@
             gap: 12px;
         }
 
-        .btn-google:hover {
+        .btn-google:hover:not(:disabled) {
             background-color: #f8fafc;
             border-color: #94a3b8;
             color: #1e293b;
         }
         
-        .btn-google:active {
+        .btn-google:active:not(:disabled) {
             transform: scale(0.98);
         }
 
@@ -304,6 +342,9 @@
                         <label for="remember-me">Ghi nhớ đăng nhập</label>
                     </div>
                     
+                    <!-- Box hiển thị thông báo lỗi/thành công Đăng Nhập -->
+                    <div id="login-msg" class="sys-msg hidden"></div>
+
                     <button id="btn-login" class="btn-submit">Đăng Nhập</button>
                     
                     <div class="divider">HOẶC</div>
@@ -337,6 +378,9 @@
                         <input type="password" id="register-password" placeholder="Tạo mật khẩu (Ít nhất 6 ký tự)" required>
                     </div>
                     
+                    <!-- Box hiển thị thông báo lỗi/thành công Đăng Ký -->
+                    <div id="register-msg" class="sys-msg hidden"></div>
+
                     <button id="btn-register" class="btn-submit">Đăng Ký</button>
                 
                 <div class="toggle-form">
@@ -353,12 +397,45 @@
         const goToRegisterBtn = document.getElementById('go-to-register');
         const goToLoginBtn = document.getElementById('go-to-login');
 
+        // Hàm hỗ trợ: Hiển thị thông báo (thay thế hoàn toàn alert)
+        function showMsg(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = 'sys-msg ' + type;
+        }
+
+        // Hàm hỗ trợ: Ẩn thông báo
+        function hideMsg(elementId) {
+            const el = document.getElementById(elementId);
+            el.className = 'sys-msg hidden';
+            el.textContent = '';
+        }
+
+        // Hàm hỗ trợ: Set hiệu ứng Loading cho Nút bấm
+        function setLoadingBtn(btn, isLoading, text = '') {
+            if (isLoading) {
+                if (!btn.dataset.originalHtml) {
+                    btn.dataset.originalHtml = btn.innerHTML; // Lưu lại nội dung HTML gốc
+                }
+                btn.disabled = true;
+                // Nhúng icon SVG spinner
+                btn.innerHTML = `<svg class="spinner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> <span>${text}</span>`;
+            } else {
+                btn.disabled = false;
+                if (btn.dataset.originalHtml) {
+                    btn.innerHTML = btn.dataset.originalHtml; // Trả lại nội dung gốc khi xong
+                }
+            }
+        }
+
         goToRegisterBtn.addEventListener('click', () => {
+            hideMsg('login-msg');
             loginForm.classList.add('hidden');
             registerForm.classList.remove('hidden');
         });
 
         goToLoginBtn.addEventListener('click', () => {
+            hideMsg('register-msg');
             registerForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
         });
@@ -422,15 +499,19 @@
                     } catch (error) {
                         console.error("Lỗi khi gác cổng lưu data:", error);
                     }
+                    // Chuyển hướng vô hình, không alert.
                     window.location.href = 'dashboard.html';
                 }
             });
         }
 
+        // --- XỬ LÝ ĐĂNG KÝ TÀI KHOẢN ---
         const btnRegister = document.getElementById('btn-register');
         btnRegister.addEventListener('click', () => {
+            hideMsg('register-msg');
+            
             if (!auth || !db) {
-                alert("Bạn chưa cấu hình Firebase!");
+                showMsg('register-msg', 'Lỗi: Bạn chưa cấu hình Firebase!', 'error');
                 return;
             }
 
@@ -438,9 +519,11 @@
             const password = document.getElementById('register-password').value;
 
             if(!email || !password) {
-                alert("Vui lòng nhập đầy đủ Email và Mật khẩu!");
+                showMsg('register-msg', 'Vui lòng nhập đầy đủ Email và Mật khẩu!', 'error');
                 return;
             }
+
+            setLoadingBtn(btnRegister, true, 'Đang đăng ký...');
 
             createUserWithEmailAndPassword(auth, email, password)
                 .then(async (userCredential) => {
@@ -453,29 +536,31 @@
                         console.error("Lỗi khi lưu Firestore:", firestoreError);
                     }
 
-                    alert("Đăng ký thành công! Mời bạn đăng nhập.");
-                    document.getElementById('go-to-login').click();
-                    document.getElementById('register-email').value = "";
-                    document.getElementById('register-password').value = "";
+                    // Không cần gỡ loading, Firebase onAuthStateChanged sẽ tự chuyển trang!
+                    showMsg('register-msg', '✅ Đăng ký thành công! Đang vào hệ thống...', 'success');
                 })
                 .catch((error) => {
+                    setLoadingBtn(btnRegister, false);
                     const errorCode = error.code;
                     if (errorCode === 'auth/email-already-in-use') {
-                        alert("Lỗi: Email này đã được đăng ký từ trước!");
+                        showMsg('register-msg', 'Lỗi: Email này đã được đăng ký từ trước!', 'error');
                     } else if (errorCode === 'auth/weak-password') {
-                        alert("Lỗi: Mật khẩu quá ngắn, vui lòng nhập ít nhất 6 ký tự!");
+                        showMsg('register-msg', 'Lỗi: Mật khẩu quá ngắn, vui lòng nhập ít nhất 6 ký tự!', 'error');
                     } else if (errorCode === 'auth/invalid-email') {
-                        alert("Lỗi: Định dạng email không hợp lệ!");
+                        showMsg('register-msg', 'Lỗi: Định dạng email không hợp lệ!', 'error');
                     } else {
-                        alert("Lỗi hệ thống: " + error.message);
+                        showMsg('register-msg', 'Lỗi hệ thống: ' + error.message, 'error');
                     }
                 });
         });
 
+        // --- XỬ LÝ ĐĂNG NHẬP EMAIL ---
         const btnLogin = document.getElementById('btn-login');
         btnLogin.addEventListener('click', () => {
+            hideMsg('login-msg');
+
             if (!auth) {
-                alert("Bạn chưa cấu hình Firebase!");
+                showMsg('login-msg', 'Lỗi: Bạn chưa cấu hình Firebase!', 'error');
                 return;
             }
 
@@ -484,9 +569,11 @@
             const isRememberMeChecked = document.getElementById('remember-me').checked;
 
             if(!email || !password) {
-                alert("Vui lòng nhập đầy đủ Email và Mật khẩu!");
+                showMsg('login-msg', 'Vui lòng nhập đầy đủ Email và Mật khẩu!', 'error');
                 return;
             }
+
+            setLoadingBtn(btnLogin, true, 'Đang kết nối...');
 
             const persistenceType = isRememberMeChecked ? browserLocalPersistence : browserSessionPersistence;
 
@@ -503,24 +590,28 @@
                     } catch (error) {
                         console.error("Lỗi cập nhật Firestore khi login email:", error);
                     }
-
-                    alert("Đăng nhập thành công! Đang chuyển vào phòng chờ...");
+                    
+                    // Chuyển hướng vô hình, không alert
                     window.location.href = 'dashboard.html';
                 })
                 .catch((error) => {
+                    setLoadingBtn(btnLogin, false);
                     const errorCode = error.code;
                     if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
-                        alert("Lỗi: Sai email hoặc mật khẩu. Vui lòng kiểm tra lại!");
+                        showMsg('login-msg', 'Lỗi: Sai email hoặc mật khẩu. Vui lòng kiểm tra lại!', 'error');
                     } else {
-                        alert("Lỗi đăng nhập: " + error.message);
+                        showMsg('login-msg', 'Lỗi đăng nhập: ' + error.message, 'error');
                     }
                 });
         });
 
+        // --- XỬ LÝ QUÊN MẬT KHẨU ---
         const btnForgotPassword = document.getElementById('btn-forgot-password');
         btnForgotPassword.addEventListener('click', async () => {
+            hideMsg('login-msg');
+
             if (!auth) {
-                alert("Bạn chưa cấu hình Firebase!");
+                showMsg('login-msg', 'Lỗi: Bạn chưa cấu hình Firebase!', 'error');
                 return;
             }
 
@@ -534,30 +625,34 @@
             email = email.trim();
 
             try {
-                alert("Đang gửi yêu cầu... Vui lòng nhấn OK để tiếp tục.");
+                showMsg('login-msg', 'Đang gửi yêu cầu đặt lại mật khẩu...', 'success');
                 await sendPasswordResetEmail(auth, email);
-                alert(`✅ Link đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra Hộp thư đến (hoặc thư rác) của email: ${email}`);
+                showMsg('login-msg', `✅ Link đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra email: ${email}`, 'success');
             } catch (error) {
                 const errorCode = error.code;
                 if (errorCode === 'auth/user-not-found') {
-                    alert("Lỗi: Email này chưa được đăng ký trong hệ thống!");
+                    showMsg('login-msg', 'Lỗi: Email này chưa được đăng ký trong hệ thống!', 'error');
                 } else if (errorCode === 'auth/invalid-email') {
-                    alert("Lỗi: Định dạng email không hợp lệ!");
+                    showMsg('login-msg', 'Lỗi: Định dạng email không hợp lệ!', 'error');
                 } else {
-                    alert("Lỗi: " + error.message);
+                    showMsg('login-msg', 'Lỗi: ' + error.message, 'error');
                 }
             }
         });
 
+        // --- XỬ LÝ ĐĂNG NHẬP BẰNG GOOGLE ---
         const btnGoogle = document.getElementById('btn-google');
         btnGoogle.addEventListener('click', () => {
+            hideMsg('login-msg');
+
             if (!auth) {
-                alert("Bạn chưa cấu hình Firebase!");
+                showMsg('login-msg', 'Lỗi: Bạn chưa cấu hình Firebase!', 'error');
                 return;
             }
 
+            setLoadingBtn(btnGoogle, true, 'Đang kết nối Google...');
+
             const isRememberMeChecked = document.getElementById('remember-me').checked;
-            
             const persistenceType = isRememberMeChecked ? browserLocalPersistence : browserSessionPersistence;
 
             setPersistence(auth, persistenceType)
@@ -575,15 +670,16 @@
                         console.error("Lỗi cập nhật Firestore khi login google:", error);
                     }
 
-                    alert("Đăng nhập thành công! Đang chuyển vào phòng chờ...");
+                    // Chuyển hướng vô hình, không alert
                     window.location.href = 'dashboard.html';
                 })
                 .catch((error) => {
+                    setLoadingBtn(btnGoogle, false);
                     const errorCode = error.code;
                     if (errorCode === 'auth/popup-closed-by-user') {
-                        alert("Lỗi: Bạn đã đóng cửa sổ đăng nhập trước khi hoàn tất!");
+                        showMsg('login-msg', 'Bạn đã đóng cửa sổ đăng nhập trước khi hoàn tất!', 'error');
                     } else {
-                        alert("Lỗi đăng nhập Google: " + error.message);
+                        showMsg('login-msg', 'Lỗi đăng nhập Google: ' + error.message, 'error');
                     }
                 });
         });
