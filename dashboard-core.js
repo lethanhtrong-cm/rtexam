@@ -43,7 +43,6 @@ export function formatDate(dateData) {
 // 3. LOGIC UI: SIDEBAR ACCORDION, ĐIỀU HƯỚNG TAB & TOPBAR
 // =========================================================================
 
-// Khởi tạo các Node Elements cho Sidebar & Tabs
 const mainMenuItems = document.querySelectorAll('.sidebar-menu > .menu-item[data-target]');
 const accordionHeaders = document.querySelectorAll('.accordion-header');
 const subMenuItems = document.querySelectorAll('.sub-menu-item');
@@ -54,76 +53,63 @@ const tabTitleMap = {
     'tab-exams': 'Kho Đề Thi',
     'tab-profile': 'Hồ Sơ Cá Nhân',
     'tab-history': 'Lịch Sử Làm Bài',
-    'tab-vip': 'Quản Lý Gói VIP'
+    'tab-vip': 'Nâng Cấp Tài Khoản Pro'
 };
 
-// Hàm Reset toàn bộ state của menu
-function resetAllMenuStates() {
+// Hàm điều hướng tab dùng chung toàn bộ hệ thống (Export để file khác có thể gọi)
+export function switchTab(targetTabId, titleOverride) {
     mainMenuItems.forEach(m => m.classList.remove('active'));
     accordionHeaders.forEach(h => h.classList.remove('active'));
     subMenuItems.forEach(sm => sm.classList.remove('active'));
     tabPanes.forEach(pane => pane.classList.remove('active'));
+
+    const targetPane = document.getElementById(targetTabId);
+    if (targetPane) {
+        targetPane.classList.add('active');
+        currentTabTitle.textContent = titleOverride || tabTitleMap[targetTabId] || 'Bảng Điều Khiển';
+    }
 }
 
-// Xử lý Click cho các Menu độc lập (VD: Lịch sử làm bài)
+// Đăng ký sự kiện Click cho các Menu độc lập
 mainMenuItems.forEach(item => {
     item.addEventListener('click', () => {
-        resetAllMenuStates();
-        item.classList.add('active');
         const targetId = item.getAttribute('data-target');
-        document.getElementById(targetId).classList.add('active');
-        currentTabTitle.textContent = tabTitleMap[targetId] || 'Bảng Điều Khiển';
+        switchTab(targetId);
+        item.classList.add('active');
     });
 });
 
-// Xử lý Click cho Accordion Header (Kho đề thi)
+// Đăng ký sự kiện Click cho Accordion Header
 accordionHeaders.forEach(header => {
     header.addEventListener('click', () => {
-        // Mở/Đóng Dropdown con
         const content = header.nextElementSibling;
         const icon = header.querySelector('.accordion-icon');
         
         content.classList.toggle('show');
-        if (content.classList.contains('show')) {
-            icon.style.transform = 'rotate(180deg)';
-        } else {
-            icon.style.transform = 'rotate(0deg)';
-        }
-
-        // Vẫn kích hoạt tab Khám phá khi ấn vào header
-        resetAllMenuStates();
-        header.classList.add('active');
-        
-        // Cố gắng giữ lại Active cho sub-menu "Tất cả" nếu chưa có ai được click
-        const allSubMenu = content.querySelector('.sub-menu-item[data-technique="all"]');
-        if (allSubMenu) allSubMenu.classList.add('active');
+        if (icon) icon.style.transform = content.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
 
         const targetId = header.getAttribute('data-target');
-        document.getElementById(targetId).classList.add('active');
-        currentTabTitle.textContent = `${tabTitleMap[targetId]} - Tất cả`;
+        switchTab(targetId, `${tabTitleMap[targetId]} - Tất cả`);
+        header.classList.add('active');
+        
+        const allSubMenu = content.querySelector('.sub-menu-item[data-technique="all"]');
+        if (allSubMenu) allSubMenu.classList.add('active');
     });
 });
 
-// Xử lý Click cho các Sub-menus (MRI, CT, X Quang...)
+// Đăng ký sự kiện Click cho các Sub-menus (MRI, CT...)
 subMenuItems.forEach(subItem => {
     subItem.addEventListener('click', (e) => {
-        e.stopPropagation(); // Ngăn chặn nổi bọt lên Accordion Header
-        resetAllMenuStates();
-        
-        // Kích hoạt Sub-menu
-        subItem.classList.add('active');
-        
-        // Giữ sáng Accordion Header cha
-        const parentHeader = subItem.closest('.menu-accordion').querySelector('.accordion-header');
-        parentHeader.classList.add('active');
-        
-        // Mở Tab nội dung tương ứng
+        e.stopPropagation();
+        const parentAccordion = subItem.closest('.menu-accordion');
+        const parentHeader = parentAccordion.querySelector('.accordion-header');
         const targetId = parentHeader.getAttribute('data-target');
-        document.getElementById(targetId).classList.add('active');
-
-        // Cập nhật Tiêu đề Topbar
+        
         const techniqueName = subItem.textContent.trim();
-        currentTabTitle.textContent = `${tabTitleMap[targetId]} - ${techniqueName}`;
+        switchTab(targetId, `${tabTitleMap[targetId]} - ${techniqueName}`);
+        
+        subItem.classList.add('active');
+        parentHeader.classList.add('active');
     });
 });
 
@@ -144,22 +130,18 @@ document.addEventListener('click', (e) => {
 });
 
 btnManageProfile.addEventListener('click', () => {
-    resetAllMenuStates();
-    document.getElementById('tab-profile').classList.add('active');
-    currentTabTitle.textContent = tabTitleMap['tab-profile'];
+    switchTab('tab-profile');
 });
 
 // =========================================================================
-// 4. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI
+// 4. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI TOPBAR (ĐỔI THÀNH PRO)
 // =========================================================================
 
 const topbarVipContainer = document.getElementById('topbar-vip-container');
 if (topbarVipContainer) {
     topbarVipContainer.addEventListener('click', (e) => {
         if (e.target.closest('#btnUpgradeVipTopbar')) {
-            resetAllMenuStates();
-            document.getElementById('tab-vip').classList.add('active');
-            currentTabTitle.textContent = tabTitleMap['tab-vip'];
+            switchTab('tab-vip');
         }
     });
 }
@@ -184,7 +166,7 @@ function renderAuthInfo(user) {
 function setVipInactive() {
     document.getElementById("vipStatusBadge").textContent = "Chưa kích hoạt";
     document.getElementById("vipStatusBadge").className = "status-badge status-unactive";
-    document.getElementById("vipStatusTab3").textContent = "Chưa kích hoạt VIP";
+    document.getElementById("vipStatusTab3").textContent = "Chưa kích hoạt Tài khoản Pro";
     document.getElementById("vipStatusTab3").className = "status-badge status-unactive";
     document.getElementById("vipStartDate").textContent = "Không xác định";
     document.getElementById("vipEndDate").textContent = "Không xác định";
@@ -192,10 +174,11 @@ function setVipInactive() {
     const statAccount = document.getElementById("statAccountStatus");
     if (statAccount) statAccount.textContent = "Thường";
 
+    // Thay đổi chữ và icon sang PRO tinh tế hơn
     if (topbarVipContainer) {
         topbarVipContainer.innerHTML = `
             <button id="btnUpgradeVipTopbar" class="topbar-vip-btn">
-                🚀 NÂNG CẤP VIP
+                🚀 Nâng cấp Pro
             </button>
         `;
     }
@@ -222,18 +205,18 @@ async function fetchUserData(user) {
             }
 
             if (currentUserData.isVip) {
-                document.getElementById("vipStatusBadge").textContent = "Đã kích hoạt VIP";
+                document.getElementById("vipStatusBadge").textContent = "Đã kích hoạt Pro";
                 document.getElementById("vipStatusBadge").className = "status-badge status-active";
-                document.getElementById("vipStatusTab3").textContent = "VIP Hoạt động";
+                document.getElementById("vipStatusTab3").textContent = "Tài khoản PRO đang hoạt động";
                 document.getElementById("vipStatusTab3").className = "status-badge status-active";
                 document.getElementById("vipStartDate").textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
                 document.getElementById("vipEndDate").textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
-                document.getElementById("statAccountStatus").textContent = "VIP";
+                document.getElementById("statAccountStatus").textContent = "PRO";
 
                 if (topbarVipContainer) {
                     topbarVipContainer.innerHTML = `
                         <div class="topbar-vip-badge">
-                            <i class="fa-solid fa-crown"></i> TÀI KHOẢN VIP
+                            <i class="fa-solid fa-gem"></i> TÀI KHOẢN PRO
                         </div>
                     `;
                 }
@@ -272,5 +255,5 @@ document.getElementById("btnLogout").addEventListener("click", () => {
 });
 
 document.getElementById("btnConfirmPayment").addEventListener("click", () => {
-    alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt VIP cho bạn trong thời gian sớm nhất!");
+    alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
 });
