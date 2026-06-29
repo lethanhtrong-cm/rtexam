@@ -1,158 +1,185 @@
 // admin-users.js
 import { db, showToast } from './admin-core.js';
 import { 
-    collection, getDocs, doc, updateDoc, query, where 
+    collection, onSnapshot, doc, updateDoc, query, where, getDocs 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// Bộ nhớ đệm lưu trữ danh sách người dùng realtime từ Firestore
+let cachedUsers = [];
+
+// Các biến trạng thái bộ lọc tìm kiếm học viên
+let currentSearchQuery = "";
+let currentFilterStatus = "all";
+
 // =========================================================================
-// 1. TẢI VÀ THỐNG KÊ DANH SÁCH NGƯỜI DÙNG
+// 1. LẮNG NGHE DỮ LIỆU REAL-TIME TỪ FIRESTORE (ONSNAPSHOT)
 // =========================================================================
-export async function loadUsers() {
+export function initRealtimeUserListener() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    try {
-        tbody.innerHTML = '<tr><td colspan="4" class="loading-text">⏳ Đang tải dữ liệu từ Firestore...</td></tr>';
+    // Thiết lập onSnapshot lắng nghe trực tiếp collection "users"
+    onSnapshot(collection(db, "users"), (snapshot) => {
+        cachedUsers = [];
         
-        const usersCol = collection(db, "users");
-        const userSnapshot = await getDocs(usersCol);
-        
-        let totalUsers = 0;
-        let totalVips = 0;
-        let htmlContent = '';
+        let totalUsersCount = 0;
+        let totalVipCount = 0;
+        let totalOnlineCount = 0;
 
-        if (userSnapshot.empty) {
-            tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Chưa có dữ liệu người dùng nào.</td></tr>';
-            document.getElementById('totalUsers').innerText = 0;
-            document.getElementById('totalVipUsers').innerText = 0;
-            return;
-        }
-
-        userSnapshot.forEach((docSnap) => {
+        snapshot.forEach((docSnap) => {
             const user = docSnap.data();
             const userId = docSnap.id;
             const email = user.email || 'Chưa cập nhật';
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
+            const isOnline = user.isOnline || false; // Trường trạng thái trực tuyến giả định
 
-            totalUsers++;
-            // Nếu bị khóa (Banned) thì không tính là VIP đang hoạt động
-            if (isVip && !isBanned) totalVips++; 
+            totalUsersCount++;
+            if (isVip && !isBanned) totalVipsCount++; // VIP hoạt động (không bị khóa)
+            if (isVip) totalVipCount++;
+            if (isOnline && !isBanned) totalOnlineCount++; // Đếm số người đang online thật
 
-            // Thiết lập trạng thái giao diện (Ưu tiên hiển thị trạng thái Bị Khóa)
-            let badgeClass = 'badge-normal';
-            let badgeText = 'Thường';
-            let statusKey = 'normal'; // Dùng cho bộ lọc frontend
+            // Phân loại trạng thái phục vụ bộ lọc Frontend
+            let statusKey = 'normal';
+            if (isBanned) statusKey = 'banned';
+            else if (isVip) statusKey = 'vip';
 
-            if (isBanned) {
-                badgeClass = 'badge-banned';
-                badgeText = 'Bị Khóa';
-                statusKey = 'banned';
-            } else if (isVip) {
-                badgeClass = 'badge-vip';
-                badgeText = 'VIP 👑';
-                statusKey = 'vip';
-            }
-
-            // Thiết lập class và text cho nút Khóa/Mở khóa
-            const banBtnClass = isBanned ? 'btn-unban' : 'btn-ban';
-            const banBtnText = isBanned ? 'Mở Khóa' : 'Khóa TK';
-
-            // Khởi tạo dòng TR (Tích hợp attribute data-email và data-status để lọc)
-            htmlContent += `
-                <tr class="user-row" data-email="${email.toLowerCase()}" data-status="${statusKey}">
-                    <td class="text-center">${totalUsers}</td>
-                    <td><strong>${email}</strong></td>
-                    <td class="text-center"><span class="badge ${badgeClass}">${badgeText}</span></td>
-                    <td class="text-center">
-                        <div class="action-buttons">
-                            <button class="btn-sm btn-toggle-vip" data-id="${userId}" data-vip="${isVip}">
-                                ${isVip ? 'Tắt VIP' : 'Bật VIP'}
-                            </button>
-                            <button class="btn-sm btn-history" data-email="${email}">
-                                Xem Lịch Sử
-                            </button>
-                            <button class="btn-sm ${banBtnClass} btn-toggle-ban" data-id="${userId}" data-banned="${isBanned}">
-                                ${banBtnText}
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
+            cachedUsers.push({
+                userId: userId,
+                email: email,
+                isVip: isVip,
+                isBanned: isBanned,
+                isOnline: isOnline,
+                statusKey: statusKey
+            });
         });
 
-        tbody.innerHTML = htmlContent;
-        document.getElementById('totalUsers').innerText = totalUsers;
-        document.getElementById('totalVipUsers').innerText = totalVips;
+        // Cập nhật số liệu Real-time lên 3 thẻ Stats Cards ngoài giao diện HTML
+        const totalUsersEl = document.getElementById('totalUsers');
+        const totalVipUsersEl = document.getElementById('totalVipUsers');
+        const totalOnlineUsersEl = document.getElementById('totalOnlineUsers');
 
-        // Chạy lại bộ lọc đề phòng trường hợp admin đang gõ từ khóa tìm kiếm
-        filterTable();
+        if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
+        if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipCount;
+        if (totalOnlineUsersEl) totalOnlineUsersEl.innerText = totalOnlineCount;
 
-    } catch (error) {
-        console.error("Lỗi khi tải users: ", error);
-        tbody.innerHTML = '<tr><td colspan="4" class="loading-text" style="color:red">❌ Lỗi tải dữ liệu người dùng.</td></tr>';
-        showToast("Không thể tải danh sách người dùng", "error");
-    }
-}
-
-// =========================================================================
-// 2. BỘ LỌC TÌM KIẾM THEO TỪ KHÓA & TRẠNG THÁI (FRONTEND REALTIME)
-// =========================================================================
-function filterTable() {
-    const searchInput = document.getElementById('searchInput');
-    const filterSelect = document.getElementById('filterSelect');
-    if (!searchInput || !filterSelect) return;
-
-    const searchText = searchInput.value.toLowerCase();
-    const filterStatus = filterSelect.value;
-    const rows = document.querySelectorAll('.user-row');
-
-    rows.forEach(row => {
-        const email = row.dataset.email || '';
-        const status = row.dataset.status || '';
-
-        const matchSearch = email.includes(searchText);
-        const matchStatus = (filterStatus === 'all') || (status === filterStatus);
-
-        if (matchSearch && matchStatus) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
+        // Tiến hành render vẽ lại bảng dữ liệu học viên
+        renderUserList();
+    }, (error) => {
+        console.error("Lỗi lắng nghe dữ liệu users Real-time:", error);
+        tbody.innerHTML = '<tr><td colspan="4" class="loading-text" style="color:red">❌ Lỗi kết nối đồng bộ học viên Real-time.</td></tr>';
     });
 }
 
 // =========================================================================
-// 3. CÁC HÀM XỬ LÝ SỰ KIỆN (VIP, BAN/UNBAN, XEM LỊCH SỬ THI)
+// 2. HÀM KẾT XUẤT DANH SÁCH USER (BỔ SUNG AVATAR & MODERN BUTTONS)
+// =========================================================================
+export function renderUserList() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+
+    // Lọc dữ liệu bộ nhớ đệm theo từ khóa tìm kiếm và trạng thái dropdown
+    const filteredUsers = cachedUsers.filter(user => {
+        const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
+        const matchStatus = currentFilterStatus === "all" || user.statusKey === currentFilterStatus;
+        return matchSearch && matchStatus;
+    });
+
+    tbody.innerHTML = '';
+    let stt = 1;
+
+    if (filteredUsers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-message">Không tìm thấy học viên nào khớp với bộ lọc hiện tại.</td></tr>';
+        return;
+    }
+
+    // Vòng lặp render chuỗi HTML mới có chứa cấu trúc Avatar và nút bấm cao cấp
+    filteredUsers.forEach(user => {
+        let badgeClass = 'badge-normal';
+        let badgeText = 'Thường';
+
+        if (user.isBanned) {
+            badgeClass = 'badge-banned';
+            badgeText = 'Bị Khóa';
+        } else if (user.isVip) {
+            badgeClass = 'badge-vip';
+            badgeText = 'VIP 👑';
+        }
+
+        // Tách chữ cái đầu tiên của Email để làm ký tự đại diện cho hình Avatar hình tròn
+        const firstLetter = user.email.charAt(0);
+
+        // Thiết lập trạng thái hiển thị và màu sắc riêng biệt cho hệ thống nút bấm hành động mới
+        const vipBtnClass = user.isVip ? 'btn-user-vip-off' : 'btn-user-vip-on';
+        const vipBtnText = user.isVip ? '💎 Tắt VIP' : '👑 Kích VIP';
+        const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
+        const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
+
+        const tr = document.createElement('tr');
+        tr.className = 'user-row';
+        
+        tr.innerHTML = `
+            <td class="text-center" style="font-weight: 600; color: #64748b;">${stt++}</td>
+            <td>
+                <div class="user-email-cell">
+                    <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)};">
+                        ${firstLetter}
+                    </div>
+                    <div style="font-weight: 600; color: #0f172a;">${user.email}</div>
+                </div>
+            </td>
+            <td class="text-center"><span class="badge ${badgeClass}">${badgeText}</span></td>
+            <td class="text-center">
+                <div class="user-action-group">
+                    <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}">
+                        ${vipBtnText}
+                    </button>
+                    <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}">
+                        📊 Lịch Sử
+                    </button>
+                    <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}">
+                        ${banBtnText}
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Hàm phụ hỗ trợ tạo màu nền ngẫu nhiên/cố định cho Avatar theo chữ cái đầu của email
+function getAvatarColor(letter) {
+    const charCode = letter.toUpperCase().charCodeAt(0) || 65;
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
+    return colors[charCode % colors.length];
+}
+
+// =========================================================================
+// 3. XỬ LÝ NGHIỆP VỤ TÀI KHOẢN (VIP, LOCK/BAN, XEM LỊCH SỬ THI)
 // =========================================================================
 async function handleToggleVip(userId, currentVipStatus) {
     try {
         const userRef = doc(db, "users", userId);
         const newVipStatus = !currentVipStatus;
-        
         await updateDoc(userRef, { isVip: newVipStatus });
-        showToast(`Đã ${newVipStatus ? 'cấp' : 'hủy'} quyền VIP thành công!`, "success");
-        loadUsers();
+        showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
+        // Không cần gọi load lại, onSnapshot tự động cập nhật UI realtime
     } catch (error) {
-        console.error("Lỗi khi cập nhật VIP: ", error);
-        showToast("Lỗi khi cập nhật trạng thái VIP", "error");
+        showToast("Lỗi cập nhật trạng thái quyền VIP học viên", "error");
     }
 }
 
 async function handleToggleBan(userId, currentBannedStatus) {
-    const actionText = currentBannedStatus ? 'mở khóa' : 'khóa';
-    if (!confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản này không?`)) return;
+    const actionText = currentBannedStatus ? 'mở khóa' : 'khóa viễn viễn';
+    if (!confirm(`Hệ thống cảnh báo: Bạn có chắc chắn muốn thực hiện lệnh ${actionText} tài khoản học sinh này?`)) return;
 
     try {
         const userRef = doc(db, "users", userId);
         const newBannedStatus = !currentBannedStatus;
-        
         await updateDoc(userRef, { isBanned: newBannedStatus });
-        showToast(`Đã ${actionText} tài khoản thành công!`, "success");
-        loadUsers();
+        showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản học viên!`, "success");
     } catch (error) {
-        console.error("Lỗi khi khóa/mở khóa TK: ", error);
-        showToast("Lỗi khi cập nhật trạng thái Khóa", "error");
+        showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
     }
 }
 
@@ -163,8 +190,8 @@ async function handleViewHistory(userEmail) {
     
     if (!modal || !historyBody) return;
     
-    modalTitle.innerText = `Lịch sử thi: ${userEmail}`;
-    historyBody.innerHTML = '<tr><td colspan="3" class="loading-text">⏳ Đang tìm kiếm kết quả thi...</td></tr>';
+    modalTitle.innerText = `📊 KẾT QUẢ THI: ${userEmail}`;
+    historyBody.innerHTML = '<tr><td colspan="3" class="loading-text">⏳ Đang truy vấn cơ sở dữ liệu kết quả thi...</td></tr>';
     modal.style.display = "block";
 
     try {
@@ -173,7 +200,7 @@ async function handleViewHistory(userEmail) {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-            historyBody.innerHTML = '<tr><td colspan="3" class="empty-message">Người dùng này chưa tham gia lượt thi nào.</td></tr>';
+            historyBody.innerHTML = '<tr><td colspan="3" class="empty-message">Học viên này chưa thực hiện bài thi trắc nghiệm nào trên hệ thống.</td></tr>';
             return;
         }
 
@@ -204,24 +231,37 @@ async function handleViewHistory(userEmail) {
         historyBody.innerHTML = htmlContent;
 
     } catch (error) {
-        console.error("Lỗi khi lấy lịch sử thi: ", error);
-        historyBody.innerHTML = '<tr><td colspan="3" class="empty-message" style="color:red">❌ Lỗi tải dữ liệu lịch sử thi.</td></tr>';
+        console.error("Lỗi khi truy vấn kết quả thi results:", error);
+        historyBody.innerHTML = '<tr><td colspan="3" class="empty-message" style="color:red">❌ Thất bại khi tải lịch sử bài làm.</td></tr>';
     }
 }
 
 // =========================================================================
-// 4. LẮNG NGHE SỰ KIỆN BAN ĐẦU
+// 4. ĐĂNG KÝ CÁC SỰ KIỆN KHỞI TẠO BAN ĐẦU
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    loadUsers();
+    // Khởi động trình kết nối Real-time lắng nghe tự động Firestore
+    initRealtimeUserListener();
 
-    // Sự kiện gõ từ khóa & đổi dropdown lọc dữ liệu
+    // Sự kiện nhập từ khóa tìm kiếm Email thành viên
     const searchInput = document.getElementById('searchInput');
-    const filterSelect = document.getElementById('filterSelect');
-    if (searchInput) searchInput.addEventListener('input', filterTable);
-    if (filterSelect) filterSelect.addEventListener('change', filterTable);
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            currentSearchQuery = e.target.value.trim().toLowerCase();
+            renderUserList(); // Chạy bộ lọc cục bộ tức thì
+        });
+    }
 
-    // Sử dụng Event Delegation tối ưu hóa sự kiện Click cho bảng User
+    // Sự kiện thay đổi dropdown phân loại trạng thái học viên
+    const filterSelect = document.getElementById('filterSelect');
+    if (filterSelect) {
+        filterSelect.addEventListener('change', (e) => {
+            currentFilterStatus = e.target.value;
+            renderUserList();
+        });
+    }
+
+    // Áp dụng kỹ thuật Event Delegation (Ủy quyền sự kiện) trên bảng danh sách User
     const usersBody = document.getElementById('usersTableBody');
     if (usersBody) {
         usersBody.addEventListener('click', (e) => {
@@ -236,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Sự kiện đóng Modal Lịch sử
+    // Sự kiện đóng Modal xem lịch sử điểm thi của học sinh
     const closeHistoryBtn = document.getElementById('closeHistoryModalBtn');
     if (closeHistoryBtn) {
         closeHistoryBtn.onclick = () => {
