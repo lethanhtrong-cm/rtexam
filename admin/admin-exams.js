@@ -4,11 +4,11 @@ import {
     collection, getDocs, doc, setDoc, deleteDoc, addDoc, query, where 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Biến tạm lưu trữ dữ liệu Excel sau khi đọc thành công (Dạng hàng đợi chờ duyệt)
+// Biến tạm lưu trữ dữ liệu Excel sau khi đọc thành công (Hàng đợi chờ duyệt)
 let draftData = [];
 
 // =========================================================================
-// 1. TẢI VÀ HIỂN THỊ DANH SÁCH ĐỀ THI (GIỮ NGUYÊN TÍNH NĂNG CŨ)
+// 1. TẢI VÀ HIỂN THỊ DANH SÁCH ĐỀ THI (GIỮ NGUYÊN HOÀN TOÀN LOGIC CŨ)
 // =========================================================================
 export async function loadExamList() {
     const tbody = document.getElementById('exam-list-body');
@@ -88,7 +88,7 @@ export async function loadExamList() {
 }
 
 // =========================================================================
-// 2. NGHIỆP VỤ ĐIỀU CHỈNH ĐỀ THI CŨ (VIP, TIME, DELETE, FEEDBACK)
+// 2. NGHIỆP VỤ ĐIỀU CHỈNH ĐỀ THI CŨ
 // =========================================================================
 async function toggleExamVip(examId, currentVipState) {
     try {
@@ -197,10 +197,8 @@ async function viewFeedback(examId) {
 }
 
 // =========================================================================
-// 3. QUY TRÌNH IMPORT & RENDER PREVIEW (TÍNH NĂNG NÂNG CẤP MỚI)
+// 3. QUY TRÌNH IMPORT & RENDER PREVIEW (GIỮ NGUYÊN TOÀN BỘ LOGIC CŨ)
 // =========================================================================
-
-// Hàm vẽ cục dữ liệu tạm nháp ra bảng Xem Trước (Preview) ở tầng Frontend
 function renderPreview() {
     const previewBody = document.getElementById('preview-list-body');
     const publishBtn = document.getElementById('btn-publish');
@@ -218,7 +216,6 @@ function renderPreview() {
     draftData.forEach((row) => {
         const tr = document.createElement('tr');
         
-        // Định dạng cột Hiển thị các đáp án cho rõ ràng trực quan
         const optionsHtml = `
             <div style="font-size:13px; line-height:1.4;">
                 A: ${row.options[0]}<br>
@@ -228,7 +225,6 @@ function renderPreview() {
             </div>
         `;
         
-        // Đổi giá trị index số (0,1,2,3) thành ký tự (A,B,C,D) để dễ đối chiếu
         const mapCorrectText = ['A', 'B', 'C', 'D'];
         const correctChar = mapCorrectText[row.correctAnswer] || 'Không rõ';
 
@@ -242,14 +238,12 @@ function renderPreview() {
         previewBody.appendChild(tr);
     });
 
-    // Mở khóa nút bấm cho phép đẩy lên hệ thống sau khi đã duyệt xong mắt thường
     if (publishBtn) {
         publishBtn.removeAttribute('disabled');
         publishBtn.innerHTML = `🔓 Xác Nhận & Publish ${draftData.length} Câu Lên Hệ Thống`;
     }
 }
 
-// Xử lý nạp và đọc file Excel chuyển thành biến tạm ẩn `draftData`
 function handleExcelRead() {
     const fileInput = document.getElementById('excel-file');
     const fileNameDisplay = document.getElementById('file-name-display');
@@ -273,15 +267,13 @@ function handleExcelRead() {
 
                 if (jsonArr.length === 0) throw new Error("File Excel không chứa bất kỳ bản ghi nào!");
 
-                // Làm rỗng và chuẩn bị nạp mảng nháp mới
                 draftData = [];
                 let skipCount = 0;
 
                 jsonArr.forEach((row) => {
-                    // Kiểm tra điều kiện tối thiểu để cấu thành một câu hỏi hợp lệ
                     if (!row["Nội Dung (text)"] || row["Đáp Án Đúng (0=A, 1=B, 2=C, 3=D)"] === undefined) {
                         skipCount++;
-                        return; // Bỏ qua bản ghi lỗi cấu trúc
+                        return;
                     }
 
                     draftData.push({
@@ -298,18 +290,15 @@ function handleExcelRead() {
                     });
                 });
 
-                showToast(`Đọc file thành công! Nạp ${draftData.length} câu hỏi vào danh sách chờ phê duyệt.`, "success");
-                if (skipCount > 0) console.warn(`Đã bỏ qua ${skipCount} dòng lỗi định dạng.`);
-                
-                // Vẽ ra bảng Preview cho quản trị viên kiểm tra dữ liệu trước
+                showToast(`Đọc file thành công! Đã nạp ${draftData.length} câu hỏi vào danh sách xem trước.`, "success");
                 renderPreview();
 
             } catch (error) {
                 console.error("Lỗi đọc Excel:", error);
-                alert("❌ Không thể đọc file Excel. Vui lòng kiểm tra lại cấu trúc cột hoặc tệp tin mẫu.\nChi tiết: " + error.message);
+                alert("❌ Không thể đọc file Excel. Vui lòng kiểm tra lại tệp tin mẫu.\nChi tiết: " + error.message);
             } finally {
                 importBtn.disabled = false;
-                importBtn.innerHTML = "<h3>👁️ Đọc Dữ Liệu & Xem Trước</h3>";
+                importBtn.innerHTML = "👁️ Đọc Dữ Liệu & Xem Trước";
             }
         };
         reader.readAsArrayBuffer(file);
@@ -317,26 +306,31 @@ function handleExcelRead() {
 }
 
 // =========================================================================
-// 4. QUY TRÌNH PUBLISH DỮ LIỆU CHÍNH THỨC LÊN FIREBASE (BATCH/CHUNK PROCESSING)
+// 4. QUY TRÌNH PUBLISH DỮ LIỆU CHÍNH THỨC + ĐỒNG BỘ THUỘC TÍNH (METADATA)
 // =========================================================================
 async function publishExam() {
     const publishBtn = document.getElementById('btn-publish');
     const fileInput = document.getElementById('excel-file');
     const fileNameDisplay = document.getElementById('file-name-display');
 
+    // Lấy đối tượng DOM của 3 thẻ select cấu hình metadata mới
+    const selectTechnique = document.getElementById('select-technique');
+    const selectTime = document.getElementById('select-time');
+    const selectLevel = document.getElementById('select-level');
+
     if (!publishBtn || draftData.length === 0) return;
 
-    if (!confirm(`Bạn có chắc chắn duyệt xuất bản ${draftData.length} câu hỏi này lên cơ sở dữ liệu Firebase không?`)) {
+    if (!confirm(`Bạn có chắc chắn muốn xuất bản ${draftData.length} câu hỏi kèm cấu hình thuộc tính đã chọn lên Firebase không?`)) {
         return;
     }
 
     publishBtn.disabled = true;
-    publishBtn.innerHTML = "⏳ Đang thực hiện ghi dữ liệu lên Cloud Firestore...";
+    publishBtn.innerHTML = "⏳ Đang thực hiện lưu dữ liệu và cấu hình...";
 
     try {
         let uniqueExamIds = new Set();
 
-        // Đẩy tuần tự dữ liệu câu hỏi lên collection "questions"
+        // 1. Lưu tuần tự dữ liệu câu hỏi chi tiết vào collection "questions"
         for (let i = 0; i < draftData.length; i++) {
             const questionItem = draftData[i];
             uniqueExamIds.add(questionItem.examId);
@@ -344,19 +338,25 @@ async function publishExam() {
             await addDoc(collection(db, "questions"), questionItem);
         }
 
-        // Tự động rà soát, khởi tạo hoặc cập nhật cấu hình mặc định cho các Đề thi trong hệ thống
+        // Đọc giá trị Metadata được chọn từ giao diện HTML
+        const techniqueValue = selectTechnique ? selectTechnique.value : "Hỗn hợp";
+        const timeLimitValue = selectTime ? parseInt(selectTime.value, 10) : 15;
+        const levelValue = selectLevel ? selectLevel.value : "Trung bình";
+
+        // 2. Đồng bộ các thuộc tính phân loại (Metadata) vào từng mã đề thuộc collection "exams"
         for (const examId of uniqueExamIds) {
-            // Sử dụng merge: true để giữ nguyên các cài đặtVIP/Thời gian cũ nếu đề thi đó đã tồn tại trên Cloud
+            // Sử dụng merge: true giúp lưu đè bổ sung các thuộc tính mà không làm mất các trường cũ (ví dụ: attemptCount)
             await setDoc(doc(db, "exams", examId), {
-                timeLimit: 15,
-                isVip: false,
-                attemptCount: 0
+                technique: techniqueValue,
+                timeLimit: timeLimitValue,
+                level: levelValue,
+                isVip: false
             }, { merge: true });
         }
 
-        alert(`🎉 XUẤT BẢN THÀNH CÔNG!\nĐã lưu trữ chính thức ${draftData.length} câu hỏi và đồng bộ cấu hình cho ${uniqueExamIds.size} mã đề thi.`);
+        alert(`🎉 XUẤT BẢN THÀNH CÔNG!\n- Đã tải lên: ${draftData.length} câu hỏi.\n- Đã cấu hình thuộc tính [Kỹ thuật: ${techniqueValue} | Thời gian: ${timeLimitValue} phút | Cấp độ: ${levelValue}] thành công cho các mã đề.`);
         
-        // Reset sạch trạng thái sau khi lưu thành công
+        // Trả lại trạng thái trống sau khi xử lý thành công
         draftData = [];
         if (fileInput) fileInput.value = "";
         if (fileNameDisplay) {
@@ -364,13 +364,13 @@ async function publishExam() {
             fileNameDisplay.style.color = "";
         }
         
-        // Vẽ lại bảng preview trống và làm mới bảng danh sách đề thi tổng
+        // Làm mới lại bảng xem trước và danh sách đề thi tổng
         renderPreview();
         loadExamList();
 
     } catch (error) {
         console.error("Lỗi khi đẩy dữ liệu lên Firebase:", error);
-        alert("❌ Quá trình xuất bản thất bại. Vui lòng kiểm tra lại quyền Rules Firestore hoặc kết nối mạng.\nChi tiết: " + error.message);
+        alert("❌ Quá trình xuất bản thất bại. Vui lòng kiểm tra Rules Firestore.\nChi tiết: " + error.message);
         publishBtn.disabled = false;
         publishBtn.innerHTML = "🔒 Xác Nhận & Publish Lên Hệ Thống";
     }
@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Sự kiện lắng nghe nút lệnh Publish dữ liệu nháp
+    // Sự kiện lắng nghe nút lệnh Publish dữ liệu
     const publishBtn = document.getElementById('btn-publish');
     if (publishBtn) {
         publishBtn.addEventListener('click', publishExam);
