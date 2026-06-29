@@ -12,7 +12,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f6f9; color: #1f2937; display: flex; height: 100vh; overflow: hidden; }
         
-        /* ================= SIDEBAR ACCORDION CẢI TIẾN ================= */
+        /* ================= SIDEBAR ACCORDION ================= */
         .sidebar { width: 260px; background-color: #0f172a; color: white; display: flex; flex-direction: column; box-shadow: 4px 0 10px rgba(0,0,0,0.05); z-index: 10; }
         .sidebar-header { padding: 25px 20px; background-color: #1e293b; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .sidebar-title { font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
@@ -20,7 +20,6 @@
         
         .sidebar-menu { display: flex; flex-direction: column; padding-top: 15px; flex: 1; overflow-y: auto; }
         
-        /* Menu Mẹ */
         .menu-parent { width: 100%; padding: 14px 20px; background: none; border: none; color: #cbd5e1; text-align: left; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
         .menu-parent:hover { background-color: rgba(255, 255, 255, 0.03); color: white; }
         .menu-parent .parent-title { display: flex; align-items: center; gap: 10px; }
@@ -28,11 +27,9 @@
         .menu-parent.open { color: white; }
         .menu-parent.open .arrow-icon { transform: rotate(180deg); color: #3b82f6; }
         
-        /* Khối Menu Con */
         .submenu { display: none; background-color: #020617; padding: 4px 0; }
         .submenu.show { display: block; }
         
-        /* Menu Con Chi Tiết */
         .menu-item { width: 100%; padding: 11px 20px 11px 45px; background: none; border: none; color: #94a3b8; text-align: left; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: block; position: relative; }
         .menu-item:hover { background-color: #1e293b; color: white; }
         .menu-item.active { background-color: rgba(59, 130, 246, 0.08); color: #3b82f6; font-weight: 600; }
@@ -59,23 +56,7 @@
         .card-description { color: #64748b; margin-bottom: 25px; line-height: 1.6; font-size: 14px; }
         .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         
-        /* Stats & Toolbar (User) */
-        .stats-container { display: flex; gap: 20px; margin-bottom: 25px; }
-        .stat-card { background: white; flex: 1; padding: 24px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; border-left: 5px solid #3b82f6; }
-        .stat-card.vip { border-left-color: #f59e0b; }
-        .stat-info h3 { font-size: 12px; color: #64748b; text-transform: uppercase; margin-bottom: 6px; font-weight: 700; letter-spacing: 0.5px; }
-        .stat-info .number { font-size: 32px; font-weight: 800; color: #0f172a; }
-        .toolbar { display: flex; gap: 15px; margin-bottom: 25px; background: white; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.01); }
-        .toolbar input, .toolbar select { padding: 10px 16px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-size: 14px; color: #334155; }
-        .toolbar input:focus, .toolbar select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 131, 246, 0.1); }
-        .search-input { flex: 1; }
-
-        /* ================= NEW SEARCH BAR SYSTEM (MỚI NÂNG CẤP) ================= */
-        .search-wrapper-modern { margin-bottom: 16px; width: 100%; }
-        .search-input-modern { width: 100%; padding: 14px 20px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 15px; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,0.01); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); color: #1f2937; font-weight: 500; background-color: #ffffff; }
-        .search-input-modern:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.12); background-color: #ffffff; }
-
-        /* ================= NEW PILL LAYOUT 2 CỘT NẰM NGANG (MỚI NÂNG CẤP) ================= */
+        /* Modern Pill Filter Layout */
         .filter-wrapper-pills-modern { display: flex; flex-direction: column; background-color: #ffffff; padding: 22px 24px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.01); }
         .filter-flex-row { display: flex; gap: 30px; width: 100%; }
         .filter-col-50 { flex: 1; display: flex; flex-direction: column; gap: 8px; }
@@ -85,52 +66,72 @@
         .pill-btn:hover { background-color: #e2e8f0; color: #0f172a; }
         .pill-btn.active { background-color: #3b82f6; color: white; border-color: #2563eb; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
 
-        /* ================= STEP BADGES & DRAG/DROP UI ================= */
-        .step-badge { background-color: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; font-weight: 700; }
-        .step-badge.green { background-color: #10b981; }
-        .step-badge.orange { background-color: #f59e0b; }
-        .file-upload-wrapper { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 45px 20px; text-align: center; background-color: #f8fafc; transition: all 0.25s ease-in-out; position: relative; cursor: pointer; }
-        .file-upload-wrapper:hover { border-color: #3b82f6; background-color: #eff6ff; }
-        .file-upload-icon { font-size: 36px; color: #64748b; margin-bottom: 12px; transition: transform 0.2s; }
-        .file-upload-wrapper:hover .file-upload-icon { transform: translateY(-4px); color: #3b82f6; }
-        .file-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
-        .file-label { font-size: 14.5px; color: #475569; pointer-events: none; line-height: 1.5; }
-        .file-label span { color: #3b82f6; font-weight: 700; text-decoration: underline; }
-        .selected-file-name { margin-top: 15px; font-weight: 700; color: #10b981; font-size: 13.5px; background-color: #d1fae5; display: inline-block; padding: 4px 14px; border-radius: 20px; border: 1px solid #a7f3d0; }
+        /* Search Engine Layout */
+        .search-wrapper-modern { margin-bottom: 16px; width: 100%; }
+        .search-input-modern { width: 100%; padding: 14px 20px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 15px; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,0.01); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); color: #1f2937; font-weight: 500; background-color: #ffffff; }
+        .search-input-modern:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.12); }
+
+        /* ================= HIGH-END USER STATS CARDS (MỚI NÂNG CẤP) ================= */
+        .stats-container { display: flex; gap: 20px; margin-bottom: 30px; width: 100%; }
+        .stat-card { background: white; flex: 1; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; position: relative; overflow: hidden; }
         
-        .btn-template { background-color: #10b981; color: white; } .btn-template:hover { background-color: #059669; }
-        .btn-import { background-color: #4b5563; color: white; width: 100%; margin-top: 15px; font-size: 14px; padding: 12px; border-radius: 8px; }
-        .btn-import:hover:not(:disabled) { background-color: #374151; }
-        .btn-import:disabled { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
-        .btn-publish { background-color: #3b82f6; color: white; font-size: 14.5px; padding: 14px 40px; border-radius: 8px; font-weight: 700; transition: all 0.2s; }
-        .btn-publish:hover:not(:disabled) { background-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
-        .btn-publish:disabled { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+        /* Màu nền nhẹ và hiệu ứng icon mờ góc thẻ */
+        .stat-card.total-users { background-color: #f0fdf4; border-left: 6px solid #10b981; }
+        .stat-card.vip-users { background-color: #fef9c3; border-left: 6px solid #eab308; }
+        .stat-card.online-users { background-color: #eff6ff; border-left: 6px solid #3b82f6; }
+        
+        .stat-card::after { content: "👤"; position: absolute; right: -10px; bottom: -15px; font-size: 90px; opacity: 0.04; pointer-events: none; font-family: sans-serif; }
+        .stat-card.vip-users::after { content: "👑"; }
+        .stat-card.online-users::after { content: "🌐"; }
 
-        .metadata-row { display: flex; gap: 20px; margin-bottom: 25px; background-color: #f8fafc; padding: 24px; border-radius: 10px; border: 1px solid #e2e8f0; }
-        .metadata-field { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-        .metadata-field label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
-        .metadata-field select { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 14.5px; background-color: #ffffff; color: #1f2937; font-weight: 600; transition: all 0.2s; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 14px; padding-right: 40px; }
+        .stat-info h3 { font-size: 12px; color: #64748b; text-transform: uppercase; margin-bottom: 6px; font-weight: 700; letter-spacing: 0.5px; }
+        .stat-info .number { font-size: 34px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        
+        /* Chấm xanh nhấp nháy cho chỉ số Online */
+        .online-pulse-dot { width: 12px; height: 12px; background-color: #10b981; border-radius: 50%; display: inline-block; position: relative; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); animation: pulse-green 2s infinite; }
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
 
-        /* ================= NEW MODERN CARD LIST VIEW (MỚI NÂNG CẤP) ================= */
+        /* ================= REAL-TIME TOOLBAR & SEARCH (MỚI NÂNG CẤP) ================= */
+        .toolbar-user-modern { display: flex; gap: 15px; margin-bottom: 25px; width: 100%; align-items: center; }
+        .search-user-container { flex: 1; position: relative; }
+        .search-user-container::before { content: "🔍"; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 15px; color: #94a3b8; pointer-events: none; }
+        .search-user-input { width: 100%; padding: 12px 20px 12px 46px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; color: #334155; font-weight: 500; transition: all 0.2s; background-color: #ffffff; }
+        .search-user-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.1); }
+        
+        .select-user-filter { padding: 12px 40px 12px 18px; border: 1px solid #cbd5e1; border-radius: 10px; outline: none; font-size: 14.5px; font-weight: 600; color: #334155; background-color: #ffffff; min-width: 200px; cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 14px; }
+        .select-user-filter:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.1); }
+
+        /* ================= LAYOUT EMAIL BỔ SUNG AVATAR (MỚI NÂNG CẤP) ================= */
+        .user-email-cell { display: flex; align-items: center; gap: 12px; }
+        .user-avatar-placeholder { width: 34px; height: 34px; border-radius: 50%; background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #475569; border: 2px solid #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-transform: uppercase; user-select: none; }
+
+        /* ================= MODERN USER ACTION BUTTONS (MỚI NÂNG CẤP) ================= */
+        .user-action-group { display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn-user-action { padding: 8px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); color: white; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        
+        .btn-user-vip-on { background-color: #10b981; } .btn-user-vip-on:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+        .btn-user-vip-off { background-color: #eab308; color: #0f172a; } .btn-user-vip-off:hover { background-color: #ca8a04; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.2); }
+        .btn-user-history { background-color: #3b82f6; } .btn-user-history:hover { background-color: #2563eb; box-shadow: 0 4px 12px rgba(59, 131, 246, 0.2); }
+        .btn-user-ban { background-color: #ef4444; } .btn-user-ban:hover { background-color: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
+        .btn-user-unban { background-color: #64748b; } .btn-user-unban:hover { background-color: #475569; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2); }
+
+        /* ================= EXAM CARD LIST VIEW ================= */
         .exam-card-list { display: flex; flex-direction: column; gap: 16px; width: 100%; }
         .exam-modern-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.015); transition: all 0.2s ease-in-out; }
         .exam-modern-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04); border-color: #cbd5e1; }
-        
-        /* Cấu trúc phần trên của Card */
         .card-top-half { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 14px; }
         .card-info-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-        .card-exam-title { font-size: 18px; font-weight: 700; color: #0f172a; letter-spacing: -0.2px; }
+        .card-exam-title { font-size: 18px; font-weight: 700; color: #0f172a; }
         .card-status-right { display: flex; align-items: center; gap: 10px; }
-        
         .card-divider { border: none; border-top: 1px solid #f1f5f9; margin: 0 0 14px 0; }
-        
-        /* Cấu trúc phần nút bấm hàng ngang ở dưới */
         .card-bottom-half { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
 
-        /* Kiểu nút bấm dạng Outline nhỏ gọn, đồng bộ hệ thống */
         .btn-outline-sm { padding: 7px 14px; border: 1px solid #cbd5e1; background-color: transparent; color: #475569; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s ease-in-out; display: inline-flex; align-items: center; gap: 6px; }
         .btn-outline-sm:hover { background-color: #f8fafc; color: #0f172a; border-color: #94a3b8; }
-        
         .btn-outline-sm.btn-properties-modern { color: #0f172a; border-color: #cbd5e1; }
         .btn-outline-sm.btn-properties-modern:hover { background-color: #f1f5f9; border-color: #64748b; }
         .btn-outline-sm.btn-feedback-modern { color: #d97706; border-color: #fde68a; }
@@ -142,27 +143,20 @@
         .btn-outline-sm.btn-delete-modern { color: #ef4444; border-color: #fca5a5; }
         .btn-outline-sm.btn-delete-modern:hover { background-color: #fee2e2; border-color: #ef4444; }
 
-        /* Bảng dữ liệu thô (Dùng ở các tab khác) */
-        .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
+        /* BẢNG DỮ LIỆU CHUNG */
+        .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.01); }
         .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
         .admin-table th, .admin-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .admin-table th { background-color: #f8fafc; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-        .text-center { text-align: center !important; }
-        .empty-message, .loading-text { text-align: center; padding: 40px !important; color: #64748b; font-style: italic; font-size: 13.5px; }
-
-        /* Badges sắc nét */
-        .badge-count { background-color: #f1f5f9; color: #334155; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; display: inline-block; border: 1px solid #e2e8f0; }
+        .admin-table tr:hover { background-color: #f8fafc; }
         .badge-meta { background-color: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 12px; display: inline-block; border: 1px solid #bfdbfe; margin: 2px; }
         .badge-meta.level-easy { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
         .badge-meta.level-medium { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
         .badge-meta.level-hard { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-        .badge-vip-exam { background-color: #fef3c7; color: #b45309; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; display: inline-block; }
-        .badge-vip { background-color: #fdf3d8; color: #f39c12; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block;}
-        .badge-normal { background-color: #f1f5f9; color: #475569; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block;}
-        .badge-banned { background-color: #fee2e2; color: #dc3545; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block;}
-        .config-text { font-size: 12.5px; color: #475569; margin: 3px 0; font-weight: 500; }
+        .text-center { text-align: center !important; }
+        .empty-message, .loading-text { text-align: center; padding: 40px !important; color: #64748b; font-style: italic; font-size: 13.5px; }
 
-        /* ================= MODALS & FORMS ================= */
+        /* ================= MODALS COMPONENT ================= */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); animation: fadeIn 0.2s; }
         .modal-content { background-color: #fefefe; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 850px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; border-radius: 12px 12px 0 0; }
@@ -170,13 +164,6 @@
         .close-modal { color: #94a3b8; font-size: 24px; font-weight: bold; cursor: pointer; transition: color 0.2s; }
         .close-modal:hover { color: #334155; }
         .modal-body { overflow-y: auto; flex: 1; padding: 25px; }
-        .rating-star { color: #f59e0b; font-size: 15px; }
-        
-        .form-group-vertical { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
-        .form-item-vertical { display: flex; flex-direction: column; gap: 6px; }
-        .form-item-vertical label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; }
-        .form-item-vertical select { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 14.5px; font-weight: 600; color: #1f2937; }
-        .note { font-size: 13px; color: #64748b; background: #f8fafc; padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -239,7 +226,6 @@
         <div class="content-container">
             
             <section id="tab-exam-list" class="content-section active">
-                
                 <div class="search-wrapper-modern">
                     <input type="text" id="examSearchInput" class="search-input-modern" placeholder="🔍 Nhập mã đề cần tìm (Gõ phím tới đâu tìm tới đó)...">
                 </div>
@@ -348,44 +334,56 @@
             </section>
 
             <section id="tab-user-list" class="content-section">
+                
                 <div class="stats-container">
-                    <div class="stat-card">
+                    <div class="stat-card total-users">
                         <div class="stat-info">
                             <h3>Tổng số người dùng</h3>
                             <div class="number" id="totalUsers">0</div>
                         </div>
                     </div>
-                    <div class="stat-card vip">
+                    <div class="stat-card vip-users">
                         <div class="stat-info">
-                            <h3>Tổng số tài khoản VIP</h3>
+                            <h3>Tài khoản VIP</h3>
                             <div class="number" id="totalVipUsers">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card online-users">
+                        <div class="stat-info">
+                            <h3>Đang trực tuyến</h3>
+                            <div class="number" style="color: #3b82f6;">
+                                <span id="totalOnlineUsers">0</span>
+                                <span class="online-pulse-dot"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="toolbar">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Tìm kiếm theo Email người dùng...">
-                    <select id="filterSelect">
+                <div class="toolbar-user-modern">
+                    <div class="search-user-container">
+                        <input type="text" id="searchInput" class="search-user-input" placeholder="Nhập địa chỉ Email thành viên cần tìm...">
+                    </div>
+                    <select id="filterSelect" class="select-user-filter">
                         <option value="all">Tất cả trạng thái</option>
-                        <option value="vip">Chỉ VIP</option>
-                        <option value="normal">Thường</option>
-                        <option value="banned">Bị Khóa</option>
+                        <option value="vip">Chỉ tài khoản VIP</option>
+                        <option value="normal">Tài khoản thường</option>
+                        <option value="banned">Tài khoản bị khóa</option>
                     </select>
                 </div>
 
-                <div class="card" style="padding: 0; overflow: hidden;">
+                <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px;">
                     <div class="table-container" style="border: none; border-radius: 0;">
                         <table class="admin-table">
                             <thead>
                                 <tr>
-                                    <th width="5%" class="text-center">STT</th>
-                                    <th width="35%">Email</th>
-                                    <th width="20%" class="text-center">Trạng thái</th>
-                                    <th width="40%" class="text-center">Hành động</th>
+                                    <th width="8%" class="text-center">STT</th>
+                                    <th width="42%">Email Người Dùng</th>
+                                    <th width="20%" class="text-center">Trạng Thái</th>
+                                    <th width="30%" class="text-center">Hành Động</th>
                                 </tr>
                             </thead>
                             <tbody id="usersTableBody">
-                                <tr><td colspan="4" class="loading-text">Đang tải dữ liệu người dùng...</td></tr>
+                                <tr><td colspan="4" class="loading-text">Đang kết nối Firestore đồng bộ danh sách học viên...</td></tr>
                             </tbody>
                         </table>
                     </div>
