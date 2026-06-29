@@ -1,28 +1,34 @@
 import { db, safeRedirect } from "./dashboard-core.js";
-import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, query, orderBy, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // 1. BIẾN TOÀN CỤC LƯU TRỮ TRẠNG THÁI & DỮ LIỆU
 // =========================================================================
-let allExamsCache = []; // Bộ nhớ đệm lưu toàn bộ đề thi để lọc cục bộ (tiết kiệm Firestore reads)
+let allExamsCache = []; 
 let isUserVip = false;
+let currentUserUid = null;
 
 // Các biến trạng thái của Bộ lọc
-let currentTechnique = 'all'; // Lấy từ Sidebar Sub-menu
-let currentLevel = 'all';     // Lấy từ Pill button Cấp độ
-let currentTime = 'all';      // Lấy từ Pill button Thời gian
-let currentSort = 'newest';   // Lấy từ Select Option Sắp xếp
+let currentTechnique = 'all'; 
+let currentLevel = 'all';     
+let currentTime = 'all';      
+let currentSort = 'newest';   
+
+const examContainer = document.getElementById('examListContainer');
 
 // =========================================================================
-// 2. KHỞI TẠO & LẮNG NGHE TRẠNG THÁI NGƯỜI DÙNG
+// 2. KHỞI TẠO & LẮNG NGHE TRẠNG THÁI NGƯỜI DÙNG TỪ CORE
 // =========================================================================
 document.addEventListener("authReady", (e) => {
-    const { currentUserData } = e.detail;
+    const { user, currentUserData } = e.detail;
+    currentUserUid = user.uid;
+    
     if (currentUserData && currentUserData.isVip) {
         isUserVip = true;
     }
     
-    // Tải dữ liệu lần đầu tiên sau khi đã xác thực xong
+    // Tải thống kê thật từ DB và danh sách đề thi
+    loadUserStats(currentUserUid);
     loadExamsFromFirestore();
 });
 
@@ -31,39 +37,43 @@ document.addEventListener("authReady", (e) => {
 // =========================================================================
 
 // A. Bộ lọc Kỹ thuật (Từ Sidebar Accordion Sub-menu)
-const submenuItems = document.querySelectorAll('.submenu-item');
-submenuItems.forEach(item => {
-    item.addEventListener('click', (e) => {
-        // Lấy giá trị data-technique ('all', 'MRI', 'CT', 'X quang', 'Hỗn hợp')
-        currentTechnique = e.currentTarget.getAttribute('data-technique') || 'all';
-        applyFiltersAndRender();
+const submenuItems = document.querySelectorAll('.submenu-item[data-technique]');
+if (submenuItems.length > 0) {
+    submenuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            currentTechnique = e.currentTarget.getAttribute('data-technique') || 'all';
+            applyFiltersAndRender();
+        });
     });
-});
+}
 
 // B. Bộ lọc Cấp độ (Pill Buttons)
 const filterLevelBtns = document.querySelectorAll('.filter-level');
-filterLevelBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        // Xóa active hiện tại, thêm active cho nút được bấm
-        filterLevelBtns.forEach(b => b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        
-        currentLevel = e.currentTarget.getAttribute('data-level') || 'all';
-        applyFiltersAndRender();
+if (filterLevelBtns.length > 0) {
+    filterLevelBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            filterLevelBtns.forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            
+            currentLevel = e.currentTarget.getAttribute('data-level') || 'all';
+            applyFiltersAndRender();
+        });
     });
-});
+}
 
 // C. Bộ lọc Thời gian (Pill Buttons)
 const filterTimeBtns = document.querySelectorAll('.filter-time');
-filterTimeBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        filterTimeBtns.forEach(b => b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        
-        currentTime = e.currentTarget.getAttribute('data-time') || 'all';
-        applyFiltersAndRender();
+if (filterTimeBtns.length > 0) {
+    filterTimeBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            filterTimeBtns.forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            
+            currentTime = e.currentTarget.getAttribute('data-time') || 'all';
+            applyFiltersAndRender();
+        });
     });
-});
+}
 
 // D. Sắp xếp (Select Dropdown)
 const sortSelect = document.getElementById('sortFilter');
@@ -76,31 +86,67 @@ if (sortSelect) {
 
 // E. Chuyển đổi View (Grid / List)
 const viewBtns = document.querySelectorAll('.view-btn');
-const examContainer = document.getElementById('examListContainer');
-
-viewBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-        viewBtns.forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        
-        const viewType = this.getAttribute('data-view');
-        if (viewType === 'list') {
-            examContainer.classList.remove('grid-view');
-            examContainer.classList.add('list-view');
-        } else {
-            examContainer.classList.remove('list-view');
-            examContainer.classList.add('grid-view');
-        }
+if (viewBtns.length > 0 && examContainer) {
+    viewBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            viewBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const viewType = this.getAttribute('data-view');
+            if (viewType === 'list') {
+                examContainer.classList.remove('grid-view');
+                examContainer.classList.add('list-view');
+            } else {
+                examContainer.classList.remove('list-view');
+                examContainer.classList.add('grid-view');
+            }
+        });
     });
-});
+}
 
 // =========================================================================
-// 4. HÀM KÉO DỮ LIỆU TỪ FIRESTORE (CHỈ GỌI 1 LẦN KHI LOAD TRANG)
+// 4. HÀM LẤY THỐNG KÊ KẾT QUẢ THẬT TỪ FIRESTORE
+// =========================================================================
+async function loadUserStats(uid) {
+    const statCompletedEl = document.getElementById('statCompletedExams');
+    const statAvgEl = document.getElementById('statAvgScore');
+    
+    try {
+        const resultsRef = collection(db, "results");
+        // Lấy tất cả bài thi mà user này đã làm
+        const q = query(resultsRef, where("userId", "==", uid));
+        const snapshot = await getDocs(q);
+        
+        let totalExams = 0;
+        let totalScore = 0;
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            totalExams++;
+            // Giả sử field điểm lưu tên là 'score'
+            totalScore += parseFloat(data.score) || 0; 
+        });
+
+        const avgScore = totalExams > 0 ? (totalScore / totalExams).toFixed(1) : "0.0";
+
+        if (statCompletedEl) statCompletedEl.innerHTML = totalExams + " đề";
+        if (statAvgEl) statAvgEl.innerHTML = avgScore + " đ";
+
+    } catch (error) {
+        console.error("Lỗi khi tải thống kê cá nhân:", error);
+        if (statCompletedEl) statCompletedEl.innerHTML = "Lỗi dữ liệu";
+        if (statAvgEl) statAvgEl.innerHTML = "Lỗi dữ liệu";
+    }
+}
+
+// =========================================================================
+// 5. HÀM KÉO DỮ LIỆU ĐỀ THI TỪ FIRESTORE (CHỈ GỌI 1 LẦN)
 // =========================================================================
 async function loadExamsFromFirestore() {
+    if (!examContainer) return;
+
     try {
         const examsRef = collection(db, "exams");
-        // Mặc định kéo về sắp xếp theo ngày tạo mới nhất
         const q = query(examsRef, orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
         
@@ -121,40 +167,29 @@ async function loadExamsFromFirestore() {
                 createdAt: data.createdAt ? data.createdAt.toDate().getTime() : 0
             });
         });
-        
-        // Cập nhật thống kê sơ bộ (Mô phỏng/Tùy chỉnh nếu có DB chi tiết hơn)
-        document.getElementById('statCompletedExams').innerHTML = Math.floor(Math.random() * 10) + " đề"; 
-        document.getElementById('statAvgScore').innerHTML = (Math.random() * (9.5 - 6.5) + 6.5).toFixed(1) + " đ";
 
-        // Sau khi có dữ liệu gốc, chạy qua bộ lọc và hiển thị
         applyFiltersAndRender();
 
     } catch (error) {
         console.error("Lỗi khi tải danh sách đề thi:", error);
-        examContainer.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--danger-red); padding: 20px;">Lỗi tải dữ liệu. Vui lòng kiểm tra lại kết nối.</div>`;
+        examContainer.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--danger-red); padding: 20px;">Lỗi tải dữ liệu. Vui lòng kiểm tra lại kết nối internet.</div>`;
     }
 }
 
 // =========================================================================
-// 5. HÀM LỌC, SẮP XẾP VÀ RENDER DỮ LIỆU LÊN MÀN HÌNH
+// 6. HÀM LỌC, SẮP XẾP VÀ RENDER DỮ LIỆU LÊN MÀN HÌNH
 // =========================================================================
 function applyFiltersAndRender() {
-    // 1. Lọc mảng dữ liệu (Array.prototype.filter)
+    // 1. Lọc mảng dữ liệu qua 3 điều kiện
     let filteredExams = allExamsCache.filter(exam => {
-        // Kiểm tra Kỹ thuật
         const passTechnique = (currentTechnique === 'all') || (exam.technique === currentTechnique);
-        
-        // Kiểm tra Cấp độ
         const passLevel = (currentLevel === 'all') || (exam.level === currentLevel);
-        
-        // Kiểm tra Thời gian (ép kiểu thời gian về chuỗi để so sánh với data-time)
         const passTime = (currentTime === 'all') || (String(exam.timeLimit) === currentTime);
 
-        // Trả về true nếu thỏa mãn cả 3 điều kiện
         return passTechnique && passLevel && passTime;
     });
 
-    // 2. Lọc và Sắp xếp nâng cao theo Toolbar Select Option
+    // 2. Sắp xếp dữ liệu
     if (currentSort === 'only_vip') {
         filteredExams = filteredExams.filter(exam => exam.isVipOnly === true);
     } else if (currentSort === 'only_free') {
@@ -164,15 +199,16 @@ function applyFiltersAndRender() {
     } else if (currentSort === 'most_attempts') {
         filteredExams.sort((a, b) => b.attempts - a.attempts);
     } else {
-        // 'newest' - Đã sort sẵn từ Firebase nhưng sort lại cho chắc chắn
         filteredExams.sort((a, b) => b.createdAt - a.createdAt);
     }
 
-    // 3. Render HTML ra giao diện
+    // 3. Kết xuất UI
     renderToDOM(filteredExams);
 }
 
 function renderToDOM(examsArray) {
+    if (!examContainer) return;
+
     if (examsArray.length === 0) {
         examContainer.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px; background: var(--white); border-radius: 12px; border: 1px dashed var(--border-color);">
@@ -189,21 +225,13 @@ function renderToDOM(examsArray) {
     examsArray.forEach(exam => {
         const isLocked = exam.isVipOnly && !isUserVip;
         
-        // Cấu hình Badge
-        let badgeHtml = "";
-        if (exam.isVipOnly) {
-            badgeHtml = `<div class="course-badge badge-vip"><i class="fa-solid fa-crown"></i> VIP</div>`;
-        } else {
-            badgeHtml = `<div class="course-badge badge-free">Free</div>`;
-        }
+        let badgeHtml = exam.isVipOnly 
+            ? `<div class="course-badge badge-vip"><i class="fa-solid fa-crown"></i> VIP</div>` 
+            : `<div class="course-badge badge-free">Free</div>`;
 
-        // Cấu hình Nút bấm
-        let buttonHtml = "";
-        if (isLocked) {
-            buttonHtml = `<button class="btn-locked" disabled><i class="fa-solid fa-lock"></i> Nâng cấp VIP để mở</button>`;
-        } else {
-            buttonHtml = `<button class="btn-primary btn-start-exam" data-id="${exam.id}"><i class="fa-solid fa-play"></i> Bắt đầu thi</button>`;
-        }
+        let buttonHtml = isLocked 
+            ? `<button class="btn-locked" disabled><i class="fa-solid fa-lock"></i> Nâng cấp VIP để mở</button>`
+            : `<button class="btn-primary btn-start-exam" data-id="${exam.id}"><i class="fa-solid fa-play"></i> Bắt đầu thi</button>`;
 
         const cardHtml = `
             <div class="course-card">
@@ -249,12 +277,10 @@ function renderToDOM(examsArray) {
         examContainer.insertAdjacentHTML('beforeend', cardHtml);
     });
 
-    // Gắn sự kiện cho các nút "Bắt đầu thi" vừa được tạo
     const startBtns = document.querySelectorAll('.btn-start-exam');
     startBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const examId = e.currentTarget.getAttribute('data-id');
-            // Chuyển hướng người dùng tới trang làm bài thi (vd: exam.html?id=xxx)
             safeRedirect(`exam.html?id=${examId}`);
         });
     });
