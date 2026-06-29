@@ -4,12 +4,20 @@ import {
     collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, where 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Biến tạm lưu trữ dữ liệu Excel sau khi đọc thành công và mã đề đang chỉnh sửa
+// Biến trạng thái bộ lọc toàn cục (Mặc định ban đầu)
+let currentTechnique = "MRI";
+let currentLevel = "all";
+let currentTime = "all";
+
+// Bộ nhớ đệm lưu trữ danh sách đề thi thô tải về từ Firestore
+let cachedExams = [];
+
+// Biến tạm phục vụ quy trình Import Excel & ID đề thi đang chỉnh sửa
 let draftData = [];
 let currentEditingExamId = "";
 
 // =========================================================================
-// 1. TẢI VÀ HIỂN THỊ DANH SÁCH ĐỀ THI (CÓ BỔ SUNG CỘT PHÂN LOẠI BADGES)
+// 1. TẢI DỮ LIỆU TỪ FIRESTORE (POPULATE CACHE)
 // =========================================================================
 export async function loadExamList() {
     const tbody = document.getElementById('exam-list-body');
@@ -23,7 +31,7 @@ export async function loadExamList() {
             getDocs(collection(db, "exams"))
         ]);
         
-        // Bản đồ hóa cấu hình thuộc tính của đề thi (Metadata)
+        // Bản đồ hóa cấu hình metadata từ collection "exams"
         const examDataMap = {};
         examsSnapshot.forEach(docSnap => {
             const data = docSnap.data();
@@ -36,7 +44,7 @@ export async function loadExamList() {
             };
         });
 
-        // Gom nhóm đếm số lượng câu hỏi thực tế của đề
+        // Gom nhóm và đếm số lượng câu hỏi thực tế từ collection "questions"
         const examGroups = {}; 
         questionsSnapshot.forEach((docSnap) => {
             const data = docSnap.data();
@@ -48,90 +56,157 @@ export async function loadExamList() {
             examGroups[examId]++; 
         });
 
-        tbody.innerHTML = '';
-        let stt = 1;
-        
-        if (Object.keys(examGroups).length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-message">Hệ thống chưa có câu hỏi nào. Hãy chuyển sang Tab Import để nạp dữ liệu!</td></tr>';
-            return;
-        }
-
-        // Vòng lặp kết xuất dữ liệu ra bảng tổng
+        // Nạp toàn bộ dữ liệu xử lý thô vào mảng bộ nhớ đệm toàn cục
+        cachedExams = [];
         for (const examId in examGroups) {
             const count = examGroups[examId];
             const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình" };
 
-            // Phân định lớp CSS cho màu sắc huy hiệu Cấp độ
-            let levelClass = 'level-medium';
-            if (config.level === 'Dễ') levelClass = 'level-easy';
-            else if (config.level === 'Khó') levelClass = 'level-hard';
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="text-center">${stt++}</td>
-                <td><strong>${examId}</strong></td>
-                <td>
-                    <span class="badge-meta">${config.technique}</span>
-                    <span class="badge-meta ${levelClass}">${config.level}</span>
-                </td>
-                <td class="text-center">
-                    <div style="margin-bottom: 5px;"><span class="badge-count">${count} câu</span></div>
-                    <div>${config.isVip ? '<span class="badge-vip-exam">VIP 👑</span>' : '<span class="badge-free">Miễn Phí</span>'}</div>
-                </td>
-                <td class="text-center">
-                    <div class="config-text">⏱️ Thời gian: <strong>${config.timeLimit}</strong> phút</div>
-                    <div class="config-text">🔄 Lượt thi: <strong>${config.attemptCount}</strong></div>
-                </td>
-                <td class="text-center">
-                    <div class="action-buttons">
-                        <button class="btn-sm btn-edit-properties" 
-                                data-examid="${examId}" 
-                                data-technique="${config.technique}" 
-                                data-time="${config.timeLimit}" 
-                                data-level="${config.level}">⚙️ Sửa Thuộc Tính</button>
-                        <button class="btn-sm btn-view-feedback" data-examid="${examId}">⭐ Xem Đánh Giá</button>
-                        ${config.isVip 
-                            ? `<button class="btn-sm btn-exam-vip-off btn-toggle-exam-vip" data-examid="${examId}" data-vip="true">Tắt VIP</button>`
-                            : `<button class="btn-sm btn-exam-vip-on btn-toggle-exam-vip" data-examid="${examId}" data-vip="false">Bật VIP</button>`
-                        }
-                        <button class="btn-sm btn-delete" data-examid="${examId}">🗑️ Xóa</button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
+            cachedExams.push({
+                examId: examId,
+                count: count,
+                isVip: config.isVip,
+                timeLimit: config.timeLimit,
+                attemptCount: config.attemptCount,
+                technique: config.technique,
+                level: config.level
+            });
         }
+
+        // Kích hoạt hàm render lọc dữ liệu ra giao diện
+        renderExamList();
+
     } catch (error) {
         console.error("Lỗi khi tải danh sách đề thi:", error);
-        tbody.innerHTML = `<tr><td colspan="6" class="empty-message" style="color: red;">❌ Lỗi tải dữ liệu đề thi.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-message" style="color: red;">❌ Lỗi tải dữ liệu đề thi từ hệ thống.</td></tr>`;
     }
 }
 
 // =========================================================================
-// 2. NGHIỆP VỤ CẬP NHẬT THUỘC TÍNH ĐỀ THI ĐÃ XUẤT BẢN (NÂNG CẤP MỚI)
+// 2. HÀM KẾT XUẤT DỮ LIỆU QUA 3 LỚP FILTER REALTIME (NÂNG CẤP CHÍNH)
 // =========================================================================
+export function renderExamList() {
+    const tbody = document.getElementById('exam-list-body');
+    if (!tbody) return;
 
-// Hàm mở Modal và gán tự động dữ liệu thuộc tính HIỆN TẠI của đề thi
+    // Tiến hành lọc dữ liệu từ bộ nhớ đệm qua 3 tầng điều kiện song song
+    const filteredExams = cachedExams.filter(exam => {
+        const matchTech = exam.technique === currentTechnique;
+        const matchLevel = currentLevel === "all" || exam.level === currentLevel;
+        const matchTime = currentTime === "all" || String(exam.timeLimit) === String(currentTime);
+        return matchTech && matchLevel && matchTime;
+    });
+
+    tbody.innerHTML = '';
+    let stt = 1;
+
+    // Giao diện khi không có kết quả phù hợp
+    if (filteredExams.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-message">Không có đề thi nào thỏa mãn bộ lọc hiện tại (Kỹ thuật: ${currentTechnique} | Cấp độ: ${currentLevel} | Thời gian: ${currentTime === 'all' ? 'Tất cả' : currentTime + ' phút'}).</td></tr>`;
+        return;
+    }
+
+    // Vòng lặp kết xuất các bản ghi thỏa mãn điều kiện
+    filteredExams.forEach(exam => {
+        let levelClass = 'level-medium';
+        if (exam.level === 'Dễ') levelClass = 'level-easy';
+        else if (exam.level === 'Khó') levelClass = 'level-hard';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="text-center">${stt++}</td>
+            <td><strong>${exam.examId}</strong></td>
+            <td>
+                <span class="badge-meta">${exam.technique}</span>
+                <span class="badge-meta ${levelClass}">${exam.level}</span>
+            </td>
+            <td class="text-center">
+                <div style="margin-bottom: 5px;"><span class="badge-count">${exam.count} câu</span></div>
+                <div>${exam.isVip ? '<span class="badge-vip-exam">VIP 👑</span>' : '<span class="badge-free">Miễn Phí</span>'}</div>
+            </td>
+            <td class="text-center">
+                <div class="config-text">⏱️ Thời gian: <strong>${exam.timeLimit}</strong> phút</div>
+                <div class="config-text">🔄 Lượt thi: <strong>${exam.attemptCount}</strong></div>
+            </td>
+            <td class="text-center">
+                <div class="action-buttons">
+                    <button class="btn-sm btn-edit-properties" 
+                            data-examid="${exam.examId}" 
+                            data-technique="${exam.technique}" 
+                            data-time="${exam.timeLimit}" 
+                            data-level="${exam.level}">⚙️ Sửa Thuộc Tính</button>
+                    <button class="btn-sm btn-view-feedback" data-examid="${exam.examId}">⭐ Xem Đánh Giá</button>
+                    ${exam.isVip 
+                        ? `<button class="btn-sm btn-exam-vip-off btn-toggle-exam-vip" data-examid="${exam.examId}" data-vip="true">Tắt VIP</button>`
+                        : `<button class="btn-sm btn-exam-vip-on btn-toggle-exam-vip" data-examid="${exam.examId}" data-vip="false">Bật VIP</button>`
+                    }
+                    <button class="btn-sm btn-delete" data-examid="${exam.examId}">🗑️ Xóa</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// =========================================================================
+// 3. KHỞI TẠO BỘ LẮNG NGHE SỰ KIỆN TỪ SIDEBAR & CÁC THANH TABS DÀN NGANG
+// =========================================================================
+function initFilterChangeListeners() {
+    // A. Lắng nghe click Chuyên khoa từ Sidebar (MRI, CT, X quang, Hỗn hợp)
+    const sidebarItems = document.querySelectorAll('.sidebar-menu .menu-item[data-tech]');
+    sidebarItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const tech = item.getAttribute('data-tech');
+            if (tech) {
+                currentTechnique = tech;
+                renderExamList(); // Re-render ngay lập tức từ cache
+            }
+        });
+    });
+
+    // B. Lắng nghe click hàng nút dàn ngang (Pills) chọn Độ Khó
+    const levelPills = document.querySelectorAll('#filter-level-pills .pill-btn');
+    levelPills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            levelPills.forEach(btn => btn.classList.remove('active'));
+            pill.classList.add('active');
+            
+            currentLevel = pill.getAttribute('data-level');
+            renderExamList();
+        });
+    });
+
+    // C. Lắng nghe click hàng nút dàn ngang (Pills) chọn Thời Gian Thi
+    const timePills = document.querySelectorAll('#filter-time-pills .pill-btn');
+    timePills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            timePills.forEach(btn => btn.classList.remove('active'));
+            pill.classList.add('active');
+            
+            currentTime = pill.getAttribute('data-time');
+            renderExamList();
+        });
+    });
+}
+
+// =========================================================================
+// 4. NGHIỆP VỤ ĐIỀU CHỈNH ĐỀ THI (VIP, EDIT PROPERTIES, DELETE, FEEDBACK)
+// =========================================================================
 function openEditPropertiesModal(examId, technique, time, level) {
     currentEditingExamId = examId;
-    
     const modal = document.getElementById('edit-properties-modal');
     const modalTitleId = document.getElementById('edit-modal-exam-id');
-    const selectTech = document.getElementById('edit-select-technique');
-    const selectTime = document.getElementById('edit-select-time');
-    const selectLevel = document.getElementById('edit-select-level');
-
+    
     if (!modal) return;
 
     modalTitleId.innerText = examId;
-    selectTech.value = technique || "Hỗn hợp";
-    selectTime.value = time || "15";
-    selectLevel.value = level || "Trung bình";
+    document.getElementById('edit-select-technique').value = technique || "Hỗn hợp";
+    document.getElementById('edit-select-time').value = time || "15";
+    document.getElementById('edit-select-level').value = level || "Trung bình";
 
-    // Hiển thị modal sửa thuộc tính
     modal.style.display = "block";
 }
 
-// Hàm đẩy thông tin thay đổi mới từ Modal lên Cloud Firestore
 async function updateExamProperties() {
     if (!currentEditingExamId) return;
 
@@ -146,8 +221,6 @@ async function updateExamProperties() {
 
     try {
         const examRef = doc(db, "exams", currentEditingExamId);
-        
-        // Thực hiện updateDoc cập nhật cục bộ Metadata của đề
         await updateDoc(examRef, {
             technique: technique,
             timeLimit: timeLimit,
@@ -157,21 +230,17 @@ async function updateExamProperties() {
         showToast(`Cập nhật thuộc tính đề "${currentEditingExamId}" thành công!`, "success");
         if (modal) modal.style.display = "none";
         
-        // Tải lại bảng danh sách đề thi tổng hợp
-        loadExamList();
+        loadExamList(); // Làm mới bộ đệm cache và cập nhật bảng dữ liệu
 
     } catch (error) {
-        console.error("Lỗi cập nhật thuộc tính đề thi:", error);
-        showToast("Không thể lưu thay đổi thuộc tính", "error");
+        console.error("Lỗi cập nhật thuộc tính:", error);
+        showToast("Không thể lưu thay đổi", "error");
     } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = "💾 Lưu Thay Đổi";
     }
 }
 
-// =========================================================================
-// 3. ĐIỀU CHỈNH TRẠNG THÁI KHÁC (VIP, DELETE, FEEDBACK)
-// =========================================================================
 async function toggleExamVip(examId, currentVipState) {
     try {
         await setDoc(doc(db, "exams", examId), { isVip: !currentVipState }, { merge: true });
@@ -260,7 +329,7 @@ async function viewFeedback(examId) {
 }
 
 // =========================================================================
-// 4. QUY TRÌNH IMPORT & PREVIEW EXCEL (GIỮ NGUYÊN)
+// 5. QUY TRÌNH IMPORT & PREVIEW EXCEL
 // =========================================================================
 function renderPreview() {
     const previewBody = document.getElementById('preview-list-body');
@@ -278,16 +347,11 @@ function renderPreview() {
     let stt = 1;
     draftData.forEach((row) => {
         const tr = document.createElement('tr');
-        
         const optionsHtml = `
             <div style="font-size:13px; line-height:1.4;">
-                A: ${row.options[0]}<br>
-                B: ${row.options[1]}<br>
-                C: ${row.options[2]}<br>
-                D: ${row.options[3]}
+                A: ${row.options[0]}<br> B: ${row.options[1]}<br> C: ${row.options[2]}<br> D: ${row.options[3]}
             </div>
         `;
-        
         const mapCorrectText = ['A', 'B', 'C', 'D'];
         const correctChar = mapCorrectText[row.correctAnswer] || 'Không rõ';
 
@@ -328,7 +392,7 @@ function handleExcelRead() {
                 const workbook = XLSX.read(data, { type: 'array' });
                 const jsonArr = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-                if (jsonArr.length === 0) throw new Error("File Excel không chứa bất kỳ bản ghi nào!");
+                if (jsonArr.length === 0) throw new Error("File Excel rỗng!");
 
                 draftData = [];
                 jsonArr.forEach((row) => {
@@ -350,7 +414,6 @@ function handleExcelRead() {
 
                 showToast(`Đọc file thành công! Đã nạp ${draftData.length} câu hỏi vào danh sách xem trước.`, "success");
                 
-                // Hiển thị tên file và vẽ bảng
                 if (fileNameDisplay) {
                     fileNameDisplay.innerText = `Đã chọn: ${file.name}`;
                     fileNameDisplay.style.display = 'inline-block';
@@ -358,7 +421,7 @@ function handleExcelRead() {
                 renderPreview();
 
             } catch (error) {
-                alert("❌ Không thể đọc file Excel. Vui lòng kiểm tra lại cấu trúc.\nChi tiết: " + error.message);
+                alert("❌ Không thể đọc file Excel. Chi tiết: " + error.message);
             } finally {
                 importBtn.disabled = false;
                 importBtn.innerHTML = "👁️ Đọc Dữ Liệu & Xem Trước";
@@ -373,16 +436,16 @@ async function publishExam() {
     const fileInput = document.getElementById('excel-file');
     const fileNameDisplay = document.getElementById('file-name-display');
 
-    const selectTechnique = document.getElementById('select-technique');
-    const selectTime = document.getElementById('select-time');
-    const selectLevel = document.getElementById('select-level');
+    const techniqueValue = document.getElementById('select-technique').value;
+    const timeLimitValue = parseInt(document.getElementById('select-time').value, 10);
+    const levelValue = document.getElementById('select-level').value;
 
     if (!publishBtn || draftData.length === 0) return;
 
     if (!confirm(`Bạn có chắc chắn muốn xuất bản ${draftData.length} câu hỏi kèm cấu hình thuộc tính đã chọn không?`)) return;
 
     publishBtn.disabled = true;
-    publishBtn.innerHTML = "⏳ Đang thực hiện lưu dữ liệu và cấu hình...";
+    publishBtn.innerHTML = "⏳ Đang xuất bản dữ liệu...";
 
     try {
         let uniqueExamIds = new Set();
@@ -391,10 +454,6 @@ async function publishExam() {
             uniqueExamIds.add(questionItem.examId);
             await addDoc(collection(db, "questions"), questionItem);
         }
-
-        const techniqueValue = selectTechnique ? selectTechnique.value : "Hỗn hợp";
-        const timeLimitValue = selectTime ? parseInt(selectTime.value, 10) : 15;
-        const levelValue = selectLevel ? selectLevel.value : "Trung bình";
 
         for (const examId of uniqueExamIds) {
             await setDoc(doc(db, "exams", examId), {
@@ -405,7 +464,7 @@ async function publishExam() {
             }, { merge: true });
         }
 
-        alert(`🎉 XUẤT BẢN THÀNH CÔNG!\n- Đã nạp: ${draftData.length} câu hỏi.\n- Đồng bộ Metadata thành công.`);
+        alert(`🎉 XUẤT BẢN THÀNH CÔNG!\n- Đã nạp: ${draftData.length} câu hỏi vào Database.`);
         
         draftData = [];
         if (fileInput) fileInput.value = "";
@@ -415,29 +474,30 @@ async function publishExam() {
         loadExamList();
 
     } catch (error) {
-        alert("❌ Quá trình xuất bản thất bại.\nChi tiết: " + error.message);
+        alert("❌ Quá trình xuất bản thất bại. Chi tiết: " + error.message);
         publishBtn.disabled = false;
         publishBtn.innerHTML = "🔒 Xác Nhận & Publish Lên Hệ Thống";
     }
 }
 
 // =========================================================================
-// 5. KHỞI TẠO VÀ GẮN LẮNG NGHE SỰ KIỆN BAN ĐẦU
+// 6. KHỞI TẠO VÀ ĐĂNG KÝ SỰ KIỆN BAN ĐẦU
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     loadExamList();
     handleExcelRead();
+    initFilterChangeListeners(); // Khởi chạy bộ lắng nghe sự kiện lọc Pill & Sidebar mới
 
-    // Sự kiện tải file mẫu Excel
+    // Tải file Excel mẫu
     const downloadBtn = document.getElementById('btn-download-template');
     if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
             const templateData = [{ 
-                "Mã Đề (examId)": "DE_002", 
-                "Nội Dung (text)": "Hệ thống đang chạy kiến trúc module gì?", 
-                "Đáp Án A": "CommonJS", "Đáp Án B": "ES6 Module", "Đáp Án C": "AMD", "Đáp Án D": "UMD", 
+                "Mã Đề (examId)": "DE_MRI_01", 
+                "Nội Dung (text)": "Chuỗi xung T2W trên MRI làm nước có màu gì?", 
+                "Đáp Án A": "Màu đen", "Đáp Án B": "Màu Trắng sáng", "Đáp Án C": "Màu xám", "Đáp Án D": "Màu đỏ", 
                 "Đáp Án Đúng (0=A, 1=B, 2=C, 3=D)": 1, 
-                "Giải thích (explanation)": "Hệ thống đang chạy kiến trúc ES6 Module." 
+                "Giải thích (explanation)": "Trên chuỗi xung dịch nước (như dịch não tủy) có tín hiệu cao (trắng)." 
             }];
             const ws = XLSX.utils.json_to_sheet(templateData);
             ws['!cols'] = [{wch: 15}, {wch: 40}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 30}, {wch: 50}];
@@ -447,7 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Gắn sự kiện click cho nút "Lưu thay đổi" của Modal Chỉnh sửa thuộc tính
+    // Modal lưu chỉnh sửa thuộc tính
     const savePropsBtn = document.getElementById('btn-save-properties');
     if (savePropsBtn) {
         savePropsBtn.addEventListener('click', updateExamProperties);
@@ -458,11 +518,10 @@ document.addEventListener('DOMContentLoaded', () => {
         publishBtn.addEventListener('click', publishExam);
     }
 
-    // Kỹ thuật Event Delegation (Ủy quyền sự kiện) linh hoạt trên bảng danh sách đề thi tổng hợp
+    // Event Delegation cho các thao tác trên dòng bảng kết quả
     const examBody = document.getElementById('exam-list-body');
     if (examBody) {
         examBody.addEventListener('click', (e) => {
-            // Nút mở Modal sửa toàn bộ thuộc tính mới
             const editPropsBtn = e.target.closest('.btn-edit-properties');
             if (editPropsBtn) {
                 const dataset = editPropsBtn.dataset;
@@ -480,19 +539,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Đóng Modal Sửa thuộc tính
-    const closeEditModalBtn = document.getElementById("closeEditPropertiesModal");
-    if (closeEditModalBtn) {
-        closeEditModalBtn.onclick = () => {
-            document.getElementById("edit-properties-modal").style.display = "none";
-        };
-    }
-
-    // Đóng Modal Feedback
-    const closeFeedbackBtn = document.getElementById("closeFeedbackModal");
-    if (closeFeedbackBtn) {
-        closeFeedbackBtn.onclick = () => {
-            document.getElementById("feedback-modal").style.display = "none";
-        };
-    }
+    // Cơ chế đóng các Modals thủ công
+    document.getElementById("closeEditPropertiesModal").onclick = () => {
+        document.getElementById("edit-properties-modal").style.display = "none";
+    };
+    document.getElementById("closeFeedbackModal").onclick = () => {
+        document.getElementById("feedback-modal").style.display = "none";
+    };
 });
