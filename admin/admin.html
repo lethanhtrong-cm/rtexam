@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Hệ thống thi trắc nghiệm</title>
+    <title>Admin Dashboard Pro - Hệ thống thi trắc nghiệm</title>
 
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
@@ -13,15 +12,31 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f3f4f6; color: #333; display: flex; height: 100vh; overflow: hidden; }
         
-        /* ================= SIDEBAR ================= */
+        /* ================= SIDEBAR ACCORDION ================= */
         .sidebar { width: 260px; background-color: #1e3a8a; color: white; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; }
         .sidebar-header { padding: 25px 20px; background-color: #1e40af; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
         .sidebar-title { font-size: 22px; font-weight: bold; color: #ffffff; }
         .sidebar-subtitle { font-size: 13px; color: #93c5fd; margin-top: 5px; }
-        .sidebar-menu { display: flex; flex-direction: column; padding-top: 20px; flex: 1; }
-        .menu-item { padding: 16px 20px; background: none; border: none; color: #bfdbfe; text-align: left; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 12px; }
+        
+        .sidebar-menu { display: flex; flex-direction: column; padding-top: 15px; flex: 1; overflow-y: auto; }
+        
+        /* Menu Mẹ */
+        .menu-parent { width: 100%; padding: 14px 20px; background: none; border: none; color: #ffffff; text-align: left; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; }
+        .menu-parent:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .menu-parent .parent-title { display: flex; align-items: center; gap: 10px; }
+        .menu-parent .arrow-icon { font-size: 11px; transition: transform 0.3s ease; color: #93c5fd; }
+        .menu-parent.open .arrow-icon { transform: rotate(180deg); }
+        
+        /* Khối Menu Con */
+        .submenu { display: none; background-color: #172554; padding: 5px 0; }
+        .submenu.show { display: block; }
+        
+        /* Menu Con Chi Tiết */
+        .menu-item { width: 100%; padding: 12px 20px 12px 45px; background: none; border: none; color: #bfdbfe; text-align: left; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: block; position: relative; }
         .menu-item:hover { background-color: #2563eb; color: white; }
-        .menu-item.active { background-color: #3b82f6; color: white; border-left: 4px solid #60a5fa; padding-left: 16px; font-weight: 600; }
+        .menu-item.active { background-color: #3b82f6; color: white; font-weight: 600; }
+        .menu-item.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: #60a5fa; }
+        
         .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
         .btn-logout { background-color: #ef4444; color: white; width: 100%; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-logout:hover { background-color: #dc2626; }
@@ -56,16 +71,20 @@
         /* File Upload */
         .btn-template { background-color: #10b981; color: white; }
         .btn-template:hover { background-color: #059669; }
-        .btn-import { background-color: #3b82f6; color: white; width: 100%; margin-top: 20px; font-size: 16px; padding: 14px; }
-        .btn-import:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-import { background-color: #4b5563; color: white; width: 100%; margin-top: 15px; font-size: 15px; padding: 12px; }
+        .btn-import:hover:not(:disabled) { background-color: #374151; }
         .btn-import:disabled { background-color: #9ca3af; cursor: not-allowed; }
-        .file-upload-wrapper { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 40px 20px; text-align: center; background-color: #f8fafc; transition: all 0.2s; position: relative; }
+        .btn-publish { background-color: #3b82f6; color: white; font-size: 15px; padding: 12px 30px; border-radius: 8px; font-weight: bold; }
+        .btn-publish:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-publish:disabled { background-color: #9ca3af; cursor: not-allowed; }
+
+        .file-upload-wrapper { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 30px 20px; text-align: center; background-color: #f8fafc; transition: all 0.2s; position: relative; }
         .file-upload-wrapper:hover { border-color: #3b82f6; background-color: #eff6ff; }
         .file-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-        .file-label { font-size: 16px; color: #475569; pointer-events: none; }
+        .file-label { font-size: 15px; color: #475569; pointer-events: none; }
         .file-label span { color: #3b82f6; font-weight: 600; }
-        .selected-file-name { margin-top: 15px; font-weight: bold; color: #10b981; font-size: 14px; }
-        .note { font-size: 13px; color: #64748b; background: #fef2f2; padding: 15px; border-radius: 6px; border-left: 4px solid #ef4444; margin-top: 20px; }
+        .selected-file-name { margin-top: 12px; font-weight: bold; color: #10b981; font-size: 14px; }
+        .note { font-size: 13px; color: #64748b; background: #fef2f2; padding: 15px; border-radius: 6px; border-left: 4px solid #ef4444; margin-top: 15px; }
 
         /* ================= BẢNG DỮ LIỆU ================= */
         .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
@@ -124,12 +143,34 @@
             <div class="sidebar-subtitle">Hệ thống thi trắc nghiệm</div>
         </div>
         <nav class="sidebar-menu">
-            <button class="menu-item active" data-target="section-exams" data-title="Quản Lý Đề Thi & Dữ Liệu">
-                📋 Quản Lý Đề Thi
-            </button>
-            <button class="menu-item" data-target="section-users" data-title="Quản Lý Người Dùng">
-                👥 Quản Lý Người Dùng
-            </button>
+            
+            <div class="menu-group">
+                <button class="menu-parent open">
+                    <span class="parent-title">📋 Quản Lý Đề Thi</span>
+                    <span class="arrow-icon">▼</span>
+                </button>
+                <div class="submenu show">
+                    <button class="menu-item active" data-target="tab-exam-list" data-title="Danh Sách Đề Thi Trên Hệ Thống">
+                        📄 Danh sách đề thi
+                    </button>
+                    <button class="menu-item" data-target="tab-exam-import" data-title="Import Đề Thi Vào Hệ Thống">
+                        🚀 Import đề thi
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-group">
+                <button class="menu-parent">
+                    <span class="parent-title">👥 Quản Lý Người Dùng</span>
+                    <span class="arrow-icon">▼</span>
+                </button>
+                <div class="submenu">
+                    <button class="menu-item" data-target="tab-user-list" data-title="Danh Sách Thành Viên & Cấp Quyền VIP">
+                        📄 Danh sách người dùng
+                    </button>
+                </div>
+            </div>
+
         </nav>
         <div class="sidebar-footer">
             <button id="btnLogout" class="btn-logout">Đăng Xuất</button>
@@ -138,27 +179,26 @@
 
     <main class="main-wrapper">
         <header class="topbar">
-            <h2 id="topbar-title">Quản Lý Đề Thi & Dữ Liệu</h2>
+            <h2 id="topbar-title">Danh Sách Đề Thi Trên Hệ Thống</h2>
             <div class="admin-profile">🟢 Đang hoạt động</div>
         </header>
 
         <div class="content-container">
             
-            <section id="section-exams" class="content-section active">
-                
+            <section id="tab-exam-list" class="content-section active">
                 <div class="card">
-                    <h2 class="card-title">📋 Danh Sách Đề Thi Trên Hệ Thống</h2>
-                    <p class="card-description">Quản lý các đề thi hiện có, thiết lập VIP, thay đổi thời gian và xem đánh giá.</p>
+                    <h2 class="card-title">📋 Danh Sách Đề Thi Hiện Tại</h2>
+                    <p class="card-description">Thống kê mã đề, trạng thái VIP và cấu hình thời gian làm bài từ Firebase.</p>
                     
                     <div class="table-container">
                         <table class="admin-table">
                             <thead>
                                 <tr>
                                     <th class="text-center" width="5%">STT</th>
-                                    <th width="20%">Mã Đề Thi</th>
+                                    <th width="25%">Mã Đề Thi</th>
                                     <th class="text-center" width="20%">Trạng thái</th>
                                     <th class="text-center" width="20%">Cấu hình</th>
-                                    <th class="text-center" width="35%">Hành Động</th>
+                                    <th class="text-center" width="30%">Hành Động</th>
                                 </tr>
                             </thead>
                             <tbody id="exam-list-body">
@@ -167,26 +207,57 @@
                         </table>
                     </div>
                 </div>
+            </section>
 
-                <div class="card" style="display: flex; gap: 30px; background: transparent; border: none; box-shadow: none; padding: 0;">
+            <section id="tab-exam-import" class="content-section">
+                <div style="display: flex; gap: 25px; margin-bottom: 25px;">
                     <div class="card" style="flex: 1; margin-bottom: 0;">
-                        <h2 class="card-title">📦 Tải File Mẫu</h2>
-                        <p class="card-description">Đảm bảo dữ liệu đúng định dạng cột quy định trước khi đưa lên hệ thống.</p>
+                        <h2 class="card-title">📦 Bước 1: Tải File Mẫu</h2>
+                        <p class="card-description">Đảm bảo cấu trúc file Excel chính xác theo quy chuẩn cột của hệ thống.</p>
                         <button id="btn-download-template" class="btn btn-template">⬇️ Tải File Excel Mẫu</button>
                     </div>
                     <div class="card" style="flex: 2; margin-bottom: 0;">
-                        <h2 class="card-title">🚀 Import Lên Hệ Thống</h2>
+                        <h2 class="card-title">🚀 Bước 2: Chọn File Cần Đọc</h2>
                         <div class="file-upload-wrapper">
                             <input type="file" id="excel-file" class="file-input" accept=".xlsx, .xls">
                             <div class="file-label">Kéo thả file vào đây hoặc <span>Nhấn để chọn file</span></div>
                             <div id="file-name-display" class="selected-file-name">Chưa có file nào được chọn</div>
                         </div>
-                        <button id="btn-import" class="btn btn-import">⬆️ Bắt Đầu Import Lên Firebase</button>
+                        <button id="btn-import" class="btn btn-import">👁️ Đọc Dữ Liệu & Xem Trước</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 class="card-title" style="margin-bottom:0;">🔍 Bước 3: Xem Trước và Phê Duyệt Xuất Bản</h2>
+                        <button id="btn-publish" class="btn btn-publish" disabled>🔒 Xác Nhận & Publish Lên Hệ Thống</button>
+                    </div>
+                    <p class="card-description">Dưới đây là dữ liệu tạm thời được đọc từ file Excel. Vui lòng kiểm tra kỹ trước khi bấm Xuất bản.</p>
+                    
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" width="5%">STT</th>
+                                    <th width="15%">Mã Đề (examId)</th>
+                                    <th width="35%">Nội Dung Câu Hỏi</th>
+                                    <th width="30%">Các Đáp Án (A, B, C, D)</th>
+                                    <th class="text-center" width="15%">Đáp Án Đúng</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-list-body">
+                                <tr><td colspan="5" class="empty-message">Chưa có dữ liệu nào được nạp để xem trước.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="note">
+                        <strong>Lưu ý:</strong> Quá trình Publish sẽ tạo tài liệu trong 2 collection <code>questions</code> (dữ liệu từng câu hỏi) và <code>exams</code> (cấu hình chung mã đề).
                     </div>
                 </div>
             </section>
 
-            <section id="section-users" class="content-section">
+            <section id="tab-user-list" class="content-section">
                 <div class="stats-container">
                     <div class="stat-card">
                         <div class="stat-info">
@@ -203,7 +274,7 @@
                 </div>
 
                 <div class="toolbar">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Tìm kiếm theo Email...">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Tìm kiếm theo Email người dùng...">
                     <select id="filterSelect">
                         <option value="all">Tất cả trạng thái</option>
                         <option value="vip">Chỉ VIP</option>
@@ -224,7 +295,7 @@
                                 </tr>
                             </thead>
                             <tbody id="usersTableBody">
-                                <tr><td colspan="4" class="loading-text">Đang tải dữ liệu...</td></tr>
+                                <tr><td colspan="4" class="loading-text">Đang tải dữ liệu người dùng...</td></tr>
                             </tbody>
                         </table>
                     </div>
