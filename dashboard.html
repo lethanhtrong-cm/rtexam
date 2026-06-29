@@ -329,11 +329,13 @@
         .stat-card-account { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; border-left: 5px solid #d97706; }
         .stat-card-account .stat-icon { color: #d97706; background: rgba(217, 119, 6, 0.12); }
 
-        /* FILTER PILLS (TÍNH NĂNG MỚI) */
+        /* MỚI: FILTER PILLS HIỂN THỊ DÀN NGANG (FLEX-ROW) */
         .filter-pills-container {
             display: flex;
-            flex-direction: column;
-            gap: 15px;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 30px;
+            align-items: center;
             background: var(--white);
             padding: 15px 20px;
             border-radius: 8px;
@@ -455,9 +457,23 @@
 
         .card-footer { padding: 15px 20px; background-color: var(--gray-bg); border-top: 1px solid var(--border-color); }
         .card-footer button { width: 100%; padding: 12px; font-size: 1rem; }
-        .btn-locked { background-color: var(--locked-color); color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-locked:hover { background-color: var(--locked-hover); }
-
+        
+        /* MỚI: NÚT PRO NỔI BẬT CHO THẺ ĐỀ THI BỊ KHÓA */
+        .btn-pro-locked {
+            background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%);
+            color: #5c3a21;
+            border: 1px solid #ffca28;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.2);
+        }
+        .btn-pro-locked:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(255, 215, 0, 0.4);
+        }
+        
         .list-view .course-card { flex-direction: row; align-items: center; }
         .list-view .card-body { flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; }
         .list-view .card-title { margin: 0; padding-right: 0; flex: 1.5; }
@@ -478,7 +494,7 @@
         .course-card-skeleton .sk-meta { height: 16px; width: 90%; }
         .course-card-skeleton .sk-button { height: 42px; width: 100%; border-radius: 6px; margin-top: 10px; }
 
-        /* PROFILE, HISTORY & VIP TABS CSS (GIỮ NGUYÊN) */
+        /* PROFILE, HISTORY & VIP TABS CSS */
         .profile-grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; align-items: start; }
         .profile-column { display: flex; flex-direction: column; gap: 25px; }
         .profile-grid-layout .card { margin-bottom: 0; }
@@ -512,10 +528,13 @@
             .list-view .course-card { flex-direction: column; align-items: stretch; }
             .list-view .card-body { flex-direction: column; align-items: flex-start; }
             .list-view .card-footer { border-left: none; border-top: 1px solid var(--border-color); }
+            
+            .filter-pills-container { flex-direction: column; align-items: flex-start; gap: 15px; }
+            
             .sidebar { width: 60px; }
             .menu-item span, .sidebar-header h2, .accordion-icon { display: none; }
             .menu-item { justify-content: center; padding: 15px; }
-            .sub-menu-item { display: none; /* Hide submenus on mobile for now */ } 
+            .sub-menu-item { display: none; } 
             .topbar { flex-direction: column; gap: 15px; align-items: flex-start; }
             .topbar-actions { width: 100%; justify-content: space-between; }
         }
@@ -529,7 +548,7 @@
         </div>
         
         <div class="sidebar-menu">
-            <!-- MỚI: ACCORDION KHO ĐỀ THI -->
+            <!-- ACCORDION KHO ĐỀ THI -->
             <div class="menu-accordion">
                 <div class="menu-item accordion-header active" data-target="tab-exams">
                     <div class="header-content">
@@ -537,7 +556,6 @@
                     </div>
                     <i class="fa-solid fa-chevron-down accordion-icon" style="transform: rotate(180deg);"></i>
                 </div>
-                <!-- SUB-MENU LỌC KỸ THUẬT -->
                 <div class="accordion-content show">
                     <div class="sub-menu-item active" data-technique="all">
                         <i class="fa-solid fa-list-ul"></i> Tất cả
@@ -619,7 +637,7 @@
                     </div>
                 </div>
 
-                <!-- MỚI: FILTER TABS (PILL BUTTONS) -->
+                <!-- BỘ LỌC ĐƯỢC CĂN DÀN NGANG CHUYÊN NGHIỆP -->
                 <div class="filter-pills-container">
                     <div class="filter-group">
                         <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
@@ -682,7 +700,6 @@
                 </div>
             </div>
             
-            <!-- CÁC TAB KHÁC GIỮ NGUYÊN (Profile, History, VIP) -->
             <div id="tab-profile" class="tab-pane">
                 <div class="profile-grid-layout">
                     <div class="profile-column">
@@ -758,6 +775,7 @@
                 </div>
             </div>
 
+            <!-- TAB NÂNG CẤP PRO/VIP -->
             <div id="tab-vip" class="tab-pane">
                 <div class="vip-layout">
                     <div class="card vip-card-box">
@@ -767,7 +785,7 @@
                         </p>
                         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
                         <ul style="line-height: 1.8; padding-left: 20px;">
-                            <li>Truy cập toàn bộ kho đề thi VIP độc quyền.</li>
+                            <li>Truy cập toàn bộ kho đề thi Pro độc quyền.</li>
                             <li>Xem giải thích chi tiết đáp án.</li>
                             <li>Lưu lại lịch sử làm bài không giới hạn.</li>
                             <li>Hỗ trợ học tập 24/7.</li>
