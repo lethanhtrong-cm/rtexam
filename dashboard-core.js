@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/fi
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
-// 1. CẤU HÌNH & KHỞI TẠO FIREBASE (ĐƯỢC EXPORT ĐỂ CÁC MODULE KHÁC DÙNG CHUNG)
+// 1. CẤU HÌNH & KHỞI TẠO FIREBASE
 // =========================================================================
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
@@ -21,7 +21,7 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 // =========================================================================
-// 2. HÀM TIỆN ÍCH HỖ TRỢ TOÀN HỆ THỐNG (UTILITIES)
+// 2. HÀM TIỆN ÍCH
 // =========================================================================
 export function safeRedirect(path) {
     if (window.location.protocol === 'blob:') {
@@ -40,9 +40,12 @@ export function formatDate(dateData) {
 }
 
 // =========================================================================
-// 3. LOGIC UI: ĐIỀU HƯỚNG TAB, DROPDOWN & ĐỔI TIÊU ĐỀ TOPBAR
+// 3. LOGIC UI: ĐIỀU HƯỚNG TAB & ACCORDION SIDEBAR
 // =========================================================================
-const menuItems = document.querySelectorAll('.sidebar-menu .menu-item[data-target]');
+const menuExamsToggle = document.getElementById('menuExamsToggle');
+const submenuExams = document.getElementById('submenuExams');
+const submenuItems = document.querySelectorAll('.submenu-item');
+const standardMenuItems = document.querySelectorAll('.sidebar-menu .menu-item:not(#menuExamsToggle)');
 const tabPanes = document.querySelectorAll('.tab-pane');
 const currentTabTitle = document.getElementById("currentTabTitle");
 
@@ -53,22 +56,54 @@ const tabTitleMap = {
     'tab-vip': 'Quản Lý Gói VIP'
 };
 
-// Logic chuyển tab chung từ Sidebar
-menuItems.forEach(item => {
+// Hàm Reset Active toàn bộ menu
+function clearAllMenuActives() {
+    menuExamsToggle.classList.remove('active');
+    submenuItems.forEach(m => m.classList.remove('active'));
+    standardMenuItems.forEach(m => m.classList.remove('active'));
+}
+
+// Xử lý bật/tắt Accordion "Kho Đề Thi"
+if (menuExamsToggle) {
+    menuExamsToggle.addEventListener('click', () => {
+        menuExamsToggle.classList.toggle('expanded');
+        submenuExams.classList.toggle('expanded');
+    });
+}
+
+// Xử lý Click vào Sub-menu (MRI, CT, X quang...)
+submenuItems.forEach(item => {
     item.addEventListener('click', () => {
-        menuItems.forEach(m => m.classList.remove('active'));
+        clearAllMenuActives();
+        menuExamsToggle.classList.add('active'); // Giữ cho thẻ cha sáng lên
+        item.classList.add('active'); // Đánh dấu thẻ con
+
         tabPanes.forEach(pane => pane.classList.remove('active'));
         
-        item.classList.add('active');
         const targetId = item.getAttribute('data-target');
         document.getElementById(targetId).classList.add('active');
+        currentTabTitle.textContent = tabTitleMap[targetId];
 
-        // Thay đổi tiêu đề trên Topbar tương ứng với Menu đang chọn
+        // Ghi chú: Logic set currentTechnique và lọc dữ liệu sẽ được bắt event bên dashboard-exams.js
+    });
+});
+
+// Xử lý Click vào Standard Menu (Ví dụ: Lịch sử làm bài)
+standardMenuItems.forEach(item => {
+    item.addEventListener('click', () => {
+        clearAllMenuActives();
+        item.classList.add('active');
+
+        tabPanes.forEach(pane => pane.classList.remove('active'));
+        
+        const targetId = item.getAttribute('data-target');
+        document.getElementById(targetId).classList.add('active');
         currentTabTitle.textContent = tabTitleMap[targetId] || 'Bảng Điều Khiển';
     });
 });
 
-// Xử lý Logic Dropdown Menu ở Topbar
+
+// Logic Dropdown Menu ở Topbar
 const userMenuToggle = document.getElementById('userMenuToggle');
 const userDropdown = document.getElementById('userDropdown');
 const btnManageProfile = document.getElementById('btnManageProfile');
@@ -86,7 +121,7 @@ document.addEventListener('click', (e) => {
 
 // Khi bấm "Quản lý Hồ Sơ" trong Dropdown Menu
 btnManageProfile.addEventListener('click', () => {
-    menuItems.forEach(m => m.classList.remove('active'));
+    clearAllMenuActives();
     tabPanes.forEach(pane => pane.classList.remove('active'));
     
     document.getElementById('tab-profile').classList.add('active');
@@ -94,20 +129,17 @@ btnManageProfile.addEventListener('click', () => {
 });
 
 // =========================================================================
-// 4. XỬ LÝ THÔNG TIN AUTHENTICATION & ĐỒNG BỘ UI TOPBAR (BAO GỒM NÚT VIP MỚI)
+// 4. XỬ LÝ THÔNG TIN AUTHENTICATION & ĐỒNG BỘ UI TOPBAR
 // =========================================================================
 
-// Xử lý sự kiện click khi bấm "NÂNG CẤP VIP" trên Topbar
 const topbarVipContainer = document.getElementById('topbar-vip-container');
 if (topbarVipContainer) {
     topbarVipContainer.addEventListener('click', (e) => {
         const btn = e.target.closest('#btnUpgradeVipTopbar');
         if (btn) {
-            // Xóa active hiện tại
-            menuItems.forEach(m => m.classList.remove('active'));
+            clearAllMenuActives();
             tabPanes.forEach(pane => pane.classList.remove('active'));
             
-            // Bật Tab VIP
             document.getElementById('tab-vip').classList.add('active');
             currentTabTitle.textContent = tabTitleMap['tab-vip'];
         }
@@ -130,7 +162,6 @@ function renderAuthInfo(user) {
 }
 
 function setVipInactive() {
-    // Trạng thái Hồ sơ
     document.getElementById("vipStatusBadge").textContent = "Chưa kích hoạt";
     document.getElementById("vipStatusBadge").className = "status-badge status-unactive";
     document.getElementById("vipStatusTab3").textContent = "Chưa kích hoạt VIP";
@@ -141,7 +172,6 @@ function setVipInactive() {
     const statAccount = document.getElementById("statAccountStatus");
     if (statAccount) statAccount.textContent = "Thường";
 
-    // Hiển thị nút Gọi hành động nâng cấp trên Topbar
     if (topbarVipContainer) {
         topbarVipContainer.innerHTML = `
             <button id="btnUpgradeVipTopbar" class="topbar-vip-btn">
@@ -172,7 +202,6 @@ async function fetchUserData(user) {
             }
 
             if (currentUserData.isVip) {
-                // Trạng thái Hồ sơ
                 document.getElementById("vipStatusBadge").textContent = "Đã kích hoạt VIP";
                 document.getElementById("vipStatusBadge").className = "status-badge status-active";
                 document.getElementById("vipStatusTab3").textContent = "VIP Hoạt động";
@@ -182,7 +211,6 @@ async function fetchUserData(user) {
                 
                 document.getElementById("statAccountStatus").textContent = "VIP";
 
-                // Hiển thị Badge VIP vĩnh viễn (sang trọng)
                 if (topbarVipContainer) {
                     topbarVipContainer.innerHTML = `
                         <div class="topbar-vip-badge">
@@ -221,7 +249,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // =========================================================================
-// 5. CÁC SỰ KIỆN TƯƠNG TÁC CƠ BẢN (ĐĂNG XUẤT & XÁC NHẬN CHUYỂN KHOẢN)
+// 5. CÁC SỰ KIỆN TƯƠNG TÁC CƠ BẢN
 // =========================================================================
 document.getElementById("btnLogout").addEventListener("click", () => {
     signOut(auth).catch((error) => {
