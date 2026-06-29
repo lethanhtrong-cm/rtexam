@@ -12,7 +12,7 @@ let currentSearchQuery = "";
 let currentFilterStatus = "all";
 
 // =========================================================================
-// 1. LẮNG NGHE DỮ LIỆU REAL-TIME TỪ FIRESTORE (ONSNAPSHOT) - ĐÃ FIX TRIỆT ĐỂ
+// 1. LẮNG NGHE DỮ LIỆU REAL-TIME TỪ FIRESTORE (ONSNAPSHOT)
 // =========================================================================
 export function initRealtimeUserListener() {
     const tbody = document.getElementById('usersTableBody');
@@ -22,7 +22,7 @@ export function initRealtimeUserListener() {
     onSnapshot(collection(db, "users"), (snapshot) => {
         cachedUsers = [];
         
-        // FIX: Khai báo đầy đủ các biến đếm ngay đầu callback của onSnapshot
+        // Khai báo đầy đủ các biến đếm ngay đầu callback của onSnapshot
         let totalUsersCount = 0;
         let totalVipsCount = 0;
         let totalOnlineCount = 0;
@@ -81,7 +81,7 @@ export function initRealtimeUserListener() {
 }
 
 // =========================================================================
-// 2. HÀM KẾT XUẤT DANH SÁCH USER (AVATAR VÀ MODERN BUTTONS)
+// 2. HÀM KẾT XUẤT DANH SÁCH USER (TINH CHỈNH NÚT BẤM TINH TẾ)
 // =========================================================================
 export function renderUserList() {
     const tbody = document.getElementById('usersTableBody');
@@ -138,14 +138,20 @@ export function renderUserList() {
             </td>
             <td class="text-center"><span class="badge ${badgeClass}">${badgeText}</span></td>
             <td class="text-center">
-                <div class="user-action-group">
-                    <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}">
+                <div class="user-action-group" style="display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap;">
+                    
+                    <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" 
+                            style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white;">
                         ${vipBtnText}
                     </button>
-                    <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}">
+                    
+                    <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" 
+                            style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white; background-color: #3b82f6;">
                         📊 Lịch Sử
                     </button>
-                    <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}">
+                    
+                    <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" 
+                            style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white;">
                         ${banBtnText}
                     </button>
                 </div>
