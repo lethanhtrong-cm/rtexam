@@ -32,7 +32,7 @@
         .submenu { display: none; background-color: #020617; padding: 4px 0; }
         .submenu.show { display: block; }
         
-        /* Menu Con Chi Tiết (Tách 4 chuyên khoa + Import) */
+        /* Menu Con Chi Tiết */
         .menu-item { width: 100%; padding: 11px 20px 11px 45px; background: none; border: none; color: #94a3b8; text-align: left; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: block; position: relative; }
         .menu-item:hover { background-color: #1e293b; color: white; }
         .menu-item.active { background-color: rgba(59, 130, 246, 0.08); color: #3b82f6; font-weight: 600; }
@@ -70,14 +70,20 @@
         .toolbar input:focus, .toolbar select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 131, 246, 0.1); }
         .search-input { flex: 1; }
 
-        /* ================= NEW PILL BUTTON FILTERS GIAO DIỆN MỚI ================= */
-        .filter-wrapper-pills { display: flex; flex-direction: column; gap: 16px; background-color: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
-        .filter-group-horizontal { display: flex; align-items: center; gap: 20px; }
-        .filter-label-text { font-size: 12px; font-weight: 700; color: #475569; width: 140px; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* ================= NEW SEARCH BAR SYSTEM (MỚI NÂNG CẤP) ================= */
+        .search-wrapper-modern { margin-bottom: 16px; width: 100%; }
+        .search-input-modern { width: 100%; padding: 14px 20px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 15px; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,0.01); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); color: #1f2937; font-weight: 500; background-color: #ffffff; }
+        .search-input-modern:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.12); background-color: #ffffff; }
+
+        /* ================= NEW PILL LAYOUT 2 CỘT NẰM NGANG (MỚI NÂNG CẤP) ================= */
+        .filter-wrapper-pills-modern { display: flex; flex-direction: column; background-color: #ffffff; padding: 22px 24px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.01); }
+        .filter-flex-row { display: flex; gap: 30px; width: 100%; }
+        .filter-col-50 { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .filter-label-text { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
         .pill-container { display: flex; gap: 8px; flex-wrap: wrap; }
         .pill-btn { background-color: #f1f5f9; border: none; color: #475569; padding: 8px 18px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #e2e8f0; }
         .pill-btn:hover { background-color: #e2e8f0; color: #0f172a; }
-        .pill-btn.active { background-color: #3b82f6; color: white; border-color: #2563eb; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25); }
+        .pill-btn.active { background-color: #3b82f6; color: white; border-color: #2563eb; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
 
         /* ================= STEP BADGES & DRAG/DROP UI ================= */
         .step-badge { background-color: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; font-weight: 700; }
@@ -105,41 +111,56 @@
         .metadata-field label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
         .metadata-field select { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 14.5px; background-color: #ffffff; color: #1f2937; font-weight: 600; transition: all 0.2s; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 14px; padding-right: 40px; }
 
-        /* ================= BẢNG DỮ LIỆU CẢI TIẾN ================= */
+        /* ================= NEW MODERN CARD LIST VIEW (MỚI NÂNG CẤP) ================= */
+        .exam-card-list { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+        .exam-modern-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.015); transition: all 0.2s ease-in-out; }
+        .exam-modern-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04); border-color: #cbd5e1; }
+        
+        /* Cấu trúc phần trên của Card */
+        .card-top-half { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 14px; }
+        .card-info-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .card-exam-title { font-size: 18px; font-weight: 700; color: #0f172a; letter-spacing: -0.2px; }
+        .card-status-right { display: flex; align-items: center; gap: 10px; }
+        
+        .card-divider { border: none; border-top: 1px solid #f1f5f9; margin: 0 0 14px 0; }
+        
+        /* Cấu trúc phần nút bấm hàng ngang ở dưới */
+        .card-bottom-half { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+
+        /* Kiểu nút bấm dạng Outline nhỏ gọn, đồng bộ hệ thống */
+        .btn-outline-sm { padding: 7px 14px; border: 1px solid #cbd5e1; background-color: transparent; color: #475569; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s ease-in-out; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-outline-sm:hover { background-color: #f8fafc; color: #0f172a; border-color: #94a3b8; }
+        
+        .btn-outline-sm.btn-properties-modern { color: #0f172a; border-color: #cbd5e1; }
+        .btn-outline-sm.btn-properties-modern:hover { background-color: #f1f5f9; border-color: #64748b; }
+        .btn-outline-sm.btn-feedback-modern { color: #d97706; border-color: #fde68a; }
+        .btn-outline-sm.btn-feedback-modern:hover { background-color: #fffbeb; border-color: #f59e0b; }
+        .btn-outline-sm.btn-vip-on-modern { color: #3b82f6; border-color: #bfdbfe; }
+        .btn-outline-sm.btn-vip-on-modern:hover { background-color: #eff6ff; border-color: #3b82f6; }
+        .btn-outline-sm.btn-vip-off-modern { color: #f97316; border-color: #fed7aa; }
+        .btn-outline-sm.btn-vip-off-modern:hover { background-color: #fff7ed; border-color: #f97316; }
+        .btn-outline-sm.btn-delete-modern { color: #ef4444; border-color: #fca5a5; }
+        .btn-outline-sm.btn-delete-modern:hover { background-color: #fee2e2; border-color: #ef4444; }
+
+        /* Bảng dữ liệu thô (Dùng ở các tab khác) */
         .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
         .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
         .admin-table th, .admin-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .admin-table th { background-color: #f8fafc; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-        .admin-table tr:hover { background-color: #f8fafc; }
         .text-center { text-align: center !important; }
         .empty-message, .loading-text { text-align: center; padding: 40px !important; color: #64748b; font-style: italic; font-size: 13.5px; }
 
-        /* Badges */
+        /* Badges sắc nét */
         .badge-count { background-color: #f1f5f9; color: #334155; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; display: inline-block; border: 1px solid #e2e8f0; }
         .badge-meta { background-color: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 12px; display: inline-block; border: 1px solid #bfdbfe; margin: 2px; }
         .badge-meta.level-easy { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
         .badge-meta.level-medium { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
         .badge-meta.level-hard { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-        .badge-free { background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; display: inline-block; }
         .badge-vip-exam { background-color: #fef3c7; color: #b45309; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; display: inline-block; }
         .badge-vip { background-color: #fdf3d8; color: #f39c12; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block;}
         .badge-normal { background-color: #f1f5f9; color: #475569; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block;}
         .badge-banned { background-color: #fee2e2; color: #dc3545; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block;}
         .config-text { font-size: 12.5px; color: #475569; margin: 3px 0; font-weight: 500; }
-
-        .action-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; }
-        .btn-sm { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; transition: background 0.2s; color: white; }
-        
-        .btn-delete { background-color: #ef4444; } .btn-delete:hover { background-color: #dc2626; }
-        .btn-exam-vip-on { background-color: #3b82f6; } .btn-exam-vip-on:hover { background-color: #2563eb; }
-        .btn-exam-vip-off { background-color: #f97316; } .btn-exam-vip-off:hover { background-color: #ea580c; }
-        .btn-edit-properties { background-color: #0f172a; } .btn-edit-properties:hover { background-color: #334155; }
-        .btn-view-feedback { background-color: #eab308; } .btn-view-feedback:hover { background-color: #ca8a04; }
-
-        .btn-toggle-vip { background-color: #3498db; } .btn-toggle-vip:hover { background-color: #2980b9; }
-        .btn-history { background-color: #10b981; } .btn-history:hover { background-color: #059669; }
-        .btn-ban { background-color: #e74c3c; } .btn-ban:hover { background-color: #c0392b; }
-        .btn-unban { background-color: #94a3b8; } .btn-unban:hover { background-color: #64748b; }
 
         /* ================= MODALS & FORMS ================= */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); animation: fadeIn 0.2s; }
@@ -149,6 +170,7 @@
         .close-modal { color: #94a3b8; font-size: 24px; font-weight: bold; cursor: pointer; transition: color 0.2s; }
         .close-modal:hover { color: #334155; }
         .modal-body { overflow-y: auto; flex: 1; padding: 25px; }
+        .rating-star { color: #f59e0b; font-size: 15px; }
         
         .form-group-vertical { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
         .form-item-vertical { display: flex; flex-direction: column; gap: 6px; }
@@ -218,49 +240,35 @@
             
             <section id="tab-exam-list" class="content-section active">
                 
-                <div class="filter-wrapper-pills">
-                    <div class="filter-group-horizontal">
-                        <span class="filter-label-text">Mức độ khó:</span>
-                        <div class="pill-container" id="filter-level-pills">
-                            <button class="pill-btn active" data-level="all">Tất cả</button>
-                            <button class="pill-btn" data-level="Dễ">Dễ</button>
-                            <button class="pill-btn" data-level="Trung bình">Trung bình</button>
-                            <button class="pill-btn" data-level="Khó">Khó</button>
+                <div class="search-wrapper-modern">
+                    <input type="text" id="examSearchInput" class="search-input-modern" placeholder="🔍 Nhập mã đề cần tìm (Gõ phím tới đâu tìm tới đó)...">
+                </div>
+
+                <div class="filter-wrapper-pills-modern">
+                    <div class="filter-flex-row">
+                        <div class="filter-col-50">
+                            <span class="filter-label-text">Mức độ khó:</span>
+                            <div class="pill-container" id="filter-level-pills">
+                                <button class="pill-btn active" data-level="all">Tất cả</button>
+                                <button class="pill-btn" data-level="Dễ">Dễ</button>
+                                <button class="pill-btn" data-level="Trung bình">Trung bình</button>
+                                <button class="pill-btn" data-level="Khó">Khó</button>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="filter-group-horizontal">
-                        <span class="filter-label-text">Thời gian thi:</span>
-                        <div class="pill-container" id="filter-time-pills">
-                            <button class="pill-btn active" data-time="all">Tất cả</button>
-                            <button class="pill-btn" data-time="15">15 phút</button>
-                            <button class="pill-btn" data-time="30">30 phút</button>
-                            <button class="pill-btn" data-time="45">45 phút</button>
+                        <div class="filter-col-50">
+                            <span class="filter-label-text">Thời gian thi:</span>
+                            <div class="pill-container" id="filter-time-pills">
+                                <button class="pill-btn active" data-time="all">Tất cả</button>
+                                <button class="pill-btn" data-time="15">15 phút</button>
+                                <button class="pill-btn" data-time="30">30 phút</button>
+                                <button class="pill-btn" data-time="45">45 phút</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card">
-                    <h2 class="card-title">📋 Cơ Sở Dữ Liệu Đề Thi Phù Hợp</h2>
-                    <p class="card-description">Các đề thi tự động đồng bộ từ Firestore theo bộ lọc Chuyên khoa từ Sidebar và Độ khó/Thời gian ở trên.</p>
-                    
-                    <div class="table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th class="text-center" width="5%">STT</th>
-                                    <th width="15%">Mã Đề Thi</th>
-                                    <th width="20%">Phân Loại</th>
-                                    <th class="text-center" width="15%">Trạng thái</th>
-                                    <th class="text-center" width="18%">Cấu hình</th>
-                                    <th class="text-center" width="27%">Hành Động</th>
-                                </tr>
-                            </thead>
-                            <tbody id="exam-list-body">
-                                <tr><td colspan="6" class="empty-message">Đang kết nối để tải dữ liệu...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div id="exam-list-body" class="exam-card-list">
+                    <div class="loading-text">⏳ Đang kết nối để tải dữ liệu danh sách đề thi...</div>
                 </div>
             </section>
 
