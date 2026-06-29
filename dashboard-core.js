@@ -40,7 +40,7 @@ export function formatDate(dateData) {
 }
 
 // =========================================================================
-// 3. LOGIC UI: ĐIỀU HƯỚNG TAB & ĐỔI TIÊU ĐỀ TOPBAR
+// 3. LOGIC UI: ĐIỀU HƯỚNG TAB, DROPDOWN & ĐỔI TIÊU ĐỀ TOPBAR
 // =========================================================================
 const menuItems = document.querySelectorAll('.sidebar-menu .menu-item[data-target]');
 const tabPanes = document.querySelectorAll('.tab-pane');
@@ -53,6 +53,7 @@ const tabTitleMap = {
     'tab-vip': 'Quản Lý Gói VIP'
 };
 
+// Logic chuyển tab chung từ Sidebar
 menuItems.forEach(item => {
     item.addEventListener('click', () => {
         menuItems.forEach(m => m.classList.remove('active'));
@@ -67,19 +68,60 @@ menuItems.forEach(item => {
     });
 });
 
+// Xử lý Logic Dropdown Menu ở Topbar
+const userMenuToggle = document.getElementById('userMenuToggle');
+const userDropdown = document.getElementById('userDropdown');
+const btnManageProfile = document.getElementById('btnManageProfile');
+
+userMenuToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown.classList.toggle('show');
+});
+
+document.addEventListener('click', (e) => {
+    if (!userMenuToggle.contains(e.target)) {
+        userDropdown.classList.remove('show');
+    }
+});
+
+// Khi bấm "Quản lý Hồ Sơ" trong Dropdown Menu
+btnManageProfile.addEventListener('click', () => {
+    menuItems.forEach(m => m.classList.remove('active'));
+    tabPanes.forEach(pane => pane.classList.remove('active'));
+    
+    document.getElementById('tab-profile').classList.add('active');
+    currentTabTitle.textContent = tabTitleMap['tab-profile'];
+});
+
 // =========================================================================
-// 4. XỬ LÝ THÔNG TIN AUTHENTICATION & ĐỒNG BỘ UI TOPBAR
+// 4. XỬ LÝ THÔNG TIN AUTHENTICATION & ĐỒNG BỘ UI TOPBAR (BAO GỒM NÚT VIP MỚI)
 // =========================================================================
+
+// Xử lý sự kiện click khi bấm "NÂNG CẤP VIP" trên Topbar
+const topbarVipContainer = document.getElementById('topbar-vip-container');
+if (topbarVipContainer) {
+    topbarVipContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('#btnUpgradeVipTopbar');
+        if (btn) {
+            // Xóa active hiện tại
+            menuItems.forEach(m => m.classList.remove('active'));
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+            
+            // Bật Tab VIP
+            document.getElementById('tab-vip').classList.add('active');
+            currentTabTitle.textContent = tabTitleMap['tab-vip'];
+        }
+    });
+}
+
 function renderAuthInfo(user) {
     const email = user.email;
     const name = user.displayName || "Người dùng ẩn danh";
     const fallbackPhotoUrl = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0056b3&color=fff`;
 
-    // Đồng bộ Topbar
     document.getElementById("topbarName").textContent = name;
     document.getElementById("topbarAvatar").src = fallbackPhotoUrl;
 
-    // Đồng bộ dữ liệu Tab hồ sơ & thanh toán mặc định
     document.getElementById("displayEmail").textContent = email;
     document.getElementById("paymentEmail").textContent = email; 
     document.getElementById("displayName").textContent = name;
@@ -88,6 +130,7 @@ function renderAuthInfo(user) {
 }
 
 function setVipInactive() {
+    // Trạng thái Hồ sơ
     document.getElementById("vipStatusBadge").textContent = "Chưa kích hoạt";
     document.getElementById("vipStatusBadge").className = "status-badge status-unactive";
     document.getElementById("vipStatusTab3").textContent = "Chưa kích hoạt VIP";
@@ -97,6 +140,15 @@ function setVipInactive() {
     
     const statAccount = document.getElementById("statAccountStatus");
     if (statAccount) statAccount.textContent = "Thường";
+
+    // Hiển thị nút Gọi hành động nâng cấp trên Topbar
+    if (topbarVipContainer) {
+        topbarVipContainer.innerHTML = `
+            <button id="btnUpgradeVipTopbar" class="topbar-vip-btn">
+                🚀 NÂNG CẤP VIP
+            </button>
+        `;
+    }
 }
 
 async function fetchUserData(user) {
@@ -114,13 +166,13 @@ async function fetchUserData(user) {
                 return null;
             }
 
-            // Ưu tiên hiển thị Avatar từ Base64 trên cả Topbar và Profile
             if (currentUserData.avatarBase64) {
                 document.getElementById("userAvatar").src = currentUserData.avatarBase64;
                 document.getElementById("topbarAvatar").src = currentUserData.avatarBase64; 
             }
 
             if (currentUserData.isVip) {
+                // Trạng thái Hồ sơ
                 document.getElementById("vipStatusBadge").textContent = "Đã kích hoạt VIP";
                 document.getElementById("vipStatusBadge").className = "status-badge status-active";
                 document.getElementById("vipStatusTab3").textContent = "VIP Hoạt động";
@@ -128,8 +180,16 @@ async function fetchUserData(user) {
                 document.getElementById("vipStartDate").textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
                 document.getElementById("vipEndDate").textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
                 
-                // Cập nhật Quick Stats
                 document.getElementById("statAccountStatus").textContent = "VIP";
+
+                // Hiển thị Badge VIP vĩnh viễn (sang trọng)
+                if (topbarVipContainer) {
+                    topbarVipContainer.innerHTML = `
+                        <div class="topbar-vip-badge">
+                            <i class="fa-solid fa-crown"></i> TÀI KHOẢN VIP
+                        </div>
+                    `;
+                }
             } else {
                 setVipInactive();
             }
@@ -150,7 +210,6 @@ onAuthStateChanged(auth, async (user) => {
         const currentUserData = await fetchUserData(user);
         
         if (currentUserData) {
-            // Phát sự kiện CustomEvent thông báo cho các module độc lập khác cùng xử lý dữ liệu
             const authReadyEvent = new CustomEvent("authReady", {
                 detail: { user, currentUserData }
             });
