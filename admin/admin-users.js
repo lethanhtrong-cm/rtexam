@@ -7,12 +7,12 @@ import {
 // Bộ nhớ đệm lưu trữ danh sách người dùng realtime từ Firestore
 let cachedUsers = [];
 
-// Các biến trạng thái bộ lọc tìm kiếm học viên
+// Các biến trạng thái bộ lọc tìm kiếm học viên toàn cục
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
 
 // =========================================================================
-// 1. LẮNG NGHE DỮ LIỆU REAL-TIME TỪ FIRESTORE (ONSNAPSHOT) - ĐÃ FIX LỖI
+// 1. LẮNG NGHE DỮ LIỆU REAL-TIME TỪ FIRESTORE (ONSNAPSHOT) - ĐÃ FIX TRIỆT ĐỂ
 // =========================================================================
 export function initRealtimeUserListener() {
     const tbody = document.getElementById('usersTableBody');
@@ -22,8 +22,9 @@ export function initRealtimeUserListener() {
     onSnapshot(collection(db, "users"), (snapshot) => {
         cachedUsers = [];
         
+        // FIX: Khai báo đầy đủ các biến đếm ngay đầu callback của onSnapshot
         let totalUsersCount = 0;
-        let totalVipCount = 0;
+        let totalVipsCount = 0;
         let totalOnlineCount = 0;
 
         snapshot.forEach((docSnap) => {
@@ -32,13 +33,14 @@ export function initRealtimeUserListener() {
             const email = user.email || 'Chưa cập nhật';
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
-            const isOnline = user.isOnline || false; // Trạng thái trực tuyến realtime
+            const isOnline = user.isOnline || false; // Trạng thái trực tuyến của học viên
 
+            // Tăng tiến các biến đếm đã được khai báo chuẩn xác
             totalUsersCount++;
-            if (isVip) totalVipCount++; // Đã sửa lỗi đồng bộ tên biến tại đây
+            if (isVip) totalVipsCount++; 
             if (isOnline && !isBanned) totalOnlineCount++; 
 
-            // Phân loại trạng thái phục vụ bộ lọc Frontend công cụ
+            // Phân loại trạng thái phục vụ bộ lọc Frontend nhanh chóng
             let statusKey = 'normal';
             if (isBanned) statusKey = 'banned';
             else if (isVip) statusKey = 'vip';
@@ -53,25 +55,24 @@ export function initRealtimeUserListener() {
             });
         });
 
-        // Cập nhật số liệu Real-time lên các thẻ Stats Cards ngoài giao diện HTML
+        // Đồng bộ số liệu Real-time lên chính xác các thẻ Stats Cards ngoài giao diện HTML
         const totalUsersEl = document.getElementById('totalUsers');
         const totalVipUsersEl = document.getElementById('totalVipUsers');
         const totalOnlineUsersEl = document.getElementById('totalOnlineUsers');
 
         if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
-        if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipCount;
+        if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
         if (totalOnlineUsersEl) totalOnlineUsersEl.innerText = totalOnlineCount;
 
-        // Tiến hành render kết xuất lại danh sách học viên
+        // Tiến hành render kết xuất lại danh sách học viên ra bảng giao diện
         renderUserList();
     }, (error) => {
-        // Bổ sung callback xử lý lỗi (Error Handler) theo đúng yêu cầu bảo mật UI
         console.error("Lỗi kết nối Firestore Real-time:", error);
         tbody.innerHTML = `
             <tr>
                 <td colspan="4" class="loading-text" style="color: #ef4444; font-weight: 500;">
                     ❌ Có lỗi xảy ra khi tải dữ liệu từ Cloud Firestore.<br>
-                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra lại cấu hình Security Rules trong Firebase Console.</span>
+                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra lại cấu hình Security Rules hoặc kết nối mạng.</span>
                 </td>
             </tr>
         `;
@@ -86,7 +87,7 @@ export function renderUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    // Lọc dữ liệu bộ nhớ đệm theo từ khóa tìm kiếm và tình trạng bộ lọc
+    // Lọc dữ liệu bộ nhớ đệm theo từ khóa tìm kiếm và tình trạng bộ lọc dropdown
     const filteredUsers = cachedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
         const matchStatus = currentFilterStatus === "all" || user.statusKey === currentFilterStatus;
@@ -116,7 +117,7 @@ export function renderUserList() {
         // Tách chữ cái đầu tiên của địa chỉ Email để hiển thị Avatar vòng tròn đại diện
         const firstLetter = user.email.charAt(0);
 
-        // Chuẩn hóa cấu trúc style và text cho hệ thống nút bấm hành động nâng cấp
+        // Chuẩn hóa cấu trúc style và text cho hệ thống nút bấm hành động nâng cấp độc lập
         const vipBtnClass = user.isVip ? 'btn-user-vip-off' : 'btn-user-vip-on';
         const vipBtnText = user.isVip ? '💎 Tắt VIP' : '👑 Kích VIP';
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
@@ -154,7 +155,7 @@ export function renderUserList() {
     });
 }
 
-// Tạo bảng màu cố định tinh tế phối cho Avatar theo ký tự chữ cái đầu
+// Tạo bảng màu cố định tinh tế phối cho Avatar theo ký tự chữ cái đầu của Email
 function getAvatarColor(letter) {
     const charCode = letter.toUpperCase().charCodeAt(0) || 65;
     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
@@ -256,11 +257,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.trim().toLowerCase();
-            renderUserList(); // Chạy bộ lọc mượt mà cục bộ từ cache
+            renderUserList(); // Chạy bộ lọc mượt mà cục bộ từ bộ nhớ đệm cachedUsers
         });
     }
 
-    // Lắng nghe sự kiện thay đổi dropdown lọc phân loại
+    // Lắng nghe sự kiện thay đổi dropdown lọc phân loại người dùng
     const filterSelect = document.getElementById('filterSelect');
     if (filterSelect) {
         filterSelect.addEventListener('change', (e) => {
@@ -269,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Cơ chế Event Delegation xử lý tập trung hành động click trên thân bảng
+    // Cơ chế Event Delegation xử lý tập trung toàn bộ hành động click trên thân bảng học viên
     const usersBody = document.getElementById('usersTableBody');
     if (usersBody) {
         usersBody.addEventListener('click', (e) => {
@@ -284,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Cơ chế đóng cửa sổ Modal Lịch sử thi
+    // Cơ chế đóng cửa sổ Modal xem lịch sử điểm thi
     const closeHistoryBtn = document.getElementById('closeHistoryModalBtn');
     if (closeHistoryBtn) {
         closeHistoryBtn.onclick = () => {
