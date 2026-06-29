@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard Ultra - Hệ thống thi trắc nghiệm</title>
+    <title>Admin Dashboard Ultra Pro - Hệ thống thi trắc nghiệm</title>
 
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
@@ -12,7 +12,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f4f6f9; color: #1f2937; display: flex; height: 100vh; overflow: hidden; }
         
-        /* ================= SIDEBAR ACCORDION ================= */
+        /* ================= SIDEBAR ACCORDION CẢI TIẾN ================= */
         .sidebar { width: 260px; background-color: #0f172a; color: white; display: flex; flex-direction: column; box-shadow: 4px 0 10px rgba(0,0,0,0.05); z-index: 10; }
         .sidebar-header { padding: 25px 20px; background-color: #1e293b; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .sidebar-title { font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
@@ -32,8 +32,8 @@
         .submenu { display: none; background-color: #020617; padding: 4px 0; }
         .submenu.show { display: block; }
         
-        /* Menu Con Chi Tiết */
-        .menu-item { width: 100%; padding: 12px 20px 12px 45px; background: none; border: none; color: #94a3b8; text-align: left; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: block; position: relative; }
+        /* Menu Con Chi Tiết (Tách 4 chuyên khoa + Import) */
+        .menu-item { width: 100%; padding: 11px 20px 11px 45px; background: none; border: none; color: #94a3b8; text-align: left; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: block; position: relative; }
         .menu-item:hover { background-color: #1e293b; color: white; }
         .menu-item.active { background-color: rgba(59, 130, 246, 0.08); color: #3b82f6; font-weight: 600; }
         .menu-item.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: #3b82f6; border-radius: 0 4px 4px 0; }
@@ -70,12 +70,19 @@
         .toolbar input:focus, .toolbar select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 131, 246, 0.1); }
         .search-input { flex: 1; }
 
-        /* ================= MODERN STEP BADGE SYSTEM ================= */
+        /* ================= NEW PILL BUTTON FILTERS GIAO DIỆN MỚI ================= */
+        .filter-wrapper-pills { display: flex; flex-direction: column; gap: 16px; background-color: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+        .filter-group-horizontal { display: flex; align-items: center; gap: 20px; }
+        .filter-label-text { font-size: 12px; font-weight: 700; color: #475569; width: 140px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pill-container { display: flex; gap: 8px; flex-wrap: wrap; }
+        .pill-btn { background-color: #f1f5f9; border: none; color: #475569; padding: 8px 18px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #e2e8f0; }
+        .pill-btn:hover { background-color: #e2e8f0; color: #0f172a; }
+        .pill-btn.active { background-color: #3b82f6; color: white; border-color: #2563eb; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25); }
+
+        /* ================= STEP BADGES & DRAG/DROP UI ================= */
         .step-badge { background-color: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; font-weight: 700; }
         .step-badge.green { background-color: #10b981; }
         .step-badge.orange { background-color: #f59e0b; }
-
-        /* ================= ADVANCED DRAG & DROP UI ================= */
         .file-upload-wrapper { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 45px 20px; text-align: center; background-color: #f8fafc; transition: all 0.25s ease-in-out; position: relative; cursor: pointer; }
         .file-upload-wrapper:hover { border-color: #3b82f6; background-color: #eff6ff; }
         .file-upload-icon { font-size: 36px; color: #64748b; margin-bottom: 12px; transition: transform 0.2s; }
@@ -85,13 +92,10 @@
         .file-label span { color: #3b82f6; font-weight: 700; text-decoration: underline; }
         .selected-file-name { margin-top: 15px; font-weight: 700; color: #10b981; font-size: 13.5px; background-color: #d1fae5; display: inline-block; padding: 4px 14px; border-radius: 20px; border: 1px solid #a7f3d0; }
         
-        /* Buttons hành động */
         .btn-template { background-color: #10b981; color: white; } .btn-template:hover { background-color: #059669; }
         .btn-import { background-color: #4b5563; color: white; width: 100%; margin-top: 15px; font-size: 14px; padding: 12px; border-radius: 8px; }
         .btn-import:hover:not(:disabled) { background-color: #374151; }
         .btn-import:disabled { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
-        
-        /* Modern Select Box Form */
         .btn-publish { background-color: #3b82f6; color: white; font-size: 14.5px; padding: 14px 40px; border-radius: 8px; font-weight: 700; transition: all 0.2s; }
         .btn-publish:hover:not(:disabled) { background-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
         .btn-publish:disabled { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
@@ -100,19 +104,17 @@
         .metadata-field { flex: 1; display: flex; flex-direction: column; gap: 8px; }
         .metadata-field label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
         .metadata-field select { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 14.5px; background-color: #ffffff; color: #1f2937; font-weight: 600; transition: all 0.2s; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 14px; padding-right: 40px; }
-        .metadata-field select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 131, 246, 0.1); }
 
         /* ================= BẢNG DỮ LIỆU CẢI TIẾN ================= */
-        .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: inset 0 1px 2px rgba(0,0,0,0.01); }
+        .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
         .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
         .admin-table th, .admin-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .admin-table th { background-color: #f8fafc; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-        .admin-table tr:last-child td { border-bottom: none; }
         .admin-table tr:hover { background-color: #f8fafc; }
         .text-center { text-align: center !important; }
         .empty-message, .loading-text { text-align: center; padding: 40px !important; color: #64748b; font-style: italic; font-size: 13.5px; }
 
-        /* Badges sắc nét */
+        /* Badges */
         .badge-count { background-color: #f1f5f9; color: #334155; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; display: inline-block; border: 1px solid #e2e8f0; }
         .badge-meta { background-color: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 12px; display: inline-block; border: 1px solid #bfdbfe; margin: 2px; }
         .badge-meta.level-easy { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
@@ -139,27 +141,20 @@
         .btn-ban { background-color: #e74c3c; } .btn-ban:hover { background-color: #c0392b; }
         .btn-unban { background-color: #94a3b8; } .btn-unban:hover { background-color: #64748b; }
 
-        /* ================= MODAL & TOAST LAYOUT ================= */
+        /* ================= MODALS & FORMS ================= */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); animation: fadeIn 0.2s; }
-        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 850px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 850px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; border-radius: 12px 12px 0 0; }
         .modal-header h2 { margin: 0; font-size: 16px; color: #0f172a; font-weight: 700; text-transform: uppercase; }
         .close-modal { color: #94a3b8; font-size: 24px; font-weight: bold; cursor: pointer; transition: color 0.2s; }
         .close-modal:hover { color: #334155; }
         .modal-body { overflow-y: auto; flex: 1; padding: 25px; }
-        .rating-star { color: #f59e0b; font-size: 15px; }
-
-        /* CSS phụ cho form chỉnh sửa thuộc tính trong Modal */
+        
         .form-group-vertical { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
         .form-item-vertical { display: flex; flex-direction: column; gap: 6px; }
         .form-item-vertical label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; }
-        .form-item-vertical select { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 14.5px; font-weight: 600; color: #1f2937; background-color: #ffffff; }
-
-        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }
-        .toast { color: white; padding: 12px 24px; border-radius: 6px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px; font-weight: 500; }
-        .toast.show { opacity: 1; transform: translateY(0); }
-        .toast.success { background-color: #10b981; }
-        .toast.error { background-color: #ef4444; }
+        .form-item-vertical select { padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 14.5px; font-weight: 600; color: #1f2937; }
+        .note { font-size: 13px; color: #64748b; background: #f8fafc; padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -177,8 +172,17 @@
                     <span class="arrow-icon">▼</span>
                 </button>
                 <div class="submenu show">
-                    <button class="menu-item active" data-target="tab-exam-list" data-title="Danh Sách Đề Thi Trên Hệ Thống">
-                        📄 Danh sách đề thi
+                    <button class="menu-item active" data-target="tab-exam-list" data-tech="MRI" data-title="Danh Sách Đề Thi: Chuyên Khoa MRI">
+                        📄 Danh sách: MRI
+                    </button>
+                    <button class="menu-item" data-target="tab-exam-list" data-tech="CT" data-title="Danh Sách Đề Thi: Chuyên Khoa CT">
+                        📄 Danh sách: CT
+                    </button>
+                    <button class="menu-item" data-target="tab-exam-list" data-tech="X quang" data-title="Danh Sách Đề Thi: Chuyên Khoa X quang">
+                        📄 Danh sách: X quang
+                    </button>
+                    <button class="menu-item" data-target="tab-exam-list" data-tech="Hỗn hợp" data-title="Danh Sách Đề Thi: Hệ Hỗn Hợp">
+                        📄 Danh sách: Hỗn hợp
                     </button>
                     <button class="menu-item" data-target="tab-exam-import" data-title="Import Đề Thi Vào Hệ Thống">
                         🚀 Import đề thi
@@ -206,16 +210,39 @@
 
     <main class="main-wrapper">
         <header class="topbar">
-            <h2 id="topbar-title">Danh Sách Đề Thi Trên Hệ Thống</h2>
+            <h2 id="topbar-title">Danh Sách Đề Thi: Chuyên Khoa MRI</h2>
             <div class="admin-profile">🟢 Đang hoạt động</div>
         </header>
 
         <div class="content-container">
             
             <section id="tab-exam-list" class="content-section active">
+                
+                <div class="filter-wrapper-pills">
+                    <div class="filter-group-horizontal">
+                        <span class="filter-label-text">Mức độ khó:</span>
+                        <div class="pill-container" id="filter-level-pills">
+                            <button class="pill-btn active" data-level="all">Tất cả</button>
+                            <button class="pill-btn" data-level="Dễ">Dễ</button>
+                            <button class="pill-btn" data-level="Trung bình">Trung bình</button>
+                            <button class="pill-btn" data-level="Khó">Khó</button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group-horizontal">
+                        <span class="filter-label-text">Thời gian thi:</span>
+                        <div class="pill-container" id="filter-time-pills">
+                            <button class="pill-btn active" data-time="all">Tất cả</button>
+                            <button class="pill-btn" data-time="15">15 phút</button>
+                            <button class="pill-btn" data-time="30">30 phút</button>
+                            <button class="pill-btn" data-time="45">45 phút</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card">
-                    <h2 class="card-title">📋 Danh Sách Đề Thi Tổng Hợp</h2>
-                    <p class="card-description">Hệ thống hiển thị mã đề, phân loại chuyên khoa, cấp độ, trạng thái VIP và thiết lập thời gian.</p>
+                    <h2 class="card-title">📋 Cơ Sở Dữ Liệu Đề Thi Phù Hợp</h2>
+                    <p class="card-description">Các đề thi tự động đồng bộ từ Firestore theo bộ lọc Chuyên khoa từ Sidebar và Độ khó/Thời gian ở trên.</p>
                     
                     <div class="table-container">
                         <table class="admin-table">
@@ -258,7 +285,7 @@
 
                 <div class="card">
                     <h2 class="card-title"><span class="step-badge orange">3</span> &nbsp; Hàng Đợi Kiểm Tra Dữ Liệu Excel</h2>
-                    <p class="card-description">Dữ liệu đọc tạm từ tệp Excel sẽ hiển thị ở đây. Hãy rà soát nội dung kỹ lưỡng trước khi publish.</p>
+                    <p class="card-description">Dữ liệu đọc tạm từ tệp Excel sẽ hiển thị ở đây. Hãy rà soát nội dung kỹ lưỡng trước khi thiết lập thuộc tính và xuất bản.</p>
                     
                     <div class="table-container" style="max-height: 350px; overflow-y: auto; margin-bottom: 30px;">
                         <table class="admin-table">
@@ -268,7 +295,7 @@
                                     <th width="15%">Mã Đề (examId)</th>
                                     <th width="35%">Nội Dung Câu Hỏi</th>
                                     <th width="30%">Các Đáp Án (A, B, C, D)</th>
-                                    <th class="text-center" width="15%">Đáp An Đúng</th>
+                                    <th class="text-center" width="15%">Đáp Án Đúng</th>
                                 </tr>
                             </thead>
                             <tbody id="preview-list-body">
@@ -278,8 +305,6 @@
                     </div>
 
                     <h2 class="card-title"><span class="step-badge">4</span> &nbsp; Thiết Lập Thuộc Tính & Xuất Bản</h2>
-                    <p class="card-description">Chọn thông tin phân loại chung cho toàn bộ các đề thi chứa trong file Excel ở trên.</p>
-                    
                     <div class="metadata-row">
                         <div class="metadata-field">
                             <label for="select-technique">🩻 Chuyên khoa / Kỹ thuật:</label>
