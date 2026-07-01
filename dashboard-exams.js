@@ -290,5 +290,5 @@ window.goToUpgrade = function() {
     
     // 4. Cập nhật Tiêu đề trang
     const currentTabTitle = document.getElementById("currentTabTitle");
-    if(currentTabTitle) currentTabTitle.textContent = 'Quản Lý Gói Pro';
+    if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
 };
