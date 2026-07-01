@@ -12,6 +12,7 @@ let currentView = 'grid';
 let currentTechnique = 'all'; // Lấy từ Sidebar
 let currentLevel = 'all';     // Lấy từ Pill Buttons
 let currentTime = 'all';      // Lấy từ Pill Buttons
+let currentSearchQuery = '';  // Lấy từ Search Bar (Tính năng mới)
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
@@ -22,6 +23,7 @@ const viewBtns = document.querySelectorAll('.view-btn');
 const subMenuItems = document.querySelectorAll('.sub-menu-item');
 const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
 const timePills = document.querySelectorAll('#timeFilter .pill-btn');
+const searchInput = document.getElementById('searchInput'); // Thanh tìm kiếm
 
 // =========================================================================
 // 2. LẮNG NGHE SỰ KIỆN AUTH READY ĐỂ KHỞI CHẠY DỮ LIỆU
@@ -64,6 +66,15 @@ function setupFilterEvents() {
 
     setupPillEvents(levelPills, 'level');
     setupPillEvents(timePills, 'time');
+
+    // 3. Sự kiện Tìm kiếm Real-time (Tìm kiếm theo Mã đề)
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            // Lấy giá trị, chuyển thành chữ thường và xóa khoảng trắng thừa
+            currentSearchQuery = e.target.value.toLowerCase().trim();
+            renderExams();
+        });
+    }
 }
 
 function setupToolbarEvents() {
@@ -199,13 +210,21 @@ function renderExams() {
         const timeTarget = parseInt(currentTime);
         displayData = displayData.filter(exam => exam.timeLimit === timeTarget);
     }
+    
+    // LỚP LỌC 4: Tìm kiếm theo từ khóa Real-time (Tìm trong ID đề thi và Kỹ thuật)
+    if (currentSearchQuery !== '') {
+        displayData = displayData.filter(exam => 
+            exam.id.toLowerCase().includes(currentSearchQuery) || 
+            (exam.technique && exam.technique.toLowerCase().includes(currentSearchQuery))
+        );
+    }
 
-    // LỚP LỌC 4: Trạng thái Dropdown (VIP/Free)
+    // LỚP LỌC 5: Trạng thái Dropdown (PRO/Free)
     const filterType = sortFilter.value;
     if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
     else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
 
-    // LỚP LỌC 5: Sắp xếp
+    // LỚP LỌC 6: Sắp xếp
     if (filterType === 'highest_rating') displayData.sort((a, b) => b.rating - a.rating);
     else if (filterType === 'most_attempts') displayData.sort((a, b) => b.attemptCount - a.attemptCount);
     else displayData.sort((a, b) => b.createdAt - a.createdAt); 
@@ -215,7 +234,7 @@ function renderExams() {
     const isUserVip = currentUserData && currentUserData.isVip === true;
 
     if (displayData.length === 0) {
-        examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi nào phù hợp với các bộ lọc hiện tại.</div>';
+        examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi nào phù hợp với các bộ lọc và từ khóa hiện tại.</div>';
         return;
     }
 
