@@ -308,13 +308,13 @@
         .loading-text { color: var(--text-muted); font-style: italic; text-align: center; padding: 2rem; width: 100%; }
 
         /* =========================================
-           4. CSS RIÊNG TỪNG TAB & TÍNH NĂNG NÂNG CAO
+           4. CSS QUICK STATS
            ========================================= */
-        
         .quick-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
         .quick-stat-card {
             display: flex; align-items: center; gap: 18px; padding: 20px; border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.04); transition: transform 0.2s, box-shadow 0.2s;
+            background: var(--white);
         }
         .quick-stat-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
         .quick-stat-card .stat-icon { width: 52px; height: 52px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
@@ -322,46 +322,63 @@
         .quick-stat-card .stat-label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .quick-stat-card .stat-value { margin: 0; font-size: 1.45rem; font-weight: 700; line-height: 1.2; }
         
-        .stat-card-completed { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0369a1; border-left: 5px solid #0284c7; }
+        .stat-card-completed { border-left: 5px solid #0284c7; }
         .stat-card-completed .stat-icon { color: #0284c7; background: rgba(2, 132, 199, 0.12); }
-        .stat-card-avg { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #15803d; border-left: 5px solid #16a34a; }
+        .stat-card-avg { border-left: 5px solid #16a34a; }
         .stat-card-avg .stat-icon { color: #16a34a; background: rgba(22, 163, 74, 0.12); }
-        .stat-card-account { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; border-left: 5px solid #d97706; }
+        .stat-card-account { border-left: 5px solid #d97706; }
         .stat-card-account .stat-icon { color: #d97706; background: rgba(217, 119, 6, 0.12); }
 
-        /* MỚI: FILTER PILLS HIỂN THỊ DÀN NGANG (FLEX-ROW) */
-        .filter-pills-container {
+        /* =========================================
+           5. ACTION BAR HIỆN ĐẠI (TÁI CẤU TRÚC)
+           ========================================= */
+        .action-bar {
             display: flex;
-            flex-direction: row;
             flex-wrap: wrap;
-            gap: 30px;
+            justify-content: space-between;
             align-items: center;
+            gap: 20px;
             background: var(--white);
             padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-            border-left: 4px solid var(--warning-orange);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            margin-bottom: 25px;
+            border: 1px solid var(--border-color);
         }
+
+        .action-left {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .action-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Group Bộ Lọc */
         .filter-group {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         .filter-label {
             font-weight: 600;
             color: var(--text-main);
-            min-width: 85px;
             font-size: 0.95rem;
         }
         .pill-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
         .pill-btn {
-            padding: 6px 18px;
+            padding: 6px 16px;
             border-radius: 20px;
             border: 1px solid var(--border-color);
             background: var(--gray-bg);
@@ -369,7 +386,7 @@
             cursor: pointer;
             font-weight: 500;
             font-size: 0.85rem;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
         .pill-btn:hover {
             border-color: var(--primary-blue);
@@ -380,47 +397,81 @@
             background: var(--primary-blue);
             color: var(--white);
             border-color: var(--primary-blue);
-            box-shadow: 0 2px 6px rgba(0, 86, 179, 0.3);
+            box-shadow: 0 2px 6px rgba(0, 86, 179, 0.2);
         }
 
-        /* TOOLBAR CŨ */
-        .toolbar {
+        /* Thẻ Select Sắp xếp mượt mà */
+        .sort-wrapper {
+            position: relative;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            background-color: var(--white);
-            padding: 15px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 15px;
         }
-        .toolbar-group { display: flex; align-items: center; gap: 10px; }
-        .toolbar label { font-weight: 600; color: var(--text-main); }
-        .toolbar select {
-            padding: 8px 12px;
+        .sort-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+        .modern-select {
+            appearance: none;
+            -webkit-appearance: none;
+            padding: 8px 35px 8px 35px;
+            border-radius: 20px;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
-            outline: none;
-            font-family: inherit;
-            color: var(--text-main);
             background-color: var(--gray-bg);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
             cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+            /* Mũi tên dropdown tùy chỉnh để bỏ mặc định cứng nhắc */
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px top 50%;
+            background-size: 10px auto;
+        }
+        .modern-select:hover, .modern-select:focus {
+            border-color: var(--primary-blue);
+            background-color: var(--white);
+            box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
         }
 
-        .view-btn {
-            background: none;
+        /* Nút Grid/List bo tròn */
+        .view-toggle-group {
+            display: flex;
+            background: var(--gray-bg);
+            border-radius: 20px;
+            padding: 4px;
             border: 1px solid var(--border-color);
-            padding: 8px 12px;
-            border-radius: 6px;
+        }
+        .view-btn {
+            background: transparent;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 16px;
             cursor: pointer;
             color: var(--text-muted);
-            transition: 0.2s;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
         }
-        .view-btn.active { background-color: var(--primary-blue); color: var(--white); border-color: var(--primary-blue); }
+        .view-btn:hover {
+            color: var(--primary-blue);
+        }
+        .view-btn.active {
+            background: var(--primary-blue);
+            color: var(--white);
+            box-shadow: 0 2px 6px rgba(0, 86, 179, 0.2);
+        }
 
-        /* DANH SÁCH KHÓA HỌC */
+        /* =========================================
+           6. DANH SÁCH KHÓA HỌC
+           ========================================= */
         .grid-view { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
         .list-view { display: flex; flex-direction: column; gap: 20px; }
 
@@ -458,7 +509,6 @@
         .card-footer { padding: 15px 20px; background-color: var(--gray-bg); border-top: 1px solid var(--border-color); }
         .card-footer button { width: 100%; padding: 12px; font-size: 1rem; }
         
-        /* MỚI: NÚT PRO NỔI BẬT CHO THẺ ĐỀ THI BỊ KHÓA */
         .btn-pro-locked {
             background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%);
             color: #5c3a21;
@@ -520,7 +570,7 @@
         .qr-placeholder img { max-width: 100%; border-radius: 8px; }
         .instruction { background-color: var(--light-blue); padding: 15px; border-radius: 5px; line-height: 1.5; text-align: center; margin-bottom: 15px; }
 
-        /* RESPONSIVE */
+        /* RESPONSIVE CẬP NHẬT CHO ACTION BAR */
         @media (max-width: 1100px) { .grid-view { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) {
             .quick-stats-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -529,7 +579,11 @@
             .list-view .card-body { flex-direction: column; align-items: flex-start; }
             .list-view .card-footer { border-left: none; border-top: 1px solid var(--border-color); }
             
-            .filter-pills-container { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .action-bar { flex-direction: column; align-items: stretch; gap: 15px; padding: 15px; }
+            .action-left { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .action-right { justify-content: space-between; width: 100%; }
+            .sort-wrapper { flex: 1; margin-right: 15px; }
+            .modern-select { width: 100%; }
             
             .sidebar { width: 60px; }
             .menu-item span, .sidebar-header h2, .accordion-icon { display: none; }
@@ -637,47 +691,51 @@
                     </div>
                 </div>
 
-                <!-- BỘ LỌC ĐƯỢC CĂN DÀN NGANG CHUYÊN NGHIỆP -->
-                <div class="filter-pills-container">
-                    <div class="filter-group">
-                        <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
-                        <div class="pill-group" id="levelFilter">
-                            <button class="pill-btn active" data-level="all">Tất cả</button>
-                            <button class="pill-btn" data-level="Khó">Khó</button>
-                            <button class="pill-btn" data-level="Trung bình">Trung bình</button>
-                            <button class="pill-btn" data-level="Dễ">Dễ</button>
+                <!-- ACTION BAR HIỆN ĐẠI MỚI (THAY THẾ BỘ LỌC & TOOLBAR CŨ) -->
+                <div class="action-bar">
+                    <!-- Khối bên trái: Các bộ lọc pill -->
+                    <div class="action-left">
+                        <div class="filter-group">
+                            <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
+                            <div class="pill-group" id="levelFilter">
+                                <button class="pill-btn active" data-level="all">Tất cả</button>
+                                <button class="pill-btn" data-level="Khó">Khó</button>
+                                <button class="pill-btn" data-level="Trung bình">Trung bình</button>
+                                <button class="pill-btn" data-level="Dễ">Dễ</button>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
+                            <div class="pill-group" id="timeFilter">
+                                <button class="pill-btn active" data-time="all">Tất cả</button>
+                                <button class="pill-btn" data-time="15">15 phút</button>
+                                <button class="pill-btn" data-time="30">30 phút</button>
+                                <button class="pill-btn" data-time="45">45 phút</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="filter-group">
-                        <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
-                        <div class="pill-group" id="timeFilter">
-                            <button class="pill-btn active" data-time="all">Tất cả</button>
-                            <button class="pill-btn" data-time="15">15 phút</button>
-                            <button class="pill-btn" data-time="30">30 phút</button>
-                            <button class="pill-btn" data-time="45">45 phút</button>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="toolbar">
-                    <div class="toolbar-group">
-                        <label for="sortFilter"><i class="fa-solid fa-sort"></i> Sắp xếp:</label>
-                        <select id="sortFilter">
-                            <option value="newest">Mới nhất (Mặc định)</option>
-                            <option value="highest_rating">Đánh giá cao nhất</option>
-                            <option value="most_attempts">Lượt thi nhiều nhất</option>
-                            <option value="only_vip">Chỉ hiện đề VIP</option>
-                            <option value="only_free">Chỉ hiện đề Miễn phí</option>
-                        </select>
-                    </div>
-                    
-                    <div class="toolbar-group">
-                        <button class="view-btn active" data-view="grid" title="Hiển thị dạng lưới">
-                            <i class="fa-solid fa-border-all"></i>
-                        </button>
-                        <button class="view-btn" data-view="list" title="Hiển thị dạng danh sách">
-                            <i class="fa-solid fa-list"></i>
-                        </button>
+                    <!-- Khối bên phải: Công cụ sắp xếp và chuyển đổi view -->
+                    <div class="action-right">
+                        <div class="sort-wrapper">
+                            <i class="fa-solid fa-sort-amount-down"></i>
+                            <select id="sortFilter" class="modern-select">
+                                <option value="newest">Mới nhất (Mặc định)</option>
+                                <option value="highest_rating">Đánh giá cao nhất</option>
+                                <option value="most_attempts">Lượt thi nhiều nhất</option>
+                                <option value="only_vip">Chỉ hiện đề PRO</option>
+                                <option value="only_free">Chỉ hiện đề Miễn phí</option>
+                            </select>
+                        </div>
+                        
+                        <div class="view-toggle-group">
+                            <button class="view-btn active" data-view="grid" title="Hiển thị dạng lưới">
+                                <i class="fa-solid fa-border-all"></i>
+                            </button>
+                            <button class="view-btn" data-view="list" title="Hiển thị dạng danh sách">
+                                <i class="fa-solid fa-list"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
