@@ -97,7 +97,7 @@ accordionHeaders.forEach(header => {
     });
 });
 
-// Đăng ký sự kiện Click cho các Sub-menus (MRI, CT...)
+// Đăng ký sự kiện Click cho các Sub-menus (MRI, CT, Đã lưu...)
 subMenuItems.forEach(subItem => {
     subItem.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -134,7 +134,7 @@ btnManageProfile.addEventListener('click', () => {
 });
 
 // =========================================================================
-// 4. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI TOPBAR (ĐỔI THÀNH PRO)
+// 4. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI TOPBAR
 // =========================================================================
 
 const topbarVipContainer = document.getElementById('topbar-vip-container');
@@ -174,7 +174,6 @@ function setVipInactive() {
     const statAccount = document.getElementById("statAccountStatus");
     if (statAccount) statAccount.textContent = "Thường";
 
-    // Thay đổi chữ và icon sang PRO tinh tế hơn
     if (topbarVipContainer) {
         topbarVipContainer.innerHTML = `
             <button id="btnUpgradeVipTopbar" class="topbar-vip-btn">
@@ -185,13 +184,18 @@ function setVipInactive() {
 }
 
 async function fetchUserData(user) {
-    let currentUserData = { isVip: false, isBanned: false };
+    let currentUserData = { isVip: false, isBanned: false, bookmarks: [] };
     try {
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (userDocSnap.exists()) {
             currentUserData = userDocSnap.data();
+            
+            // Khởi tạo mảng bookmarks mặc định rỗng nếu chưa tồn tại
+            if (!currentUserData.bookmarks) {
+                currentUserData.bookmarks = [];
+            }
 
             if (currentUserData.isBanned) {
                 alert("Tài khoản của bạn đã bị khóa hệ thống. Vui lòng liên hệ quản trị viên.");
