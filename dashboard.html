@@ -353,7 +353,6 @@
             align-items: center;
         }
 
-        /* --- MỚI: Thanh tìm kiếm (Search Bar) --- */
         .action-search {
             position: relative;
             flex: 1;
@@ -399,113 +398,37 @@
             flex-wrap: wrap;
         }
 
-        /* Group Bộ Lọc */
-        .filter-group {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .filter-label {
-            font-weight: 600;
-            color: var(--text-main);
-            font-size: 0.95rem;
-        }
-        .pill-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
+        .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .filter-label { font-weight: 600; color: var(--text-main); font-size: 0.95rem; }
+        .pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
         .pill-btn {
-            padding: 6px 16px;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            background: var(--gray-bg);
-            color: var(--text-muted);
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 0.85rem;
-            transition: all 0.2s ease;
+            padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border-color);
+            background: var(--gray-bg); color: var(--text-muted); cursor: pointer;
+            font-weight: 500; font-size: 0.85rem; transition: all 0.2s ease;
         }
-        .pill-btn:hover {
-            border-color: var(--primary-blue);
-            color: var(--primary-blue);
-            background-color: var(--light-blue);
-        }
-        .pill-btn.active {
-            background: var(--primary-blue);
-            color: var(--white);
-            border-color: var(--primary-blue);
-            box-shadow: 0 2px 6px rgba(0, 86, 179, 0.2);
-        }
+        .pill-btn:hover { border-color: var(--primary-blue); color: var(--primary-blue); background-color: var(--light-blue); }
+        .pill-btn.active { background: var(--primary-blue); color: var(--white); border-color: var(--primary-blue); box-shadow: 0 2px 6px rgba(0, 86, 179, 0.2); }
 
-        /* Thẻ Select Sắp xếp mượt mà */
-        .sort-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        .sort-wrapper i {
-            position: absolute;
-            left: 14px;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            pointer-events: none;
-        }
+        .sort-wrapper { position: relative; display: flex; align-items: center; }
+        .sort-wrapper i { position: absolute; left: 14px; color: var(--text-muted); font-size: 0.9rem; pointer-events: none; }
         .modern-select {
-            appearance: none;
-            -webkit-appearance: none;
-            padding: 8px 35px 8px 35px;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            background-color: var(--gray-bg);
-            color: var(--text-main);
-            font-family: inherit;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            outline: none;
-            transition: all 0.2s ease;
+            appearance: none; -webkit-appearance: none; padding: 8px 35px 8px 35px;
+            border-radius: 20px; border: 1px solid var(--border-color); background-color: var(--gray-bg);
+            color: var(--text-main); font-family: inherit; font-size: 0.9rem; font-weight: 500;
+            cursor: pointer; outline: none; transition: all 0.2s ease;
             background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px top 50%;
-            background-size: 10px auto;
+            background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 10px auto;
         }
-        .modern-select:hover, .modern-select:focus {
-            border-color: var(--primary-blue);
-            background-color: var(--white);
-            box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
-        }
+        .modern-select:hover, .modern-select:focus { border-color: var(--primary-blue); background-color: var(--white); box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
 
-        /* Nút Grid/List bo tròn */
-        .view-toggle-group {
-            display: flex;
-            background: var(--gray-bg);
-            border-radius: 20px;
-            padding: 4px;
-            border: 1px solid var(--border-color);
-        }
+        .view-toggle-group { display: flex; background: var(--gray-bg); border-radius: 20px; padding: 4px; border: 1px solid var(--border-color); }
         .view-btn {
-            background: transparent;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 16px;
-            cursor: pointer;
-            color: var(--text-muted);
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.95rem;
+            background: transparent; border: none; padding: 6px 14px; border-radius: 16px;
+            cursor: pointer; color: var(--text-muted); transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
         }
-        .view-btn:hover {
-            color: var(--primary-blue);
-        }
-        .view-btn.active {
-            background: var(--primary-blue);
-            color: var(--white);
-            box-shadow: 0 2px 6px rgba(0, 86, 179, 0.2);
-        }
+        .view-btn:hover { color: var(--primary-blue); }
+        .view-btn.active { background: var(--primary-blue); color: var(--white); box-shadow: 0 2px 6px rgba(0, 86, 179, 0.2); }
 
         /* =========================================
            6. DANH SÁCH KHÓA HỌC
@@ -519,18 +442,33 @@
             border: 1px solid var(--border-color); position: relative;
         }
         .course-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        
+        /* Đã dời Badge PRO/Free sang trái để nhường chỗ cho Bookmark */
         .course-badge {
-            position: absolute; top: 15px; right: 15px; padding: 5px 12px; border-radius: 20px; font-size: 0.75rem;
+            position: absolute; top: 15px; left: 15px; padding: 5px 12px; border-radius: 20px; font-size: 0.75rem;
             font-weight: bold; color: #fff; z-index: 2; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .badge-vip { background-color: var(--vip-color); }
         .badge-free { background-color: var(--free-color); }
 
+        /* Nút Bookmark Đề Thi */
+        .btn-bookmark {
+            position: absolute; top: 15px; right: 15px; padding: 0; width: 34px; height: 34px;
+            border-radius: 50%; font-size: 1.05rem;
+            color: var(--text-muted); background: var(--white);
+            z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .btn-bookmark:hover { transform: scale(1.1); color: var(--primary-blue); }
+        .btn-bookmark.saved { color: var(--warning-orange); border-color: var(--warning-orange); background-color: #fffaf0; }
+
         .card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
         .card-title {
             font-size: 1.2rem; font-weight: 700; color: var(--primary-blue);
             margin: 0 0 15px 0; line-height: 1.4; display: -webkit-box;
-            -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding-right: 50px;
+            -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+            padding-right: 40px; padding-left: 60px; /* Chừa không gian cho Bookmark bên phải và Badge bên trái (nếu cần ở ListView) */
         }
 
         .card-tags { margin-bottom: 15px; display: flex; gap: 8px; flex-wrap: wrap; }
@@ -564,10 +502,11 @@
         
         .list-view .course-card { flex-direction: row; align-items: center; }
         .list-view .card-body { flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; }
-        .list-view .card-title { margin: 0; padding-right: 0; flex: 1.5; }
+        .list-view .card-title { margin: 0; padding-right: 0; padding-left: 0; flex: 1.5; }
         .list-view .card-stats { grid-template-columns: 1fr; margin: 0; flex: 1; }
         .list-view .card-meta { border-top: none; padding-top: 0; flex-direction: column; align-items: flex-start; gap: 5px; flex: 1; }
-        .list-view .course-badge { position: relative; top: 0; right: 0; margin-left: 15px; box-shadow: none; }
+        .list-view .course-badge { position: relative; top: 0; left: 0; margin-right: 15px; box-shadow: none; }
+        .list-view .btn-bookmark { position: relative; top: 0; right: 0; margin-left: 15px; flex-shrink: 0; }
         .list-view .card-footer { border-top: none; border-left: 1px solid var(--border-color); background: transparent; min-width: 200px; }
 
         /* SKELETON LOADER */
@@ -576,7 +515,7 @@
         .stat-skeleton-text { width: 60px; height: 24px; vertical-align: middle; }
         
         .course-card-skeleton { background: var(--white); border-radius: 12px; border: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); }
-        .course-card-skeleton .sk-badge { height: 22px; width: 60px; border-radius: 20px; align-self: flex-end; }
+        .course-card-skeleton .sk-badge { height: 22px; width: 60px; border-radius: 20px; align-self: flex-start; }
         .course-card-skeleton .sk-title { height: 24px; width: 75%; margin-top: 5px; }
         .course-card-skeleton .sk-text { height: 16px; width: 50%; }
         .course-card-skeleton .sk-meta { height: 16px; width: 90%; }
@@ -608,7 +547,7 @@
         .qr-placeholder img { max-width: 100%; border-radius: 8px; }
         .instruction { background-color: var(--light-blue); padding: 15px; border-radius: 5px; line-height: 1.5; text-align: center; margin-bottom: 15px; }
 
-        /* RESPONSIVE CẬP NHẬT CHO ACTION BAR & SEARCH */
+        /* RESPONSIVE CẬP NHẬT */
         @media (max-width: 1100px) { .grid-view { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) {
             .quick-stats-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -619,7 +558,6 @@
             
             .action-bar { flex-direction: column; align-items: stretch; gap: 15px; padding: 15px; }
             .action-left { flex-direction: column; align-items: flex-start; gap: 15px; }
-            /* Đưa search bar lên trên cùng trên điện thoại */
             .action-search { margin: 0; max-width: 100%; order: -1; }
             .action-right { justify-content: space-between; width: 100%; }
             .sort-wrapper { flex: 1; margin-right: 15px; }
@@ -665,6 +603,10 @@
                     </div>
                     <div class="sub-menu-item" data-technique="Hỗn hợp">
                         <i class="fa-solid fa-layer-group"></i> Hỗn hợp
+                    </div>
+                    <!-- MENU MỚI: ĐỀ THI ĐÃ LƯU -->
+                    <div class="sub-menu-item" id="menu-saved-exams" data-technique="saved" style="border-top: 1px dashed rgba(255,255,255,0.2); margin-top: 5px;">
+                        <i class="fa-solid fa-bookmark" style="color: var(--star-color);"></i> Đề thi đã lưu
                     </div>
                 </div>
             </div>
