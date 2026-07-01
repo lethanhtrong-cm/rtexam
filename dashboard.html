@@ -330,7 +330,7 @@
         .stat-card-account .stat-icon { color: #d97706; background: rgba(217, 119, 6, 0.12); }
 
         /* =========================================
-           5. ACTION BAR HIỆN ĐẠI (TÁI CẤU TRÚC)
+           5. ACTION BAR HIỆN ĐẠI
            ========================================= */
         .action-bar {
             display: flex;
@@ -351,6 +351,45 @@
             gap: 25px;
             flex-wrap: wrap;
             align-items: center;
+        }
+
+        /* --- MỚI: Thanh tìm kiếm (Search Bar) --- */
+        .action-search {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+            max-width: 350px;
+            margin: 0 15px;
+        }
+        .action-search i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            pointer-events: none;
+        }
+        .search-input {
+            width: 100%;
+            padding: 9px 20px 9px 40px;
+            border-radius: 30px;
+            border: 1px solid var(--border-color);
+            background-color: var(--gray-bg);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+        .search-input::placeholder {
+            color: #9ca3af;
+        }
+        .search-input:focus {
+            background-color: var(--white);
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
         }
 
         .action-right {
@@ -427,7 +466,6 @@
             cursor: pointer;
             outline: none;
             transition: all 0.2s ease;
-            /* Mũi tên dropdown tùy chỉnh để bỏ mặc định cứng nhắc */
             background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
             background-repeat: no-repeat;
             background-position: right 12px top 50%;
@@ -570,7 +608,7 @@
         .qr-placeholder img { max-width: 100%; border-radius: 8px; }
         .instruction { background-color: var(--light-blue); padding: 15px; border-radius: 5px; line-height: 1.5; text-align: center; margin-bottom: 15px; }
 
-        /* RESPONSIVE CẬP NHẬT CHO ACTION BAR */
+        /* RESPONSIVE CẬP NHẬT CHO ACTION BAR & SEARCH */
         @media (max-width: 1100px) { .grid-view { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) {
             .quick-stats-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -581,6 +619,8 @@
             
             .action-bar { flex-direction: column; align-items: stretch; gap: 15px; padding: 15px; }
             .action-left { flex-direction: column; align-items: flex-start; gap: 15px; }
+            /* Đưa search bar lên trên cùng trên điện thoại */
+            .action-search { margin: 0; max-width: 100%; order: -1; }
             .action-right { justify-content: space-between; width: 100%; }
             .sort-wrapper { flex: 1; margin-right: 15px; }
             .modern-select { width: 100%; }
@@ -691,7 +731,7 @@
                     </div>
                 </div>
 
-                <!-- ACTION BAR HIỆN ĐẠI MỚI (THAY THẾ BỘ LỌC & TOOLBAR CŨ) -->
+                <!-- ACTION BAR HIỆN ĐẠI TÍCH HỢP SEARCH BAR -->
                 <div class="action-bar">
                     <!-- Khối bên trái: Các bộ lọc pill -->
                     <div class="action-left">
@@ -713,6 +753,12 @@
                                 <button class="pill-btn" data-time="45">45 phút</button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Khối giữa: Thanh tìm kiếm thông minh -->
+                    <div class="action-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm...">
                     </div>
 
                     <!-- Khối bên phải: Công cụ sắp xếp và chuyển đổi view -->
