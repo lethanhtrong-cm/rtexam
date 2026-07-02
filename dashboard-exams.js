@@ -508,3 +508,4 @@ window.goToHistory = function(examId) {
     // 4. Bắn sự kiện (CustomEvent) để module history bắt được và fill input search
     document.dispatchEvent(new CustomEvent("filterHistoryByExam", { detail: { examId: examId } }));
 };
+
