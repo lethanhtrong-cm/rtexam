@@ -348,17 +348,16 @@
 
         .action-left {
             display: flex;
-            gap: 25px;
+            gap: 20px;
             flex-wrap: wrap;
             align-items: center;
+            flex: 1; 
         }
 
         .action-search {
             position: relative;
-            flex: 1;
-            min-width: 250px;
-            max-width: 350px;
-            margin: 0 15px;
+            flex: 0 1 320px; 
+            min-width: 220px;
         }
         .action-search i {
             position: absolute;
@@ -382,22 +381,10 @@
             transition: all 0.2s ease;
             box-sizing: border-box;
         }
-        .search-input::placeholder {
-            color: #9ca3af;
-        }
-        .search-input:focus {
-            background-color: var(--white);
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1);
-        }
+        .search-input::placeholder { color: #9ca3af; }
+        .search-input:focus { background-color: var(--white); border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
 
-        .action-right {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
+        .action-right { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
         .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .filter-label { font-weight: 600; color: var(--text-main); font-size: 0.95rem; }
         .pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -431,83 +418,90 @@
         .view-btn.active { background: var(--primary-blue); color: var(--white); box-shadow: 0 2px 6px rgba(0, 86, 179, 0.2); }
 
         /* =========================================
-           6. DANH SÁCH KHÓA HỌC
+           6. CSS EXAM CARD RỰC RỠ & CHUYÊN NGHIỆP
            ========================================= */
         .grid-view { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
         .list-view { display: flex; flex-direction: column; gap: 20px; }
 
         .course-card {
-            background: var(--white); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            background: var(--white); border-radius: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.04);
             overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s;
             border: 1px solid var(--border-color); position: relative;
         }
-        .course-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        .course-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         
-        /* Đã dời Badge PRO/Free sang trái để nhường chỗ cho Bookmark */
+        /* Badge VIP/Free góc trái */
         .course-badge {
-            position: absolute; top: 15px; left: 15px; padding: 5px 12px; border-radius: 20px; font-size: 0.75rem;
-            font-weight: bold; color: #fff; z-index: 2; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: absolute; top: 16px; left: 16px; padding: 5px 12px; border-radius: 20px; font-size: 0.75rem;
+            font-weight: bold; color: #fff; z-index: 2; box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
         .badge-vip { background-color: var(--vip-color); }
         .badge-free { background-color: var(--free-color); }
 
-        /* Nút Bookmark Đề Thi */
+        /* --- MỚI: Nút Bookmark Góc Phải --- */
         .btn-bookmark {
-            position: absolute; top: 15px; right: 15px; padding: 0; width: 34px; height: 34px;
-            border-radius: 50%; font-size: 1.05rem;
-            color: var(--text-muted); background: var(--white);
-            z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            border: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s ease;
+            position: absolute; top: 14px; right: 14px; padding: 0; width: 36px; height: 36px;
+            border-radius: 50%; font-size: 1.1rem;
+            color: #9ca3af; background: rgba(255, 255, 255, 0.9);
+            z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .btn-bookmark:hover { transform: scale(1.1); color: var(--primary-blue); }
-        .btn-bookmark.saved { color: var(--warning-orange); border-color: var(--warning-orange); background-color: #fffaf0; }
+        .btn-bookmark:hover { transform: scale(1.1); color: var(--danger-red); border-color: var(--danger-red); }
+        .btn-bookmark.saved { color: var(--danger-red); border-color: var(--danger-red); background-color: #fff5f5; }
 
-        .card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
-        .card-title {
-            font-size: 1.2rem; font-weight: 700; color: var(--primary-blue);
-            margin: 0 0 15px 0; line-height: 1.4; display: -webkit-box;
-            -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-            padding-right: 40px; padding-left: 60px; /* Chừa không gian cho Bookmark bên phải và Badge bên trái (nếu cần ở ListView) */
-        }
-
-        .card-tags { margin-bottom: 15px; display: flex; gap: 8px; flex-wrap: wrap; }
-        .meta-tag { background: var(--gray-bg); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--text-muted); font-weight: 600; border: 1px solid var(--border-color);}
+        .card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
         
-        .card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted); }
-        .stat-item { display: flex; align-items: center; gap: 6px; }
+        .card-title {
+            font-size: 1.25rem; font-weight: 700; color: var(--primary-blue);
+            margin: 25px 0 15px 0; /* Cách xa badge phía trên */
+            line-height: 1.4; display: -webkit-box;
+            -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+
+        /* --- MỚI: CSS Màu Sắc Cho Tags (Kỹ thuật & Cấp độ) --- */
+        .card-tags { margin-bottom: 18px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .meta-tag { padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: none; letter-spacing: 0.3px;}
+        .tag-tech { background-color: #e0f2fe; color: #0284c7; } /* Xanh dương nhạt */
+        .tag-level-de { background-color: #dcfce7; color: #16a34a; } /* Xanh lá */
+        .tag-level-tb { background-color: #fef3c7; color: #d97706; } /* Vàng cam */
+        .tag-level-kho { background-color: #fee2e2; color: #dc2626; } /* Đỏ */
+        
+        /* --- MỚI: Dòng Stats Nền Xám Mượt Mà --- */
+        .card-stats-bg { 
+            background-color: var(--gray-bg); border-radius: 8px; padding: 12px 15px; 
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 18px; font-size: 0.85rem; color: var(--text-muted); border: 1px solid #f0f0f0;
+        }
+        .card-stats-bg .stat-item { display: flex; align-items: center; gap: 6px; }
+        .card-stats-bg b { color: var(--text-main); font-size: 1rem; font-weight: 750; } /* Chữ số in đậm rực rỡ */
 
         .card-meta { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px dashed var(--border-color); }
         .rating { font-weight: bold; color: var(--text-main); display: flex; align-items: center; gap: 5px; }
         .rating i { color: var(--star-color); }
         .attempts { font-size: 0.85rem; color: var(--text-muted); }
 
-        .card-footer { padding: 15px 20px; background-color: var(--gray-bg); border-top: 1px solid var(--border-color); }
-        .card-footer button { width: 100%; padding: 12px; font-size: 1rem; }
+        .card-footer { padding: 18px 22px; background-color: #fafafa; border-top: 1px solid var(--border-color); }
+        .card-footer button { width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; }
         
         .btn-pro-locked {
             background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%);
-            color: #5c3a21;
-            border: 1px solid #ffca28;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            color: #5c3a21; border: 1px solid #ffca28;
+            border-radius: 8px !important; font-weight: bold;
+            cursor: pointer; transition: all 0.3s ease;
             box-shadow: 0 4px 10px rgba(255, 215, 0, 0.2);
         }
-        .btn-pro-locked:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(255, 215, 0, 0.4);
-        }
+        .btn-pro-locked:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255, 215, 0, 0.4); }
         
-        .list-view .course-card { flex-direction: row; align-items: center; }
-        .list-view .card-body { flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; }
-        .list-view .card-title { margin: 0; padding-right: 0; padding-left: 0; flex: 1.5; }
-        .list-view .card-stats { grid-template-columns: 1fr; margin: 0; flex: 1; }
-        .list-view .card-meta { border-top: none; padding-top: 0; flex-direction: column; align-items: flex-start; gap: 5px; flex: 1; }
-        .list-view .course-badge { position: relative; top: 0; left: 0; margin-right: 15px; box-shadow: none; }
-        .list-view .btn-bookmark { position: relative; top: 0; right: 0; margin-left: 15px; flex-shrink: 0; }
-        .list-view .card-footer { border-top: none; border-left: 1px solid var(--border-color); background: transparent; min-width: 200px; }
+        /* Chỉnh List View */
+        .list-view .course-card { flex-direction: row; align-items: stretch; }
+        .list-view .card-body { flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; padding: 20px; }
+        .list-view .card-title { margin: 0 0 10px 0; padding-right: 0; padding-left: 0; flex: 1.5; font-size: 1.15rem; }
+        .list-view .card-stats-bg { margin-bottom: 0; background: transparent; border: none; padding: 0; flex: 1; justify-content: flex-start; gap: 20px; }
+        .list-view .card-meta { border-top: none; padding-top: 0; flex-direction: column; align-items: flex-start; gap: 5px; flex: 1; margin-top: 0; border-left: 1px dashed var(--border-color); padding-left: 20px;}
+        .list-view .course-badge { position: relative; top: 0; left: 0; margin-right: 15px; margin-bottom: 10px; display: inline-block;}
+        .list-view .btn-bookmark { position: relative; top: 0; right: 0; margin-left: auto; flex-shrink: 0; }
+        .list-view .card-footer { border-top: none; border-left: 1px solid var(--border-color); background: transparent; min-width: 220px; display: flex; align-items: center; }
 
         /* SKELETON LOADER */
         .skeleton-loader { background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%); background-size: 200% 100%; animation: shimmerEffect 1.5s infinite linear; border-radius: 4px; display: inline-block; }
@@ -553,12 +547,15 @@
             .quick-stats-grid { grid-template-columns: 1fr; gap: 15px; }
             .grid-view { grid-template-columns: 1fr; }
             .list-view .course-card { flex-direction: column; align-items: stretch; }
-            .list-view .card-body { flex-direction: column; align-items: flex-start; }
-            .list-view .card-footer { border-left: none; border-top: 1px solid var(--border-color); }
+            .list-view .card-body { flex-direction: column; align-items: flex-start; padding: 15px; }
+            .list-view .card-stats-bg { width: 100%; box-sizing: border-box; }
+            .list-view .card-meta { border-left: none; padding-left: 0; width: 100%; border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 15px; flex-direction: row; align-items: center; }
+            .list-view .btn-bookmark { position: absolute; top: 15px; right: 15px; margin: 0; }
+            .list-view .card-footer { border-top: 1px solid var(--border-color); border-left: none; width: 100%; padding: 15px; box-sizing: border-box;}
             
             .action-bar { flex-direction: column; align-items: stretch; gap: 15px; padding: 15px; }
-            .action-left { flex-direction: column; align-items: flex-start; gap: 15px; }
-            .action-search { margin: 0; max-width: 100%; order: -1; }
+            .action-left { flex-direction: column; align-items: stretch; gap: 15px; }
+            .action-search { flex: auto; max-width: 100%; order: -1; }
             .action-right { justify-content: space-between; width: 100%; }
             .sort-wrapper { flex: 1; margin-right: 15px; }
             .modern-select { width: 100%; }
@@ -604,7 +601,7 @@
                     <div class="sub-menu-item" data-technique="Hỗn hợp">
                         <i class="fa-solid fa-layer-group"></i> Hỗn hợp
                     </div>
-                    <!-- MENU MỚI: ĐỀ THI ĐÃ LƯU -->
+                    <!-- MENU: ĐỀ THI ĐÃ LƯU -->
                     <div class="sub-menu-item" id="menu-saved-exams" data-technique="saved" style="border-top: 1px dashed rgba(255,255,255,0.2); margin-top: 5px;">
                         <i class="fa-solid fa-bookmark" style="color: var(--star-color);"></i> Đề thi đã lưu
                     </div>
@@ -675,8 +672,15 @@
 
                 <!-- ACTION BAR HIỆN ĐẠI TÍCH HỢP SEARCH BAR -->
                 <div class="action-bar">
-                    <!-- Khối bên trái: Các bộ lọc pill -->
+                    <!-- Khối bên trái: Tìm kiếm & Các bộ lọc pill -->
                     <div class="action-left">
+                        
+                        <!-- Khối tìm kiếm thông minh -->
+                        <div class="action-search">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm...">
+                        </div>
+
                         <div class="filter-group">
                             <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
                             <div class="pill-group" id="levelFilter">
@@ -686,6 +690,7 @@
                                 <button class="pill-btn" data-level="Dễ">Dễ</button>
                             </div>
                         </div>
+                        
                         <div class="filter-group">
                             <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
                             <div class="pill-group" id="timeFilter">
@@ -695,12 +700,7 @@
                                 <button class="pill-btn" data-time="45">45 phút</button>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Khối giữa: Thanh tìm kiếm thông minh -->
-                    <div class="action-search">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm...">
                     </div>
 
                     <!-- Khối bên phải: Công cụ sắp xếp và chuyển đổi view -->
