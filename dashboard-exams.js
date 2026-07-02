@@ -47,18 +47,18 @@ if (!document.getElementById(styleId)) {
         .btn-outline-primary-custom:hover {
             background: var(--primary-blue); color: white;
         }
-        /* --- NÚT PRO CHUẨN PREMIUM --- */
+        /* --- NÚT PRO CHUẨN PREMIUM (PASTEL COOL) --- */
         .btn-premium-pro {
-            background: linear-gradient(45deg, #FFD700, #FFA500) !important;
-            color: #111827 !important; /* Chữ đen xám đậm */
+            background: linear-gradient(135deg, #8ec5fc 0%, #e0c3fc 100%) !important;
+            color: #2c3e50 !important; /* Chữ màu xám xanh đậm, lịch sự */
             border: none !important;
-            font-weight: 800 !important;
+            font-weight: 500 !important; /* Độ đậm vừa phải, không bị thô */
             transition: all 0.3s ease !important;
             cursor: pointer;
         }
         .btn-premium-pro:hover {
             transform: translateY(-3px) !important;
-            box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4) !important;
+            box-shadow: 0 8px 20px rgba(142, 197, 252, 0.5) !important; /* Bóng đổ đồng điệu với màu nền */
             filter: brightness(1.05);
         }
         
@@ -334,12 +334,12 @@ function renderExams() {
             </div>
         `;
 
-        // 3. ACTION BUTTON THÔNG MINH (CẬP NHẬT GIAO DIỆN PRO RỰC RỠ)
+        // 3. ACTION BUTTON THÔNG MINH (CẬP NHẬT GIAO DIỆN PRO PASTEL, NHẸ NHÀNG)
         let buttonHtml = '';
         if (isExamVip && !isUserVip) {
             buttonHtml = `
-                <button class="btn btn-warning w-100 shadow-sm btn-premium-pro" style="padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="goToUpgrade()">
-                    <i class="fa-solid fa-gem" style="margin-right: 6px; font-size: 1.1rem;"></i> Nâng cấp tài khoản Pro
+                <button class="btn w-100 shadow-sm btn-premium-pro" style="padding: 10px 12px; font-size: 0.9rem; border-radius: 8px;" onclick="goToUpgrade()">
+                    <i class="fa-solid fa-gem me-2"></i> Nâng cấp tài khoản Pro
                 </button>
             `;
         } else if (isCompleted) {
@@ -451,4 +451,3 @@ window.goToUpgrade = function() {
     const currentTabTitle = document.getElementById("currentTabTitle");
     if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
 };
-
