@@ -210,7 +210,7 @@ function renderExams() {
         displayData = displayData.filter(exam => exam.timeLimit === timeTarget);
     }
     
-    // LỚP LỌC 4: Tìm kiếm theo từ khóa
+    // LỚP LỌC 4: Tìm kiếm theo từ khóa Real-time
     if (currentSearchQuery !== '') {
         displayData = displayData.filter(exam => 
             exam.id.toLowerCase().includes(currentSearchQuery) || 
@@ -263,23 +263,44 @@ function renderExams() {
             buttonHtml = `<button class="btn-primary" onclick="goToQuiz('${exam.id}')">Vào thi ngay</button>`;
         }
 
-        // Color-coding Cấp độ chuyên nghiệp
-        let levelClass = 'tag-level-tb'; 
-        if (exam.level === 'Dễ') levelClass = 'tag-level-de';
-        else if (exam.level === 'Khó') levelClass = 'tag-level-kho';
+        // ==============================================================
+        // UI CẬP NHẬT: GỘP 4 THÔNG SỐ VÀO BADGE DÀN NGANG MƯỢT MÀ
+        // ==============================================================
+        
+        let levelClass = 'bg-warning-subtle text-warning'; 
+        let levelStyle = 'background-color: #fff3cd; color: #664d03;'; // TB
+        if (exam.level === 'Dễ') {
+            levelClass = 'bg-success-subtle text-success';
+            levelStyle = 'background-color: #d1e7dd; color: #0f5132;';
+        } else if (exam.level === 'Khó') {
+            levelClass = 'bg-danger-subtle text-danger';
+            levelStyle = 'background-color: #f8d7da; color: #842029;';
+        }
 
-        const tagsHtml = `
-            <div class="card-tags">
-                <span class="meta-tag tag-tech"><i class="fa-solid fa-tag"></i> ${exam.technique}</span>
-                <span class="meta-tag ${levelClass}"><i class="fa-solid fa-signal"></i> ${exam.level}</span>
-            </div>
-        `;
+        // Style chung cho các viên Pill (Dùng inline style để độc lập với thư viện ngoài)
+        const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
 
-        // Thống kê với nền xám nổi bật con số
-        const statsHtml = `
-            <div class="card-stats-bg">
-                <div class="stat-item"><i class="fa-solid fa-file-circle-question"></i> <span><b>${exam.questionCount}</b> câu</span></div>
-                <div class="stat-item"><i class="fa-solid fa-stopwatch"></i> <span><b>${exam.timeLimit}</b> phút</span></div>
+        const mergedTagsHtml = `
+            <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+                <!-- Tag Kỹ thuật -->
+                <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #cfe2ff; color: #084298;">
+                    <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
+                </span>
+                
+                <!-- Tag Cấp độ -->
+                <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
+                    <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
+                </span>
+                
+                <!-- Tag Số câu hỏi -->
+                <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #055160;">
+                    <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
+                </span>
+                
+                <!-- Tag Thời gian -->
+                <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #e2e3e5; color: #41464b;">
+                    <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
+                </span>
             </div>
         `;
 
@@ -288,18 +309,21 @@ function renderExams() {
         card.innerHTML = `
             ${badgeHtml}
             ${bookmarkHtml}
-            <div class="card-body">
+            <div class="card-body" style="padding-bottom: 15px;">
                 <div style="flex: 1;">
                     <h3 class="card-title">${exam.id}</h3>
-                    ${tagsHtml}
-                    ${statsHtml}
+                    ${mergedTagsHtml}
                 </div>
-                <div class="card-meta">
+                
+                <!-- Xóa bỏ border-top để card liền khối sạch sẽ -->
+                <div class="card-meta" style="border-top: none; padding-top: 0;">
                     <div class="rating">${exam.rating} <i class="fa-solid fa-star"></i> <span class="attempts">(${exam.ratingCount})</span></div>
                     <div class="attempts"><i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi</div>
                 </div>
             </div>
-            <div class="card-footer">${buttonHtml}</div>
+            <div class="card-footer" style="border-top: none; padding-top: 0; padding-bottom: 20px; background-color: #ffffff;">
+                ${buttonHtml}
+            </div>
         `;
         examListContainer.appendChild(card);
     });
@@ -311,7 +335,7 @@ function renderExams() {
 
 // Xử lý Lưu / Bỏ lưu đề thi Real-time
 window.toggleBookmark = async function(event, examId) {
-    event.stopPropagation(); // Ngăn sự kiện click lan ra ngoài Card
+    event.stopPropagation(); 
     
     if (!auth.currentUser || !currentUserData) {
         alert("Vui lòng đăng nhập để lưu đề thi vào bộ sưu tập!");
@@ -327,13 +351,10 @@ window.toggleBookmark = async function(event, examId) {
 
     try {
         if (isCurrentlySaved) {
-            // Xóa Bookmark: Cập nhật local array và render UI ngay lập tức để tạo cảm giác mượt mà
             currentUserData.bookmarks = currentUserData.bookmarks.filter(id => id !== examId);
             renderExams();
-            // Gửi dữ liệu đồng bộ lên Firestore ngầm
             await updateDoc(userRef, { bookmarks: arrayRemove(examId) });
         } else {
-            // Thêm Bookmark
             currentUserData.bookmarks.push(examId);
             renderExams();
             await updateDoc(userRef, { bookmarks: arrayUnion(examId) });
@@ -361,4 +382,3 @@ window.goToUpgrade = function() {
     const currentTabTitle = document.getElementById("currentTabTitle");
     if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
 };
-```eof
