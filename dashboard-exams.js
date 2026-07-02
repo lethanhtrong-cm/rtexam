@@ -452,3 +452,4 @@ window.goToUpgrade = function() {
     if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
 };
 
+
