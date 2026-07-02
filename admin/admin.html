@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard Ultra Pro - Hệ thống thi trắc nghiệm</title>
 
+    <!-- Thư viện SheetJS để xử lý Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <style>
@@ -71,11 +72,10 @@
         .search-input-modern { width: 100%; padding: 14px 20px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 15px; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,0.01); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); color: #1f2937; font-weight: 500; background-color: #ffffff; }
         .search-input-modern:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.12); }
 
-        /* ================= HIGH-END USER STATS CARDS (MỚI NÂNG CẤP) ================= */
+        /* ================= HIGH-END USER STATS CARDS ================= */
         .stats-container { display: flex; gap: 20px; margin-bottom: 30px; width: 100%; }
         .stat-card { background: white; flex: 1; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; position: relative; overflow: hidden; }
         
-        /* Màu nền nhẹ và hiệu ứng icon mờ góc thẻ */
         .stat-card.total-users { background-color: #f0fdf4; border-left: 6px solid #10b981; }
         .stat-card.vip-users { background-color: #fef9c3; border-left: 6px solid #eab308; }
         .stat-card.online-users { background-color: #eff6ff; border-left: 6px solid #3b82f6; }
@@ -87,7 +87,6 @@
         .stat-info h3 { font-size: 12px; color: #64748b; text-transform: uppercase; margin-bottom: 6px; font-weight: 700; letter-spacing: 0.5px; }
         .stat-info .number { font-size: 34px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
         
-        /* Chấm xanh nhấp nháy cho chỉ số Online */
         .online-pulse-dot { width: 12px; height: 12px; background-color: #10b981; border-radius: 50%; display: inline-block; position: relative; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); animation: pulse-green 2s infinite; }
         @keyframes pulse-green {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
@@ -95,7 +94,7 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
-        /* ================= REAL-TIME TOOLBAR & SEARCH (MỚI NÂNG CẤP) ================= */
+        /* ================= REAL-TIME TOOLBAR & SEARCH ================= */
         .toolbar-user-modern { display: flex; gap: 15px; margin-bottom: 25px; width: 100%; align-items: center; }
         .search-user-container { flex: 1; position: relative; }
         .search-user-container::before { content: "🔍"; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 15px; color: #94a3b8; pointer-events: none; }
@@ -105,11 +104,11 @@
         .select-user-filter { padding: 12px 40px 12px 18px; border: 1px solid #cbd5e1; border-radius: 10px; outline: none; font-size: 14.5px; font-weight: 600; color: #334155; background-color: #ffffff; min-width: 200px; cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 14px; }
         .select-user-filter:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.1); }
 
-        /* ================= LAYOUT EMAIL BỔ SUNG AVATAR (MỚI NÂNG CẤP) ================= */
+        /* ================= LAYOUT EMAIL BỔ SUNG AVATAR ================= */
         .user-email-cell { display: flex; align-items: center; gap: 12px; }
         .user-avatar-placeholder { width: 34px; height: 34px; border-radius: 50%; background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #475569; border: 2px solid #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-transform: uppercase; user-select: none; }
 
-        /* ================= MODERN USER ACTION BUTTONS (MỚI NÂNG CẤP) ================= */
+        /* ================= MODERN USER ACTION BUTTONS ================= */
         .user-action-group { display: flex; justify-content: center; align-items: center; gap: 8px; }
         .btn-user-action { padding: 8px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); color: white; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
@@ -143,10 +142,23 @@
         .btn-outline-sm.btn-delete-modern { color: #ef4444; border-color: #fca5a5; }
         .btn-outline-sm.btn-delete-modern:hover { background-color: #fee2e2; border-color: #ef4444; }
 
+        /* STEP BADGES & DRAG/DROP UI */
+        .step-badge { background-color: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; font-weight: 700; }
+        .step-badge.green { background-color: #10b981; }
+        .step-badge.orange { background-color: #f59e0b; }
+        .file-upload-wrapper { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 45px 20px; text-align: center; background-color: #f8fafc; transition: all 0.25s ease-in-out; position: relative; cursor: pointer; }
+        .file-upload-wrapper:hover { border-color: #3b82f6; background-color: #eff6ff; }
+        .file-upload-icon { font-size: 36px; color: #64748b; margin-bottom: 12px; transition: transform 0.2s; }
+        .file-upload-wrapper:hover .file-upload-icon { transform: translateY(-4px); color: #3b82f6; }
+        .file-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
+        .file-label { font-size: 14.5px; color: #475569; pointer-events: none; line-height: 1.5; }
+        .file-label span { color: #3b82f6; font-weight: 700; text-decoration: underline; }
+        .selected-file-name { margin-top: 15px; font-weight: 700; color: #10b981; font-size: 13.5px; background-color: #d1fae5; display: inline-block; padding: 4px 14px; border-radius: 20px; border: 1px solid #a7f3d0; }
+
         /* BẢNG DỮ LIỆU CHUNG */
         .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.01); }
         .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .admin-table th, .admin-table td { padding: 14px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        .admin-table th, .admin-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .admin-table th { background-color: #f8fafc; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
         .admin-table tr:hover { background-color: #f8fafc; }
         .badge-meta { background-color: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 12px; display: inline-block; border: 1px solid #bfdbfe; margin: 2px; }
@@ -281,8 +293,7 @@
                     <h2 class="card-title"><span class="step-badge orange">3</span> &nbsp; Hàng Đợi Kiểm Tra Dữ Liệu Excel</h2>
                     <p class="card-description">Dữ liệu đọc tạm từ tệp Excel sẽ hiển thị ở đây. Hãy rà soát nội dung kỹ lưỡng trước khi thiết lập thuộc tính và xuất bản.</p>
                     
-                    <!-- ĐÃ CẬP NHẬT CẤU TRÚC BẢNG THEO YÊU CẦU MỚI -->
-                    <div class="table-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 30px;">
+                    <div class="table-container" style="max-height: 350px; overflow-y: auto; margin-bottom: 30px;">
                         <table class="admin-table">
                             <thead>
                                 <tr>
