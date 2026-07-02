@@ -201,7 +201,7 @@ function initFilterChangeListeners() {
         });
     });
 
-    // D. LẮNG NGHE LỌC THEO TỪ KHÓA TÌM KIẾM MÃ ĐỀ REALTIME (MỚI NÂNG CẤP)
+    // D. LẮNG NGHE LỌC THEO TỪ KHÓA TÌM KIẾM MÃ ĐỀ REALTIME
     const searchInput = document.getElementById('examSearchInput');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -351,7 +351,7 @@ async function viewFeedback(examId) {
 }
 
 // =========================================================================
-// 5. QUY TRÌNH IMPORT & PREVIEW EXCEL DỮ LIỆU ĐỀ THI KHÔNG ĐỔI
+// 5. QUY TRÌNH IMPORT & PREVIEW EXCEL DỮ LIỆU ĐỀ THI
 // =========================================================================
 function renderPreview() {
     const previewBody = document.getElementById('preview-list-body');
@@ -361,7 +361,7 @@ function renderPreview() {
     previewBody.innerHTML = '';
 
     if (draftData.length === 0) {
-        previewBody.innerHTML = '<tr><td colspan="5" class="empty-message">Chưa có dữ liệu nào được nạp để xem trước.</td></tr>';
+        previewBody.innerHTML = '<tr><td colspan="9" class="empty-message">Chưa có dữ liệu nào được nạp để xem trước.</td></tr>';
         if (publishBtn) publishBtn.disabled = true;
         return;
     }
@@ -369,20 +369,19 @@ function renderPreview() {
     let stt = 1;
     draftData.forEach((row) => {
         const tr = document.createElement('tr');
-        const optionsHtml = `
-            <div style="font-size:13px; line-height:1.4;">
-                A: ${row.options[0]}<br> B: ${row.options[1]}<br> C: ${row.options[2]}<br> D: ${row.options[3]}
-            </div>
-        `;
         const mapCorrectText = ['A', 'B', 'C', 'D'];
         const correctChar = mapCorrectText[row.correctAnswer] || 'Không rõ';
 
         tr.innerHTML = `
             <td class="text-center">${stt++}</td>
             <td><span class="badge-count" style="background:#eff6ff; color:#2563eb;">${row.examId}</span></td>
-            <td><div style="max-width:300px; font-weight:500;">${row.text}</div></td>
-            <td>${optionsHtml}</td>
-            <td class="text-center"><strong style="color:#10b981; font-size:15px;">${correctChar}</strong></td>
+            <td><div style="max-width:250px; font-weight:500;">${row.text}</div></td>
+            <td><div style="font-size: 13px; color: #475569;">${row.options[0]}</div></td>
+            <td><div style="font-size: 13px; color: #475569;">${row.options[1]}</div></td>
+            <td><div style="font-size: 13px; color: #475569;">${row.options[2]}</div></td>
+            <td><div style="font-size: 13px; color: #475569;">${row.options[3]}</div></td>
+            <td class="text-center"><strong style="color:#10b981; font-size:16px;">${correctChar}</strong></td>
+            <td><div style="max-width:200px; font-size:12.5px; color:#64748b; font-style: italic;">${row.explanation}</div></td>
         `;
         previewBody.appendChild(tr);
     });
@@ -418,19 +417,30 @@ function handleExcelRead() {
 
                 draftData = [];
                 jsonArr.forEach((row) => {
-                    if (!row["Nội Dung (text)"] || row["Đáp Án Đúng (0=A, 1=B, 2=C, 3=D)"] === undefined) return;
+                    // Bỏ qua nếu thiếu "Câu hỏi" hoặc "Đáp án đúng"
+                    if (!row["Câu hỏi"] || !row["Đáp án đúng"]) return;
+
+                    // Xử lý chuyển đổi đáp án đúng từ A,B,C,D sang mảng index
+                    const correctStr = String(row["Đáp án đúng"]).toUpperCase().trim();
+                    let correctIndex = 0; // Mặc định là A (0)
+                    
+                    if (correctStr === 'A') correctIndex = 0;
+                    else if (correctStr === 'B') correctIndex = 1;
+                    else if (correctStr === 'C') correctIndex = 2;
+                    else if (correctStr === 'D') correctIndex = 3;
+                    else if (!isNaN(parseInt(correctStr))) correctIndex = parseInt(correctStr); // Giữ lại tương thích ngược nếu nhập số
 
                     draftData.push({
-                        examId: String(row["Mã Đề (examId)"] || "DEFAULT_EXAM").trim(),
-                        text: String(row["Nội Dung (text)"]).trim(),
+                        examId: String(row["Mã đề"] || "DEFAULT_EXAM").trim(),
+                        text: String(row["Câu hỏi"]).trim(),
                         options: [
-                            String(row["Đáp Án A"] || "").trim(),
-                            String(row["Đáp Án B"] || "").trim(),
-                            String(row["Đáp Án C"] || "").trim(),
-                            String(row["Đáp Án D"] || "").trim()
+                            String(row["Đáp án A"] || "").trim(),
+                            String(row["Đáp án B"] || "").trim(),
+                            String(row["Đáp án C"] || "").trim(),
+                            String(row["Đáp án D"] || "").trim()
                         ],
-                        correctAnswer: parseInt(row["Đáp Án Đúng (0=A, 1=B, 2=C, 3=D)"], 10),
-                        explanation: row["Giải thích (explanation)"] ? String(row["Giải thích (explanation)"]).trim() : ""
+                        correctAnswer: correctIndex,
+                        explanation: row["Giải thích đáp án"] ? String(row["Giải thích đáp án"]).trim() : ""
                     });
                 });
 
@@ -510,19 +520,23 @@ document.addEventListener('DOMContentLoaded', () => {
     handleExcelRead();
     initFilterChangeListeners(); 
 
-    // Tải file Excel mẫu câu hỏi
+    // Tải file Excel mẫu câu hỏi theo CẤU TRÚC MỚI
     const downloadBtn = document.getElementById('btn-download-template');
     if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
             const templateData = [{ 
-                "Mã Đề (examId)": "DE_MRI_01", 
-                "Nội Dung (text)": "Chuỗi xung T2W trên MRI làm nước có màu gì?", 
-                "Đáp Án A": "Màu đen", "Đáp Án B": "Màu Trắng sáng", "Đáp Án C": "Màu xám", "Đáp Án D": "Màu đỏ", 
-                "Đáp Án Đúng (0=A, 1=B, 2=C, 3=D)": 1, 
-                "Giải thích (explanation)": "Trên chuỗi xung dịch nước (như dịch não tủy) có tín hiệu cao (trắng)." 
+                "Mã đề": "DE_MRI_01", 
+                "Câu hỏi": "Chuỗi xung T2W trên MRI làm nước có màu gì?", 
+                "Đáp án A": "Màu đen", 
+                "Đáp án B": "Màu Trắng sáng", 
+                "Đáp án C": "Màu xám", 
+                "Đáp án D": "Màu đỏ", 
+                "Đáp án đúng": "B", 
+                "Giải thích đáp án": "Trên chuỗi xung dịch nước (như dịch não tủy) có tín hiệu cao (trắng)." 
             }];
             const ws = XLSX.utils.json_to_sheet(templateData);
-            ws['!cols'] = [{wch: 15}, {wch: 40}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 30}, {wch: 50}];
+            // Thiết lập độ rộng cột cho đẹp
+            ws['!cols'] = [{wch: 15}, {wch: 45}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 15}, {wch: 50}];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "DanhSachCauHoi");
             XLSX.writeFile(wb, "Template_Import_Cau_Hoi.xlsx");
