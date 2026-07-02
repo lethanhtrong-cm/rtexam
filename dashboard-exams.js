@@ -1,5 +1,5 @@
 import { auth, db, safeRedirect } from "./dashboard-core.js";
-import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // 1. BIẾN TOÀN CỤC & TRẠNG THÁI BỘ LỌC ĐA LỚP
@@ -8,32 +8,83 @@ export let allExamsData = [];
 let currentUserData = null;
 let currentView = 'grid'; 
 
-// Biến trạng thái của Bộ lọc
-let currentTechnique = 'all'; // Lấy từ Sidebar
-let currentLevel = 'all';     // Lấy từ Pill Buttons
-let currentTime = 'all';      // Lấy từ Pill Buttons
-let currentSearchQuery = '';  // Lấy từ Search Bar
+// Biến trạng thái của Bộ lọc & Dữ liệu Lịch sử
+let currentTechnique = 'all'; 
+let currentLevel = 'all';     
+let currentTime = 'all';      
+let currentSearchQuery = '';  
+let completedExams = new Set(); // Lưu danh sách các mã đề user đã hoàn thành
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
 const sortFilter = document.getElementById('sortFilter');
 const viewBtns = document.querySelectorAll('.view-btn');
 
-// Các phần tử lọc mới
 const subMenuItems = document.querySelectorAll('.sub-menu-item');
 const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
 const timePills = document.querySelectorAll('#timeFilter .pill-btn');
 const searchInput = document.getElementById('searchInput');
+
+// Bơm CSS động cho hiệu ứng Hover mượt mà & Nút Thi lại
+const styleId = "exam-card-dynamic-styles";
+if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.innerHTML = `
+        .exam-card-hover {
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease-out !important;
+        }
+        .exam-card-hover:hover {
+            transform: translateY(-6px) !important;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.12) !important;
+        }
+        .btn-outline-primary-custom {
+            width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;
+            background: transparent; border: 2px solid var(--primary-blue); 
+            color: var(--primary-blue); font-weight: bold; cursor: pointer; 
+            transition: all 0.3s ease;
+        }
+        .btn-outline-primary-custom:hover {
+            background: var(--primary-blue); color: white;
+        }
+        /* Loại bỏ position absolute cũ để gom vào Flexbox Header */
+        .header-badge {
+            position: relative !important; top: auto !important; left: auto !important; right: auto !important; margin: 0 !important;
+        }
+        .header-bookmark {
+            position: relative !important; top: auto !important; right: auto !important; left: auto !important; margin: 0 !important;
+            width: 34px !important; height: 34px !important; flex-shrink: 0;
+        }
+        .list-view .header-flex-container { margin-bottom: 10px !important; }
+    `;
+    document.head.appendChild(style);
+}
 
 // =========================================================================
 // 2. LẮNG NGHE SỰ KIỆN AUTH READY ĐỂ KHỞI CHẠY DỮ LIỆU
 // =========================================================================
 document.addEventListener("authReady", async (e) => {
     currentUserData = e.detail.currentUserData;
-    // Đảm bảo mảng bookmarks luôn tồn tại ở local để tránh lỗi undefined
     if (currentUserData && !currentUserData.bookmarks) {
         currentUserData.bookmarks = [];
     }
+    
+    // Tải danh sách đề thi đã hoàn thành để hiển thị Dấu tick
+    try {
+        if (e.detail.user && e.detail.user.email) {
+            const resultsRef = collection(db, "results");
+            const q = query(resultsRef, where("email", "==", e.detail.user.email));
+            const snap = await getDocs(q);
+            snap.forEach(doc => {
+                const data = doc.data();
+                if (data.examId) completedExams.add(data.examId);
+                if (data.examCode) completedExams.add(data.examCode);
+            });
+        }
+    } catch (err) {
+        console.error("Lỗi lấy lịch sử thi để check trạng thái hoàn thành:", err);
+    }
+
     setupToolbarEvents(); 
     setupFilterEvents(); 
     await loadAggregatedExamData(); 
@@ -43,7 +94,6 @@ document.addEventListener("authReady", async (e) => {
 // 3. CẤU HÌNH SỰ KIỆN LỌC & TOOLBAR
 // =========================================================================
 function setupFilterEvents() {
-    // 1. Sự kiện lọc theo Kỹ thuật hoặc Bộ sưu tập (Sidebar)
     subMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             currentTechnique = e.currentTarget.getAttribute('data-technique');
@@ -51,7 +101,6 @@ function setupFilterEvents() {
         });
     });
 
-    // 2. Hàm setup chung cho Pill Buttons (Cấp độ & Thời gian)
     function setupPillEvents(pills, stateKey) {
         pills.forEach(pill => {
             pill.addEventListener('click', (e) => {
@@ -69,7 +118,6 @@ function setupFilterEvents() {
     setupPillEvents(levelPills, 'level');
     setupPillEvents(timePills, 'time');
 
-    // 3. Sự kiện Tìm kiếm Real-time
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.toLowerCase().trim();
@@ -243,32 +291,49 @@ function renderExams() {
     displayData.forEach(exam => {
         const isExamVip = exam.isVip;
         const isSaved = userBookmarks.includes(exam.id);
+        const isCompleted = completedExams.has(exam.id); // Check user completed status
         
-        // Badge PRO/Free
+        // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark (Nhóm vào Flexbox)
         const badgeHtml = isExamVip 
-            ? `<span class="course-badge badge-vip"><i class="fa-solid fa-crown"></i> PRO</span>`
-            : `<span class="course-badge badge-free">Free</span>`;
+            ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>`
+            : `<span class="course-badge badge-free header-badge">Free</span>`;
             
-        // UI Nút Bookmark
         const bookmarkHtml = `
-            <button class="btn-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${exam.id}')" title="${isSaved ? 'Bỏ lưu đề thi' : 'Lưu đề thi'}">
+            <button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${exam.id}')" title="${isSaved ? 'Bỏ lưu đề thi' : 'Lưu đề thi'}">
                 <i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
             </button>
         `;
-        
+
+        // 2. HEADER FLEXBOX CHUYÊN NGHIỆP
+        const headerHtml = `
+            <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 15px;">
+                <!-- Góc trái: Tên đề thi + Dấu tick -->
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+                    <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
+                    ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
+                </div>
+                
+                <!-- Góc phải: Badge + Bookmark -->
+                <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                    ${badgeHtml}
+                    ${bookmarkHtml}
+                </div>
+            </div>
+        `;
+
+        // 3. ACTION BUTTON THÔNG MINH
         let buttonHtml = '';
         if (isExamVip && !isUserVip) {
-            buttonHtml = `<button class="btn-pro-locked" onclick="goToUpgrade()"><i class="fa-solid fa-gem"></i> Nâng cấp tài khoản Pro</button>`;
+            buttonHtml = `<button class="btn-pro-locked" style="width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="goToUpgrade()"><i class="fa-solid fa-gem"></i> Nâng cấp tài khoản Pro</button>`;
+        } else if (isCompleted) {
+            buttonHtml = `<button class="btn-outline-primary-custom" onclick="goToQuiz('${exam.id}')">🔄 Thi lại</button>`;
         } else {
-            buttonHtml = `<button class="btn-primary" onclick="goToQuiz('${exam.id}')">Vào thi ngay</button>`;
+            buttonHtml = `<button class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="goToQuiz('${exam.id}')">Vào thi ngay</button>`;
         }
 
-        // ==============================================================
-        // UI CẬP NHẬT: GỘP 4 THÔNG SỐ VÀO BADGE DÀN NGANG MƯỢT MÀ
-        // ==============================================================
-        
+        // 4. DẢI BADGE PASTEL 4 THÔNG SỐ (GỘP CHUNG HÀNG NGANG)
         let levelClass = 'bg-warning-subtle text-warning'; 
-        let levelStyle = 'background-color: #fff3cd; color: #664d03;'; // TB
+        let levelStyle = 'background-color: #fff3cd; color: #664d03;'; 
         if (exam.level === 'Dễ') {
             levelClass = 'bg-success-subtle text-success';
             levelStyle = 'background-color: #d1e7dd; color: #0f5132;';
@@ -277,27 +342,19 @@ function renderExams() {
             levelStyle = 'background-color: #f8d7da; color: #842029;';
         }
 
-        // Style chung cho các viên Pill (Dùng inline style để độc lập với thư viện ngoài)
         const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
 
         const mergedTagsHtml = `
             <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
-                <!-- Tag Kỹ thuật -->
                 <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #cfe2ff; color: #084298;">
                     <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
                 </span>
-                
-                <!-- Tag Cấp độ -->
                 <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
                     <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
                 </span>
-                
-                <!-- Tag Số câu hỏi -->
                 <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #055160;">
                     <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
                 </span>
-                
-                <!-- Tag Thời gian -->
                 <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #e2e3e5; color: #41464b;">
                     <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
                 </span>
@@ -305,23 +362,20 @@ function renderExams() {
         `;
 
         const card = document.createElement('div');
-        card.className = 'course-card';
+        card.className = 'course-card exam-card-hover'; // Tích hợp class hover mượt mà
         card.innerHTML = `
-            ${badgeHtml}
-            ${bookmarkHtml}
             <div class="card-body" style="padding-bottom: 15px;">
                 <div style="flex: 1;">
-                    <h3 class="card-title">${exam.id}</h3>
+                    ${headerHtml}
                     ${mergedTagsHtml}
                 </div>
                 
-                <!-- Xóa bỏ border-top để card liền khối sạch sẽ -->
                 <div class="card-meta" style="border-top: none; padding-top: 0;">
                     <div class="rating">${exam.rating} <i class="fa-solid fa-star"></i> <span class="attempts">(${exam.ratingCount})</span></div>
                     <div class="attempts"><i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi</div>
                 </div>
             </div>
-            <div class="card-footer" style="border-top: none; padding-top: 0; padding-bottom: 20px; background-color: #ffffff;">
+            <div class="card-footer" style="border-top: none; padding-top: 0; padding-bottom: 20px; background-color: transparent;">
                 ${buttonHtml}
             </div>
         `;
@@ -332,8 +386,6 @@ function renderExams() {
 // =========================================================================
 // 6. LOGIC BOOKMARK & CÁC HÀM EXPOSE HTML
 // =========================================================================
-
-// Xử lý Lưu / Bỏ lưu đề thi Real-time
 window.toggleBookmark = async function(event, examId) {
     event.stopPropagation(); 
     
