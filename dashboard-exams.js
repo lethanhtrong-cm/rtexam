@@ -451,5 +451,3 @@ window.goToUpgrade = function() {
     const currentTabTitle = document.getElementById("currentTabTitle");
     if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
 };
-
-
