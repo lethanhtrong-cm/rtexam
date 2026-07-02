@@ -27,6 +27,21 @@
             --star-color: #fbbf24;
         }
 
+        /* --- Bổ sung Utility Classes hỗ trợ thiết kế Topbar --- */
+        .d-flex { display: flex; }
+        .align-items-center { align-items: center; }
+        .justify-content-center { justify-content: center; }
+        .justify-content-between { justify-content: space-between; }
+        .gap-3 { gap: 1rem; }
+        .mb-0 { margin-bottom: 0 !important; }
+        .fw-bold { font-weight: 700 !important; }
+        .fw-medium { font-weight: 500 !important; }
+        .text-dark { color: #111827 !important; }
+        .text-secondary { color: #6b7280 !important; }
+        .text-primary { color: var(--primary-blue) !important; }
+        .bg-primary-subtle { background-color: #e0f2fe !important; }
+        .rounded-circle { border-radius: 50% !important; }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--gray-bg);
@@ -133,21 +148,17 @@
             flex-direction: column;
         }
 
-        /* TOPBAR */
+        /* TOPBAR (ĐÃ NÂNG CẤP) */
         .topbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .topbar-title {
-            margin: 0;
-            color: var(--primary-blue);
-            font-size: 1.5rem;
-            font-weight: 700;
+            padding: 15px 25px;
+            background-color: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            border: 1px solid var(--border-color);
         }
 
         .topbar-actions {
@@ -428,22 +439,18 @@
             overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s;
             border: 1px solid var(--border-color); position: relative;
         }
-        .course-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         
-        /* Badge VIP/Free góc trái */
         .course-badge {
-            position: absolute; top: 16px; left: 16px; padding: 5px 12px; border-radius: 20px; font-size: 0.75rem;
-            font-weight: bold; color: #fff; z-index: 2; box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            padding: 5px 12px; border-radius: 20px; font-size: 0.75rem;
+            font-weight: bold; color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
         .badge-vip { background-color: var(--vip-color); }
         .badge-free { background-color: var(--free-color); }
 
-        /* --- MỚI: Nút Bookmark Góc Phải --- */
         .btn-bookmark {
-            position: absolute; top: 14px; right: 14px; padding: 0; width: 36px; height: 36px;
-            border-radius: 50%; font-size: 1.1rem;
+            padding: 0; border-radius: 50%; font-size: 1.1rem;
             color: #9ca3af; background: rgba(255, 255, 255, 0.9);
-            z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             border: 1px solid #e5e7eb; cursor: pointer; display: flex; align-items: center; justify-content: center;
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
@@ -452,29 +459,20 @@
 
         .card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
         
-        .card-title {
-            font-size: 1.25rem; font-weight: 700; color: var(--primary-blue);
-            margin: 25px 0 15px 0; /* Cách xa badge phía trên */
-            line-height: 1.4; display: -webkit-box;
-            -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-        }
-
-        /* --- MỚI: CSS Màu Sắc Cho Tags (Kỹ thuật & Cấp độ) --- */
         .card-tags { margin-bottom: 18px; display: flex; gap: 8px; flex-wrap: wrap; }
         .meta-tag { padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: none; letter-spacing: 0.3px;}
-        .tag-tech { background-color: #e0f2fe; color: #0284c7; } /* Xanh dương nhạt */
-        .tag-level-de { background-color: #dcfce7; color: #16a34a; } /* Xanh lá */
-        .tag-level-tb { background-color: #fef3c7; color: #d97706; } /* Vàng cam */
-        .tag-level-kho { background-color: #fee2e2; color: #dc2626; } /* Đỏ */
+        .tag-tech { background-color: #e0f2fe; color: #0284c7; } 
+        .tag-level-de { background-color: #dcfce7; color: #16a34a; } 
+        .tag-level-tb { background-color: #fef3c7; color: #d97706; } 
+        .tag-level-kho { background-color: #fee2e2; color: #dc2626; } 
         
-        /* --- MỚI: Dòng Stats Nền Xám Mượt Mà --- */
         .card-stats-bg { 
             background-color: var(--gray-bg); border-radius: 8px; padding: 12px 15px; 
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 18px; font-size: 0.85rem; color: var(--text-muted); border: 1px solid #f0f0f0;
         }
         .card-stats-bg .stat-item { display: flex; align-items: center; gap: 6px; }
-        .card-stats-bg b { color: var(--text-main); font-size: 1rem; font-weight: 750; } /* Chữ số in đậm rực rỡ */
+        .card-stats-bg b { color: var(--text-main); font-size: 1rem; font-weight: 750; } 
 
         .card-meta { margin-top: auto; display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px dashed var(--border-color); }
         .rating { font-weight: bold; color: var(--text-main); display: flex; align-items: center; gap: 5px; }
@@ -493,14 +491,9 @@
         }
         .btn-pro-locked:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255, 215, 0, 0.4); }
         
-        /* Chỉnh List View */
         .list-view .course-card { flex-direction: row; align-items: stretch; }
         .list-view .card-body { flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; padding: 20px; }
-        .list-view .card-title { margin: 0 0 10px 0; padding-right: 0; padding-left: 0; flex: 1.5; font-size: 1.15rem; }
-        .list-view .card-stats-bg { margin-bottom: 0; background: transparent; border: none; padding: 0; flex: 1; justify-content: flex-start; gap: 20px; }
         .list-view .card-meta { border-top: none; padding-top: 0; flex-direction: column; align-items: flex-start; gap: 5px; flex: 1; margin-top: 0; border-left: 1px dashed var(--border-color); padding-left: 20px;}
-        .list-view .course-badge { position: relative; top: 0; left: 0; margin-right: 15px; margin-bottom: 10px; display: inline-block;}
-        .list-view .btn-bookmark { position: relative; top: 0; right: 0; margin-left: auto; flex-shrink: 0; }
         .list-view .card-footer { border-top: none; border-left: 1px solid var(--border-color); background: transparent; min-width: 220px; display: flex; align-items: center; }
 
         /* SKELETON LOADER */
@@ -548,14 +541,12 @@
             .grid-view { grid-template-columns: 1fr; }
             .list-view .course-card { flex-direction: column; align-items: stretch; }
             .list-view .card-body { flex-direction: column; align-items: flex-start; padding: 15px; }
-            .list-view .card-stats-bg { width: 100%; box-sizing: border-box; }
             .list-view .card-meta { border-left: none; padding-left: 0; width: 100%; border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 15px; flex-direction: row; align-items: center; }
-            .list-view .btn-bookmark { position: absolute; top: 15px; right: 15px; margin: 0; }
             .list-view .card-footer { border-top: 1px solid var(--border-color); border-left: none; width: 100%; padding: 15px; box-sizing: border-box;}
             
             .action-bar { flex-direction: column; align-items: stretch; gap: 15px; padding: 15px; }
             .action-left { flex-direction: column; align-items: stretch; gap: 15px; }
-            .action-search { flex: auto; max-width: 100%; order: -1; }
+            .action-search { flex: auto; max-width: 100%; order: -1; } 
             .action-right { justify-content: space-between; width: 100%; }
             .sort-wrapper { flex: 1; margin-right: 15px; }
             .modern-select { width: 100%; }
@@ -564,7 +555,9 @@
             .menu-item span, .sidebar-header h2, .accordion-icon { display: none; }
             .menu-item { justify-content: center; padding: 15px; }
             .sub-menu-item { display: none; } 
-            .topbar { flex-direction: column; gap: 15px; align-items: flex-start; }
+            
+            /* Responsive cho Topbar mới */
+            .topbar { flex-direction: column; gap: 15px; align-items: flex-start; padding: 15px; }
             .topbar-actions { width: 100%; justify-content: space-between; }
         }
     </style>
@@ -616,9 +609,25 @@
 
     <div class="main-content">
         
+        <!-- HEADER / TOPBAR MỚI (TÁI CẤU TRÚC THEO YÊU CẦU) -->
         <div class="topbar">
-            <h2 id="currentTabTitle" class="topbar-title">Kho Đề Thi - Tất cả</h2>
+            <!-- Khối bên trái: Tiêu đề chuyên nghiệp -->
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; font-size: 1.5rem;">
+                    <i class="fa-solid fa-laptop-medical"></i>
+                </div>
+                <div>
+                    <h1 class="fw-bold mb-0 text-dark" style="font-size: 1.3rem;">Hệ Thống Thi Trắc Nghiệm Trực Tuyến</h1>
+                    <div style="margin-top: 4px;">
+                        <span class="text-secondary fw-medium" style="font-size: 0.95rem;">Chuyên ngành Kỹ thuật Hình ảnh Y học</span>
+                        <!-- Dấu cách điệu và thẻ động để logic JS vẫn hoạt động hoàn hảo -->
+                        <span style="color: #d1d5db; margin: 0 8px;">|</span>
+                        <span id="currentTabTitle" class="text-primary fw-bold" style="font-size: 0.95rem;">Kho Đề Thi - Tất cả</span>
+                    </div>
+                </div>
+            </div>
             
+            <!-- Khối bên phải: Nâng cấp VIP/Pro và User Avatar -->
             <div class="topbar-actions">
                 <div id="topbar-vip-container"></div>
                 <div class="topbar-user" id="userMenuToggle">
@@ -670,7 +679,7 @@
                     </div>
                 </div>
 
-                <!-- ACTION BAR HIỆN ĐẠI TÍCH HỢP SEARCH BAR -->
+                <!-- ACTION BAR HIỆN ĐẠI -->
                 <div class="action-bar">
                     <!-- Khối bên trái: Tìm kiếm & Các bộ lọc pill -->
                     <div class="action-left">
