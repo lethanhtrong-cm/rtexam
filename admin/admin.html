@@ -146,7 +146,7 @@
         /* BẢNG DỮ LIỆU CHUNG */
         .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.01); }
         .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .admin-table th, .admin-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        .admin-table th, .admin-table td { padding: 14px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .admin-table th { background-color: #f8fafc; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
         .admin-table tr:hover { background-color: #f8fafc; }
         .badge-meta { background-color: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 12px; display: inline-block; border: 1px solid #bfdbfe; margin: 2px; }
@@ -281,19 +281,24 @@
                     <h2 class="card-title"><span class="step-badge orange">3</span> &nbsp; Hàng Đợi Kiểm Tra Dữ Liệu Excel</h2>
                     <p class="card-description">Dữ liệu đọc tạm từ tệp Excel sẽ hiển thị ở đây. Hãy rà soát nội dung kỹ lưỡng trước khi thiết lập thuộc tính và xuất bản.</p>
                     
-                    <div class="table-container" style="max-height: 350px; overflow-y: auto; margin-bottom: 30px;">
+                    <!-- ĐÃ CẬP NHẬT CẤU TRÚC BẢNG THEO YÊU CẦU MỚI -->
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 30px;">
                         <table class="admin-table">
                             <thead>
                                 <tr>
                                     <th class="text-center" width="5%">STT</th>
-                                    <th width="15%">Mã Đề (examId)</th>
-                                    <th width="35%">Nội Dung Câu Hỏi</th>
-                                    <th width="30%">Các Đáp Án (A, B, C, D)</th>
-                                    <th class="text-center" width="15%">Đáp Án Đúng</th>
+                                    <th width="10%">Mã đề</th>
+                                    <th width="20%">Câu hỏi</th>
+                                    <th width="10%">Đáp án A</th>
+                                    <th width="10%">Đáp án B</th>
+                                    <th width="10%">Đáp án C</th>
+                                    <th width="10%">Đáp án D</th>
+                                    <th class="text-center" width="10%">Đáp án đúng</th>
+                                    <th width="15%">Giải thích đáp án</th>
                                 </tr>
                             </thead>
                             <tbody id="preview-list-body">
-                                <tr><td colspan="5" class="empty-message">Chưa có dữ liệu nào được nạp để xem trước.</td></tr>
+                                <tr><td colspan="9" class="empty-message">Chưa có dữ liệu nào được nạp để xem trước.</td></tr>
                             </tbody>
                         </table>
                     </div>
