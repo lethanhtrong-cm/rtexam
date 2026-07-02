@@ -25,7 +25,7 @@ const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
 const timePills = document.querySelectorAll('#timeFilter .pill-btn');
 const searchInput = document.getElementById('searchInput');
 
-// Bơm CSS động cho hiệu ứng Hover mượt mà & Nút Thi lại
+// Bơm CSS động cho hiệu ứng Hover mượt mà & Nút PRO rực rỡ
 const styleId = "exam-card-dynamic-styles";
 if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
@@ -47,6 +47,21 @@ if (!document.getElementById(styleId)) {
         .btn-outline-primary-custom:hover {
             background: var(--primary-blue); color: white;
         }
+        /* --- NÚT PRO CHUẨN PREMIUM --- */
+        .btn-premium-pro {
+            background: linear-gradient(45deg, #FFD700, #FFA500) !important;
+            color: #111827 !important; /* Chữ đen xám đậm */
+            border: none !important;
+            font-weight: 800 !important;
+            transition: all 0.3s ease !important;
+            cursor: pointer;
+        }
+        .btn-premium-pro:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 8px 20px rgba(255, 165, 0, 0.4) !important;
+            filter: brightness(1.05);
+        }
+        
         /* Loại bỏ position absolute cũ để gom vào Flexbox Header */
         .header-badge {
             position: relative !important; top: auto !important; left: auto !important; right: auto !important; margin: 0 !important;
@@ -291,9 +306,9 @@ function renderExams() {
     displayData.forEach(exam => {
         const isExamVip = exam.isVip;
         const isSaved = userBookmarks.includes(exam.id);
-        const isCompleted = completedExams.has(exam.id); // Check user completed status
+        const isCompleted = completedExams.has(exam.id); 
         
-        // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark (Nhóm vào Flexbox)
+        // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark
         const badgeHtml = isExamVip 
             ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>`
             : `<span class="course-badge badge-free header-badge">Free</span>`;
@@ -307,13 +322,11 @@ function renderExams() {
         // 2. HEADER FLEXBOX CHUYÊN NGHIỆP
         const headerHtml = `
             <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 15px;">
-                <!-- Góc trái: Tên đề thi + Dấu tick -->
                 <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
                     <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
                     ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
                 </div>
                 
-                <!-- Góc phải: Badge + Bookmark -->
                 <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
                     ${badgeHtml}
                     ${bookmarkHtml}
@@ -321,17 +334,21 @@ function renderExams() {
             </div>
         `;
 
-        // 3. ACTION BUTTON THÔNG MINH
+        // 3. ACTION BUTTON THÔNG MINH (CẬP NHẬT GIAO DIỆN PRO RỰC RỠ)
         let buttonHtml = '';
         if (isExamVip && !isUserVip) {
-            buttonHtml = `<button class="btn-pro-locked" style="width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="goToUpgrade()"><i class="fa-solid fa-gem"></i> Nâng cấp tài khoản Pro</button>`;
+            buttonHtml = `
+                <button class="btn btn-warning w-100 shadow-sm btn-premium-pro" style="padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="goToUpgrade()">
+                    <i class="fa-solid fa-gem" style="margin-right: 6px; font-size: 1.1rem;"></i> Nâng cấp tài khoản Pro
+                </button>
+            `;
         } else if (isCompleted) {
             buttonHtml = `<button class="btn-outline-primary-custom" onclick="goToQuiz('${exam.id}')">🔄 Thi lại</button>`;
         } else {
             buttonHtml = `<button class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="goToQuiz('${exam.id}')">Vào thi ngay</button>`;
         }
 
-        // 4. DẢI BADGE PASTEL 4 THÔNG SỐ (GỘP CHUNG HÀNG NGANG)
+        // 4. DẢI BADGE PASTEL 4 THÔNG SỐ
         let levelClass = 'bg-warning-subtle text-warning'; 
         let levelStyle = 'background-color: #fff3cd; color: #664d03;'; 
         if (exam.level === 'Dễ') {
@@ -362,7 +379,7 @@ function renderExams() {
         `;
 
         const card = document.createElement('div');
-        card.className = 'course-card exam-card-hover'; // Tích hợp class hover mượt mà
+        card.className = 'course-card exam-card-hover'; 
         card.innerHTML = `
             <div class="card-body" style="padding-bottom: 15px;">
                 <div style="flex: 1;">
