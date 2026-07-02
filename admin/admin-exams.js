@@ -84,7 +84,7 @@ export async function loadExamList() {
 }
 
 // =========================================================================
-// 2. HÀM KẾT XUẤT DANH SÁCH DẠNG CARD - LỌC SONG SONG 4 LỚP (NÂNG CẤP CHÍNH)
+// 2. HÀM KẾT XUẤT DANH SÁCH DẠNG CARD - LỌC SONG SONG 4 LỚP
 // =========================================================================
 export function renderExamList() {
     const container = document.getElementById('exam-list-body');
@@ -167,7 +167,6 @@ export function renderExamList() {
 // 3. KHỞI TẠO BỘ LẮNG NGHE SỰ KIỆN TỪ SIDEBAR, PILLS VÀ THANH TÌM KIẾM MỚI
 // =========================================================================
 function initFilterChangeListeners() {
-    // A. Lắng nghe thay đổi chuyên khoa từ Sidebar click
     const sidebarItems = document.querySelectorAll('.sidebar-menu .menu-item[data-tech]');
     sidebarItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -179,7 +178,6 @@ function initFilterChangeListeners() {
         });
     });
 
-    // B. Lắng nghe thay đổi cấp độ khó từ Pill Buttons click
     const levelPills = document.querySelectorAll('#filter-level-pills .pill-btn');
     levelPills.forEach(pill => {
         pill.addEventListener('click', () => {
@@ -190,7 +188,6 @@ function initFilterChangeListeners() {
         });
     });
 
-    // C. Lắng nghe thay đổi thời gian thi từ Pill Buttons click
     const timePills = document.querySelectorAll('#filter-time-pills .pill-btn');
     timePills.forEach(pill => {
         pill.addEventListener('click', () => {
@@ -201,18 +198,17 @@ function initFilterChangeListeners() {
         });
     });
 
-    // D. LẮNG NGHE LỌC THEO TỪ KHÓA TÌM KIẾM MÃ ĐỀ REALTIME
     const searchInput = document.getElementById('examSearchInput');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.trim().toLowerCase();
-            renderExamList(); // Chạy bộ lọc 4 lớp ngay tức thì khi gõ phím
+            renderExamList(); 
         });
     }
 }
 
 // =========================================================================
-// 4. NGHIỆP VỤ ĐIỀU CHỈNH ĐỀ THI (CÓ MODAL SỬA THUỘC TÍNH TOÀN DIỆN MỚI)
+// 4. NGHIỆP VỤ ĐIỀU CHỈNH ĐỀ THI
 // =========================================================================
 function openEditPropertiesModal(examId, technique, time, level) {
     currentEditingExamId = examId;
@@ -252,7 +248,7 @@ async function updateExamProperties() {
         showToast(`Cập nhật thuộc tính đề "${currentEditingExamId}" thành công!`, "success");
         if (modal) modal.style.display = "none";
         
-        loadExamList(); // Đồng bộ lại bộ nhớ đệm cache từ Cloud và cập nhật Card UI
+        loadExamList(); 
 
     } catch (error) {
         console.error("Lỗi cập nhật thuộc tính:", error);
@@ -351,7 +347,7 @@ async function viewFeedback(examId) {
 }
 
 // =========================================================================
-// 5. QUY TRÌNH IMPORT & PREVIEW EXCEL DỮ LIỆU ĐỀ THI
+// 5. QUY TRÌNH IMPORT & PREVIEW EXCEL (MỚI NÂNG CẤP XỬ LÝ CHỮ CÁI A, B, C, D)
 // =========================================================================
 function renderPreview() {
     const previewBody = document.getElementById('preview-list-body');
@@ -369,17 +365,20 @@ function renderPreview() {
     let stt = 1;
     draftData.forEach((row) => {
         const tr = document.createElement('tr');
+        
+        // Render ngược lại chữ cái từ index (để hiển thị cho Admin xem chính xác chưa)
         const mapCorrectText = ['A', 'B', 'C', 'D'];
         const correctChar = mapCorrectText[row.correctAnswer] || 'Không rõ';
 
+        // Trải dài 9 cột html tương ứng với thay đổi trong UI
         tr.innerHTML = `
             <td class="text-center">${stt++}</td>
             <td><span class="badge-count" style="background:#eff6ff; color:#2563eb;">${row.examId}</span></td>
-            <td><div style="max-width:250px; font-weight:500;">${row.text}</div></td>
-            <td><div style="font-size: 13px; color: #475569;">${row.options[0]}</div></td>
-            <td><div style="font-size: 13px; color: #475569;">${row.options[1]}</div></td>
-            <td><div style="font-size: 13px; color: #475569;">${row.options[2]}</div></td>
-            <td><div style="font-size: 13px; color: #475569;">${row.options[3]}</div></td>
+            <td><div style="max-width:250px; font-weight:500; font-size:13.5px;">${row.text}</div></td>
+            <td><div style="max-width:150px; font-size:13px; color:#475569;">${row.options[0]}</div></td>
+            <td><div style="max-width:150px; font-size:13px; color:#475569;">${row.options[1]}</div></td>
+            <td><div style="max-width:150px; font-size:13px; color:#475569;">${row.options[2]}</div></td>
+            <td><div style="max-width:150px; font-size:13px; color:#475569;">${row.options[3]}</div></td>
             <td class="text-center"><strong style="color:#10b981; font-size:16px;">${correctChar}</strong></td>
             <td><div style="max-width:200px; font-size:12.5px; color:#64748b; font-style: italic;">${row.explanation}</div></td>
         `;
@@ -416,20 +415,27 @@ function handleExcelRead() {
                 if (jsonArr.length === 0) throw new Error("File Excel rỗng!");
 
                 draftData = [];
+                let skipCount = 0;
+
                 jsonArr.forEach((row) => {
-                    // Bỏ qua nếu thiếu "Câu hỏi" hoặc "Đáp án đúng"
-                    if (!row["Câu hỏi"] || !row["Đáp án đúng"]) return;
+                    // CẬP NHẬT MỚI: Check theo chuẩn Tên cột tiếng Việt mới
+                    if (!row["Câu hỏi"] || !row["Đáp án đúng"]) {
+                        skipCount++;
+                        return;
+                    }
 
-                    // Xử lý chuyển đổi đáp án đúng từ A,B,C,D sang mảng index
-                    const correctStr = String(row["Đáp án đúng"]).toUpperCase().trim();
-                    let correctIndex = 0; // Mặc định là A (0)
+                    // XỬ LÝ CHUYỂN ĐỔI ĐÁP ÁN BẰNG CHỮ CÁI (A, B, C, D) SANG SỐ INDEX (0, 1, 2, 3)
+                    const correctChar = String(row["Đáp án đúng"]).toUpperCase().trim();
+                    let correctIndex = 0; // Mặc định là 0 (A) để phòng hờ lỗi
                     
-                    if (correctStr === 'A') correctIndex = 0;
-                    else if (correctStr === 'B') correctIndex = 1;
-                    else if (correctStr === 'C') correctIndex = 2;
-                    else if (correctStr === 'D') correctIndex = 3;
-                    else if (!isNaN(parseInt(correctStr))) correctIndex = parseInt(correctStr); // Giữ lại tương thích ngược nếu nhập số
+                    if (correctChar === 'B') correctIndex = 1;
+                    else if (correctChar === 'C') correctIndex = 2;
+                    else if (correctChar === 'D') correctIndex = 3;
+                    else if (correctChar !== 'A') {
+                        console.warn(`Đáp án "${correctChar}" không hợp lệ, hệ thống tự động fallback về A.`);
+                    }
 
+                    // PUSH DATA LƯU TRỮ VÀO HÀNG ĐỢI
                     draftData.push({
                         examId: String(row["Mã đề"] || "DEFAULT_EXAM").trim(),
                         text: String(row["Câu hỏi"]).trim(),
@@ -439,21 +445,25 @@ function handleExcelRead() {
                             String(row["Đáp án C"] || "").trim(),
                             String(row["Đáp án D"] || "").trim()
                         ],
-                        correctAnswer: correctIndex,
+                        correctAnswer: correctIndex, // Lưu dạng số chuẩn xác cho DB
                         explanation: row["Giải thích đáp án"] ? String(row["Giải thích đáp án"]).trim() : ""
                     });
                 });
 
-                showToast(`Đọc file thành công! Đã nạp ${draftData.length} câu hỏi vào danh sách xem trước.`, "success");
+                let msg = `Đọc file thành công! Nạp được ${draftData.length} câu hỏi.`;
+                if (skipCount > 0) msg += ` (Bỏ qua ${skipCount} dòng lỗi do để trống câu hỏi hoặc đáp án).`;
+                showToast(msg, "success");
                 
                 if (fileNameDisplay) {
                     fileNameDisplay.innerText = `Đã chọn: ${file.name}`;
                     fileNameDisplay.style.display = 'inline-block';
                 }
+                
+                // Gọi lại hàm vẽ bảng với giao diện 9 cột mới
                 renderPreview();
 
             } catch (error) {
-                alert("❌ Không thể đọc file Excel. Chi tiết: " + error.message);
+                alert("❌ Không thể đọc file Excel. Có thể cấu trúc cột chưa khớp. Chi tiết: " + error.message);
             } finally {
                 importBtn.disabled = false;
                 importBtn.innerHTML = "👁️ Đọc Dữ Liệu & Xem Trước";
@@ -520,23 +530,20 @@ document.addEventListener('DOMContentLoaded', () => {
     handleExcelRead();
     initFilterChangeListeners(); 
 
-    // Tải file Excel mẫu câu hỏi theo CẤU TRÚC MỚI
+    // Tải file Excel mẫu câu hỏi (CẬP NHẬT TÊN CỘT CHUẨN MỚI)
     const downloadBtn = document.getElementById('btn-download-template');
     if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
             const templateData = [{ 
                 "Mã đề": "DE_MRI_01", 
                 "Câu hỏi": "Chuỗi xung T2W trên MRI làm nước có màu gì?", 
-                "Đáp án A": "Màu đen", 
-                "Đáp án B": "Màu Trắng sáng", 
-                "Đáp án C": "Màu xám", 
-                "Đáp án D": "Màu đỏ", 
+                "Đáp án A": "Màu đen", "Đáp án B": "Màu Trắng sáng", "Đáp án C": "Màu xám", "Đáp án D": "Màu đỏ", 
                 "Đáp án đúng": "B", 
-                "Giải thích đáp án": "Trên chuỗi xung dịch nước (như dịch não tủy) có tín hiệu cao (trắng)." 
+                "Giải thích đáp án": "Trên chuỗi xung dịch nước (như dịch não tủy) có tín hiệu cao (trắng sáng)." 
             }];
             const ws = XLSX.utils.json_to_sheet(templateData);
-            // Thiết lập độ rộng cột cho đẹp
-            ws['!cols'] = [{wch: 15}, {wch: 45}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 15}, {wch: 50}];
+            // Canh lại độ rộng của 8 cột (trừ STT tự sinh)
+            ws['!cols'] = [{wch: 15}, {wch: 45}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 40}];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "DanhSachCauHoi");
             XLSX.writeFile(wb, "Template_Import_Cau_Hoi.xlsx");
@@ -558,7 +565,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const examContainer = document.getElementById('exam-list-body');
     if (examContainer) {
         examContainer.addEventListener('click', (e) => {
-            // Nút mở Modal sửa toàn bộ thuộc tính
             const editPropsBtn = e.target.closest('.btn-edit-properties');
             if (editPropsBtn) {
                 const dataset = editPropsBtn.dataset;
