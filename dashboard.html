@@ -27,7 +27,7 @@
             --star-color: #fbbf24;
         }
 
-        /* --- Bổ sung Utility Classes hỗ trợ thiết kế Topbar --- */
+        /* --- Utility Classes --- */
         .d-flex { display: flex; }
         .align-items-center { align-items: center; }
         .justify-content-center { justify-content: center; }
@@ -39,9 +39,14 @@
         .text-dark { color: #111827 !important; }
         .text-secondary { color: #6b7280 !important; }
         .text-primary { color: var(--primary-blue) !important; }
+        .text-white { color: var(--white) !important; }
+        .bg-white { background-color: var(--white) !important; }
         .bg-primary-subtle { background-color: #e0f2fe !important; }
         .rounded-circle { border-radius: 50% !important; }
 
+        /* =========================================
+           2. BỐ CỤC MỚI: FULL-WIDTH TOPBAR LAYOUT
+           ========================================= */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--gray-bg);
@@ -49,116 +54,24 @@
             margin: 0;
             padding: 0;
             display: flex;
+            flex-direction: column; /* Đổi thành column để Topbar nằm trên */
             height: 100vh;
             overflow: hidden;
         }
 
-        /* =========================================
-           2. BỐ CỤC 2 CỘT & SIDEBAR ACCORDION
-           ========================================= */
-        .sidebar {
-            width: 260px;
+        /* TOPBAR TRÀN VIỀN MỚI */
+        .topbar-fullwidth {
+            width: 100%;
             background-color: var(--primary-blue);
             color: var(--white);
             display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-            z-index: 10;
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .sidebar-header h2 {
-            margin: 0;
-            font-size: 1.2rem;
-            line-height: 1.5;
-        }
-
-        .sidebar-menu {
-            flex: 1;
-            padding: 20px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            overflow-y: auto;
-        }
-
-        .menu-item {
-            padding: 15px 25px;
-            color: var(--light-blue);
-            text-decoration: none;
-            font-weight: 500;
-            cursor: pointer;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-left: 4px solid transparent;
-        }
-
-        .menu-item:hover, .menu-item.active {
-            background-color: rgba(255,255,255,0.1);
-            color: var(--white);
-            border-left-color: var(--warning-orange);
-        }
-
-        /* ACCORDION CHO KHO ĐỀ THI */
-        .menu-accordion { display: flex; flex-direction: column; }
-        .accordion-header { justify-content: space-between; }
-        .header-content { display: flex; align-items: center; gap: 15px; }
-        .accordion-icon { transition: transform 0.3s ease; font-size: 0.85rem; }
-        
-        .accordion-content {
-            display: none;
-            flex-direction: column;
-            background-color: rgba(0,0,0,0.15);
-        }
-        .accordion-content.show { display: flex; }
-        
-        .sub-menu-item {
-            padding: 12px 25px 12px 55px;
-            color: var(--light-blue);
-            text-decoration: none;
-            font-weight: 400;
-            cursor: pointer;
-            transition: 0.3s;
-            font-size: 0.9rem;
-            border-left: 4px solid transparent;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .sub-menu-item:hover, .sub-menu-item.active {
-            background-color: rgba(255,255,255,0.05);
-            color: var(--white);
-            border-left-color: var(--warning-orange);
-            font-weight: bold;
-        }
-
-        /* MAIN CONTENT */
-        .main-content {
-            flex: 1;
-            padding: 30px 40px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* TOPBAR (ĐÃ NÂNG CẤP) */
-        .topbar {
-            display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            padding: 15px 25px;
-            background-color: var(--white);
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-            border: 1px solid var(--border-color);
+            padding: 12px 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1050;
+            flex-shrink: 0;
+            box-sizing: border-box;
         }
 
         .topbar-actions {
@@ -215,16 +128,16 @@
         }
         
         .topbar-user:hover {
-            background-color: rgba(0, 86, 179, 0.05);
+            background-color: rgba(255, 255, 255, 0.1);
         }
 
         .topbar-greeting {
-            color: var(--text-muted);
+            color: rgba(255, 255, 255, 0.85);
             font-size: 0.95rem;
         }
 
         .topbar-greeting b {
-            color: var(--text-main);
+            color: var(--white);
         }
 
         .topbar-user img {
@@ -232,8 +145,8 @@
             height: 40px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid var(--light-blue);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 2px solid var(--white);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .dropdown-menu {
@@ -271,6 +184,99 @@
         .dropdown-item:hover { background-color: var(--light-blue); color: var(--primary-blue); }
         .dropdown-item.danger-text { border-top: 1px solid var(--border-color); }
         .dropdown-item.danger-text:hover { background-color: #fee2e2; color: var(--danger-red); }
+
+
+        /* KHUNG CHỨA SIDEBAR VÀ NỘI DUNG */
+        .layout-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* SIDEBAR (TÁI THIẾT KẾ: TRẮNG, THANH THOÁT) */
+        .sidebar {
+            width: 260px;
+            background-color: var(--white);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            z-index: 10;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            padding: 12px 20px;
+            margin: 4px 15px; /* Thêm margin để bo góc không chạm lề */
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-radius: 8px; /* Bo góc mềm mại */
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background-color: var(--light-blue); /* Nền xanh nhạt pastel */
+            color: var(--primary-blue); /* Chữ xanh đậm */
+        }
+
+        /* ACCORDION CHO KHO ĐỀ THI */
+        .menu-accordion { display: flex; flex-direction: column; }
+        .accordion-header { justify-content: space-between; }
+        .header-content { display: flex; align-items: center; gap: 15px; }
+        .accordion-icon { transition: transform 0.3s ease; font-size: 0.85rem; }
+        
+        .accordion-content {
+            display: none;
+            flex-direction: column;
+            background-color: transparent; /* Bỏ nền tối cũ */
+            margin-bottom: 5px;
+        }
+        .accordion-content.show { display: flex; }
+        
+        .sub-menu-item {
+            padding: 10px 20px 10px 50px;
+            margin: 2px 15px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sub-menu-item:hover, .sub-menu-item.active {
+            background-color: var(--light-blue);
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--gray-bg);
+        }
 
         .tab-content-container { flex: 1; }
         .tab-pane { display: none; animation: fadeIn 0.3s ease; }
@@ -325,7 +331,7 @@
         .quick-stat-card {
             display: flex; align-items: center; gap: 18px; padding: 20px; border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.04); transition: transform 0.2s, box-shadow 0.2s;
-            background: var(--white);
+            background: var(--white); border: 1px solid var(--border-color);
         }
         .quick-stat-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
         .quick-stat-card .stat-icon { width: 52px; height: 52px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
@@ -482,15 +488,6 @@
         .card-footer { padding: 18px 22px; background-color: #fafafa; border-top: 1px solid var(--border-color); }
         .card-footer button { width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; }
         
-        .btn-pro-locked {
-            background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%);
-            color: #5c3a21; border: 1px solid #ffca28;
-            border-radius: 8px !important; font-weight: bold;
-            cursor: pointer; transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.2);
-        }
-        .btn-pro-locked:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255, 215, 0, 0.4); }
-        
         .list-view .course-card { flex-direction: row; align-items: stretch; }
         .list-view .card-body { flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; padding: 20px; }
         .list-view .card-meta { border-top: none; padding-top: 0; flex-direction: column; align-items: flex-start; gap: 5px; flex: 1; margin-top: 0; border-left: 1px dashed var(--border-color); padding-left: 20px;}
@@ -534,7 +531,7 @@
         .qr-placeholder img { max-width: 100%; border-radius: 8px; }
         .instruction { background-color: var(--light-blue); padding: 15px; border-radius: 5px; line-height: 1.5; text-align: center; margin-bottom: 15px; }
 
-        /* RESPONSIVE CẬP NHẬT */
+        /* RESPONSIVE CẬP NHẬT CHO LAYOUT MỚI */
         @media (max-width: 1100px) { .grid-view { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) {
             .quick-stats-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -551,319 +548,325 @@
             .sort-wrapper { flex: 1; margin-right: 15px; }
             .modern-select { width: 100%; }
             
-            .sidebar { width: 60px; }
-            .menu-item span, .sidebar-header h2, .accordion-icon { display: none; }
-            .menu-item { justify-content: center; padding: 15px; }
-            .sub-menu-item { display: none; } 
-            
-            /* Responsive cho Topbar mới */
-            .topbar { flex-direction: column; gap: 15px; align-items: flex-start; padding: 15px; }
+            /* Responsive cho Full-width Topbar */
+            .topbar-fullwidth { flex-direction: column; gap: 15px; align-items: flex-start; padding: 15px 20px; }
+            .topbar-fullwidth .d-flex.align-items-center.gap-3 { width: 100%; }
             .topbar-actions { width: 100%; justify-content: space-between; }
+            
+            /* Responsive Sidebar ghim trái */
+            .sidebar { width: 60px; }
+            .menu-item { justify-content: center; padding: 12px; margin: 5px; }
+            .menu-item span, .accordion-icon { display: none; }
+            .sub-menu-item { display: none; } 
         }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>Hệ Thống<br>Câu hỏi Trắc Nghiệm</h2>
+    <!-- ==============================================================
+         1. KHỐI TOPBAR TRÀN VIỀN TRÊN CÙNG (LAYOUT MỚI)
+         ============================================================== -->
+    <header class="topbar-fullwidth">
+        <!-- Khối bên trái: Icon + Tiêu đề chuyên nghiệp -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 1.4rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                <i class="fa-solid fa-laptop-medical"></i>
+            </div>
+            <div>
+                <h1 class="fw-bold mb-0 text-white" style="font-size: 1.25rem;">Hệ Thống Thi Trắc Nghiệm Trực Tuyến</h1>
+                <div style="margin-top: 3px;">
+                    <span class="text-white fw-medium" style="font-size: 0.9rem; opacity: 0.9;">Chuyên ngành Kỹ thuật Hình ảnh Y học</span>
+                    <span style="color: rgba(255,255,255,0.4); margin: 0 8px;">|</span>
+                    <!-- Dữ liệu JS fill vào đây -->
+                    <span id="currentTabTitle" class="text-white fw-bold" style="font-size: 0.9rem;">Kho Đề Thi - Tất cả</span>
+                </div>
+            </div>
         </div>
         
-        <div class="sidebar-menu">
-            <!-- ACCORDION KHO ĐỀ THI -->
-            <div class="menu-accordion">
-                <div class="menu-item accordion-header active" data-target="tab-exams">
-                    <div class="header-content">
-                        <i class="fa-solid fa-book"></i> <span>Kho Đề Thi</span>
-                    </div>
-                    <i class="fa-solid fa-chevron-down accordion-icon" style="transform: rotate(180deg);"></i>
-                </div>
-                <div class="accordion-content show">
-                    <div class="sub-menu-item active" data-technique="all">
-                        <i class="fa-solid fa-list-ul"></i> Tất cả
-                    </div>
-                    <div class="sub-menu-item" data-technique="MRI">
-                        <i class="fa-solid fa-magnet"></i> MRI
-                    </div>
-                    <div class="sub-menu-item" data-technique="CT">
-                        <i class="fa-solid fa-radiation"></i> CT
-                    </div>
-                    <div class="sub-menu-item" data-technique="X quang">
-                        <i class="fa-solid fa-x-ray"></i> X quang
-                    </div>
-                    <div class="sub-menu-item" data-technique="Hỗn hợp">
-                        <i class="fa-solid fa-layer-group"></i> Hỗn hợp
-                    </div>
-                    <!-- MENU: ĐỀ THI ĐÃ LƯU -->
-                    <div class="sub-menu-item" id="menu-saved-exams" data-technique="saved" style="border-top: 1px dashed rgba(255,255,255,0.2); margin-top: 5px;">
-                        <i class="fa-solid fa-bookmark" style="color: var(--star-color);"></i> Đề thi đã lưu
-                    </div>
-                </div>
-            </div>
-
-            <div class="menu-item" data-target="tab-history">
-                <i class="fa-solid fa-clock-rotate-left"></i> <span>Lịch sử làm bài</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="main-content">
-        
-        <!-- HEADER / TOPBAR MỚI (TÁI CẤU TRÚC THEO YÊU CẦU) -->
-        <div class="topbar">
-            <!-- Khối bên trái: Tiêu đề chuyên nghiệp -->
-            <div class="d-flex align-items-center gap-3">
-                <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; font-size: 1.5rem;">
-                    <i class="fa-solid fa-laptop-medical"></i>
-                </div>
-                <div>
-                    <h1 class="fw-bold mb-0 text-dark" style="font-size: 1.3rem;">Hệ Thống Thi Trắc Nghiệm Trực Tuyến</h1>
-                    <div style="margin-top: 4px;">
-                        <span class="text-secondary fw-medium" style="font-size: 0.95rem;">Chuyên ngành Kỹ thuật Hình ảnh Y học</span>
-                        <!-- Dấu cách điệu và thẻ động để logic JS vẫn hoạt động hoàn hảo -->
-                        <span style="color: #d1d5db; margin: 0 8px;">|</span>
-                        <span id="currentTabTitle" class="text-primary fw-bold" style="font-size: 0.95rem;">Kho Đề Thi - Tất cả</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Khối bên phải: Nâng cấp VIP/Pro và User Avatar -->
-            <div class="topbar-actions">
-                <div id="topbar-vip-container"></div>
-                <div class="topbar-user" id="userMenuToggle">
-                    <span class="topbar-greeting">Xin chào, <b id="topbarName">Đang tải...</b></span>
-                    <img id="topbarAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar User">
-                    
-                    <div class="dropdown-menu" id="userDropdown">
-                        <div class="dropdown-item" id="btnManageProfile">
-                            <i class="fa-solid fa-user-pen"></i> Quản lý Hồ Sơ
-                        </div>
-                        <div class="dropdown-item danger-text" id="btnLogout">
-                            <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="tab-content-container">
-            <div id="tab-exams" class="tab-pane active">
+        <!-- Khối bên phải: Nâng cấp VIP/Pro và User Avatar -->
+        <div class="topbar-actions">
+            <div id="topbar-vip-container"></div>
+            <div class="topbar-user" id="userMenuToggle">
+                <span class="topbar-greeting">Xin chào, <b id="topbarName">Đang tải...</b></span>
+                <img id="topbarAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar User">
                 
-                <div class="quick-stats-grid">
-                    <div class="quick-stat-card stat-card-completed">
-                        <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Đã hoàn thành</span>
-                            <h3 id="statCompletedExams" class="stat-value">
-                                <span class="skeleton-loader stat-skeleton-text"></span>
-                            </h3>
-                        </div>
+                <div class="dropdown-menu" id="userDropdown">
+                    <div class="dropdown-item" id="btnManageProfile">
+                        <i class="fa-solid fa-user-pen"></i> Quản lý Hồ Sơ
                     </div>
-                    <div class="quick-stat-card stat-card-avg">
-                        <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Điểm trung bình</span>
-                            <h3 id="statAvgScore" class="stat-value">
-                                <span class="skeleton-loader stat-skeleton-text"></span>
-                            </h3>
-                        </div>
-                    </div>
-                    <div class="quick-stat-card stat-card-account">
-                        <div class="stat-icon"><i class="fa-solid fa-user-shield"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Trạng thái tài khoản</span>
-                            <h3 id="statAccountStatus" class="stat-value">
-                                <span class="skeleton-loader stat-skeleton-text"></span>
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ACTION BAR HIỆN ĐẠI -->
-                <div class="action-bar">
-                    <!-- Khối bên trái: Tìm kiếm & Các bộ lọc pill -->
-                    <div class="action-left">
-                        
-                        <!-- Khối tìm kiếm thông minh -->
-                        <div class="action-search">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm...">
-                        </div>
-
-                        <div class="filter-group">
-                            <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
-                            <div class="pill-group" id="levelFilter">
-                                <button class="pill-btn active" data-level="all">Tất cả</button>
-                                <button class="pill-btn" data-level="Khó">Khó</button>
-                                <button class="pill-btn" data-level="Trung bình">Trung bình</button>
-                                <button class="pill-btn" data-level="Dễ">Dễ</button>
-                            </div>
-                        </div>
-                        
-                        <div class="filter-group">
-                            <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
-                            <div class="pill-group" id="timeFilter">
-                                <button class="pill-btn active" data-time="all">Tất cả</button>
-                                <button class="pill-btn" data-time="15">15 phút</button>
-                                <button class="pill-btn" data-time="30">30 phút</button>
-                                <button class="pill-btn" data-time="45">45 phút</button>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <!-- Khối bên phải: Công cụ sắp xếp và chuyển đổi view -->
-                    <div class="action-right">
-                        <div class="sort-wrapper">
-                            <i class="fa-solid fa-sort-amount-down"></i>
-                            <select id="sortFilter" class="modern-select">
-                                <option value="newest">Mới nhất (Mặc định)</option>
-                                <option value="highest_rating">Đánh giá cao nhất</option>
-                                <option value="most_attempts">Lượt thi nhiều nhất</option>
-                                <option value="only_vip">Chỉ hiện đề PRO</option>
-                                <option value="only_free">Chỉ hiện đề Miễn phí</option>
-                            </select>
-                        </div>
-                        
-                        <div class="view-toggle-group">
-                            <button class="view-btn active" data-view="grid" title="Hiển thị dạng lưới">
-                                <i class="fa-solid fa-border-all"></i>
-                            </button>
-                            <button class="view-btn" data-view="list" title="Hiển thị dạng danh sách">
-                                <i class="fa-solid fa-list"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="examListContainer" class="grid-view">
-                    <!-- Skeletons -->
-                    <div class="course-card-skeleton">
-                        <div class="skeleton-loader sk-badge"></div>
-                        <div class="skeleton-loader sk-title"></div>
-                        <div class="skeleton-loader sk-text" style="width: 45%;"></div>
-                        <div class="skeleton-loader sk-meta"></div>
-                        <div class="skeleton-loader sk-button"></div>
-                    </div>
-                    <div class="course-card-skeleton">
-                        <div class="skeleton-loader sk-badge"></div>
-                        <div class="skeleton-loader sk-title"></div>
-                        <div class="skeleton-loader sk-text" style="width: 60%;"></div>
-                        <div class="skeleton-loader sk-meta"></div>
-                        <div class="skeleton-loader sk-button"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="tab-profile" class="tab-pane">
-                <div class="profile-grid-layout">
-                    <div class="profile-column">
-                        <div class="card">
-                            <h3><i class="fa-solid fa-address-card"></i> Thông tin chung</h3>
-                            <div class="profile-container">
-                                <div class="profile-avatar">
-                                    <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar">
-                                </div>
-                                <div class="profile-info">
-                                    <p><strong>Tên hiển thị:</strong> <span id="displayName">Đang tải...</span></p>
-                                    <p><strong>Email:</strong> <span id="displayEmail">Đang tải...</span></p>
-                                    <p>
-                                        <strong>Trạng thái VIP:</strong> 
-                                        <span id="vipStatusBadge" class="status-badge status-unactive">Đang kiểm tra...</span>
-                                    </p>
-                                    <p><strong>Ngày kích hoạt:</strong> <span id="vipStartDate">Không xác định</span></p>
-                                    <p><strong>Ngày hết hạn:</strong> <span id="vipEndDate">Không xác định</span></p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <h3>🔒 Đổi Mật Khẩu</h3>
-                            <form id="changePasswordForm">
-                                <div class="form-group">
-                                    <label for="inputNewPassword">Mật khẩu mới:</label>
-                                    <input type="password" id="inputNewPassword" placeholder="Nhập mật khẩu mới..." required minlength="6">
-                                </div>
-                                <button type="submit" id="btnChangePassword" class="btn-primary">Cập nhật mật khẩu</button>
-                            </form>
-                        </div>
-                    </div>
-                    
-                    <div class="profile-column">
-                        <div class="card" style="height: 100%;">
-                            <h3><i class="fa-solid fa-pen-to-square"></i> Cập nhật hồ sơ</h3>
-                            <form id="updateProfileForm">
-                                <div class="form-group">
-                                    <label for="inputName">Tên hiển thị mới:</label>
-                                    <input type="text" id="inputName" placeholder="Nhập tên của bạn...">
-                                </div>
-                                <div class="form-group">
-                                    <label for="inputAvatarFile">Tải lên ảnh đại diện:</label>
-                                    <input type="file" id="inputAvatarFile" accept="image/*">
-                                    <small style="display: block; color: #666; margin-top: 5px;">Ảnh sẽ được nén tự động xuống 200x200 pixel.</small>
-                                </div>
-                                <button type="submit" id="btnUpdateProfile" class="btn-primary">Lưu thay đổi</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-history" class="tab-pane">
-                <div class="card">
-                    <h3><i class="fa-solid fa-list-check"></i> Lịch sử các lần thi</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Mã đề</th>
-                                <th>Thời gian làm bài</th>
-                                <th>Thời gian nộp</th>
-                                <th>Số câu đúng</th>
-                                <th>Điểm số</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTableBody">
-                            <tr><td colspan="6" class="loading-text">Đang tải lịch sử thi...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- TAB NÂNG CẤP PRO/VIP -->
-            <div id="tab-vip" class="tab-pane">
-                <div class="vip-layout">
-                    <div class="card vip-card-box">
-                        <h3><i class="fa-solid fa-star"></i> Gói cước của bạn</h3>
-                        <p style="font-size: 1.1rem;">Tình trạng hiện tại:<br><br>
-                            <span id="vipStatusTab3" class="status-badge status-unactive" style="font-size: 1rem; padding: 10px 15px;">Chưa kích hoạt VIP</span>
-                        </p>
-                        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                        <ul style="line-height: 1.8; padding-left: 20px;">
-                            <li>Truy cập toàn bộ kho đề thi Pro độc quyền.</li>
-                            <li>Xem giải thích chi tiết đáp án.</li>
-                            <li>Lưu lại lịch sử làm bài không giới hạn.</li>
-                            <li>Hỗ trợ học tập 24/7.</li>
-                        </ul>
-                    </div>
-
-                    <div class="card vip-card-box" style="text-align: center;">
-                        <h3><i class="fa-solid fa-qrcode"></i> Thanh toán qua QR Code</h3>
-                        <div class="qr-placeholder">
-                            <img src="https://via.placeholder.com/200?text=QR+Code+Demo" alt="Mã QR Chuyển khoản">
-                        </div>
-                        <div class="instruction">
-                            Vui lòng chuyển khoản <strong>100.000đ</strong> với nội dung:<br><br>
-                            <span style="font-weight: bold; color: var(--primary-blue); font-size: 1.2rem;">NAP <span id="paymentEmail">[Email của bạn]</span></span><br><br>
-                            để được hệ thống mở khóa tự động.
-                        </div>
-                        <button id="btnConfirmPayment" class="btn-primary" style="width: 100%;">Tôi đã chuyển khoản</button>
+                    <div class="dropdown-item danger-text" id="btnLogout">
+                        <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
                     </div>
                 </div>
             </div>
         </div>
+    </header>
 
-    </div>
+    <!-- ==============================================================
+         2. KHUNG CHỨA SIDEBAR (TRÁI) VÀ MAIN CONTENT (PHẢI)
+         ============================================================== -->
+    <div class="layout-wrapper">
+        
+        <!-- SIDEBAR BÊN TRÁI -->
+        <div class="sidebar">
+            <div class="sidebar-menu">
+                <!-- ACCORDION KHO ĐỀ THI -->
+                <div class="menu-accordion">
+                    <div class="menu-item accordion-header active" data-target="tab-exams">
+                        <div class="header-content">
+                            <i class="fa-solid fa-book"></i> <span>Kho Đề Thi</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-down accordion-icon" style="transform: rotate(180deg);"></i>
+                    </div>
+                    <div class="accordion-content show">
+                        <div class="sub-menu-item active" data-technique="all">
+                            <i class="fa-solid fa-list-ul"></i> Tất cả
+                        </div>
+                        <div class="sub-menu-item" data-technique="MRI">
+                            <i class="fa-solid fa-magnet"></i> MRI
+                        </div>
+                        <div class="sub-menu-item" data-technique="CT">
+                            <i class="fa-solid fa-radiation"></i> CT
+                        </div>
+                        <div class="sub-menu-item" data-technique="X quang">
+                            <i class="fa-solid fa-x-ray"></i> X quang
+                        </div>
+                        <div class="sub-menu-item" data-technique="Hỗn hợp">
+                            <i class="fa-solid fa-layer-group"></i> Hỗn hợp
+                        </div>
+                        <!-- MENU: ĐỀ THI ĐÃ LƯU -->
+                        <div class="sub-menu-item" id="menu-saved-exams" data-technique="saved" style="border-top: 1px dashed var(--border-color); margin-top: 5px;">
+                            <i class="fa-solid fa-bookmark" style="color: var(--star-color);"></i> Đề thi đã lưu
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-item" data-target="tab-history">
+                    <i class="fa-solid fa-clock-rotate-left"></i> <span>Lịch sử làm bài</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT BÊN PHẢI -->
+        <div class="main-content">
+            <div class="tab-content-container">
+                <div id="tab-exams" class="tab-pane active">
+                    
+                    <div class="quick-stats-grid">
+                        <div class="quick-stat-card stat-card-completed">
+                            <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-label">Đã hoàn thành</span>
+                                <h3 id="statCompletedExams" class="stat-value">
+                                    <span class="skeleton-loader stat-skeleton-text"></span>
+                                </h3>
+                            </div>
+                        </div>
+                        <div class="quick-stat-card stat-card-avg">
+                            <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-label">Điểm trung bình</span>
+                                <h3 id="statAvgScore" class="stat-value">
+                                    <span class="skeleton-loader stat-skeleton-text"></span>
+                                </h3>
+                            </div>
+                        </div>
+                        <div class="quick-stat-card stat-card-account">
+                            <div class="stat-icon"><i class="fa-solid fa-user-shield"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-label">Trạng thái tài khoản</span>
+                                <h3 id="statAccountStatus" class="stat-value">
+                                    <span class="skeleton-loader stat-skeleton-text"></span>
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ACTION BAR HIỆN ĐẠI TÍCH HỢP SEARCH BAR -->
+                    <div class="action-bar">
+                        <!-- Khối bên trái: Tìm kiếm & Các bộ lọc pill -->
+                        <div class="action-left">
+                            
+                            <!-- Khối tìm kiếm thông minh -->
+                            <div class="action-search">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm...">
+                            </div>
+
+                            <div class="filter-group">
+                                <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
+                                <div class="pill-group" id="levelFilter">
+                                    <button class="pill-btn active" data-level="all">Tất cả</button>
+                                    <button class="pill-btn" data-level="Khó">Khó</button>
+                                    <button class="pill-btn" data-level="Trung bình">Trung bình</button>
+                                    <button class="pill-btn" data-level="Dễ">Dễ</button>
+                                </div>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
+                                <div class="pill-group" id="timeFilter">
+                                    <button class="pill-btn active" data-time="all">Tất cả</button>
+                                    <button class="pill-btn" data-time="15">15 phút</button>
+                                    <button class="pill-btn" data-time="30">30 phút</button>
+                                    <button class="pill-btn" data-time="45">45 phút</button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Khối bên phải: Công cụ sắp xếp và chuyển đổi view -->
+                        <div class="action-right">
+                            <div class="sort-wrapper">
+                                <i class="fa-solid fa-sort-amount-down"></i>
+                                <select id="sortFilter" class="modern-select">
+                                    <option value="newest">Mới nhất (Mặc định)</option>
+                                    <option value="highest_rating">Đánh giá cao nhất</option>
+                                    <option value="most_attempts">Lượt thi nhiều nhất</option>
+                                    <option value="only_vip">Chỉ hiện đề PRO</option>
+                                    <option value="only_free">Chỉ hiện đề Miễn phí</option>
+                                </select>
+                            </div>
+                            
+                            <div class="view-toggle-group">
+                                <button class="view-btn active" data-view="grid" title="Hiển thị dạng lưới">
+                                    <i class="fa-solid fa-border-all"></i>
+                                </button>
+                                <button class="view-btn" data-view="list" title="Hiển thị dạng danh sách">
+                                    <i class="fa-solid fa-list"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="examListContainer" class="grid-view">
+                        <!-- Skeletons -->
+                        <div class="course-card-skeleton">
+                            <div class="skeleton-loader sk-badge"></div>
+                            <div class="skeleton-loader sk-title"></div>
+                            <div class="skeleton-loader sk-text" style="width: 45%;"></div>
+                            <div class="skeleton-loader sk-meta"></div>
+                            <div class="skeleton-loader sk-button"></div>
+                        </div>
+                        <div class="course-card-skeleton">
+                            <div class="skeleton-loader sk-badge"></div>
+                            <div class="skeleton-loader sk-title"></div>
+                            <div class="skeleton-loader sk-text" style="width: 60%;"></div>
+                            <div class="skeleton-loader sk-meta"></div>
+                            <div class="skeleton-loader sk-button"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="tab-profile" class="tab-pane">
+                    <div class="profile-grid-layout">
+                        <div class="profile-column">
+                            <div class="card">
+                                <h3><i class="fa-solid fa-address-card"></i> Thông tin chung</h3>
+                                <div class="profile-container">
+                                    <div class="profile-avatar">
+                                        <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar">
+                                    </div>
+                                    <div class="profile-info">
+                                        <p><strong>Tên hiển thị:</strong> <span id="displayName">Đang tải...</span></p>
+                                        <p><strong>Email:</strong> <span id="displayEmail">Đang tải...</span></p>
+                                        <p>
+                                            <strong>Trạng thái VIP:</strong> 
+                                            <span id="vipStatusBadge" class="status-badge status-unactive">Đang kiểm tra...</span>
+                                        </p>
+                                        <p><strong>Ngày kích hoạt:</strong> <span id="vipStartDate">Không xác định</span></p>
+                                        <p><strong>Ngày hết hạn:</strong> <span id="vipEndDate">Không xác định</span></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <h3>🔒 Đổi Mật Khẩu</h3>
+                                <form id="changePasswordForm">
+                                    <div class="form-group">
+                                        <label for="inputNewPassword">Mật khẩu mới:</label>
+                                        <input type="password" id="inputNewPassword" placeholder="Nhập mật khẩu mới..." required minlength="6">
+                                    </div>
+                                    <button type="submit" id="btnChangePassword" class="btn-primary">Cập nhật mật khẩu</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-column">
+                            <div class="card" style="height: 100%;">
+                                <h3><i class="fa-solid fa-pen-to-square"></i> Cập nhật hồ sơ</h3>
+                                <form id="updateProfileForm">
+                                    <div class="form-group">
+                                        <label for="inputName">Tên hiển thị mới:</label>
+                                        <input type="text" id="inputName" placeholder="Nhập tên của bạn...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inputAvatarFile">Tải lên ảnh đại diện:</label>
+                                        <input type="file" id="inputAvatarFile" accept="image/*">
+                                        <small style="display: block; color: #666; margin-top: 5px;">Ảnh sẽ được nén tự động xuống 200x200 pixel.</small>
+                                    </div>
+                                    <button type="submit" id="btnUpdateProfile" class="btn-primary">Lưu thay đổi</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-history" class="tab-pane">
+                    <div class="card">
+                        <h3><i class="fa-solid fa-list-check"></i> Lịch sử các lần thi</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mã đề</th>
+                                    <th>Thời gian làm bài</th>
+                                    <th>Thời gian nộp</th>
+                                    <th>Số câu đúng</th>
+                                    <th>Điểm số</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr><td colspan="6" class="loading-text">Đang tải lịch sử thi...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB NÂNG CẤP PRO/VIP -->
+                <div id="tab-vip" class="tab-pane">
+                    <div class="vip-layout">
+                        <div class="card vip-card-box">
+                            <h3><i class="fa-solid fa-star"></i> Gói cước của bạn</h3>
+                            <p style="font-size: 1.1rem;">Tình trạng hiện tại:<br><br>
+                                <span id="vipStatusTab3" class="status-badge status-unactive" style="font-size: 1rem; padding: 10px 15px;">Chưa kích hoạt VIP</span>
+                            </p>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                            <ul style="line-height: 1.8; padding-left: 20px;">
+                                <li>Truy cập toàn bộ kho đề thi Pro độc quyền.</li>
+                                <li>Xem giải thích chi tiết đáp án.</li>
+                                <li>Lưu lại lịch sử làm bài không giới hạn.</li>
+                                <li>Hỗ trợ học tập 24/7.</li>
+                            </ul>
+                        </div>
+
+                        <div class="card vip-card-box" style="text-align: center;">
+                            <h3><i class="fa-solid fa-qrcode"></i> Thanh toán qua QR Code</h3>
+                            <div class="qr-placeholder">
+                                <img src="https://via.placeholder.com/200?text=QR+Code+Demo" alt="Mã QR Chuyển khoản">
+                            </div>
+                            <div class="instruction">
+                                Vui lòng chuyển khoản <strong>100.000đ</strong> với nội dung:<br><br>
+                                <span style="font-weight: bold; color: var(--primary-blue); font-size: 1.2rem;">NAP <span id="paymentEmail">[Email của bạn]</span></span><br><br>
+                                để được hệ thống mở khóa tự động.
+                            </div>
+                            <button id="btnConfirmPayment" class="btn-primary" style="width: 100%;">Tôi đã chuyển khoản</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- Hết layout-wrapper -->
 
     <script type="module" src="dashboard-core.js"></script>
     <script type="module" src="dashboard-exams.js"></script>
