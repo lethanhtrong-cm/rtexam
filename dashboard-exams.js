@@ -1,5 +1,5 @@
-import { db, safeRedirect } from "./dashboard-core.js";
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { db, auth, safeRedirect } from "./dashboard-core.js";
+import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // 1. BIẾN TOÀN CỤC & TRẠNG THÁI BỘ LỌC ĐA LỚP
@@ -7,31 +7,38 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/f
 export let allExamsData = []; 
 let currentUserData = null;
 let currentView = 'grid'; 
+let userBookmarks = []; // Mảng chứa ID các đề thi đã lưu
 
 // Biến trạng thái của Bộ lọc
 let currentTechnique = 'all'; // Lấy từ Sidebar
 let currentLevel = 'all';     // Lấy từ Pill Buttons
 let currentTime = 'all';      // Lấy từ Pill Buttons
-let currentSearchQuery = '';  // Lấy từ Search Bar (Tính năng mới)
+let currentSearchQuery = '';  // Lấy từ Search Bar 
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
 const sortFilter = document.getElementById('sortFilter');
 const viewBtns = document.querySelectorAll('.view-btn');
 
-// Các phần tử lọc mới
+// Các phần tử lọc
 const subMenuItems = document.querySelectorAll('.sub-menu-item');
 const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
 const timePills = document.querySelectorAll('#timeFilter .pill-btn');
-const searchInput = document.getElementById('searchInput'); // Thanh tìm kiếm
+const searchInput = document.getElementById('searchInput'); 
 
 // =========================================================================
 // 2. LẮNG NGHE SỰ KIỆN AUTH READY ĐỂ KHỞI CHẠY DỮ LIỆU
 // =========================================================================
 document.addEventListener("authReady", async (e) => {
     currentUserData = e.detail.currentUserData;
+    
+    // Lấy mảng bookmark từ dữ liệu User truyền qua
+    if (currentUserData && currentUserData.bookmarks) {
+        userBookmarks = [...currentUserData.bookmarks];
+    }
+
     setupToolbarEvents(); 
-    setupFilterEvents(); // Khởi tạo sự kiện cho các bộ lọc
+    setupFilterEvents(); 
     await loadAggregatedExamData(); 
 });
 
@@ -39,7 +46,7 @@ document.addEventListener("authReady", async (e) => {
 // 3. CẤU HÌNH SỰ KIỆN LỌC & TOOLBAR
 // =========================================================================
 function setupFilterEvents() {
-    // 1. Sự kiện lọc theo Kỹ thuật (Sidebar)
+    // 1. Sự kiện lọc theo Kỹ thuật (Sidebar) - Bao gồm cả "Đề thi đã lưu" (saved)
     subMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             currentTechnique = e.currentTarget.getAttribute('data-technique');
@@ -51,15 +58,13 @@ function setupFilterEvents() {
     function setupPillEvents(pills, stateKey) {
         pills.forEach(pill => {
             pill.addEventListener('click', (e) => {
-                // Xóa active của nhóm pill tương ứng
                 pills.forEach(p => p.classList.remove('active'));
                 e.currentTarget.classList.add('active');
                 
-                // Cập nhật biến trạng thái
                 if (stateKey === 'level') currentLevel = e.currentTarget.getAttribute('data-level');
                 if (stateKey === 'time') currentTime = e.currentTarget.getAttribute('data-time');
                 
-                renderExams(); // Kích hoạt render lại
+                renderExams();
             });
         });
     }
@@ -67,10 +72,9 @@ function setupFilterEvents() {
     setupPillEvents(levelPills, 'level');
     setupPillEvents(timePills, 'time');
 
-    // 3. Sự kiện Tìm kiếm Real-time (Tìm kiếm theo Mã đề)
+    // 3. Sự kiện Tìm kiếm Real-time
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            // Lấy giá trị, chuyển thành chữ thường và xóa khoảng trắng thừa
             currentSearchQuery = e.target.value.toLowerCase().trim();
             renderExams();
         });
@@ -78,11 +82,9 @@ function setupFilterEvents() {
 }
 
 function setupToolbarEvents() {
-    // Sự kiện Thay đổi Dropdown (Sắp xếp / Free-Pro)
     sortFilter.removeEventListener('change', handleSortFilterChange);
     sortFilter.addEventListener('change', handleSortFilterChange);
 
-    // Sự kiện Chuyển đổi Grid / List View
     viewBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const view = e.currentTarget.getAttribute('data-view');
@@ -119,7 +121,6 @@ async function loadAggregatedExamData() {
             }
         });
 
-        // Lấy cấu hình metadata (isVip, timeLimit, level, technique...)
         const examsConfigRef = collection(db, "exams");
         const eSnap = await getDocs(examsConfigRef);
         eSnap.forEach((doc) => {
@@ -130,8 +131,6 @@ async function loadAggregatedExamData() {
                 examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
                 examMap[eId].attemptCount = conf.attemptCount || 0;
                 examMap[eId].createdAt = conf.createdAt ? (typeof conf.createdAt.toMillis === 'function' ? conf.createdAt.toMillis() : new Date(conf.createdAt).getTime()) : 0;
-                
-                // Fetch siêu dữ liệu phân loại
                 examMap[eId].technique = conf.technique || "Hỗn hợp";
                 examMap[eId].level = conf.level || "Trung bình";
             }
@@ -152,7 +151,6 @@ async function loadAggregatedExamData() {
             }
         });
 
-        // Chuẩn hóa dữ liệu
         Object.keys(examMap).forEach(eId => {
             if (examMap[eId].timeLimit === undefined) examMap[eId].timeLimit = 15;
             if (examMap[eId].isVip === undefined) examMap[eId].isVip = false;
@@ -185,7 +183,34 @@ async function loadAggregatedExamData() {
 }
 
 // =========================================================================
-// 5. PIPELINE LỌC DỮ LIỆU & RENDER GIAO DIỆN
+// 5. EVENT DELEGATION CHO NÚT BOOKMARK
+// =========================================================================
+examListContainer.addEventListener('click', async (e) => {
+    const bookmarkBtn = e.target.closest('.btn-bookmark');
+    if (bookmarkBtn) {
+        const examId = bookmarkBtn.getAttribute('data-exam-id');
+        const userDocRef = doc(db, "users", auth.currentUser.uid);
+        
+        try {
+            if (userBookmarks.includes(examId)) {
+                // Xóa Bookmark
+                await updateDoc(userDocRef, { bookmarks: arrayRemove(examId) });
+                userBookmarks = userBookmarks.filter(id => id !== examId);
+            } else {
+                // Thêm Bookmark
+                await updateDoc(userDocRef, { bookmarks: arrayUnion(examId) });
+                userBookmarks.push(examId);
+            }
+            renderExams(); // Cập nhật lại UI lập tức
+        } catch (error) {
+            console.error("Lỗi cập nhật Bookmark:", error);
+            alert("Đã xảy ra lỗi khi lưu đề thi. Vui lòng thử lại!");
+        }
+    }
+});
+
+// =========================================================================
+// 6. PIPELINE LỌC DỮ LIỆU & RENDER GIAO DIỆN
 // =========================================================================
 function renderExams() {
     if (allExamsData.length === 0) {
@@ -195,8 +220,10 @@ function renderExams() {
 
     let displayData = [...allExamsData];
 
-    // LỚP LỌC 1: Kỹ thuật (Từ Sidebar)
-    if (currentTechnique !== 'all') {
+    // LỚP LỌC 1: Kỹ thuật hoặc Đề thi đã lưu (Từ Sidebar)
+    if (currentTechnique === 'saved') {
+        displayData = displayData.filter(exam => userBookmarks.includes(exam.id));
+    } else if (currentTechnique !== 'all') {
         displayData = displayData.filter(exam => exam.technique === currentTechnique);
     }
 
@@ -234,13 +261,22 @@ function renderExams() {
     const isUserVip = currentUserData && currentUserData.isVip === true;
 
     if (displayData.length === 0) {
-        examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi nào phù hợp với các bộ lọc và từ khóa hiện tại.</div>';
+        if (currentTechnique === 'saved') {
+            examListContainer.innerHTML = '<div class="loading-text">Bạn chưa lưu đề thi nào vào bộ sưu tập.</div>';
+        } else {
+            examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi nào phù hợp với các bộ lọc và từ khóa hiện tại.</div>';
+        }
         return;
     }
 
     displayData.forEach(exam => {
         const isExamVip = exam.isVip;
+        const isSaved = userBookmarks.includes(exam.id);
         
+        // Trạng thái Bookmark Icon
+        const bookmarkClass = isSaved ? "btn-bookmark saved" : "btn-bookmark";
+        const bookmarkIcon = isSaved ? "fa-solid fa-bookmark" : "fa-regular fa-bookmark";
+
         // Badge PRO hoặc Free
         const badgeHtml = isExamVip 
             ? `<span class="course-badge badge-vip"><i class="fa-solid fa-crown"></i> PRO</span>`
@@ -254,7 +290,6 @@ function renderExams() {
             buttonHtml = `<button class="btn-primary" onclick="goToQuiz('${exam.id}')">Vào thi ngay</button>`;
         }
 
-        // Tags hiển thị Cấp độ & Kỹ thuật
         const tagsHtml = `
             <div class="card-tags">
                 <span class="meta-tag"><i class="fa-solid fa-tag"></i> ${exam.technique}</span>
@@ -266,6 +301,9 @@ function renderExams() {
         card.className = 'course-card';
         card.innerHTML = `
             ${badgeHtml}
+            <button class="${bookmarkClass}" data-exam-id="${exam.id}" title="${isSaved ? 'Bỏ lưu đề thi' : 'Lưu đề thi'}">
+                <i class="${bookmarkIcon}"></i>
+            </button>
             <div class="card-body">
                 <div style="flex: 1;">
                     <h3 class="card-title">${exam.id}</h3>
@@ -287,27 +325,22 @@ function renderExams() {
 }
 
 // =========================================================================
-// 6. EXPOSE FUNCTIONS ĐỂ HTML THUẦN CÓ THỂ GỌI SỰ KIỆN CLICK
+// 7. EXPOSE FUNCTIONS ĐỂ HTML THUẦN CÓ THỂ GỌI SỰ KIỆN CLICK
 // =========================================================================
 window.goToQuiz = function(examId) {
     safeRedirect(`quiz.html?examId=${examId}`);
 };
 
-// Hàm xử lý sự kiện bấm Nâng cấp từ thẻ Đề thi
 window.goToUpgrade = function() {
-    // 1. Tắt active toàn bộ Tab Nội Dung
     const tabPanes = document.querySelectorAll('.tab-pane');
     tabPanes.forEach(pane => pane.classList.remove('active'));
     
-    // 2. Tắt active toàn bộ Menu Sidebar để reset trạng thái
     document.querySelectorAll('.sidebar-menu .menu-item').forEach(m => m.classList.remove('active'));
     document.querySelectorAll('.sub-menu-item').forEach(m => m.classList.remove('active'));
     
-    // 3. Mở hiển thị Tab VIP/PRO
     const proTab = document.getElementById('tab-vip');
     if (proTab) proTab.classList.add('active');
     
-    // 4. Cập nhật Tiêu đề trang
     const currentTabTitle = document.getElementById("currentTabTitle");
     if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
 };
