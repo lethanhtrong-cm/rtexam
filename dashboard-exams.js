@@ -31,7 +31,7 @@ if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
     style.id = styleId;
     style.innerHTML = `
-        /* CẬP NHẬT: Thêm Box-shadow mặc định và hiệu ứng Hover nảy lên mượt mà */
+        /* Thêm Box-shadow mặc định và hiệu ứng Hover nảy lên mượt mà */
         .exam-card-hover {
             box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
             transition: all 0.3s ease !important;
@@ -41,7 +41,7 @@ if (!document.getElementById(styleId)) {
             box-shadow: 0 12px 24px rgba(0,0,0,0.08) !important;
         }
 
-        /* CẬP NHẬT: Nút "Vào thi ngay" thành màu xanh nhạt, mát mắt */
+        /* Nút "Vào thi ngay" thành màu xanh nhạt, mát mắt */
         .btn-primary {
             background-color: #e0f2fe !important;
             color: #0369a1 !important;
@@ -120,7 +120,8 @@ document.addEventListener("authReady", async (e) => {
                         completedExams[examId] = {
                             score: data.score || 0,
                             total: data.totalQuestions || data.total || 1,
-                            timestamp: ts
+                            timestamp: ts,
+                            resultId: doc.id // Thêm dòng này để giữ ID của bài thi
                         };
                     }
                 }
@@ -543,20 +544,12 @@ window.goToUpgrade = function() {
 window.goToHistory = function(examId) {
     if (!examId) return;
     
-    // Lưu tạm mã đề thi để tab lịch sử đọc khi render
-    sessionStorage.setItem('pendingHistoryFilter', examId);
-    
-    // Thử tìm nút Menu Lịch sử qua nhiều cách (Hãy đảm bảo HTML của bạn có 1 trong các thuộc tính này)
-    const historyMenuBtn = document.querySelector('[data-target="history"]') || 
-                           document.querySelector('a[href*="history"]') ||
-                           document.getElementById('menu-history') ||
-                           document.querySelector('.history-tab-btn'); // Thêm class này vào menu Lịch sử của bạn nếu cần
-    
-    if (historyMenuBtn) {
-        historyMenuBtn.click();
-        // Bắn event cho file history.js lọc (nếu có setup)
-        document.dispatchEvent(new CustomEvent('filterHistoryByExam', { detail: { examId: examId } }));
+    const historyData = completedExams[examId];
+    if (historyData && historyData.resultId) {
+        // Mở thẳng trang quiz kèm resultId để kích hoạt chế độ Xem lại (Review mode)
+        const url = `quiz.html?resultId=${historyData.resultId}`;
+        window.open(url, '_blank');
     } else {
-        alert("Hệ thống đã ghi nhận yêu cầu xem lịch sử mã đề: " + examId + "\nTuy nhiên, không tìm thấy ID của Tab Lịch sử trên thanh menu. Hãy kiểm tra lại HTML của Sidebar!");
+        alert("Không tìm thấy dữ liệu bài thi cũ để xem lại.");
     }
 };
