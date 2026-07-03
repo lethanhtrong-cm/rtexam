@@ -295,100 +295,150 @@ function renderExams() {
         const timeTarget = parseInt(currentTime);
         displayData = displayData.filter(exam => exam.timeLimit === timeTarget);
     }
-    
-    // LỚP LỌC 4: Tìm kiếm theo từ khóa Real-time
-    if (currentSearchQuery !== '') {
-        displayData = displayData.filter(exam => 
-            exam.id.toLowerCase().includes(currentSearchQuery) || 
-            (exam.technique && exam.technique.toLowerCase().includes(currentSearchQuery))
-        );
-    }
+// 4. ACTION BUTTONS & PROGRESS THÔNG MINH
+        let actionAreaHtml = '';
 
-    // LỚP LỌC 5: Trạng thái Dropdown (PRO/Free)
-    const filterType = sortFilter.value;
-    if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
-    else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
-
-    // LỚP LỌC 6: Sắp xếp
-    if (filterType === 'highest_rating') displayData.sort((a, b) => b.rating - a.rating);
-    else if (filterType === 'most_attempts') displayData.sort((a, b) => b.attemptCount - a.attemptCount);
-    else displayData.sort((a, b) => b.createdAt - a.createdAt); 
-
-    examListContainer.innerHTML = "";
-    const isUserVip = currentUserData && currentUserData.isVip === true;
-
-    if (displayData.length === 0) {
-        if (currentTechnique === 'saved') {
-            examListContainer.innerHTML = '<div class="loading-text">Bạn chưa lưu đề thi nào vào bộ sưu tập.</div>';
+        if (isExamVip && !isUserVip) {
+            // Trường hợp 1: Đề VIP & User Thường -> Khóa, yêu cầu nâng cấp (Nút Pastel Sang trọng)
+            actionAreaHtml = `
+                <button class="btn btn-premium-pro w-100 mt-2" onclick="handleUpgradeProClick('${exam.id}')">
+                    <i class="fa-solid fa-gem me-2"></i> Nâng cấp tài khoản Pro
+                </button>
+            `;
         } else {
-            examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi nào phù hợp với các bộ lọc hiện tại.</div>';
+            // Trường hợp 2: Đề Free hoặc User đã là VIP
+            if (isCompleted) {
+                // ĐÃ THI: Hiện Progress Bar và chia đôi 2 nút
+                const score = completedExams[exam.id].score;
+                const totalQuestions = completedExams[exam.id].total;
+                const percent = Math.min(100, Math.round((score / totalQuestions) * 100));
+
+                actionAreaHtml = `
+                    <div class="mb-3 p-2 bg-light rounded border border-light">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted fw-medium">Lần thi gần nhất</small>
+                            <span class="text-success fw-bold" style="font-size: 0.95rem;">${score} / ${totalQuestions} điểm</span>
+                        </div>
+                        <div class="progress" style="height: 6px; border-radius: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: ${percent}%; border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button class="btn btn-outline-secondary w-100 fw-medium" style="border-radius: 6px;" onclick="goToHistory('${exam.id}')">
+                                <i class="fas fa-history me-1"></i> Lịch sử
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-primary-subtle text-primary fw-medium w-100" style="border-radius: 6px;" onclick="handleExamClick('${exam.id}')">
+                                <i class="fas fa-redo me-1"></i> Thi lại
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // CHƯA THI: Nút Bắt đầu thi to, liền mạch
+                actionAreaHtml = `
+                    <button class="btn btn-primary w-100 fw-bold mt-2" style="padding: 10px; border-radius: 6px;" onclick="handleExamClick('${exam.id}')">
+                        Bắt đầu thi <i class="fa-solid fa-arrow-right ms-2"></i>
+                    </button>
+                `;
+            }
         }
+
+        // TỔNG HỢP VÀ GẮN VÀO CARD
+        const cardHtml = `
+            <div class="course-card exam-card-hover" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #eef0f2;">
+                <div class="card-body p-4" style="display: flex; flex-direction: column; height: 100%;">
+                    ${headerHtml}
+                    ${mergedTagsHtml}
+                    
+                    <div class="stats-row" style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 0.9rem; color: #6c757d; border-top: 1px dashed #e9ecef; padding-top: 15px;">
+                        <div class="rating">
+                            <span class="fw-bold text-dark">${exam.rating}</span> <i class="fa-solid fa-star text-warning"></i> <span style="font-size: 0.8rem;">(${exam.ratingCount})</span>
+                        </div>
+                        <div class="users">
+                            <i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi
+                        </div>
+                    </div>
+                    
+                    <div class="mt-auto">
+                        ${actionAreaHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        examListContainer.insertAdjacentHTML('beforeend', cardHtml);
+    });
+}
+
+// =========================================================================
+// 6. CÁC HÀM XỬ LÝ SỰ KIỆN NÚT BẤM (CLICK HANDLERS)
+// =========================================================================
+window.handleExamClick = function(examId) {
+    if (!currentUserData) {
+        alert("Vui lòng tải lại trang.");
         return;
     }
+    const exam = allExamsData.find(e => e.id === examId);
+    if (!exam) return;
+    
+    // Nếu là Đề VIP mà chưa là user VIP
+    if (exam.isVip && currentUserData.isVip !== true) {
+        handleUpgradeProClick(examId);
+        return;
+    }
+    
+    // Mở trang quiz
+    const url = `quiz.html?examId=${encodeURIComponent(examId)}`;
+    window.open(url, '_blank');
+}
 
-    displayData.forEach(exam => {
-        const isExamVip = exam.isVip;
-        const isSaved = userBookmarks.includes(exam.id);
-        const isCompleted = !!completedExams[exam.id]; // Kiểm tra tồn tại trong Object lịch sử
-        
-        // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark
-        const badgeHtml = isExamVip 
-            ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>`
-            : `<span class="course-badge badge-free header-badge">Free</span>`;
-            
-        const bookmarkHtml = `
-            <button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${exam.id}')" title="${isSaved ? 'Bỏ lưu đề thi' : 'Lưu đề thi'}">
-                <i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-            </button>
-        `;
+window.handleUpgradeProClick = function(examId) {
+    // Chuyển hướng sang Tab Nâng Cấp Pro (Nếu bạn có hàm switchTab bên core)
+    // Hoặc mở modal thanh toán
+    alert("Tính năng Nâng cấp Pro đang được xây dựng. Vui lòng liên hệ Admin để mua tài khoản.");
+}
 
-        // 2. HEADER FLEXBOX CHUYÊN NGHIỆP
-        const headerHtml = `
-            <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 15px;">
-                <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
-                    <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
-                    ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
-                </div>
-                
-                <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-                    ${badgeHtml}
-                    ${bookmarkHtml}
-                </div>
-            </div>
-        `;
+window.goToHistory = function(examId) {
+    // Gọi hàm chuyển tab Lịch sử (nếu có ở dashboard-core)
+    const historyBtn = document.querySelector('[data-target="history"]');
+    if(historyBtn) {
+        historyBtn.click();
+        // Có thể dispatch event báo cho history.js lọc theo examId này
+        document.dispatchEvent(new CustomEvent('filterHistoryByExam', { detail: { examId: examId } }));
+    } else {
+        alert("Đang chuyển đến lịch sử của đề " + examId);
+    }
+}
 
-        // 3. DẢI BADGE PASTEL 4 THÔNG SỐ (GIỮ NGUYÊN)
-        let levelClass = 'bg-warning-subtle text-warning'; 
-        let levelStyle = 'background-color: #fff3cd; color: #664d03;'; 
-        if (exam.level === 'Dễ') {
-            levelClass = 'bg-success-subtle text-success';
-            levelStyle = 'background-color: #d1e7dd; color: #0f5132;';
-        } else if (exam.level === 'Khó') {
-            levelClass = 'bg-danger-subtle text-danger';
-            levelStyle = 'background-color: #f8d7da; color: #842029;';
+window.toggleBookmark = async function(event, examId) {
+    event.stopPropagation();
+    if (!currentUserData || !currentUserData.email) return;
+
+    const btn = event.currentTarget;
+    const isSaved = btn.classList.contains('saved');
+    const userRef = doc(db, "users", currentUserData.email);
+
+    try {
+        if (isSaved) {
+            await updateDoc(userRef, { bookmarks: arrayRemove(examId) });
+            currentUserData.bookmarks = currentUserData.bookmarks.filter(id => id !== examId);
+            btn.classList.remove('saved');
+            btn.innerHTML = '<i class="fa-regular fa-heart"></i>';
+        } else {
+            await updateDoc(userRef, { bookmarks: arrayUnion(examId) });
+            currentUserData.bookmarks.push(examId);
+            btn.classList.add('saved');
+            btn.innerHTML = '<i class="fa-solid fa-heart" style="color: #dc3545;"></i>';
         }
-
-        const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
-
-        const mergedTagsHtml = `
-            <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
-                <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #cfe2ff; color: #084298;">
-                    <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
-                </span>
-                <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
-                    <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
-                </span>
-                <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #055160;">
-                    <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
-                </span>
-                <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #e2e3e5; color: #41464b;">
-                    <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
-                </span>
-            </div>
-        `;
-
-        // 4. ACTION BUTTONS & PROGRESS THÔNG MINH
-        let progressHtml = '';
-        let buttonHtml = '';
         
-        if (isExamVip && !isUserVip)
+        // Cập nhật lại UI nếu đang ở tab Saved
+        if (currentTechnique === 'saved') {
+            renderExams();
+        }
+    } catch (error) {
+        console.error("Lỗi khi cập nhật bookmark:", error);
+    }
+}
