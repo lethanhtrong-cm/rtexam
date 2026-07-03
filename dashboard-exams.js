@@ -416,10 +416,10 @@ function renderExams() {
                 </div>
             `;
             
-            // Hai nút Lịch sử & Thi lại chia đôi
+            // Hai nút Lịch sử & Thi lại phân bổ khoảng cách chuyên nghiệp bằng Flexbox và Margin
             buttonHtml = `
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary w-50 btn-sm" onclick="goToHistory('${exam.id}')">
+                <div class="d-flex justify-content-between w-100 mt-2">
+                    <button class="btn btn-outline-secondary w-50 btn-sm me-2" onclick="goToHistory('${exam.id}')">
                         <i class="fas fa-history"></i> Lịch sử
                     </button>
                     <button class="btn btn-primary-subtle text-primary fw-medium w-50 btn-sm" onclick="goToQuiz('${exam.id}')">
