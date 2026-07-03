@@ -13,7 +13,7 @@ let currentTechnique = 'all';
 let currentLevel = 'all';     
 let currentTime = 'all';      
 let currentSearchQuery = '';  
-let completedExams = {}; // Đã đổi sang Object để lưu trữ thông tin điểm số lần thi gần nhất
+let completedExams = {}; // Lưu trữ thông tin điểm số lần thi gần nhất
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
@@ -50,18 +50,17 @@ if (!document.getElementById(styleId)) {
         /* --- NÚT PRO CHUẨN PREMIUM (PASTEL COOL) --- */
         .btn-premium-pro {
             background: linear-gradient(135deg, #8ec5fc 0%, #e0c3fc 100%) !important;
-            color: #2c3e50 !important; /* Chữ màu xám xanh đậm, lịch sự */
+            color: #2c3e50 !important;
             border: none !important;
-            font-weight: 500 !important; /* Độ đậm vừa phải, không bị thô */
+            font-weight: 500 !important;
             transition: all 0.3s ease !important;
             cursor: pointer;
         }
         .btn-premium-pro:hover {
             transform: translateY(-3px) !important;
-            box-shadow: 0 8px 20px rgba(142, 197, 252, 0.5) !important; /* Bóng đổ đồng điệu với màu nền */
+            box-shadow: 0 8px 20px rgba(142, 197, 252, 0.5) !important;
             filter: brightness(1.05);
         }
-        /* Class dự phòng cho nút pastel Bootstrap */
         .btn-primary-subtle {
             background-color: #cfe2ff !important;
             color: #0a58ca !important;
@@ -71,8 +70,6 @@ if (!document.getElementById(styleId)) {
         .btn-primary-subtle:hover {
             background-color: #9ec5fe !important;
         }
-        
-        /* Loại bỏ position absolute cũ để gom vào Flexbox Header */
         .header-badge {
             position: relative !important; top: auto !important; left: auto !important; right: auto !important; margin: 0 !important;
         }
@@ -105,14 +102,12 @@ document.addEventListener("authReady", async (e) => {
                 const data = doc.data();
                 const examId = data.examId || data.examCode;
                 if (examId) {
-                    // Xử lý timestamp để tìm lần thi mới nhất
                     const ts = data.createdAt ? (typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : data.timestamp || 0;
                     
-                    // Nếu chưa có trong danh sách, hoặc có nhưng bản ghi này mới hơn
                     if (!completedExams[examId] || ts >= completedExams[examId].timestamp) {
                         completedExams[examId] = {
                             score: data.score || 0,
-                            total: data.totalQuestions || data.total || 1, // Fallback mặc định 1 để không chia cho 0
+                            total: data.totalQuestions || data.total || 1,
                             timestamp: ts
                         };
                     }
@@ -186,20 +181,212 @@ function handleSortFilterChange() {
     renderExams();
 }
 
-// 4. ACTION BUTTONS & PROGRESS THÔNG MINH
+// =========================================================================
+// 4. TẢI VÀ TỔNG HỢP SIÊU DỮ LIỆU TỪ FIRESTORE
+// =========================================================================
+async function loadAggregatedExamData() {
+    try {
+        const questionsRef = collection(db, "questions");
+        const qSnap = await getDocs(questionsRef);
+        const examMap = {}; 
+        
+        qSnap.forEach((doc) => {
+            const data = doc.data();
+            const eId = data.examId;
+            if (eId) {
+                if (!examMap[eId]) examMap[eId] = { id: eId, questionCount: 0 };
+                examMap[eId].questionCount++;
+            }
+        });
+
+        const examsConfigRef = collection(db, "exams");
+        const eSnap = await getDocs(examsConfigRef);
+        eSnap.forEach((doc) => {
+            const eId = doc.id;
+            if (examMap[eId]) {
+                const conf = doc.data();
+                examMap[eId].isVip = conf.isVip || false;
+                examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
+                examMap[eId].attemptCount = conf.attemptCount || 0;
+                examMap[eId].createdAt = conf.createdAt ? (typeof conf.createdAt.toMillis === 'function' ? conf.createdAt.toMillis() : new Date(conf.createdAt).getTime()) : 0;
+                
+                examMap[eId].technique = conf.technique || "Hỗn hợp";
+                examMap[eId].level = conf.level || "Trung bình";
+            }
+        });
+
+        const feedbacksRef = collection(db, "feedbacks");
+        const fSnap = await getDocs(feedbacksRef);
+        const ratingMap = {}; 
+        
+        fSnap.forEach((doc) => {
+            const data = doc.data();
+            const eId = data.examId;
+            const stars = data.rating || 5; 
+            if (eId) {
+                if (!ratingMap[eId]) ratingMap[eId] = { total: 0, count: 0 };
+                ratingMap[eId].total += stars;
+                ratingMap[eId].count++;
+            }
+        });
+
+        Object.keys(examMap).forEach(eId => {
+            if (examMap[eId].timeLimit === undefined) examMap[eId].timeLimit = 15;
+            if (examMap[eId].isVip === undefined) examMap[eId].isVip = false;
+            if (examMap[eId].attemptCount === undefined) examMap[eId].attemptCount = 0;
+            if (examMap[eId].createdAt === undefined) examMap[eId].createdAt = 0;
+            if (examMap[eId].technique === undefined) examMap[eId].technique = "Hỗn hợp";
+            if (examMap[eId].level === undefined) examMap[eId].level = "Trung bình";
+
+            if (ratingMap[eId]) {
+                const avg = ratingMap[eId].total / ratingMap[eId].count;
+                examMap[eId].rating = Math.round(avg * 10) / 10; 
+                examMap[eId].ratingCount = ratingMap[eId].count;
+            } else {
+                examMap[eId].rating = 5.0; 
+                examMap[eId].ratingCount = 0;
+            }
+        });
+
+        allExamsData = Object.values(examMap);
+
+        const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
+        document.dispatchEvent(examsReadyEvent);
+
+        renderExams();
+
+    } catch (error) {
+        console.error("Lỗi khi tổng hợp dữ liệu đề thi:", error);
+        examListContainer.innerHTML = '<div class="loading-text" style="color:red;">Lỗi tải dữ liệu khóa học!</div>';
+    }
+}
+
+// =========================================================================
+// 5. PIPELINE LỌC DỮ LIỆU & RENDER GIAO DIỆN CHUYÊN NGHIỆP
+// =========================================================================
+function renderExams() {
+    if (allExamsData.length === 0) {
+        examListContainer.innerHTML = '<div class="loading-text">Hiện tại chưa có khóa học / đề thi nào.</div>';
+        return;
+    }
+
+    let displayData = [...allExamsData];
+    const userBookmarks = (currentUserData && currentUserData.bookmarks) ? currentUserData.bookmarks : [];
+
+    // Lọc theo Technique & Bookmark
+    if (currentTechnique === 'saved') {
+        displayData = displayData.filter(exam => userBookmarks.includes(exam.id));
+    } else if (currentTechnique !== 'all') {
+        displayData = displayData.filter(exam => exam.technique === currentTechnique);
+    }
+
+    // Lọc Level, Time, Search
+    if (currentLevel !== 'all') {
+        displayData = displayData.filter(exam => exam.level === currentLevel);
+    }
+    if (currentTime !== 'all') {
+        const timeTarget = parseInt(currentTime);
+        displayData = displayData.filter(exam => exam.timeLimit === timeTarget);
+    }
+    if (currentSearchQuery !== '') {
+        displayData = displayData.filter(exam => 
+            exam.id.toLowerCase().includes(currentSearchQuery) || 
+            (exam.technique && exam.technique.toLowerCase().includes(currentSearchQuery))
+        );
+    }
+
+    // Lọc VIP/Free & Sắp xếp
+    const filterType = sortFilter.value;
+    if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
+    else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
+
+    if (filterType === 'highest_rating') displayData.sort((a, b) => b.rating - a.rating);
+    else if (filterType === 'most_attempts') displayData.sort((a, b) => b.attemptCount - a.attemptCount);
+    else displayData.sort((a, b) => b.createdAt - a.createdAt); 
+
+    examListContainer.innerHTML = "";
+    const isUserVip = currentUserData && currentUserData.isVip === true;
+
+    if (displayData.length === 0) {
+        if (currentTechnique === 'saved') {
+            examListContainer.innerHTML = '<div class="loading-text">Bạn chưa lưu đề thi nào vào bộ sưu tập.</div>';
+        } else {
+            examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi nào phù hợp với các bộ lọc hiện tại.</div>';
+        }
+        return;
+    }
+
+    displayData.forEach(exam => {
+        const isExamVip = exam.isVip;
+        const isSaved = userBookmarks.includes(exam.id);
+        const isCompleted = !!completedExams[exam.id]; 
+        
+        const badgeHtml = isExamVip 
+            ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>`
+            : `<span class="course-badge badge-free header-badge">Free</span>`;
+            
+        const bookmarkHtml = `
+            <button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${exam.id}')" title="${isSaved ? 'Bỏ lưu đề thi' : 'Lưu đề thi'}">
+                <i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+            </button>
+        `;
+
+        const headerHtml = `
+            <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+                    <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
+                    ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                    ${badgeHtml}
+                    ${bookmarkHtml}
+                </div>
+            </div>
+        `;
+
+        let levelClass = 'bg-warning-subtle text-warning'; 
+        let levelStyle = 'background-color: #fff3cd; color: #664d03;'; 
+        if (exam.level === 'Dễ') {
+            levelClass = 'bg-success-subtle text-success';
+            levelStyle = 'background-color: #d1e7dd; color: #0f5132;';
+        } else if (exam.level === 'Khó') {
+            levelClass = 'bg-danger-subtle text-danger';
+            levelStyle = 'background-color: #f8d7da; color: #842029;';
+        }
+
+        const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
+
+        const mergedTagsHtml = `
+            <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+                <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #cfe2ff; color: #084298;">
+                    <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
+                </span>
+                <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
+                    <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
+                </span>
+                <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #055160;">
+                    <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
+                </span>
+                <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #e2e3e5; color: #41464b;">
+                    <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
+                </span>
+            </div>
+        `;
+
+        // ==========================================
+        // CẤU TRÚC LẠI PHẦN NÚT BẤM VÀ ĐIỂM SỐ Ở ĐÂY
+        // ==========================================
         let actionAreaHtml = '';
 
         if (isExamVip && !isUserVip) {
-            // Trường hợp 1: Đề VIP & User Thường -> Khóa, yêu cầu nâng cấp (Nút Pastel Sang trọng)
             actionAreaHtml = `
                 <button class="btn btn-premium-pro w-100 mt-2" onclick="handleUpgradeProClick('${exam.id}')">
                     <i class="fa-solid fa-gem me-2"></i> Nâng cấp tài khoản Pro
                 </button>
             `;
         } else {
-            // Trường hợp 2: Đề Free hoặc User đã là VIP
             if (isCompleted) {
-                // ĐÃ THI: Hiện Progress Bar và chia đôi 2 nút
                 const score = completedExams[exam.id].score;
                 const totalQuestions = completedExams[exam.id].total;
                 const percent = Math.min(100, Math.round((score / totalQuestions) * 100));
@@ -228,7 +415,6 @@ function handleSortFilterChange() {
                     </div>
                 `;
             } else {
-                // CHƯA THI: Nút Bắt đầu thi to, liền mạch
                 actionAreaHtml = `
                     <button class="btn btn-primary w-100 fw-bold mt-2" style="padding: 10px; border-radius: 6px;" onclick="handleExamClick('${exam.id}')">
                         Bắt đầu thi <i class="fa-solid fa-arrow-right ms-2"></i>
@@ -237,7 +423,6 @@ function handleSortFilterChange() {
             }
         }
 
-        // TỔNG HỢP VÀ GẮN VÀO CARD
         const cardHtml = `
             <div class="course-card exam-card-hover" style="border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid #eef0f2;">
                 <div class="card-body p-4" style="display: flex; flex-direction: column; height: 100%;">
@@ -275,29 +460,23 @@ window.handleExamClick = function(examId) {
     const exam = allExamsData.find(e => e.id === examId);
     if (!exam) return;
     
-    // Nếu là Đề VIP mà chưa là user VIP
     if (exam.isVip && currentUserData.isVip !== true) {
         handleUpgradeProClick(examId);
         return;
     }
     
-    // Mở trang quiz
     const url = `quiz.html?examId=${encodeURIComponent(examId)}`;
     window.open(url, '_blank');
 }
 
 window.handleUpgradeProClick = function(examId) {
-    // Chuyển hướng sang Tab Nâng Cấp Pro (Nếu bạn có hàm switchTab bên core)
-    // Hoặc mở modal thanh toán
     alert("Tính năng Nâng cấp Pro đang được xây dựng. Vui lòng liên hệ Admin để mua tài khoản.");
 }
 
 window.goToHistory = function(examId) {
-    // Gọi hàm chuyển tab Lịch sử (nếu có ở dashboard-core)
     const historyBtn = document.querySelector('[data-target="history"]');
     if(historyBtn) {
         historyBtn.click();
-        // Có thể dispatch event báo cho history.js lọc theo examId này
         document.dispatchEvent(new CustomEvent('filterHistoryByExam', { detail: { examId: examId } }));
     } else {
         alert("Đang chuyển đến lịch sử của đề " + examId);
@@ -325,7 +504,6 @@ window.toggleBookmark = async function(event, examId) {
             btn.innerHTML = '<i class="fa-solid fa-heart" style="color: #dc3545;"></i>';
         }
         
-        // Cập nhật lại UI nếu đang ở tab Saved
         if (currentTechnique === 'saved') {
             renderExams();
         }
