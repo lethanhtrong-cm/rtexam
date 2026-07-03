@@ -346,4 +346,49 @@ function renderExams() {
         const headerHtml = `
             <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 15px;">
                 <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
-                    <h3 class="card-title" style="margin
+                    <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
+                    ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                    ${badgeHtml}
+                    ${bookmarkHtml}
+                </div>
+            </div>
+        `;
+
+        // 3. DẢI BADGE PASTEL 4 THÔNG SỐ (GIỮ NGUYÊN)
+        let levelClass = 'bg-warning-subtle text-warning'; 
+        let levelStyle = 'background-color: #fff3cd; color: #664d03;'; 
+        if (exam.level === 'Dễ') {
+            levelClass = 'bg-success-subtle text-success';
+            levelStyle = 'background-color: #d1e7dd; color: #0f5132;';
+        } else if (exam.level === 'Khó') {
+            levelClass = 'bg-danger-subtle text-danger';
+            levelStyle = 'background-color: #f8d7da; color: #842029;';
+        }
+
+        const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
+
+        const mergedTagsHtml = `
+            <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+                <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #cfe2ff; color: #084298;">
+                    <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
+                </span>
+                <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
+                    <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
+                </span>
+                <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #055160;">
+                    <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
+                </span>
+                <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #e2e3e5; color: #41464b;">
+                    <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
+                </span>
+            </div>
+        `;
+
+        // 4. ACTION BUTTONS & PROGRESS THÔNG MINH
+        let progressHtml = '';
+        let buttonHtml = '';
+        
+        if (isExamVip && !isUserVip)
