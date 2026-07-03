@@ -40,6 +40,19 @@ if (!document.getElementById(styleId)) {
             transform: translateY(-4px) !important;
             box-shadow: 0 12px 24px rgba(0,0,0,0.08) !important;
         }
+
+        /* CẬP NHẬT: Nút "Vào thi ngay" thành màu xanh nhạt, mát mắt */
+        .btn-primary {
+            background-color: #e0f2fe !important;
+            color: #0369a1 !important;
+            border: none !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease !important;
+        }
+        .btn-primary:hover {
+            background-color: #bae6fd !important;
+        }
+
         .btn-outline-primary-custom {
             width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;
             background: transparent; border: 2px solid var(--primary-blue); 
@@ -353,29 +366,29 @@ function renderExams() {
 
         // 3. DẢI BADGE PASTEL 4 THÔNG SỐ
         let levelClass = 'bg-warning-subtle text-warning'; 
-        let levelStyle = 'background-color: #fff3cd; color: #664d03;'; 
+        let levelStyle = 'background-color: #fef3c7; color: #d97706;'; 
         if (exam.level === 'Dễ') {
             levelClass = 'bg-success-subtle text-success';
-            levelStyle = 'background-color: #d1e7dd; color: #0f5132;';
+            levelStyle = 'background-color: #dcfce7; color: #15803d;';
         } else if (exam.level === 'Khó') {
             levelClass = 'bg-danger-subtle text-danger';
-            levelStyle = 'background-color: #f8d7da; color: #842029;';
+            levelStyle = 'background-color: #fee2e2; color: #b91c1c;';
         }
 
         const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
 
         const mergedTagsHtml = `
             <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
-                <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #cfe2ff; color: #084298;">
+                <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #e0f2fe; color: #0369a1;">
                     <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
                 </span>
                 <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
                     <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
                 </span>
-                <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #055160;">
+                <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #0891b2;">
                     <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
                 </span>
-                <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #e2e3e5; color: #41464b;">
+                <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #f3f4f6; color: #4b5563;">
                     <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
                 </span>
             </div>
