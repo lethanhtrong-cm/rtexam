@@ -31,12 +31,14 @@ if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
     style.id = styleId;
     style.innerHTML = `
+        /* CẬP NHẬT: Thêm Box-shadow mặc định và hiệu ứng Hover nảy lên mượt mà */
         .exam-card-hover {
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease-out !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+            transition: all 0.3s ease !important;
         }
         .exam-card-hover:hover {
-            transform: translateY(-6px) !important;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.12) !important;
+            transform: translateY(-4px) !important;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.08) !important;
         }
         .btn-outline-primary-custom {
             width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;
@@ -392,9 +394,9 @@ function renderExams() {
             const total = completedExams[exam.id].total;
             const percent = Math.min(100, Math.round((correctAnswers / total) * 100));
 
-            // Tính thang điểm 10 và làm tròn tối đa 2 chữ số thập phân
+            // CẬP NHẬT: Tính thang điểm 10 và làm tròn tối đa 1 chữ số thập phân (VD: 8.67 -> 8.7, 9 -> 9)
             let displayScore = (correctAnswers / total) * 10;
-            displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(2));
+            displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
             actionAreaHtml = `
                 <div class="mb-4 p-3 rounded" style="background-color: #f8f9fa; border: 1px solid #e9ecef; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
@@ -407,11 +409,12 @@ function renderExams() {
                     </div>
                 </div>
                 <div style="display: flex; gap: 12px; width: 100%;">
+                    <!-- CẬP NHẬT: Thêm class me-2 vào thẻ <i> để tạo khoảng cách với chữ -->
                     <button onclick="goToHistory('${exam.id}')" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='transparent'" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                        <i class="fas fa-history"></i> Lịch sử
+                        <i class="fas fa-history me-2"></i> Lịch sử
                     </button>
                     <button onclick="goToQuiz('${exam.id}')" onmouseover="this.style.background='#9ec5fe'" onmouseout="this.style.background='#cfe2ff'" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                        <i class="fas fa-redo"></i> Thi lại
+                        <i class="fas fa-redo me-2"></i> Thi lại
                     </button>
                 </div>
             `;
@@ -450,3 +453,73 @@ function renderExams() {
     });
 }
 
+// =========================================================================
+// 6. LOGIC BOOKMARK & CÁC HÀM EXPOSE HTML
+// =========================================================================
+window.toggleBookmark = async function(event, examId) {
+    event.stopPropagation(); 
+    
+    // YÊU CẦU CỐT LÕI: Kiểm tra đăng nhập (Không áp dụng user khách)
+    if (!auth.currentUser || !currentUserData) {
+        alert("Vui lòng đăng nhập để lưu đề thi vào bộ sưu tập!");
+        return;
+    }
+
+    if (!currentUserData.bookmarks) {
+        currentUserData.bookmarks = [];
+    }
+
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    const isCurrentlySaved = currentUserData.bookmarks.includes(examId);
+
+    try {
+        if (isCurrentlySaved) {
+            currentUserData.bookmarks = currentUserData.bookmarks.filter(id => id !== examId);
+            renderExams();
+            await updateDoc(userRef, { bookmarks: arrayRemove(examId) });
+        } else {
+            currentUserData.bookmarks.push(examId);
+            renderExams();
+            await updateDoc(userRef, { bookmarks: arrayUnion(examId) });
+        }
+    } catch (error) {
+        console.error("Lỗi cập nhật bộ sưu tập:", error);
+        alert("Đã xảy ra lỗi khi cập nhật bộ sưu tập. Vui lòng thử lại!");
+    }
+};
+
+window.goToQuiz = function(examId) {
+    safeRedirect(`quiz.html?examId=${examId}`);
+};
+
+window.goToUpgrade = function() {
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    tabPanes.forEach(pane => pane.classList.remove('active'));
+    
+    document.querySelectorAll('.sidebar-menu .menu-item').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.sub-menu-item').forEach(m => m.classList.remove('active'));
+    
+    const proTab = document.getElementById('tab-vip');
+    if (proTab) proTab.classList.add('active');
+    
+    const currentTabTitle = document.getElementById("currentTabTitle");
+    if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
+};
+
+window.goToHistory = function(examId) {
+    if (!examId) return;
+    
+    // Lưu tạm mã đề thi để tab lịch sử đọc khi render
+    sessionStorage.setItem('pendingHistoryFilter', examId);
+    
+    // Tìm menu Lịch sử ở Sidebar và mô phỏng cú click
+    const historyMenuBtn = document.querySelector('[data-target="history"]') || document.getElementById('menu-history');
+    
+    if (historyMenuBtn) {
+        historyMenuBtn.click();
+        // Bắn event báo cho file history.js lọc dữ liệu nếu cần
+        document.dispatchEvent(new CustomEvent('filterHistoryByExam', { detail: { examId: examId } }));
+    } else {
+        console.warn("Không tìm thấy nút menu Lịch sử để chuyển tab.");
+    }
+};
