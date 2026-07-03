@@ -381,7 +381,7 @@ function renderExams() {
             </div>
         `;
 
-        // 4. ACTION BUTTON THÔNG MINH (CÓ PROGRESS BAR & CHIA GRID ĐỀU NHAU)
+        // 4. ACTION BUTTON THÔNG MINH (CÓ VÒNG TRÒN ĐIỂM SỐ SVG)
         let actionAreaHtml = '';
         if (isExamVip && !isUserVip) {
             actionAreaHtml = `
@@ -390,31 +390,52 @@ function renderExams() {
                 </button>
             `;
         } else if (isCompleted) {
-            const correctAnswers = completedExams[exam.id].score;
-            const total = completedExams[exam.id].total;
-            const percent = Math.min(100, Math.round((correctAnswers / total) * 100));
+            const correctAnswers = completedExams[exam.id].score || 0;
+            const total = completedExams[exam.id].total || 1;
 
-            // CẬP NHẬT: Tính thang điểm 10 và làm tròn tối đa 1 chữ số thập phân (VD: 8.67 -> 8.7, 9 -> 9)
+            // 1. Tính thang điểm 10 (Làm tròn 1 chữ số thập phân)
             let displayScore = (correctAnswers / total) * 10;
             displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
+            // 2. Tính toán các thông số cho Vòng tròn SVG
+            const percent = Math.min(100, (displayScore / 10) * 100);
+            const radius = 24;
+            const circum = 2 * Math.PI * radius; // Chu vi vòng tròn
+            const offset = circum - (percent / 100) * circum; // Độ dài nét đứt
+            const dotRotation = (percent / 100) * 360; // Góc quay của chấm tròn
+
             actionAreaHtml = `
-                <div class="mb-4 p-3 rounded" style="background-color: #f8f9fa; border: 1px solid #e9ecef; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <span style="font-size: 0.85rem; color: #6c757d; font-weight: 600;">Lần thi gần nhất</span>
-                        <span style="font-size: 1rem; color: #0ba360; font-weight: 800;">${displayScore} / 10 điểm</span>
+                <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
+                    <div>
+                        <span style="font-size: 0.85rem; color: #6c757d; font-weight: 600; display: block; margin-bottom: 4px;">Lần thi gần nhất</span>
+                        <span style="font-size: 1.15rem; color: #0ba360; font-weight: 800;">${displayScore} <span style="font-size:0.85rem; color:#6c757d; font-weight:600;">/ 10</span></span>
                     </div>
-                    <div style="width: 100%; background-color: #dee2e6; border-radius: 10px; height: 8px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.1);">
-                        <div style="width: ${percent}%; background: linear-gradient(90deg, #0ba360 0%, #3cba92 100%); height: 100%; border-radius: 10px; transition: width 0.5s ease;"></div>
+
+                    <div style="position: relative; width: 56px; height: 56px;">
+                        <svg width="56" height="56" viewBox="0 0 56 56" style="transform: rotate(-90deg); overflow: visible;">
+                            <defs>
+                                <linearGradient id="grad_${exam.id}" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#0ba360" />
+                                    <stop offset="100%" stop-color="#3cba92" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="28" cy="28" r="${radius}" fill="none" stroke="#e9ecef" stroke-width="5"></circle>
+                            <circle cx="28" cy="28" r="${radius}" fill="none" stroke="url(#grad_${exam.id})" stroke-width="5"
+                                    stroke-dasharray="${circum}" stroke-dashoffset="${offset}"
+                                    stroke-linecap="round" style="transition: stroke-dashoffset 1s ease-out;"></circle>
+                            <g style="transform: rotate(${dotRotation}deg); transform-origin: 28px 28px; transition: transform 1s ease-out;">
+                                <circle cx="28" cy="4" r="4.5" fill="#fff" stroke="#0ba360" stroke-width="2.5"></circle>
+                            </g>
+                        </svg>
                     </div>
                 </div>
+
                 <div style="display: flex; gap: 12px; width: 100%;">
-                    <!-- CẬP NHẬT: Thêm class me-2 vào thẻ <i> để tạo khoảng cách với chữ -->
-                    <button onclick="goToHistory('${exam.id}')" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='transparent'" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                        <i class="fas fa-history me-2"></i> Lịch sử
+                    <button onclick="goToHistory('${exam.id}')" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='transparent'" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+                        <i class="fas fa-history"></i> Lịch sử
                     </button>
                     <button onclick="goToQuiz('${exam.id}')" onmouseover="this.style.background='#9ec5fe'" onmouseout="this.style.background='#cfe2ff'" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                        <i class="fas fa-redo me-2"></i> Thi lại
+                        <i class="fas fa-redo"></i> Thi lại
                     </button>
                 </div>
             `;
