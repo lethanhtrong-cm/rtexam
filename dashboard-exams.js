@@ -403,15 +403,15 @@ function renderExams() {
             const histData = completedExams[exam.id];
             const percent = Math.min(100, Math.round((histData.score / histData.total) * 100));
 
-            // Hiển thị thanh tiến trình
+            // Hiển thị thanh tiến trình điểm số
             progressHtml = `
                 <div class="bg-light rounded p-2 mb-3">
-                    <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+                    <div class="d-flex justify-content-between" style="font-size: 0.85rem;">
                         <span class="text-secondary">Lần thi gần nhất</span>
                         <span class="text-success fw-bold">${histData.score} / ${histData.total} điểm</span>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress mt-2 mb-3" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: ${percent}%;"></div>
                     </div>
                 </div>
             `;
@@ -419,7 +419,7 @@ function renderExams() {
             // Hai nút Lịch sử & Thi lại chia đôi
             buttonHtml = `
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary w-50 btn-sm fw-medium" onclick="goToHistory('${exam.id}')">
+                    <button class="btn btn-outline-secondary w-50 btn-sm" onclick="goToHistory('${exam.id}')">
                         <i class="fas fa-history"></i> Lịch sử
                     </button>
                     <button class="btn btn-primary-subtle text-primary fw-medium w-50 btn-sm" onclick="goToQuiz('${exam.id}')">
