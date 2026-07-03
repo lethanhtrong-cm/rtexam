@@ -47,42 +47,59 @@ async function fetchHistory(email) {
         const q = query(resultsRef, where("email", "==", email));
         const querySnapshot = await getDocs(q);
 
-        // Nếu người dùng chưa từng nộp bài thi nào
         if (querySnapshot.empty) {
-            historyTableBody.innerHTML = `<tr><td colspan="6" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>`;
+            historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>';
             if (statCompletedExams) statCompletedExams.textContent = "0";
             if (statAvgScore) statAvgScore.textContent = "0.0";
             return;
         }
 
         const resultsArray = [];
-        let totalScoreSum = 0;
+        const firstAttempts = {}; // Lưu lần thi ĐẦU TIÊN của mỗi mã đề
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             resultsArray.push({ id: doc.id, ...data });
             
-            // Tính lũy kế tổng điểm để làm Quick Stats
-            const currentScore = data.score !== undefined ? parseFloat(data.score) : 0;
-            totalScoreSum += currentScore;
+            const examId = data.examId || data.examCode || "Unknown";
+            
+            // Quy chuẩn thời gian về milliseconds để so sánh
+            const ts = data.timestamp && typeof data.timestamp.toMillis === 'function' 
+                ? data.timestamp.toMillis() 
+                : new Date(data.timestamp || data.submittedAt || 0).getTime();
+
+            // Lọc lần thi đầu tiên: Nếu chưa có, HOẶC lần thi đang xét CŨ HƠN (nhỏ hơn) lần đã lưu
+            if (!firstAttempts[examId] || ts < firstAttempts[examId].timestamp) {
+                firstAttempts[examId] = {
+                    score: data.score !== undefined ? parseFloat(data.score) : 0,
+                    totalQuestions: data.totalQuestions || data.total || 1,
+                    timestamp: ts
+                };
+            }
         });
 
-        // --- CẬP NHẬT SỐ LIỆU CHO 2 THẺ THỐNG KÊ NHANH (QUICK STATS) ---
-        const totalSubmitted = resultsArray.length;
-        const averageScoreResult = totalSubmitted > 0 ? (totalScoreSum / totalSubmitted).toFixed(1) : "0.0";
+        // --- TÍNH TOÁN QUICK STATS (Thang điểm 10 - Chỉ lấy lần đầu) ---
+        let totalScoreSum = 0;
+        const uniqueExamsCount = Object.keys(firstAttempts).length;
 
-        // Ghi đè dữ liệu thật vào vị trí đang chạy hiệu ứng Skeleton Loading
-        if (statCompletedExams) statCompletedExams.textContent = totalSubmitted;
+        for (const examId in firstAttempts) {
+            const attempt = firstAttempts[examId];
+            const scoreBase10 = (attempt.score / attempt.totalQuestions) * 10;
+            totalScoreSum += scoreBase10;
+        }
+
+        const averageScoreResult = uniqueExamsCount > 0 ? (totalScoreSum / uniqueExamsCount).toFixed(1) : "0.0";
+
+        if (statCompletedExams) statCompletedExams.textContent = uniqueExamsCount;
         if (statAvgScore) statAvgScore.textContent = averageScoreResult;
 
-        // Sắp xếp danh sách lịch sử thi theo thời gian nộp bài mới nhất lên trên đầu
+        // --- RENDER BẢNG LỊCH SỬ (Vẫn hiện tất cả, mới nhất xếp trên) ---
         resultsArray.sort((a, b) => {
             const dateA = a.timestamp && typeof a.timestamp.toDate === 'function' ? a.timestamp.toDate() : new Date(a.timestamp || a.submittedAt || 0);
             const dateB = b.timestamp && typeof b.timestamp.toDate === 'function' ? b.timestamp.toDate() : new Date(b.timestamp || b.submittedAt || 0);
             return dateB - dateA;
         });
 
-        // Render dữ liệu ra bảng lịch sử
         historyTableBody.innerHTML = ""; 
         
         resultsArray.forEach((data) => {
@@ -91,24 +108,23 @@ async function fetchHistory(email) {
             const score = data.score !== undefined ? data.score : 0;
             const correctAnswers = data.correctAnswers !== undefined ? data.correctAnswers : 0;
             
-            // Đối chiếu bản đồ phân quyền để hiển thị Badge tương ứng cho bài làm
             const isVipExam = examVipMap[quizId] === true;
-            const badgeHtml = isVipExam ? `<span style="background:#ffc107;color:#856404;padding:2px 5px;border-radius:4px;font-size:0.75rem;">VIP</span>` 
-                                        : `<span style="background:#e2e3e5;color:#383d41;padding:2px 5px;border-radius:4px;font-size:0.75rem;">Free</span>`;
+            const badgeHtml = isVipExam ? '<span style="background:#ffc107;color:#856404;padding:2px 5px;border-radius:4px;font-size:0.75rem;">VIP</span>' 
+                                        : '<span style="background:#e2e3e5;color:#383d41;padding:2px 5px;border-radius:4px;font-size:0.75rem;">Free</span>';
 
-            // Định dạng chuỗi thời gian làm bài
             let timeSpentStr = "Không rõ";
             if (data.timeSpent !== undefined) {
                 const totalSeconds = parseInt(data.timeSpent, 10);
                 const m = Math.floor(totalSeconds / 60);
                 const s = totalSeconds % 60;
-                timeSpentStr = `${m}p ${s}s`;
+                timeSpentStr = m + "p " + s + "s";
             }
             
-            // Định dạng chuỗi thời gian nộp bài bài thi
             let submitTime = "Không xác định";
             if (data.timestamp || data.submittedAt) {
-                submitTime = formatDate(data.timestamp || data.submittedAt);
+                // Sử dụng lại hàm formatDate từ dashboard-core.js
+                const d = data.timestamp && typeof data.timestamp.toDate === 'function' ? data.timestamp.toDate() : new Date(data.timestamp || data.submittedAt);
+                submitTime = d.toLocaleString('vi-VN'); 
             }
 
             tr.innerHTML = `
@@ -130,8 +146,8 @@ async function fetchHistory(email) {
         });
 
     } catch (error) {
-        console.error("Lỗi khi tải hoặc xử lý bảng lịch sử làm bài:", error);
-        historyTableBody.innerHTML = `<tr><td colspan="6" class="loading-text" style="color: red;">Lỗi khi tải dữ liệu lịch sử!</td></tr>`;
+        console.error("Lỗi khi tải bảng lịch sử:", error);
+        historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text" style="color: red;">Lỗi khi tải dữ liệu lịch sử!</td></tr>';
     }
 }
 
