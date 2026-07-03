@@ -13,7 +13,7 @@ let currentTechnique = 'all';
 let currentLevel = 'all';     
 let currentTime = 'all';      
 let currentSearchQuery = '';  
-let completedExams = new Set(); // Lưu danh sách các mã đề user đã hoàn thành
+let completedExams = {}; // Đã đổi sang Object để lưu trữ thông tin điểm số lần thi gần nhất
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
@@ -61,6 +61,16 @@ if (!document.getElementById(styleId)) {
             box-shadow: 0 8px 20px rgba(142, 197, 252, 0.5) !important; /* Bóng đổ đồng điệu với màu nền */
             filter: brightness(1.05);
         }
+        /* Class dự phòng cho nút pastel Bootstrap */
+        .btn-primary-subtle {
+            background-color: #cfe2ff !important;
+            color: #0a58ca !important;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary-subtle:hover {
+            background-color: #9ec5fe !important;
+        }
         
         /* Loại bỏ position absolute cũ để gom vào Flexbox Header */
         .header-badge {
@@ -84,16 +94,29 @@ document.addEventListener("authReady", async (e) => {
         currentUserData.bookmarks = [];
     }
     
-    // Tải danh sách đề thi đã hoàn thành để hiển thị Dấu tick
+    // Tải danh sách đề thi đã hoàn thành & lấy điểm số gần nhất
     try {
         if (e.detail.user && e.detail.user.email) {
             const resultsRef = collection(db, "results");
             const q = query(resultsRef, where("email", "==", e.detail.user.email));
             const snap = await getDocs(q);
+            
             snap.forEach(doc => {
                 const data = doc.data();
-                if (data.examId) completedExams.add(data.examId);
-                if (data.examCode) completedExams.add(data.examCode);
+                const examId = data.examId || data.examCode;
+                if (examId) {
+                    // Xử lý timestamp để tìm lần thi mới nhất
+                    const ts = data.createdAt ? (typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : data.timestamp || 0;
+                    
+                    // Nếu chưa có trong danh sách, hoặc có nhưng bản ghi này mới hơn
+                    if (!completedExams[examId] || ts >= completedExams[examId].timestamp) {
+                        completedExams[examId] = {
+                            score: data.score || 0,
+                            total: data.totalQuestions || data.total || 1, // Fallback mặc định 1 để không chia cho 0
+                            timestamp: ts
+                        };
+                    }
+                }
             });
         }
     } catch (err) {
@@ -306,7 +329,7 @@ function renderExams() {
     displayData.forEach(exam => {
         const isExamVip = exam.isVip;
         const isSaved = userBookmarks.includes(exam.id);
-        const isCompleted = completedExams.has(exam.id); 
+        const isCompleted = !!completedExams[exam.id]; // Kiểm tra tồn tại trong Object lịch sử
         
         // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark
         const badgeHtml = isExamVip 
@@ -334,21 +357,7 @@ function renderExams() {
             </div>
         `;
 
-        // 3. ACTION BUTTON THÔNG MINH (CẬP NHẬT GIAO DIỆN PRO PASTEL, NHẸ NHÀNG)
-        let buttonHtml = '';
-        if (isExamVip && !isUserVip) {
-            buttonHtml = `
-                <button class="btn w-100 shadow-sm btn-premium-pro" style="padding: 10px 12px; font-size: 0.9rem; border-radius: 8px;" onclick="goToUpgrade()">
-                    <i class="fa-solid fa-gem me-2"></i> Nâng cấp tài khoản Pro
-                </button>
-            `;
-        } else if (isCompleted) {
-            buttonHtml = `<button class="btn-outline-primary-custom" onclick="goToQuiz('${exam.id}')">🔄 Thi lại</button>`;
-        } else {
-            buttonHtml = `<button class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="goToQuiz('${exam.id}')">Vào thi ngay</button>`;
-        }
-
-        // 4. DẢI BADGE PASTEL 4 THÔNG SỐ
+        // 3. DẢI BADGE PASTEL 4 THÔNG SỐ (GIỮ NGUYÊN)
         let levelClass = 'bg-warning-subtle text-warning'; 
         let levelStyle = 'background-color: #fff3cd; color: #664d03;'; 
         if (exam.level === 'Dễ') {
@@ -378,6 +387,55 @@ function renderExams() {
             </div>
         `;
 
+        // 4. ACTION BUTTONS & PROGRESS THÔNG MINH
+        let progressHtml = '';
+        let buttonHtml = '';
+        
+        if (isExamVip && !isUserVip) {
+            // Nút Nâng cấp VIP
+            buttonHtml = `
+                <button class="btn w-100 shadow-sm btn-premium-pro" style="padding: 10px 12px; font-size: 0.9rem; border-radius: 8px;" onclick="goToUpgrade()">
+                    <i class="fa-solid fa-gem me-2"></i> Nâng cấp tài khoản Pro
+                </button>
+            `;
+        } else if (isCompleted) {
+            // Lấy thông tin điểm và tính %
+            const histData = completedExams[exam.id];
+            const percent = Math.min(100, Math.round((histData.score / histData.total) * 100));
+
+            // Hiển thị thanh tiến trình
+            progressHtml = `
+                <div class="bg-light rounded p-2 mb-3">
+                    <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+                        <span class="text-secondary">Lần thi gần nhất</span>
+                        <span class="text-success fw-bold">${histData.score} / ${histData.total} điểm</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Hai nút Lịch sử & Thi lại chia đôi
+            buttonHtml = `
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary w-50 btn-sm fw-medium" onclick="goToHistory('${exam.id}')">
+                        <i class="fas fa-history"></i> Lịch sử
+                    </button>
+                    <button class="btn btn-primary-subtle text-primary fw-medium w-50 btn-sm" onclick="goToQuiz('${exam.id}')">
+                        <i class="fas fa-redo"></i> Thi lại
+                    </button>
+                </div>
+            `;
+        } else {
+            // Nút Bắt đầu thi cho Đề chưa làm
+            buttonHtml = `
+                <button class="btn btn-primary w-100 fw-medium" style="padding: 10px 12px; border-radius: 8px;" onclick="goToQuiz('${exam.id}')">
+                    Bắt đầu thi <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            `;
+        }
+
         const card = document.createElement('div');
         card.className = 'course-card exam-card-hover'; 
         card.innerHTML = `
@@ -393,6 +451,7 @@ function renderExams() {
                 </div>
             </div>
             <div class="card-footer" style="border-top: none; padding-top: 0; padding-bottom: 20px; background-color: transparent;">
+                ${progressHtml}
                 ${buttonHtml}
             </div>
         `;
@@ -450,4 +509,26 @@ window.goToUpgrade = function() {
     
     const currentTabTitle = document.getElementById("currentTabTitle");
     if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
+};
+
+// Hàm chuyển hướng sang tab lịch sử và tự động lọc
+window.goToHistory = function(examId) {
+    // 1. Reset trạng thái các tab hiện tại
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    tabPanes.forEach(pane => pane.classList.remove('active'));
+    document.querySelectorAll('.sidebar-menu .menu-item').forEach(m => m.classList.remove('active'));
+    
+    // 2. Mở tab Lịch sử
+    const historyTab = document.getElementById('tab-history');
+    if (historyTab) historyTab.classList.add('active');
+    
+    // 3. Highlight menu Lịch sử trên sidebar
+    const historyMenu = document.querySelector('.sidebar-menu .menu-item[data-target="tab-history"]');
+    if (historyMenu) historyMenu.classList.add('active');
+    
+    const currentTabTitle = document.getElementById("currentTabTitle");
+    if(currentTabTitle) currentTabTitle.textContent = 'Lịch Sử Thi';
+
+    // 4. Phát sự kiện (CustomEvent) để module History bắt và lọc theo mã đề
+    document.dispatchEvent(new CustomEvent("filterHistoryByExam", { detail: { examId: examId } }));
 };
