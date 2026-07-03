@@ -13,7 +13,7 @@ let currentTechnique = 'all';
 let currentLevel = 'all';     
 let currentTime = 'all';      
 let currentSearchQuery = '';  
-let completedExams = new Set(); // Lưu danh sách các mã đề user đã hoàn thành
+let completedExams = {}; // ĐÃ NÂNG CẤP: Dùng Object để lưu chi tiết điểm số
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
@@ -47,22 +47,28 @@ if (!document.getElementById(styleId)) {
         .btn-outline-primary-custom:hover {
             background: var(--primary-blue); color: white;
         }
-        /* --- NÚT PRO CHUẨN PREMIUM (PASTEL COOL) --- */
         .btn-premium-pro {
             background: linear-gradient(135deg, #8ec5fc 0%, #e0c3fc 100%) !important;
-            color: #2c3e50 !important; /* Chữ màu xám xanh đậm, lịch sự */
+            color: #2c3e50 !important; 
             border: none !important;
-            font-weight: 500 !important; /* Độ đậm vừa phải, không bị thô */
+            font-weight: 500 !important; 
             transition: all 0.3s ease !important;
             cursor: pointer;
         }
         .btn-premium-pro:hover {
             transform: translateY(-3px) !important;
-            box-shadow: 0 8px 20px rgba(142, 197, 252, 0.5) !important; /* Bóng đổ đồng điệu với màu nền */
+            box-shadow: 0 8px 20px rgba(142, 197, 252, 0.5) !important; 
             filter: brightness(1.05);
         }
-        
-        /* Loại bỏ position absolute cũ để gom vào Flexbox Header */
+        .btn-primary-subtle {
+            background-color: #cfe2ff !important;
+            color: #0a58ca !important;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-primary-subtle:hover {
+            background-color: #9ec5fe !important;
+        }
         .header-badge {
             position: relative !important; top: auto !important; left: auto !important; right: auto !important; margin: 0 !important;
         }
@@ -84,7 +90,7 @@ document.addEventListener("authReady", async (e) => {
         currentUserData.bookmarks = [];
     }
     
-    // Tải danh sách đề thi đã hoàn thành để hiển thị Dấu tick
+    // ĐÃ NÂNG CẤP: Tải danh sách đề thi đã hoàn thành kèm ĐIỂM SỐ
     try {
         if (e.detail.user && e.detail.user.email) {
             const resultsRef = collection(db, "results");
@@ -92,8 +98,17 @@ document.addEventListener("authReady", async (e) => {
             const snap = await getDocs(q);
             snap.forEach(doc => {
                 const data = doc.data();
-                if (data.examId) completedExams.add(data.examId);
-                if (data.examCode) completedExams.add(data.examCode);
+                const examId = data.examId || data.examCode;
+                if (examId) {
+                    const ts = data.createdAt ? (typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : data.timestamp || 0;
+                    if (!completedExams[examId] || ts >= completedExams[examId].timestamp) {
+                        completedExams[examId] = {
+                            score: data.score || 0,
+                            total: data.totalQuestions || data.total || 1,
+                            timestamp: ts
+                        };
+                    }
+                }
             });
         }
     } catch (err) {
@@ -306,7 +321,7 @@ function renderExams() {
     displayData.forEach(exam => {
         const isExamVip = exam.isVip;
         const isSaved = userBookmarks.includes(exam.id);
-        const isCompleted = completedExams.has(exam.id); 
+        const isCompleted = !!completedExams[exam.id]; // Dùng !! để kiểm tra có tồn tại data không
         
         // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark
         const badgeHtml = isExamVip 
@@ -334,21 +349,7 @@ function renderExams() {
             </div>
         `;
 
-        // 3. ACTION BUTTON THÔNG MINH (CẬP NHẬT GIAO DIỆN PRO PASTEL, NHẸ NHÀNG)
-        let buttonHtml = '';
-        if (isExamVip && !isUserVip) {
-            buttonHtml = `
-                <button class="btn w-100 shadow-sm btn-premium-pro" style="padding: 10px 12px; font-size: 0.9rem; border-radius: 8px;" onclick="goToUpgrade()">
-                    <i class="fa-solid fa-gem me-2"></i> Nâng cấp tài khoản Pro
-                </button>
-            `;
-        } else if (isCompleted) {
-            buttonHtml = `<button class="btn-outline-primary-custom" onclick="goToQuiz('${exam.id}')">🔄 Thi lại</button>`;
-        } else {
-            buttonHtml = `<button class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;" onclick="goToQuiz('${exam.id}')">Vào thi ngay</button>`;
-        }
-
-        // 4. DẢI BADGE PASTEL 4 THÔNG SỐ
+        // 3. DẢI BADGE PASTEL 4 THÔNG SỐ
         let levelClass = 'bg-warning-subtle text-warning'; 
         let levelStyle = 'background-color: #fff3cd; color: #664d03;'; 
         if (exam.level === 'Dễ') {
@@ -378,22 +379,67 @@ function renderExams() {
             </div>
         `;
 
-        const card = document.createElement('div');
-        card.className = 'course-card exam-card-hover'; 
-        card.innerHTML = `
-            <div class="card-body" style="padding-bottom: 15px;">
-                <div style="flex: 1;">
-                    ${headerHtml}
-                    ${mergedTagsHtml}
+        // 4. ACTION BUTTON THÔNG MINH (CÓ PROGRESS BAR & CHIA GRID ĐỀU NHAU)
+        let actionAreaHtml = '';
+        if (isExamVip && !isUserVip) {
+            actionAreaHtml = `
+                <button class="btn w-100 shadow-sm btn-premium-pro" style="padding: 10px 12px; font-size: 0.9rem; border-radius: 8px;" onclick="goToUpgrade()">
+                    <i class="fa-solid fa-gem me-2"></i> Nâng cấp tài khoản Pro
+                </button>
+            `;
+        } else if (isCompleted) {
+            const score = completedExams[exam.id].score;
+            const total = completedExams[exam.id].total;
+            const percent = Math.min(100, Math.round((score / total) * 100));
+            
+            actionAreaHtml = `
+                <div class="mb-3 p-2 bg-light rounded border border-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted fw-medium">Lần thi gần nhất</small>
+                        <span class="text-success fw-bold" style="font-size: 0.95rem;">${score} / ${total} điểm</span>
+                    </div>
+                    <div class="progress" style="height: 6px; border-radius: 10px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: ${percent}%; border-radius: 10px;"></div>
+                    </div>
                 </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-outline-secondary w-100 fw-medium" style="border-radius: 6px; padding: 8px 0;" onclick="goToHistory('${exam.id}')"><i class="fas fa-history me-1"></i> Lịch sử</button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-primary-subtle text-primary fw-medium w-100" style="border-radius: 6px; padding: 8px 0;" onclick="goToQuiz('${exam.id}')"><i class="fas fa-redo me-1"></i> Thi lại</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            actionAreaHtml = `
+                <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 1rem; border-radius: 8px; border: none;" onclick="goToQuiz('${exam.id}')">
+                    Vào thi ngay <i class="fa-solid fa-arrow-right ms-2"></i>
+                </button>
+            `;
+        }
+
+        // TẠO THẺ CARD VỚI ĐỒNG BỘ CHIỀU CAO (h-100)
+        const card = document.createElement('div');
+        card.className = 'course-card exam-card-hover h-100 d-flex flex-column'; 
+        card.style.borderRadius = '12px';
+        card.style.border = '1px solid #eef0f2';
+        card.style.background = '#fff';
+        card.style.overflow = 'hidden';
+        
+        card.innerHTML = `
+            <div class="card-body p-4 d-flex flex-column h-100">
+                ${headerHtml}
+                ${mergedTagsHtml}
                 
-                <div class="card-meta" style="border-top: none; padding-top: 0;">
-                    <div class="rating">${exam.rating} <i class="fa-solid fa-star"></i> <span class="attempts">(${exam.ratingCount})</span></div>
+                <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; font-size: 0.9rem; color: #6c757d; margin-bottom: 20px;">
+                    <div class="rating"><span class="fw-bold text-dark">${exam.rating}</span> <i class="fa-solid fa-star text-warning"></i> <span>(${exam.ratingCount})</span></div>
                     <div class="attempts"><i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi</div>
                 </div>
-            </div>
-            <div class="card-footer" style="border-top: none; padding-top: 0; padding-bottom: 20px; background-color: transparent;">
-                ${buttonHtml}
+                
+                <div>
+                    ${actionAreaHtml}
+                </div>
             </div>
         `;
         examListContainer.appendChild(card);
@@ -450,4 +496,22 @@ window.goToUpgrade = function() {
     
     const currentTabTitle = document.getElementById("currentTabTitle");
     if(currentTabTitle) currentTabTitle.textContent = 'Nâng Cấp Tài Khoản Pro';
+};
+
+window.goToHistory = function(examId) {
+    if (!examId) return;
+    
+    // Lưu tạm mã đề thi để tab lịch sử đọc khi render
+    sessionStorage.setItem('pendingHistoryFilter', examId);
+    
+    // Tìm menu Lịch sử ở Sidebar và mô phỏng cú click
+    const historyMenuBtn = document.querySelector('[data-target="history"]') || document.getElementById('menu-history');
+    
+    if (historyMenuBtn) {
+        historyMenuBtn.click();
+        // Bắn event báo cho file history.js lọc dữ liệu nếu cần
+        document.dispatchEvent(new CustomEvent('filterHistoryByExam', { detail: { examId: examId } }));
+    } else {
+        console.warn("Không tìm thấy nút menu Lịch sử để chuyển tab.");
+    }
 };
