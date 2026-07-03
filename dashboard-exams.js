@@ -394,23 +394,23 @@ function renderExams() {
             </div>
         `;
 
-        // 4. ACTION BUTTON THÔNG MINH (CÓ VÒNG TRÒN ĐIỂM SỐ SVG)
+        // 4. ACTION BUTTON THÔNG MINH
         let actionAreaHtml = '';
         if (isExamVip && !isUserVip) {
             actionAreaHtml = `
-                <button class="btn w-100 shadow-sm btn-premium-pro" style="padding: 10px 12px; font-size: 0.9rem; border-radius: 8px;" onclick="goToUpgrade()">
-                    <i class="fa-solid fa-gem me-2"></i> Nâng cấp tài khoản Pro
+                <button onclick="goToUpgrade()" style="width: 100%; display: block; padding: 12px; border: none; background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); color: #997404; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(255, 230, 156, 0.4);">
+                    <i class="fa-solid fa-crown me-2"></i> Nâng cấp tài khoản Pro
                 </button>
             `;
         } else if (isCompleted) {
             const correctAnswers = completedExams[exam.id].score || 0;
             const total = completedExams[exam.id].total || 1;
 
-            // 1. Tính thang điểm 10 (Làm tròn 1 chữ số thập phân)
+            // Tính thang điểm 10 (Làm tròn 1 chữ số thập phân)
             let displayScore = (correctAnswers / total) * 10;
             displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
-            // 2. Tính toán các thông số cho Vòng tròn SVG
+            // Tính toán các thông số cho Vòng tròn SVG
             const percent = Math.min(100, (displayScore / 10) * 100);
             const radius = 24;
             const circum = 2 * Math.PI * radius; // Chu vi vòng tròn
@@ -445,10 +445,10 @@ function renderExams() {
 
                 <div style="display: flex; gap: 12px; width: 100%;">
                     <button onclick="goToHistory('${exam.id}')" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='transparent'" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                        <i class="fas fa-history"></i> Lịch sử
+                        <i class="fas fa-history me-2"></i> Lịch sử
                     </button>
                     <button onclick="goToQuiz('${exam.id}')" onmouseover="this.style.background='#9ec5fe'" onmouseout="this.style.background='#cfe2ff'" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                        <i class="fas fa-redo"></i> Thi lại
+                        <i class="fas fa-redo me-2"></i> Thi lại
                     </button>
                 </div>
             `;
@@ -546,14 +546,17 @@ window.goToHistory = function(examId) {
     // Lưu tạm mã đề thi để tab lịch sử đọc khi render
     sessionStorage.setItem('pendingHistoryFilter', examId);
     
-    // Tìm menu Lịch sử ở Sidebar và mô phỏng cú click
-    const historyMenuBtn = document.querySelector('[data-target="history"]') || document.getElementById('menu-history');
+    // Thử tìm nút Menu Lịch sử qua nhiều cách (Hãy đảm bảo HTML của bạn có 1 trong các thuộc tính này)
+    const historyMenuBtn = document.querySelector('[data-target="history"]') || 
+                           document.querySelector('a[href*="history"]') ||
+                           document.getElementById('menu-history') ||
+                           document.querySelector('.history-tab-btn'); // Thêm class này vào menu Lịch sử của bạn nếu cần
     
     if (historyMenuBtn) {
         historyMenuBtn.click();
-        // Bắn event báo cho file history.js lọc dữ liệu nếu cần
+        // Bắn event cho file history.js lọc (nếu có setup)
         document.dispatchEvent(new CustomEvent('filterHistoryByExam', { detail: { examId: examId } }));
     } else {
-        console.warn("Không tìm thấy nút menu Lịch sử để chuyển tab.");
+        alert("Hệ thống đã ghi nhận yêu cầu xem lịch sử mã đề: " + examId + "\nTuy nhiên, không tìm thấy ID của Tab Lịch sử trên thanh menu. Hãy kiểm tra lại HTML của Sidebar!");
     }
 };
