@@ -13,7 +13,7 @@ let currentTechnique = 'all';
 let currentLevel = 'all';     
 let currentTime = 'all';      
 let currentSearchQuery = '';  
-let completedExams = {}; // ĐÃ NÂNG CẤP: Dùng Object để lưu chi tiết điểm số
+let completedExams = {}; // Lưu chi tiết điểm số đề thi đã hoàn thành
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
@@ -90,7 +90,7 @@ document.addEventListener("authReady", async (e) => {
         currentUserData.bookmarks = [];
     }
     
-    // ĐÃ NÂNG CẤP: Tải danh sách đề thi đã hoàn thành kèm ĐIỂM SỐ
+    // Tải danh sách đề thi đã hoàn thành kèm ĐIỂM SỐ
     try {
         if (e.detail.user && e.detail.user.email) {
             const resultsRef = collection(db, "results");
@@ -321,7 +321,7 @@ function renderExams() {
     displayData.forEach(exam => {
         const isExamVip = exam.isVip;
         const isSaved = userBookmarks.includes(exam.id);
-        const isCompleted = !!completedExams[exam.id]; // Dùng !! để kiểm tra có tồn tại data không
+        const isCompleted = !!completedExams[exam.id];
         
         // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark
         const badgeHtml = isExamVip 
@@ -389,26 +389,26 @@ function renderExams() {
             `;
         } else if (isCompleted) {
             const score = completedExams[exam.id].score;
-            const total = completedExams[exam.id].total;
-            const percent = Math.min(100, Math.round((score / total) * 100));
+            const totalQuestions = completedExams[exam.id].total; 
+            const percent = Math.min(100, Math.round((score / totalQuestions) * 100));
             
             actionAreaHtml = `
-                <div class="mb-3 p-2 bg-light rounded border border-light">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted fw-medium">Lần thi gần nhất</small>
-                        <span class="text-success fw-bold" style="font-size: 0.95rem;">${score} / ${total} điểm</span>
+                <div class="mb-3 p-2 rounded" style="background-color: #f8f9fa; border: 1px solid #e9ecef;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.85rem; color: #6c757d; font-weight: 600;">Lần thi gần nhất</span>
+                        <span style="font-size: 0.95rem; color: #198754; font-weight: 700;">${score} / ${totalQuestions} điểm</span>
                     </div>
-                    <div class="progress" style="height: 6px; border-radius: 10px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: ${percent}%; border-radius: 10px;"></div>
+                    <div style="width: 100%; background-color: #dee2e6; border-radius: 10px; height: 6px; overflow: hidden;">
+                        <div style="width: ${percent}%; background-color: #198754; height: 100%; transition: width 0.5s ease;"></div>
                     </div>
                 </div>
-                <div class="row g-2">
-                    <div class="col-6">
-                        <button class="btn btn-outline-secondary w-100 fw-medium" style="border-radius: 6px; padding: 8px 0;" onclick="goToHistory('${exam.id}')"><i class="fas fa-history me-1"></i> Lịch sử</button>
-                    </div>
-                    <div class="col-6">
-                        <button class="btn btn-primary-subtle text-primary fw-medium w-100" style="border-radius: 6px; padding: 8px 0;" onclick="goToQuiz('${exam.id}')"><i class="fas fa-redo me-1"></i> Thi lại</button>
-                    </div>
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <button onclick="goToHistory('${exam.id}')" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='transparent'" style="flex: 1; padding: 8px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+                        <i class="fas fa-history"></i> Lịch sử
+                    </button>
+                    <button onclick="goToQuiz('${exam.id}')" onmouseover="this.style.background='#9ec5fe'" onmouseout="this.style.background='#cfe2ff'" style="flex: 1; padding: 8px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+                        <i class="fas fa-redo"></i> Thi lại
+                    </button>
                 </div>
             `;
         } else {
