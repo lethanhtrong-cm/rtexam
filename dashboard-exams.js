@@ -182,4 +182,3 @@ function renderExams() {
         examListContainer.insertAdjacentHTML('beforeend', cardHtml);
     });
 }
-
