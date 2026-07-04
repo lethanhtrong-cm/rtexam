@@ -356,7 +356,7 @@ function renderExams() {
         let rowHtml = `
             <div class="exam-category-row mb-5">
                 <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
-                <div class="d-flex gap-4 overflow-x-auto pb-4 hide-scrollbar" style="flex-wrap: nowrap; scroll-snap-type: x mandatory;">
+                <div class="d-flex overflow-x-auto hide-scrollbar" style="flex-wrap: nowrap; scroll-snap-type: x mandatory; padding: 10px 5px; padding-bottom: 20px;">
         `;
 
         group.data.forEach(exam => {
@@ -484,9 +484,9 @@ function renderExams() {
                 `;
             }
 
-            // --- GHÉP CARD VÀO TRONG ROW HTML, ÉP THÊM MIN-WIDTH VÀ SCROLL-SNAP ---
+            // --- GHÉP CARD VÀO TRONG ROW HTML, THÊM MARGIN CHO CÁC THẺ ---
             rowHtml += `
-                <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: hidden; position: relative;">
+                <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: hidden; position: relative;">
                     <div class="card-body p-4 d-flex flex-column h-100">
                         ${headerHtml}
                         ${mergedTagsHtml}
