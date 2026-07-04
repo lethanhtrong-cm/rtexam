@@ -13,7 +13,7 @@ let currentTechnique = 'all';
 let currentLevel = 'all';     
 let currentTime = 'all';      
 let currentSearchQuery = '';  
-let completedExams = {}; // Lưu chi tiết điểm số đề thi đã hoàn thành
+let completedExams = {}; // ĐÃ NÂNG CẤP: Dùng Object để lưu chi tiết điểm số
 
 // DOM Elements
 const examListContainer = document.getElementById('examListContainer');
@@ -25,13 +25,20 @@ const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
 const timePills = document.querySelectorAll('#timeFilter .pill-btn');
 const searchInput = document.getElementById('searchInput');
 
-// Bơm CSS động cho hiệu ứng Hover mượt mà & Nút PRO rực rỡ
+// Bơm CSS động cho hiệu ứng Hover mượt mà, Nút PRO rực rỡ & Băng chuyền Netflix
 const styleId = "exam-card-dynamic-styles";
 if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
     style.id = styleId;
     style.innerHTML = `
-        /* Thêm Box-shadow mặc định và hiệu ứng Hover nảy lên mượt mà */
+        /* Ẩn thanh cuộn scrollbar cho giao diện băng chuyền */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Ghi đè class container để tránh xung đột với lưới Grid/List cũ */
+        .swimlane-view { display: block !important; }
+
+        /* Box-shadow mặc định và hiệu ứng Hover nảy lên mượt mà */
         .exam-card-hover {
             box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
             transition: all 0.3s ease !important;
@@ -91,7 +98,6 @@ if (!document.getElementById(styleId)) {
             position: relative !important; top: auto !important; right: auto !important; left: auto !important; margin: 0 !important;
             width: 34px !important; height: 34px !important; flex-shrink: 0;
         }
-        .list-view .header-flex-container { margin-bottom: 10px !important; }
     `;
     document.head.appendChild(style);
 }
@@ -105,7 +111,6 @@ document.addEventListener("authReady", async (e) => {
         currentUserData.bookmarks = [];
     }
     
-    // Tải danh sách đề thi đã hoàn thành kèm ĐIỂM SỐ
     try {
         if (e.detail.user && e.detail.user.email) {
             const resultsRef = collection(db, "results");
@@ -121,7 +126,7 @@ document.addEventListener("authReady", async (e) => {
                             score: data.score || 0,
                             total: data.totalQuestions || data.total || 1,
                             timestamp: ts,
-                            resultId: doc.id // Thêm dòng này để giữ ID của bài thi
+                            resultId: doc.id
                         };
                     }
                 }
@@ -183,7 +188,7 @@ function setupToolbarEvents() {
                 currentView = view;
                 viewBtns.forEach(b => b.classList.remove('active'));
                 e.currentTarget.classList.add('active');
-                examListContainer.className = currentView === 'grid' ? 'grid-view' : 'list-view';
+                // Gọi renderExams để update UI, container class sẽ do renderExams tự xử lý
                 renderExams();
             }
         });
@@ -275,7 +280,7 @@ async function loadAggregatedExamData() {
 }
 
 // =========================================================================
-// 5. PIPELINE LỌC DỮ LIỆU & RENDER GIAO DIỆN CHUYÊN NGHIỆP
+// 5. CẤU TRÚC GIAO DIỆN BĂNG CHUYỀN (SWIMLANES NETFLIX STYLE)
 // =========================================================================
 function renderExams() {
     if (allExamsData.length === 0) {
@@ -286,25 +291,22 @@ function renderExams() {
     let displayData = [...allExamsData];
     const userBookmarks = (currentUserData && currentUserData.bookmarks) ? currentUserData.bookmarks : [];
 
-    // LỚP LỌC 1: Kỹ thuật hoặc Lọc đề thi ĐÃ LƯU
+    // --- CÁC LỚP LỌC DỮ LIỆU ---
     if (currentTechnique === 'saved') {
         displayData = displayData.filter(exam => userBookmarks.includes(exam.id));
     } else if (currentTechnique !== 'all') {
         displayData = displayData.filter(exam => exam.technique === currentTechnique);
     }
 
-    // LỚP LỌC 2: Cấp độ
     if (currentLevel !== 'all') {
         displayData = displayData.filter(exam => exam.level === currentLevel);
     }
 
-    // LỚP LỌC 3: Thời gian
     if (currentTime !== 'all') {
         const timeTarget = parseInt(currentTime);
         displayData = displayData.filter(exam => exam.timeLimit === timeTarget);
     }
     
-    // LỚP LỌC 4: Tìm kiếm theo từ khóa Real-time
     if (currentSearchQuery !== '') {
         displayData = displayData.filter(exam => 
             exam.id.toLowerCase().includes(currentSearchQuery) || 
@@ -312,18 +314,18 @@ function renderExams() {
         );
     }
 
-    // LỚP LỌC 5: Trạng thái Dropdown (PRO/Free)
     const filterType = sortFilter.value;
     if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
     else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
 
-    // LỚP LỌC 6: Sắp xếp
     if (filterType === 'highest_rating') displayData.sort((a, b) => b.rating - a.rating);
     else if (filterType === 'most_attempts') displayData.sort((a, b) => b.attemptCount - a.attemptCount);
     else displayData.sort((a, b) => b.createdAt - a.createdAt); 
 
     examListContainer.innerHTML = "";
-    const isUserVip = currentUserData && currentUserData.isVip === true;
+    
+    // Ép buộc container hiển thị dạng Block để không bị vỡ Layout Băng chuyền 
+    examListContainer.className = "swimlane-view";
 
     if (displayData.length === 0) {
         if (currentTechnique === 'saved') {
@@ -334,157 +336,179 @@ function renderExams() {
         return;
     }
 
-    displayData.forEach(exam => {
-        const isExamVip = exam.isVip;
-        const isSaved = userBookmarks.includes(exam.id);
-        const isCompleted = !!completedExams[exam.id];
-        
-        // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark
-        const badgeHtml = isExamVip 
-            ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>`
-            : `<span class="course-badge badge-free header-badge">Free</span>`;
+    const isUserVip = currentUserData && currentUserData.isVip === true;
+
+    // --- PHÂN LUỒNG DỮ LIỆU THÀNH CÁC NHÓM (CONTENT CURATION) ---
+    const groups = [
+        { title: "📝 Đề đã thi & Cần ôn tập", data: displayData.filter(exam => !!completedExams[exam.id]) },
+        { title: "⚡ Khởi động nhanh (15 phút)", data: displayData.filter(exam => exam.timeLimit === 15) },
+        { title: "🔥 Thử thách chuyên sâu", data: displayData.filter(exam => exam.level === 'Khó') },
+        { title: "🧲 Khối kiến thức MRI", data: displayData.filter(exam => exam.technique === 'MRI') },
+        { title: "☢️ Khối kiến thức CT Scanner", data: displayData.filter(exam => exam.technique === 'CT') },
+        { title: "🩻 Khối kiến thức X-Quang", data: displayData.filter(exam => exam.technique === 'X quang') },
+        { title: "🧩 Khối kiến thức Hỗn hợp & Khác", data: displayData.filter(exam => exam.technique === 'Hỗn hợp' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) }
+    ];
+
+    // --- RENDER TỪNG BĂNG CHUYỀN ---
+    groups.forEach(group => {
+        if (group.data.length === 0) return; // Bỏ qua nếu nhóm không có đề thi
+
+        let rowHtml = `
+            <div class="exam-category-row mb-5">
+                <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
+                <div class="d-flex gap-4 overflow-x-auto pb-4 hide-scrollbar" style="flex-wrap: nowrap; scroll-snap-type: x mandatory;">
+        `;
+
+        group.data.forEach(exam => {
+            const isExamVip = exam.isVip;
+            const isSaved = userBookmarks.includes(exam.id);
+            const isCompleted = !!completedExams[exam.id];
             
-        const bookmarkHtml = `
-            <button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${exam.id}')" title="${isSaved ? 'Bỏ lưu đề thi' : 'Lưu đề thi'}">
-                <i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-            </button>
-        `;
-
-        // 2. HEADER FLEXBOX CHUYÊN NGHIỆP
-        const headerHtml = `
-            <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 15px;">
-                <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
-                    <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
-                    ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
-                </div>
+            // 1. GÓC PHẢI: Badge PRO/Free & Nút Bookmark
+            const badgeHtml = isExamVip 
+                ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>`
+                : `<span class="course-badge badge-free header-badge">Free</span>`;
                 
-                <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-                    ${badgeHtml}
-                    ${bookmarkHtml}
-                </div>
-            </div>
-        `;
-
-        // 3. DẢI BADGE PASTEL 4 THÔNG SỐ
-        let levelClass = 'bg-warning-subtle text-warning'; 
-        let levelStyle = 'background-color: #fef3c7; color: #d97706;'; 
-        if (exam.level === 'Dễ') {
-            levelClass = 'bg-success-subtle text-success';
-            levelStyle = 'background-color: #dcfce7; color: #15803d;';
-        } else if (exam.level === 'Khó') {
-            levelClass = 'bg-danger-subtle text-danger';
-            levelStyle = 'background-color: #fee2e2; color: #b91c1c;';
-        }
-
-        const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
-
-        const mergedTagsHtml = `
-            <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
-                <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #e0f2fe; color: #0369a1;">
-                    <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
-                </span>
-                <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
-                    <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
-                </span>
-                <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #0891b2;">
-                    <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
-                </span>
-                <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #f3f4f6; color: #4b5563;">
-                    <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
-                </span>
-            </div>
-        `;
-
-        // 4. ACTION BUTTON THÔNG MINH
-        let actionAreaHtml = '';
-        if (isExamVip && !isUserVip) {
-            actionAreaHtml = `
-                <button onclick="goToUpgrade()" style="width: 100%; display: block; padding: 12px; border: none; background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); color: #997404; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(255, 230, 156, 0.4);">
-                    <i class="fa-solid fa-crown me-2"></i> Nâng cấp tài khoản Pro
+            const bookmarkHtml = `
+                <button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${exam.id}')" title="${isSaved ? 'Bỏ lưu đề thi' : 'Lưu đề thi'}">
+                    <i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                 </button>
             `;
-        } else if (isCompleted) {
-            const correctAnswers = completedExams[exam.id].score || 0;
-            const total = completedExams[exam.id].total || 1;
 
-            // Tính thang điểm 10 (Làm tròn 1 chữ số thập phân)
-            let displayScore = (correctAnswers / total) * 10;
-            displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
-
-            // Tính toán các thông số cho Vòng tròn SVG
-            const percent = Math.min(100, (displayScore / 10) * 100);
-            const radius = 24;
-            const circum = 2 * Math.PI * radius; // Chu vi vòng tròn
-            const offset = circum - (percent / 100) * circum; // Độ dài nét đứt
-            const dotRotation = (percent / 100) * 360; // Góc quay của chấm tròn
-
-            actionAreaHtml = `
-                <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
-                    <div>
-                        <span style="font-size: 0.85rem; color: #6c757d; font-weight: 600; display: block; margin-bottom: 4px;">Lần thi gần nhất</span>
-                        <span style="font-size: 1.15rem; color: #0ba360; font-weight: 800;">${displayScore} <span style="font-size:0.85rem; color:#6c757d; font-weight:600;">/ 10</span></span>
+            // 2. HEADER FLEXBOX
+            const headerHtml = `
+                <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+                        <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
+                        ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
                     </div>
-
-                    <div style="position: relative; width: 56px; height: 56px;">
-                        <svg width="56" height="56" viewBox="0 0 56 56" style="transform: rotate(-90deg); overflow: visible;">
-                            <defs>
-                                <linearGradient id="grad_${exam.id}" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#0ba360" />
-                                    <stop offset="100%" stop-color="#3cba92" />
-                                </linearGradient>
-                            </defs>
-                            <circle cx="28" cy="28" r="${radius}" fill="none" stroke="#e9ecef" stroke-width="5"></circle>
-                            <circle cx="28" cy="28" r="${radius}" fill="none" stroke="url(#grad_${exam.id})" stroke-width="5"
-                                    stroke-dasharray="${circum}" stroke-dashoffset="${offset}"
-                                    stroke-linecap="round" style="transition: stroke-dashoffset 1s ease-out;"></circle>
-                            <g style="transform: rotate(${dotRotation}deg); transform-origin: 28px 28px; transition: transform 1s ease-out;">
-                                <circle cx="28" cy="4" r="4.5" fill="#fff" stroke="#0ba360" stroke-width="2.5"></circle>
-                            </g>
-                        </svg>
+                    
+                    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                        ${badgeHtml}
+                        ${bookmarkHtml}
                     </div>
                 </div>
+            `;
 
-                <div style="display: flex; gap: 12px; width: 100%;">
-                    <button onclick="goToHistory('${exam.id}')" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='transparent'" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                        <i class="fas fa-history me-2"></i> Lịch sử
-                    </button>
-                    <button onclick="goToQuiz('${exam.id}')" onmouseover="this.style.background='#9ec5fe'" onmouseout="this.style.background='#cfe2ff'" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-                        <i class="fas fa-redo me-2"></i> Thi lại
-                    </button>
+            // 3. DẢI BADGE PASTEL 4 THÔNG SỐ
+            let levelClass = 'bg-warning-subtle text-warning'; 
+            let levelStyle = 'background-color: #fef3c7; color: #d97706;'; 
+            if (exam.level === 'Dễ') {
+                levelClass = 'bg-success-subtle text-success';
+                levelStyle = 'background-color: #dcfce7; color: #15803d;';
+            } else if (exam.level === 'Khó') {
+                levelClass = 'bg-danger-subtle text-danger';
+                levelStyle = 'background-color: #fee2e2; color: #b91c1c;';
+            }
+
+            const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
+
+            const mergedTagsHtml = `
+                <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+                    <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #e0f2fe; color: #0369a1;">
+                        <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
+                    </span>
+                    <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
+                        <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
+                    </span>
+                    <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #0891b2;">
+                        <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
+                    </span>
+                    <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #f3f4f6; color: #4b5563;">
+                        <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
+                    </span>
                 </div>
             `;
-        } else {
-            actionAreaHtml = `
-                <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 1rem; border-radius: 8px; border: none;" onclick="goToQuiz('${exam.id}')">
-                    Vào thi ngay <i class="fa-solid fa-arrow-right ms-2"></i>
-                </button>
-            `;
-        }
 
-        // TẠO THẺ CARD VỚI ĐỒNG BỘ CHIỀU CAO (h-100)
-        const card = document.createElement('div');
-        card.className = 'course-card exam-card-hover h-100 d-flex flex-column'; 
-        card.style.borderRadius = '12px';
-        card.style.border = '1px solid #eef0f2';
-        card.style.background = '#fff';
-        card.style.overflow = 'hidden';
-        
-        card.innerHTML = `
-            <div class="card-body p-4 d-flex flex-column h-100">
-                ${headerHtml}
-                ${mergedTagsHtml}
-                
-                <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; font-size: 0.9rem; color: #6c757d; margin-bottom: 20px;">
-                    <div class="rating"><span class="fw-bold text-dark">${exam.rating}</span> <i class="fa-solid fa-star text-warning"></i> <span>(${exam.ratingCount})</span></div>
-                    <div class="attempts"><i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi</div>
+            // 4. ACTION BUTTON THÔNG MINH (CÓ VÒNG TRÒN ĐIỂM SỐ SVG)
+            let actionAreaHtml = '';
+            if (isExamVip && !isUserVip) {
+                actionAreaHtml = `
+                    <button onclick="goToUpgrade()" style="width: 100%; display: block; padding: 12px; border: none; background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); color: #997404; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(255, 230, 156, 0.4);">
+                        <i class="fa-solid fa-crown me-2"></i> Nâng cấp tài khoản Pro
+                    </button>
+                `;
+            } else if (isCompleted) {
+                const correctAnswers = completedExams[exam.id].score || 0;
+                const total = completedExams[exam.id].total || 1;
+
+                let displayScore = (correctAnswers / total) * 10;
+                displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
+
+                const percent = Math.min(100, (displayScore / 10) * 100);
+                const radius = 24;
+                const circum = 2 * Math.PI * radius; 
+                const offset = circum - (percent / 100) * circum; 
+                const dotRotation = (percent / 100) * 360; 
+
+                actionAreaHtml = `
+                    <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
+                        <div>
+                            <span style="font-size: 0.85rem; color: #6c757d; font-weight: 600; display: block; margin-bottom: 4px;">Lần thi gần nhất</span>
+                            <span style="font-size: 1.15rem; color: #0ba360; font-weight: 800;">${displayScore} <span style="font-size:0.85rem; color:#6c757d; font-weight:600;">/ 10</span></span>
+                        </div>
+
+                        <div style="position: relative; width: 56px; height: 56px;">
+                            <svg width="56" height="56" viewBox="0 0 56 56" style="transform: rotate(-90deg); overflow: visible;">
+                                <defs>
+                                    <linearGradient id="grad_${exam.id}" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#0ba360" />
+                                        <stop offset="100%" stop-color="#3cba92" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="28" cy="28" r="${radius}" fill="none" stroke="#e9ecef" stroke-width="5"></circle>
+                                <circle cx="28" cy="28" r="${radius}" fill="none" stroke="url(#grad_${exam.id})" stroke-width="5"
+                                        stroke-dasharray="${circum}" stroke-dashoffset="${offset}"
+                                        stroke-linecap="round" style="transition: stroke-dashoffset 1s ease-out;"></circle>
+                                <g style="transform: rotate(${dotRotation}deg); transform-origin: 28px 28px; transition: transform 1s ease-out;">
+                                    <circle cx="28" cy="4" r="4.5" fill="#fff" stroke="#0ba360" stroke-width="2.5"></circle>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; width: 100%;">
+                        <button onclick="goToHistory('${exam.id}')" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='transparent'" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+                            <i class="fas fa-history me-2"></i> Lịch sử
+                        </button>
+                        <button onclick="goToQuiz('${exam.id}')" onmouseover="this.style.background='#9ec5fe'" onmouseout="this.style.background='#cfe2ff'" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+                            <i class="fas fa-redo me-2"></i> Thi lại
+                        </button>
+                    </div>
+                `;
+            } else {
+                actionAreaHtml = `
+                    <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 1rem; border-radius: 8px; border: none;" onclick="goToQuiz('${exam.id}')">
+                        Vào thi ngay <i class="fa-solid fa-arrow-right ms-2"></i>
+                    </button>
+                `;
+            }
+
+            // --- GHÉP CARD VÀO TRONG ROW HTML, ÉP THÊM MIN-WIDTH VÀ SCROLL-SNAP ---
+            rowHtml += `
+                <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: hidden; position: relative;">
+                    <div class="card-body p-4 d-flex flex-column h-100">
+                        ${headerHtml}
+                        ${mergedTagsHtml}
+                        
+                        <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; font-size: 0.9rem; color: #6c757d; margin-bottom: 20px;">
+                            <div class="rating"><span class="fw-bold text-dark">${exam.rating}</span> <i class="fa-solid fa-star text-warning"></i> <span>(${exam.ratingCount})</span></div>
+                            <div class="attempts"><i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi</div>
+                        </div>
+                        
+                        <div>
+                            ${actionAreaHtml}
+                        </div>
+                    </div>
                 </div>
-                
-                <div>
-                    ${actionAreaHtml}
+            `;
+        });
+
+        rowHtml += `
                 </div>
             </div>
         `;
-        examListContainer.appendChild(card);
+        examListContainer.insertAdjacentHTML('beforeend', rowHtml);
     });
 }
 
