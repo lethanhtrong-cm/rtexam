@@ -109,7 +109,7 @@
             padding: 2px 6px;
             border-radius: 10px;
             border: 2px solid var(--primary-blue);
-            display: none; /* Ẩn mặc định, hiện khi > 0 */
+            display: none; 
         }
         .notification-dropdown {
             position: absolute;
@@ -163,7 +163,6 @@
         .noti-time { font-size: 0.75rem; color: var(--text-muted); }
         .noti-empty { padding: 30px; text-align: center; color: var(--text-muted); font-size: 0.9rem;}
 
-
         .topbar-vip-badge {
             background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%);
             color: #5c3a21;
@@ -194,7 +193,6 @@
             box-shadow: 0 4px 10px rgba(142, 197, 252, 0.4) !important;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-
         .btn-premium-pro:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 15px rgba(142, 197, 252, 0.6) !important;
@@ -268,7 +266,6 @@
         .dropdown-item:hover { background-color: var(--light-blue); color: var(--primary-blue); }
         .dropdown-item.danger-text { border-top: 1px solid var(--border-color); }
         .dropdown-item.danger-text:hover { background-color: #fee2e2; color: var(--danger-red); }
-
 
         /* KHUNG CHỨA SIDEBAR VÀ NỘI DUNG */
         .layout-wrapper {
@@ -499,13 +496,24 @@
         .profile-grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; align-items: start; }
         .profile-column { display: flex; flex-direction: column; gap: 25px; }
         .profile-container { display: flex; gap: 30px; align-items: flex-start; }
+        .profile-avatar { text-align: center; }
         .profile-avatar img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--light-blue); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .profile-info { flex: 1; }
+        .profile-info p { margin: 10px 0; font-size: 1.05rem; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; font-size: 1rem; font-family: inherit;}
+        input[type="file"] { padding: 7px; background-color: var(--light-blue); cursor: pointer; border-radius: 5px; width: 100%; box-sizing: border-box;}
+        
         table { width: 100%; border-collapse: collapse; }
         table th, table td { border: 1px solid var(--border-color); padding: 12px; text-align: center; }
         table th { background-color: var(--light-blue); color: var(--primary-blue); }
+
+        .vip-layout { display: flex; gap: 20px; flex-wrap: wrap; }
+        .vip-card-box { flex: 1; min-width: 300px; }
+        .qr-placeholder { width: 200px; height: 200px; background-color: #eee; margin: 20px auto; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc; border-radius: 8px; }
+        .qr-placeholder img { max-width: 100%; border-radius: 8px; }
+        .instruction { background-color: var(--light-blue); padding: 15px; border-radius: 5px; line-height: 1.5; text-align: center; margin-bottom: 15px; }
 
         /* BẢNG XẾP HẠNG */
         .podium-container { display: flex; justify-content: center; align-items: flex-end; gap: 20px; margin-bottom: 40px; margin-top: 20px; }
@@ -542,16 +550,19 @@
         
         <div class="topbar-actions">
             
+            <!-- KHU VỰC CHUÔNG THÔNG BÁO -->
             <div class="topbar-notifications" id="bellToggle">
                 <i class="fa-solid fa-bell"></i>
                 <span class="notification-badge" id="notiBadgeCount">0</span>
                 
+                <!-- DROPDOWN THÔNG BÁO -->
                 <div class="notification-dropdown" id="notiDropdown">
                     <div class="noti-header">
                         <span>Thông báo</span>
                         <i class="fa-solid fa-check-double" style="font-size: 0.9rem; cursor: pointer; color: var(--primary-blue);" title="Đánh dấu đã đọc tất cả"></i>
                     </div>
                     <div class="noti-list" id="notiListContainer">
+                        <!-- JS Render -->
                         <div class="noti-empty">Đang tải thông báo...</div>
                     </div>
                 </div>
@@ -624,6 +635,8 @@
 
         <div class="main-content">
             <div class="tab-content-container">
+                
+                <!-- TAB 1: KHO ĐỀ THI -->
                 <div id="tab-exams" class="tab-pane active">
                     
                     <div class="quick-stats-grid">
@@ -665,9 +678,19 @@
                                     <button class="pill-btn" data-level="Dễ">Dễ</button>
                                 </div>
                             </div>
+                            <div class="filter-group">
+                                <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
+                                <div class="pill-group" id="timeFilter">
+                                    <button class="pill-btn active" data-time="all">Tất cả</button>
+                                    <button class="pill-btn" data-time="15">15 phút</button>
+                                    <button class="pill-btn" data-time="30">30 phút</button>
+                                    <button class="pill-btn" data-time="45">45 phút</button>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="action-right">
+                            <!-- NÚT TẠO PHÒNG THI MỚI THÊM VÀO -->
                             <button id="btnOpenCreateRoom" class="btn-primary btn-success">
                                 <i class="fa-solid fa-people-roof"></i> Tạo phòng thi
                             </button>
@@ -677,7 +700,9 @@
                                 <select id="sortFilter" class="modern-select">
                                     <option value="newest">Mới nhất</option>
                                     <option value="highest_rating">Đánh giá cao nhất</option>
+                                    <option value="most_attempts">Lượt thi nhiều nhất</option>
                                     <option value="only_vip">Chỉ hiện đề PRO</option>
+                                    <option value="only_free">Chỉ hiện đề Miễn phí</option>
                                 </select>
                             </div>
                             
@@ -689,30 +714,138 @@
                     </div>
 
                     <div id="examListContainer" class="grid-view">
+                        <!-- Skeleton Loader -->
                         <div class="course-card-skeleton"><div class="skeleton-loader sk-badge"></div><div class="skeleton-loader sk-title"></div></div>
                     </div>
                 </div>
                 
+                <!-- TAB 2: HỒ SƠ -->
                 <div id="tab-profile" class="tab-pane">
                     <div class="profile-grid-layout">
-                        <div class="card"><h3>Thông tin chung</h3><p id="displayName">Đang tải...</p></div>
+                        <div class="profile-column">
+                            <div class="card">
+                                <h3><i class="fa-solid fa-address-card"></i> Thông tin chung</h3>
+                                <div class="profile-container">
+                                    <div class="profile-avatar">
+                                        <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar">
+                                    </div>
+                                    <div class="profile-info">
+                                        <p><strong>Tên hiển thị:</strong> <span id="displayName">Đang tải...</span></p>
+                                        <p><strong>Email:</strong> <span id="displayEmail">Đang tải...</span></p>
+                                        <p>
+                                            <strong>Trạng thái VIP:</strong> 
+                                            <span id="vipStatusBadge" class="status-badge status-unactive">Đang kiểm tra...</span>
+                                        </p>
+                                        <p><strong>Ngày kích hoạt:</strong> <span id="vipStartDate">Không xác định</span></p>
+                                        <p><strong>Ngày hết hạn:</strong> <span id="vipEndDate">Không xác định</span></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <h3>🔒 Đổi Mật Khẩu</h3>
+                                <form id="changePasswordForm">
+                                    <div class="form-group">
+                                        <label for="inputNewPassword">Mật khẩu mới:</label>
+                                        <input type="password" id="inputNewPassword" placeholder="Nhập mật khẩu mới..." required minlength="6">
+                                    </div>
+                                    <button type="submit" id="btnChangePassword" class="btn-primary">Cập nhật mật khẩu</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-column">
+                            <div class="card" style="height: 100%;">
+                                <h3><i class="fa-solid fa-pen-to-square"></i> Cập nhật hồ sơ</h3>
+                                <form id="updateProfileForm">
+                                    <div class="form-group">
+                                        <label for="inputName">Tên hiển thị mới:</label>
+                                        <input type="text" id="inputName" placeholder="Nhập tên của bạn...">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inputAvatarFile">Tải lên ảnh đại diện:</label>
+                                        <input type="file" id="inputAvatarFile" accept="image/*">
+                                        <small style="display: block; color: #666; margin-top: 5px;">Ảnh sẽ được nén tự động xuống 200x200 pixel.</small>
+                                    </div>
+                                    <button type="submit" id="btnUpdateProfile" class="btn-primary">Lưu thay đổi</button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
+                <!-- TAB 3: LỊCH SỬ LÀM BÀI -->
                 <div id="tab-history" class="tab-pane">
                     <div class="card">
                         <h3><i class="fa-solid fa-list-check"></i> Lịch sử làm bài</h3>
-                        <table><tbody id="historyTableBody"><tr><td>Đang tải...</td></tr></tbody></table>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mã đề</th>
+                                    <th>Thời gian làm bài</th>
+                                    <th>Thời gian nộp</th>
+                                    <th>Số câu đúng</th>
+                                    <th>Điểm số</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr><td colspan="6" class="loading-text">Đang tải lịch sử thi...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
+                <!-- TAB 4: BẢNG XẾP HẠNG -->
                 <div id="leaderboard" class="tab-pane">
                     <div class="card">
                         <h3><i class="fa-solid fa-trophy"></i> Bảng Xếp Hạng</h3>
                         <div class="podium-container" id="leaderboardPodium"></div>
-                        <table class="leaderboard-table"><tbody id="leaderboardTableBody"></tbody></table>
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Thứ hạng</th>
+                                    <th>Học viên</th>
+                                    <th>Số XP Tích Lũy</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardTableBody"></tbody>
+                        </table>
                     </div>
                 </div>
+
+                <!-- TAB 5: GÓI CƯỚC VIP -->
+                <div id="tab-vip" class="tab-pane">
+                    <div class="vip-layout">
+                        <div class="card vip-card-box">
+                            <h3><i class="fa-solid fa-star"></i> Gói cước của bạn</h3>
+                            <p style="font-size: 1.1rem;">Tình trạng hiện tại:<br><br>
+                                <span id="vipStatusTab3" class="status-badge status-unactive" style="font-size: 1rem; padding: 10px 15px;">Chưa kích hoạt VIP</span>
+                            </p>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                            <ul style="line-height: 1.8; padding-left: 20px;">
+                                <li>Truy cập toàn bộ kho đề thi Pro độc quyền.</li>
+                                <li>Xem giải thích chi tiết đáp án.</li>
+                                <li>Lưu lại lịch sử làm bài không giới hạn.</li>
+                                <li>Hỗ trợ học tập 24/7.</li>
+                            </ul>
+                        </div>
+
+                        <div class="card vip-card-box" style="text-align: center;">
+                            <h3><i class="fa-solid fa-qrcode"></i> Thanh toán qua QR Code</h3>
+                            <div class="qr-placeholder">
+                                <img src="https://via.placeholder.com/200?text=QR+Code+Demo" alt="Mã QR Chuyển khoản">
+                            </div>
+                            <div class="instruction">
+                                Vui lòng chuyển khoản <strong>100.000đ</strong> với nội dung:<br><br>
+                                <span style="font-weight: bold; color: var(--primary-blue); font-size: 1.2rem;">NAP <span id="paymentEmail">[Email của bạn]</span></span><br><br>
+                                để được hệ thống mở khóa tự động.
+                            </div>
+                            <button id="btnConfirmPayment" class="btn-primary" style="width: 100%;">Tôi đã chuyển khoản</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             
             <div class="sticky-user-rank" id="stickyUserRank" style="display: none;">
@@ -722,6 +855,11 @@
         </div>
     </div> 
 
+    <!-- ==========================================
+         MODALS 
+         ========================================== -->
+    
+    <!-- Modal 1: Tạo phòng thi -->
     <div class="custom-modal-overlay" id="createRoomModal">
         <div class="custom-modal-content">
             <div class="custom-modal-header">
@@ -736,6 +874,7 @@
                     </select>
                 </div>
                 
+                <!-- Khu vực hiển thị khi tạo phòng thành công -->
                 <div id="roomCreatedArea" style="display: none; text-align: center; margin-top: 20px; padding: 15px; background: var(--light-blue); border-radius: 8px; border: 1px dashed var(--primary-blue);">
                     <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Mã phòng của bạn là:</p>
                     <h2 id="generatedRoomCode" style="margin: 10px 0; color: var(--primary-blue); font-size: 2rem; letter-spacing: 2px;">ROOM-XXXXXX</h2>
@@ -749,6 +888,7 @@
         </div>
     </div>
 
+    <!-- Modal 2: Mời bạn bè -->
     <div class="custom-modal-overlay" id="inviteFriendModal">
         <div class="custom-modal-content" style="max-width: 400px;">
             <div class="custom-modal-header">
@@ -768,13 +908,12 @@
         </div>
     </div>
 
-
+    <!-- KHAI BÁO SCRIPTS -->
     <script type="module" src="dashboard-core.js"></script>
     <script type="module" src="dashboard-exams.js"></script>
     <script type="module" src="dashboard-profile.js"></script>
     <script type="module" src="dashboard-history.js"></script>
     <script type="module" src="leaderboard.js"></script>
-    
     <script type="module" src="dashboard-notifications.js"></script>
     <script type="module" src="dashboard-room.js"></script>
 </body>
