@@ -13,7 +13,7 @@
             --primary-blue: #0056b3; 
             --light-blue: #e3f2fd;
             --white: #ffffff;
-            --gray-bg: #f4f7f6;
+            --gray-bg: #f4f6f8; /* Đã cập nhật thành màu xám nhạt tối ưu cho Depth of Field */
             --text-main: #333333;
             --text-muted: #6b7280;
             --warning-orange: #f57c00;
@@ -95,9 +95,9 @@
             border: 1px solid #ffca28;
         }
 
-        .topbar-vip-btn {
-            background: linear-gradient(135deg, #ff9a44 0%, #fc6076 100%);
-            color: white;
+        .btn-premium-pro {
+            background: linear-gradient(135deg, #8ec5fc 0%, #e0c3fc 100%) !important;
+            color: #2c3e50 !important;
             border: none;
             padding: 8px 16px;
             border-radius: 20px;
@@ -107,13 +107,13 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 10px rgba(252, 96, 118, 0.3);
+            box-shadow: 0 4px 10px rgba(142, 197, 252, 0.4) !important;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .topbar-vip-btn:hover {
+        .btn-premium-pro:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(252, 96, 118, 0.4);
+            box-shadow: 0 6px 15px rgba(142, 197, 252, 0.6) !important;
         }
 
         .topbar-user {
@@ -327,9 +327,9 @@
         /* =========================================
            4. CSS QUICK STATS (Đã Cập Nhật)
            ========================================= */
-        .quick-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 15px; } /* Cập nhật margin-bottom */
+        .quick-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 15px; } 
         .quick-stat-card {
-            display: flex; align-items: center; gap: 18px; padding: 12px 20px; border-radius: 12px; /* Cập nhật padding */
+            display: flex; align-items: center; gap: 18px; padding: 12px 20px; border-radius: 12px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.04); transition: transform 0.2s, box-shadow 0.2s;
             background: var(--white); border: 1px solid var(--border-color);
         }
@@ -337,7 +337,7 @@
         .quick-stat-card .stat-icon { width: 52px; height: 52px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
         .quick-stat-card .stat-info { display: flex; flex-direction: column; gap: 4px; }
         .quick-stat-card .stat-label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .quick-stat-card .stat-value { margin: 0; font-size: 1.8rem; font-weight: 700; line-height: 1.2; } /* Cập nhật font-size */
+        .quick-stat-card .stat-value { margin: 0; font-size: 1.8rem; font-weight: 700; line-height: 1.2; } 
         
         .stat-card-completed { border-left: 5px solid #0284c7; }
         .stat-card-completed .stat-icon { color: #0284c7; background: rgba(2, 132, 199, 0.12); }
@@ -531,6 +531,13 @@
         .qr-placeholder img { max-width: 100%; border-radius: 8px; }
         .instruction { background-color: var(--light-blue); padding: 15px; border-radius: 5px; line-height: 1.5; text-align: center; margin-bottom: 15px; }
 
+        /* CSS ÉP ĐỔI NỀN RIÊNG CHO DEPTH OF FIELD NẾU CẦN THIẾT */
+        body, .main-content {
+            background-color: #f4f6f8 !important;
+        }
+        .sidebar { background-color: #ffffff !important; }
+        .topbar-fullwidth { background-color: var(--primary-blue) !important; }
+
         /* RESPONSIVE CẬP NHẬT CHO LAYOUT MỚI */
         @media (max-width: 1100px) { .grid-view { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) {
@@ -579,7 +586,11 @@
         </div>
         
         <div class="topbar-actions">
-            <div id="topbar-vip-container"></div>
+            <div id="topbar-vip-container">
+                <button class="btn-premium-pro" id="btnUpgradeHeader" onclick="goToUpgrade()">
+                    <i class="fa-solid fa-gem"></i> Nâng cấp Pro
+                </button>
+            </div>
             <div class="topbar-user" id="userMenuToggle">
                 <span class="topbar-greeting">Xin chào, <b id="topbarName">Đang tải...</b></span>
                 <img id="topbarAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar User">
