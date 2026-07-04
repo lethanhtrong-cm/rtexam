@@ -13,7 +13,7 @@
             --primary-blue: #0056b3; 
             --light-blue: #e3f2fd;
             --white: #ffffff;
-            --gray-bg: #f4f6f8; /* Đã cập nhật thành màu xám nhạt tối ưu cho Depth of Field */
+            --gray-bg: #f4f6f8;
             --text-main: #333333;
             --text-muted: #6b7280;
             --warning-orange: #f57c00;
@@ -25,6 +25,9 @@
             --vip-color: #d97706;
             --free-color: #10b981;
             --star-color: #fbbf24;
+            --gold-color: #FFD700;
+            --silver-color: #C0C0C0;
+            --bronze-color: #CD7F32;
         }
 
         /* --- Utility Classes --- */
@@ -54,7 +57,7 @@
             margin: 0;
             padding: 0;
             display: flex;
-            flex-direction: column; /* Đổi thành column để Topbar nằm trên */
+            flex-direction: column;
             height: 100vh;
             overflow: hidden;
         }
@@ -194,7 +197,7 @@
             position: relative;
         }
 
-        /* SIDEBAR (TÁI THIẾT KẾ: TRẮNG, THANH THOÁT) */
+        /* SIDEBAR */
         .sidebar {
             width: 260px;
             background-color: var(--white);
@@ -217,7 +220,7 @@
 
         .menu-item {
             padding: 12px 20px;
-            margin: 4px 15px; /* Thêm margin để bo góc không chạm lề */
+            margin: 4px 15px; 
             color: var(--text-main);
             text-decoration: none;
             font-weight: 500;
@@ -226,12 +229,12 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            border-radius: 8px; /* Bo góc mềm mại */
+            border-radius: 8px; 
         }
 
         .menu-item:hover, .menu-item.active {
-            background-color: var(--light-blue); /* Nền xanh nhạt pastel */
-            color: var(--primary-blue); /* Chữ xanh đậm */
+            background-color: var(--light-blue); 
+            color: var(--primary-blue); 
         }
 
         /* ACCORDION CHO KHO ĐỀ THI */
@@ -243,7 +246,7 @@
         .accordion-content {
             display: none;
             flex-direction: column;
-            background-color: transparent; /* Bỏ nền tối cũ */
+            background-color: transparent; 
             margin-bottom: 5px;
         }
         .accordion-content.show { display: flex; }
@@ -276,6 +279,8 @@
             display: flex;
             flex-direction: column;
             background-color: var(--gray-bg);
+            position: relative; /* Cho sticky bar */
+            padding-bottom: 80px; /* Nhường chỗ cho sticky bar */
         }
 
         .tab-content-container { flex: 1; }
@@ -325,7 +330,7 @@
         .loading-text { color: var(--text-muted); font-style: italic; text-align: center; padding: 2rem; width: 100%; }
 
         /* =========================================
-           4. CSS QUICK STATS (Đã Cập Nhật)
+           4. CSS QUICK STATS
            ========================================= */
         .quick-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 15px; } 
         .quick-stat-card {
@@ -538,7 +543,78 @@
         .sidebar { background-color: #ffffff !important; }
         .topbar-fullwidth { background-color: var(--primary-blue) !important; }
 
-        /* RESPONSIVE CẬP NHẬT CHO LAYOUT MỚI */
+        /* =========================================
+           7. CSS BẢNG XẾP HẠNG (LEADERBOARD)
+           ========================================= */
+        .podium-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 20px;
+            margin-bottom: 40px;
+            margin-top: 20px;
+        }
+        .podium-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 130px;
+            background: var(--white);
+            border-radius: 12px 12px 0 0;
+            padding: 15px 10px 0;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .podium-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+            border: 3px solid var(--white);
+            background: var(--gray-bg);
+        }
+        .podium-name { font-weight: 700; font-size: 0.95rem; text-align: center; margin-bottom: 5px; color: var(--text-main); word-break: break-word;}
+        .podium-xp { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; margin-bottom: 10px;}
+        .podium-rank-box { width: 100%; text-align: center; padding: 10px 0; font-size: 1.2rem; font-weight: bold; color: white;}
+        
+        .step-1 { height: 220px; border: 2px solid var(--gold-color); z-index: 3;}
+        .step-1 .podium-rank-box { background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); }
+        .step-1 .podium-avatar { border-color: var(--gold-color); width: 80px; height: 80px; }
+        .step-1 .crown-icon { position: absolute; top: -30px; color: var(--gold-color); font-size: 2rem; }
+
+        .step-2 { height: 180px; border: 2px solid var(--silver-color); z-index: 2;}
+        .step-2 .podium-rank-box { background: linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%); }
+        .step-2 .podium-avatar { border-color: var(--silver-color); }
+
+        .step-3 { height: 150px; border: 2px solid var(--bronze-color); z-index: 1;}
+        .step-3 .podium-rank-box { background: linear-gradient(135deg, #d38b55 0%, #a8622c 100%); }
+        .step-3 .podium-avatar { border-color: var(--bronze-color); }
+
+        .leaderboard-table th { background-color: var(--primary-blue); color: var(--white); }
+        .leaderboard-table td { font-size: 0.95rem; }
+        .leaderboard-table tr:hover { background-color: var(--light-blue); }
+        
+        .sticky-user-rank {
+            position: fixed;
+            bottom: 0;
+            left: 260px; /* Bằng độ rộng sidebar */
+            right: 0;
+            background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
+            color: var(--white);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.15);
+            z-index: 100;
+            transition: left 0.3s ease;
+        }
+        .sticky-user-rank p { margin: 0; font-size: 1.05rem; font-weight: 600; display: flex; align-items: center; gap: 10px;}
+        .sticky-user-rank .highlight-rank { background: var(--warning-orange); padding: 5px 12px; border-radius: 20px; font-weight: bold;}
+
+
+        /* RESPONSIVE */
         @media (max-width: 1100px) { .grid-view { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) {
             .quick-stats-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -555,16 +631,16 @@
             .sort-wrapper { flex: 1; margin-right: 15px; }
             .modern-select { width: 100%; }
             
-            /* Responsive cho Full-width Topbar */
             .topbar-fullwidth { flex-direction: column; gap: 15px; align-items: flex-start; padding: 15px 20px; }
             .topbar-fullwidth .d-flex.align-items-center.gap-3 { width: 100%; }
             .topbar-actions { width: 100%; justify-content: space-between; }
             
-            /* Responsive Sidebar ghim trái */
             .sidebar { width: 60px; }
             .menu-item { justify-content: center; padding: 12px; margin: 5px; }
             .menu-item span, .accordion-icon { display: none; }
             .sub-menu-item { display: none; } 
+            
+            .sticky-user-rank { left: 60px; flex-direction: column; gap: 10px; text-align: center; }
         }
     </style>
 </head>
@@ -642,6 +718,10 @@
 
                 <div class="menu-item" data-target="tab-history">
                     <i class="fa-solid fa-clock-rotate-left"></i> <span>Lịch sử làm bài</span>
+                </div>
+
+                <div class="menu-item" data-target="leaderboard">
+                    <i class="fa-solid fa-trophy" style="color: var(--warning-orange);"></i> <span>Bảng Xếp Hạng</span>
                 </div>
             </div>
         </div>
@@ -826,6 +906,28 @@
                     </div>
                 </div>
 
+                <div id="leaderboard" class="tab-pane">
+                    <div class="card">
+                        <h3><i class="fa-solid fa-trophy"></i> Bảng Xếp Hạng Tích Lũy (Top 30)</h3>
+                        
+                        <div class="podium-container" id="leaderboardPodium">
+                            <div class="loading-text">Đang tải danh sách vinh danh...</div>
+                        </div>
+
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Thứ hạng</th>
+                                    <th>Học viên</th>
+                                    <th>Số XP Tích Lũy</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div id="tab-vip" class="tab-pane">
                     <div class="vip-layout">
                         <div class="card vip-card-box">
@@ -857,10 +959,19 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="sticky-user-rank" id="stickyUserRank" style="display: none;">
+                <p><i class="fa-solid fa-user-astronaut"></i> Thành tích của bạn:</p>
+                <div id="stickyUserStats">Đang tải...</div>
+            </div>
+
         </div>
-    </div> <script type="module" src="dashboard-core.js"></script>
+    </div> 
+
+    <script type="module" src="dashboard-core.js"></script>
     <script type="module" src="dashboard-exams.js"></script>
     <script type="module" src="dashboard-profile.js"></script>
     <script type="module" src="dashboard-history.js"></script>
+    <script type="module" src="leaderboard.js"></script>
 </body>
 </html>
