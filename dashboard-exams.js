@@ -441,7 +441,6 @@ function renderExams() {
                 const offset = circum - (percent / 100) * circum; 
                 const dotRotation = (percent / 100) * 360; 
 
-                // Đã xóa thuộc tính stroke-linecap="round" khỏi thẻ circle vẽ stroke progress
                 actionAreaHtml = `
                     <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
                         <div>
@@ -460,9 +459,9 @@ function renderExams() {
                                 <circle cx="28" cy="28" r="${radius}" fill="none" stroke="#e9ecef" stroke-width="5"></circle>
                                 <circle cx="28" cy="28" r="${radius}" fill="none" stroke="url(#grad_${exam.id})" stroke-width="5"
                                         stroke-dasharray="${circum}" stroke-dashoffset="${offset}"
-                                        style="transition: stroke-dashoffset 1s ease-out;"></circle>
+                                        stroke-linecap="butt" style="transition: stroke-dashoffset 1s ease-out;"></circle>
                                 <g style="transform: rotate(${dotRotation}deg); transform-origin: 28px 28px; transition: transform 1s ease-out;">
-                                    <circle cx="28" cy="4" r="4.5" fill="#fff" stroke="#0ba360" stroke-width="2.5"></circle>
+                                    <circle cx="52" cy="28" r="4.5" fill="#fff" stroke="#0ba360" stroke-width="2.5"></circle>
                                 </g>
                             </svg>
                         </div>
