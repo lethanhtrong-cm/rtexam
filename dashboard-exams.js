@@ -390,32 +390,32 @@ function renderExams() {
                 </div>
             `;
 
-            // 3. DẢI BADGE PASTEL 4 THÔNG SỐ
-            let levelClass = 'bg-warning-subtle text-warning'; 
-            let levelStyle = 'background-color: #fef3c7; color: #d97706;'; 
+            // 3. DẢI BADGE PASTEL 4 THÔNG SỐ (Minimalist Style)
+            let levelColor = '#d97706'; // Vàng cam cho Trung bình
+            let levelIcon = 'fa-chart-bar';
             if (exam.level === 'Dễ') {
-                levelClass = 'bg-success-subtle text-success';
-                levelStyle = 'background-color: #dcfce7; color: #15803d;';
+                levelColor = '#059669'; // Xanh lá
+                levelIcon = 'fa-arrow-trend-up';
             } else if (exam.level === 'Khó') {
-                levelClass = 'bg-danger-subtle text-danger';
-                levelStyle = 'background-color: #fee2e2; color: #b91c1c;';
+                levelColor = '#dc2626'; // Đỏ
+                levelIcon = 'fa-fire';
             }
 
-            const pillBaseStyle = "padding: 5px 12px; border-radius: 50rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; border: none; letter-spacing: 0.2px;";
+            const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
 
             const mergedTagsHtml = `
-                <div class="d-flex flex-wrap gap-2 mb-3" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
-                    <span class="badge rounded-pill bg-primary-subtle text-primary" style="${pillBaseStyle} background-color: #e0f2fe; color: #0369a1;">
-                        <i class="fa-solid fa-tag"></i> <span class="fw-normal" style="font-weight: 600;">${exam.technique}</span>
+                <div style="display: flex; flex-wrap: nowrap; gap: 6px; margin-bottom: 20px; overflow: hidden; width: 100%;">
+                    <span style="${pillBaseStyle} color: #0284c7;">
+                        <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique}
                     </span>
-                    <span class="badge rounded-pill ${levelClass}" style="${pillBaseStyle} ${levelStyle}">
-                        <i class="fa-solid fa-signal"></i> <span class="fw-normal" style="font-weight: 600;">${exam.level}</span>
+                    <span style="${pillBaseStyle} color: ${levelColor};">
+                        <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level}
                     </span>
-                    <span class="badge rounded-pill bg-info-subtle text-info" style="${pillBaseStyle} background-color: #cff4fc; color: #0891b2;">
-                        <i class="fa-solid fa-cube"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.questionCount}</b> câu</span>
+                    <span style="${pillBaseStyle} color: #4b5563;">
+                        <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu
                     </span>
-                    <span class="badge rounded-pill bg-secondary-subtle text-secondary" style="${pillBaseStyle} background-color: #f3f4f6; color: #4b5563;">
-                        <i class="fa-solid fa-clock"></i> <span class="fw-normal" style="font-weight: 500;"><b>${exam.timeLimit}</b> phút</span>
+                    <span style="${pillBaseStyle} color: #4b5563;">
+                        <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút
                     </span>
                 </div>
             `;
