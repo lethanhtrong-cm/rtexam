@@ -308,7 +308,6 @@
         let warningCount = 0;
 
         function updateAntiCheatState() {
-            // Chỉ khoá khi đang làm bài thi
             if (!isSubmitted && !isShowExplanation) {
                 document.body.classList.add('no-select');
             } else {
@@ -316,7 +315,6 @@
             }
         }
 
-        // 1. CHỐNG COPY, PASTE, CHUỘT PHẢI
         ['contextmenu', 'copy', 'cut', 'paste'].forEach(evt => {
             document.addEventListener(evt, (e) => {
                 if (!isSubmitted && !isShowExplanation) {
@@ -326,7 +324,6 @@
             });
         });
 
-        // 2. THEO DÕI VIỆC CHUYỂN TAB (VISIBILITY API)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && !isSubmitted && !isShowExplanation) {
                 warningCount++;
@@ -342,7 +339,6 @@
                         warningModal.classList.remove('active');
                     };
                     
-                    // Lập tức ép thu bài tự động
                     executeSubmit();
                 } else {
                     warningText.innerHTML = `<b>Vi phạm lần ${warningCount}:</b> Bạn vừa rời khỏi phòng thi!<br><br>Nếu vi phạm quá 3 lần, hệ thống sẽ tự động thu bài.`;
@@ -399,7 +395,7 @@
             isShowExplanation = false;
             warningCount = 0;
             
-            updateAntiCheatState(); // Áp dụng chống gian lận
+            updateAntiCheatState(); 
             
             const btnSubmit = document.getElementById('btn-submit-exam');
             btnSubmit.disabled = false; 
@@ -428,7 +424,7 @@
                 isSubmitted = true;
                 isShowExplanation = true;
                 
-                updateAntiCheatState(); // Hủy chống gian lận
+                updateAntiCheatState(); 
 
                 document.getElementById('quiz-title-display').innerText = `Xem lại bài thi: ${currentExamId}`;
                 document.getElementById('timer-container-box').style.display = 'none'; 
@@ -499,7 +495,7 @@
         async function executeSubmit() {
             stopTimer(); 
             isSubmitted = true; 
-            updateAntiCheatState(); // Xóa class no-select
+            updateAntiCheatState(); 
             
             const total = questions.length;
             const timeSpent = examDuration - timeRemaining; 
@@ -518,6 +514,38 @@
 
             let score = (correctCount / total) * 10;
             score = Math.round(score * 100) / 100; 
+
+            // ========================================================
+            // ===== TÍNH NĂNG LEADERBOARD: CỘNG ĐIỂM XP LẦN ĐẦU ======
+            // ========================================================
+            let gainedXP = 0;
+            try {
+                // Bước 1: Kiểm tra xem đã từng làm mã đề này chưa
+                const resultsRef = collection(db, "results");
+                const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId));
+                const resultSnapshot = await getDocs(qResult);
+                
+                if (resultSnapshot.empty) {
+                    // Chưa làm bao giờ -> Đây là lần đầu thi
+                    gainedXP = Math.round((correctCount / total) * 10 * 10);
+                    
+                    if (gainedXP > 0) {
+                        const leaderboardRef = doc(db, "users_leaderboard", currentUser.uid);
+                        await setDoc(leaderboardRef, {
+                            displayName: currentUser.displayName || currentUser.email.split('@')[0],
+                            email: currentUser.email,
+                            photoURL: currentUser.photoURL || "",
+                            totalXP: increment(gainedXP) // Cộng dồn điểm bằng hàm increment
+                        }, { merge: true });
+                        
+                        // Hiển thị thông báo vui vẻ
+                        showToast(`🎉 Bạn đã nhận được +${gainedXP} XP cho lần đầu hoàn thành!`);
+                    }
+                }
+            } catch (xpError) {
+                console.error("Lỗi khi tính XP Leaderboard:", xpError);
+            }
+            // ========================================================
 
             renderAll(); 
             btnSubmit.innerText = "Đã nộp bài";
@@ -559,7 +587,6 @@
             const answeredCount = Object.keys(userAnswers).length;
             
             if (!isAutoSubmit) {
-                // Thay thế confirm() hệ thống bằng custom modal
                 const confirmModal = document.getElementById('confirm-submit-modal');
                 document.getElementById('confirm-submit-text').innerText = `Bạn đã hoàn thành ${answeredCount}/${total} câu hỏi.\nBạn có chắc chắn muốn nộp bài lúc này?`;
                 confirmModal.classList.add('active');
@@ -664,7 +691,7 @@
         document.getElementById('btn-modal-explain').onclick = () => {
             closeModal();
             isShowExplanation = true; 
-            updateAntiCheatState(); // Xóa class no-select khi xem lại bài giải
+            updateAntiCheatState(); 
             renderAll(); 
             
             const btnSubmit = document.getElementById('btn-submit-exam');
