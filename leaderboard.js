@@ -1,5 +1,5 @@
-import { auth, db } from './dashboard-core.js';
-import { collection, query, orderBy, limit, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+import { auth, db } from "./dashboard-core.js";
+import { collection, query, orderBy, limit, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Lắng nghe sự kiện authReady từ hệ thống cốt lõi
 document.addEventListener('authReady', async (e) => {
@@ -16,14 +16,17 @@ async function initLeaderboard(currentUser) {
     const stickyStats = document.getElementById('stickyUserStats');
 
     try {
-        // Query top 30 từ collection tối ưu
-        const leaderboardRef = collection(db, 'users_leaderboard');
-        const q = query(leaderboardRef, orderBy('totalXP', 'desc'), limit(30));
-        const snapshot = await getDocs(q);
+        // Cú pháp chuẩn Modular V9 của Firebase
+        const q = query(
+            collection(db, "users_leaderboard"), 
+            orderBy("totalXP", "desc"), 
+            limit(30)
+        );
+        const querySnapshot = await getDocs(q);
 
         const topUsers = [];
-        snapshot.forEach(doc => {
-            topUsers.push({ id: doc.id, ...doc.data() });
+        querySnapshot.forEach(docSnap => {
+            topUsers.push({ id: docSnap.id, ...docSnap.data() });
         });
 
         // Tách dữ liệu Top 3 và Top 4-30
@@ -53,7 +56,7 @@ async function initLeaderboard(currentUser) {
                         ${crown}
                         <img src="${avatar}" alt="Avatar" class="podium-avatar">
                         <div class="podium-name">${user.displayName || 'Học viên ẩn danh'}</div>
-                        <div class="podium-xp">${user.totalXP.toLocaleString()} XP</div>
+                        <div class="podium-xp">${(user.totalXP || 0).toLocaleString()} XP</div>
                         <div class="podium-rank-box">TOP ${user.rank}</div>
                     </div>
                 `;
@@ -73,7 +76,7 @@ async function initLeaderboard(currentUser) {
                     <tr>
                         <td><strong>#${actualRank}</strong></td>
                         <td>${user.displayName || 'Học viên ẩn danh'}</td>
-                        <td class="text-primary fw-bold">${user.totalXP.toLocaleString()}</td>
+                        <td class="text-primary fw-bold">${(user.totalXP || 0).toLocaleString()}</td>
                     </tr>
                 `;
             });
@@ -107,13 +110,13 @@ async function initLeaderboard(currentUser) {
         if (currentUserIndex !== -1) {
             // Nằm trong Top 30
             const currentRank = currentUserIndex + 1;
-            const currentXP = topUsers[currentUserIndex].totalXP;
+            const currentXP = topUsers[currentUserIndex].totalXP || 0;
             stickyStats.innerHTML = `
                 <span style="margin-right: 15px;">XP Tích lũy: <b style="color: var(--warning-orange);">${currentXP.toLocaleString()}</b></span>
                 <span class="highlight-rank">Hạng: ${currentRank}</span>
             `;
         } else {
-            // Ngoài Top 30, truy vấn thêm duy nhất 1 Read request để lấy điểm bản thân
+            // Ngoài Top 30, truy vấn thêm 1 lượt đọc để lấy điểm bản thân
             const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
             
