@@ -47,7 +47,12 @@
             font-size: 1.2rem;
             color: #00ff88;
         }
-        /* Center Area: Room Code & Exam Name */
+        
+        /* ---------------- STATE 1: PHÒNG CHỜ ---------------- */
+        #state1Waiting {
+            display: block; /* Sẽ được JS điều khiển */
+            flex: 1;
+        }
         .center-area {
             text-align: center;
             padding: 30px 20px 15px 20px;
@@ -81,7 +86,7 @@
             word-wrap: break-word;
         }
 
-        /* Host Control Panel Zone */
+        /* Host Control Panel */
         .host-panel {
             background: rgba(255, 255, 255, 0.15);
             border: 2px dashed #ffdf00;
@@ -90,7 +95,7 @@
             margin: 15px auto;
             padding: 20px;
             width: calc(100% - 40px);
-            display: none; /* Hiển thị bằng JS nếu là Host */
+            display: none;
             box-shadow: 0 8px 24px rgba(0,0,0,0.2);
             animation: fadeIn 0.5s ease;
         }
@@ -151,14 +156,9 @@
             transform: translateY(4px);
             box-shadow: none;
         }
-        .btn-invite-friend {
-            background: #9b59b6;
-        }
+        .btn-invite-friend { background: #9b59b6; }
         .btn-invite-friend:hover { background: #8e44ad; }
-        .btn-copy-link {
-            background: #34495e;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
+        .btn-copy-link { background: #34495e; border: 1px solid rgba(255,255,255,0.2); }
         .btn-copy-link:hover { background: #2c3e50; }
 
         /* Grid: Participants */
@@ -215,7 +215,7 @@
             text-overflow: ellipsis;
         }
 
-        /* Footer Area */
+        /* Footer Action */
         .footer-action {
             position: fixed;
             bottom: 0;
@@ -240,7 +240,7 @@
             text-transform: uppercase;
             box-shadow: 0 8px 0 #00b25c;
             transition: all 0.1s;
-            display: none; /* Hiện bằng JS nếu là Host */
+            display: none;
             margin: 0 auto;
         }
         .btn-start:disabled {
@@ -261,7 +261,114 @@
             animation: pulse 1.5s infinite;
         }
 
-        /* Modern Modal Mời Bạn Bè */
+        /* ---------------- STATE 2: LEADERBOARD ---------------- */
+        #state2Leaderboard {
+            display: none; /* Sẽ được JS điều khiển */
+            flex: 1;
+            padding: 40px 20px 100px 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+            animation: fadeIn 0.5s ease;
+        }
+        .leaderboard-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .leaderboard-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #ffdf00;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+        .leaderboard-subtitle {
+            font-size: 1.2rem;
+            color: #00e5ff;
+        }
+        .table-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .lb-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+        }
+        .lb-table th {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #b3a2c7;
+        }
+        .lb-table td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            vertical-align: middle;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .lb-table tr:last-child td {
+            border-bottom: none;
+        }
+        .lb-table tbody tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .td-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: flex-start;
+            padding-left: 30px !important;
+        }
+        .td-user img {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid #ffdf00;
+            object-fit: cover;
+        }
+        /* Status Badges */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+        .badge-waiting { background: #95a5a6; color: white; }
+        .badge-playing { background: #3498db; color: white; box-shadow: 0 0 10px rgba(52,152,219,0.5); animation: pulse 1.5s infinite; }
+        .badge-finished { background: #2ecc71; color: white; }
+
+        /* End Room Button */
+        .btn-end-room {
+            background: #e74c3c;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 900;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 6px 0 #c0392b;
+            transition: all 0.2s;
+            display: block;
+            margin: 30px auto 0 auto;
+        }
+        .btn-end-room:active {
+            transform: translateY(6px);
+            box-shadow: none;
+        }
+
+        /* Modal Mời Bạn Bè */
         .modal {
             position: fixed;
             top: 0;
@@ -278,96 +385,29 @@
             transition: all 0.3s ease;
             z-index: 999;
         }
-        .modal.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        .modal.active { opacity: 1; pointer-events: auto; }
         .modal-content {
-            background: #2c3e50;
-            border: 3px solid #9b59b6;
-            border-radius: 20px;
-            padding: 30px;
-            width: 90%;
-            max-width: 450px;
-            text-align: center;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
-            transform: translateY(-30px);
-            transition: all 0.3s ease;
-            color: white;
+            background: #2c3e50; border: 3px solid #9b59b6; border-radius: 20px;
+            padding: 30px; width: 90%; max-width: 450px; text-align: center;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5); transform: translateY(-30px);
+            transition: all 0.3s ease; color: white;
         }
-        .modal.active .modal-content {
-            transform: translateY(0);
-        }
-        .modal-title {
-            font-size: 1.5rem;
-            font-weight: 900;
-            color: #9b59b6;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
+        .modal.active .modal-content { transform: translateY(0); }
+        .modal-title { font-size: 1.5rem; font-weight: 900; color: #9b59b6; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .modal-input {
-            width: 100%;
-            padding: 12px 15px;
-            font-size: 1rem;
-            border-radius: 10px;
-            border: 2px solid rgba(255,255,255,0.2);
-            background: rgba(0,0,0,0.2);
-            color: white;
-            outline: none;
-            margin-bottom: 20px;
-            font-family: inherit;
-            text-align: center;
+            width: 100%; padding: 12px 15px; font-size: 1rem; border-radius: 10px; border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2); color: white; outline: none; margin-bottom: 20px; font-family: inherit; text-align: center;
         }
-        .modal-input:focus {
-            border-color: #9b59b6;
-        }
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        .btn-modal-submit {
-            background: #9b59b6;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-weight: 700;
-            border-radius: 10px;
-            cursor: pointer;
-            font-family: inherit;
-        }
-        .btn-modal-close {
-            background: #7f8c8d;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-weight: 700;
-            border-radius: 10px;
-            cursor: pointer;
-            font-family: inherit;
-        }
+        .modal-input:focus { border-color: #9b59b6; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .btn-modal-submit { background: #9b59b6; color: white; border: none; padding: 12px 25px; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: inherit; }
+        .btn-modal-close { background: #7f8c8d; color: white; border: none; padding: 12px 25px; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: inherit; }
 
         /* Animations */
-        @keyframes bounceIn {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.03); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes popIn {
-            0% { transform: scale(0); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes bounceIn { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.03); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -380,38 +420,62 @@
         </div>
     </header>
 
-    <div class="center-area">
-        <div class="room-label">Mã Phòng Tham Gia</div>
-        <div class="room-code" id="displayRoomId">------</div>
-        <div class="exam-name" id="displayExamName"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải thông tin...</div>
-    </div>
-
-    <div class="host-panel" id="hostPanel">
-        <div class="host-panel-title">
-            <i class="fa-solid fa-crown"></i> Bảng điều khiển của chủ phòng
+    <div id="state1Waiting">
+        <div class="center-area">
+            <div class="room-label">Mã Phòng Tham Gia</div>
+            <div class="room-code" id="displayRoomId">------</div>
+            <div class="exam-name" id="displayExamName"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải thông tin...</div>
         </div>
-        <div class="host-controls">
-            <select class="host-select" id="selectExamInLobby">
-                <option value="">-- Đang tải bộ đề từ hệ thống... --</option>
-            </select>
-            <button class="btn-panel btn-invite-friend" id="btnOpenInviteModal">
-                <i class="fa-solid fa-user-plus"></i> Mời bạn bè
-            </button>
-            <button class="btn-panel btn-copy-link" id="btnCopyLink">
-                <i class="fa-solid fa-copy"></i> Sao chép Link
-            </button>
-        </div>
-    </div>
 
-    <div class="participants-container">
-        <div class="participants-count">Người chơi trong phòng: <span id="playerCount">0</span></div>
-        <div class="grid" id="participantsGrid">
+        <div class="host-panel" id="hostPanel">
+            <div class="host-panel-title"><i class="fa-solid fa-crown"></i> Bảng điều khiển của chủ phòng</div>
+            <div class="host-controls">
+                <select class="host-select" id="selectExamInLobby">
+                    <option value="">-- Đang tải bộ đề từ hệ thống... --</option>
+                </select>
+                <button class="btn-panel btn-invite-friend" id="btnOpenInviteModal">
+                    <i class="fa-solid fa-user-plus"></i> Mời bạn bè
+                </button>
+                <button class="btn-panel btn-copy-link" id="btnCopyLink">
+                    <i class="fa-solid fa-copy"></i> Sao chép Link
+                </button>
             </div>
+        </div>
+
+        <div class="participants-container">
+            <div class="participants-count">Người chơi trong phòng: <span id="playerCount">0</span></div>
+            <div class="grid" id="participantsGrid">
+                </div>
+        </div>
+
+        <div class="footer-action">
+            <button id="btnStart" class="btn-start" disabled><i class="fa-solid fa-rocket"></i> BẮT ĐẦU THI</button>
+            <div id="waitingText" class="waiting-text">Đang chờ chủ phòng cấu hình bài thi...</div>
+        </div>
     </div>
 
-    <div class="footer-action">
-        <button id="btnStart" class="btn-start" disabled><i class="fa-solid fa-rocket"></i> BẮT ĐẦU THI</button>
-        <div id="waitingText" class="waiting-text">Đang chờ chủ phòng cấu hình bài thi...</div>
+    <div id="state2Leaderboard">
+        <div class="leaderboard-header">
+            <div class="leaderboard-title" id="lbMainTitle"><i class="fa-solid fa-trophy"></i> Bảng Xếp Hạng Trực Tiếp</div>
+            <div class="leaderboard-subtitle" id="lbSubTitle">Tiến độ làm bài của các thành viên</div>
+        </div>
+
+        <div class="table-container">
+            <table class="lb-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; padding-left: 30px;">Học viên</th>
+                        <th>Trạng thái</th>
+                        <th>Điểm số</th>
+                        <th>Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                    </tbody>
+            </table>
+        </div>
+
+        <button id="btnEndRoom" class="btn-end-room" style="display: none;"><i class="fa-solid fa-flag-checkered"></i> KẾT THÚC PHÒNG THI</button>
     </div>
 
     <div class="modal" id="inviteFriendModal">
