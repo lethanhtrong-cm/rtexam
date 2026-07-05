@@ -65,10 +65,10 @@ function initNotifications(userEmail) {
                 timeString = date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) + ' ' + date.toLocaleDateString('vi-VN');
             }
 
-            // Dựng HTML cho từng thông báo
+            // Dựng HTML cho từng thông báo - Đã thêm cursor: pointer
             const itemClass = data.isRead ? 'noti-item' : 'noti-item unread';
             const html = `
-                <div class="${itemClass}" data-id="${id}">
+                <div class="${itemClass}" data-id="${id}" style="cursor: pointer; transition: background 0.2s;">
                     <div class="noti-icon">
                         <i class="fa-solid ${data.type === 'room_invite' ? 'fa-envelope-open-text' : 'fa-bell'}"></i>
                     </div>
@@ -91,11 +91,11 @@ function initNotifications(userEmail) {
             notiBadgeCount.style.display = 'none';
         }
 
-        // Gắn sự kiện click đánh dấu đã đọc
+        // Gắn sự kiện click đánh dấu đã đọc VÀ chuyển hướng
         document.querySelectorAll('.noti-item').forEach(item => {
             item.addEventListener('click', async () => {
                 const notiId = item.getAttribute('data-id');
-                // Lấy lại data tương ứng với thông báo được click
+                // Tìm lại data của thông báo bị click để lấy roomId
                 const notiDataDoc = snapshot.docs.find(d => d.id === notiId);
                 const notiData = notiDataDoc ? notiDataDoc.data() : null;
 
@@ -108,7 +108,7 @@ function initNotifications(userEmail) {
                     }
                 }
 
-                // XỬ LÝ CHUYỂN HƯỚNG NẾU LÀ LỜI MỜI PHÒNG THI
+                // Chuyển hướng người dùng vào phòng chờ nếu là lời mời
                 if (notiData && notiData.type === 'room_invite' && notiData.roomId) {
                     window.location.href = `lobby.html?roomId=${notiData.roomId}`;
                 }
