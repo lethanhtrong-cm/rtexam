@@ -86,14 +86,34 @@
             margin-bottom: 5px;
             font-weight: 700;
         }
+        
+        /* Chứa Mã phòng & Nút Copy */
+        .room-code-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
         .room-code {
             font-size: 4.5rem;
             font-weight: 900;
             letter-spacing: 8px;
             color: #084298;
-            margin-bottom: 15px;
             line-height: 1;
+            margin-bottom: 0;
         }
+        .btn-copy-code {
+            background: transparent;
+            border: none;
+            color: #6b7280;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-copy-code:hover { transform: scale(1.1); color: #0d6efd; }
+        .btn-copy-code:active { transform: scale(0.95); }
+
         .exam-name {
             font-size: 1.4rem;
             font-weight: 700;
@@ -162,10 +182,15 @@
             gap: 8px;
             transition: all 0.2s;
         }
-        .btn-invite-friend { background: #0d6efd; color: white; }
-        .btn-invite-friend:hover { background: #0b5ed7; }
-        .btn-copy-link { background: #6c757d; color: white; }
-        .btn-copy-link:hover { background: #5c636a; }
+        /* Cập nhật màu sắc cho các nút */
+        .btn-invite-friend { background: #6f42c1; color: white; }
+        .btn-invite-friend:hover { background: #59339d; }
+        
+        .btn-copy-link { background: #0d6efd; color: white; }
+        .btn-copy-link:hover { background: #0b5ed7; }
+
+        .btn-lock-room { background: #dc3545; color: white; }
+        .btn-lock-room:hover { filter: brightness(0.9); }
 
         /* Card 2: Participants Area */
         .participants-header {
@@ -183,63 +208,23 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 20px;
             justify-items: center;
         }
-        .participant-card {
-            background: #f9fafb;
-            padding: 15px 10px;
-            border-radius: 12px;
-            text-align: center;
-            width: 100%;
-            border: 1px solid #e5e7eb;
-            position: relative;
-            transition: transform 0.2s;
-        }
-        .participant-card:hover { transform: translateY(-3px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .participant-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: 3px solid #0d6efd;
-            margin-bottom: 10px;
-            object-fit: cover;
-        }
-        .participant-name {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #1f2937;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
-        .grid-badge {
-            display: inline-block;
-            margin-top: 5px;
-            font-size: 0.7rem;
-            padding: 3px 8px;
-            border-radius: 20px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        .grid-badge-playing { background: #cfe2ff; color: #084298; }
-        .grid-badge-finished { background: #d1e7dd; color: #0f5132; }
-        .grid-badge-waiting { background: #e2e3e5; color: #41464b; }
         
         /* Kick Button */
         .btn-kick {
             position: absolute;
-            top: -8px;
-            right: -8px;
+            top: 6px;
+            right: 6px;
             width: 26px;
             height: 26px;
             border-radius: 50%;
             background: #dc3545;
             color: white;
-            border: 2px solid #fff;
-            font-size: 0.7rem;
+            border: none;
+            font-size: 0.8rem;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -247,6 +232,7 @@
             transition: all 0.2s;
             opacity: 0;
             visibility: hidden;
+            z-index: 10;
         }
         .participant-card:hover .btn-kick { opacity: 1; visibility: visible; }
         .btn-kick:hover { background: #bb2d3b; transform: scale(1.1); }
@@ -258,12 +244,15 @@
             justify-content: flex-end;
             align-items: center;
         }
+        
+        /* Cập nhật nút Bắt đầu thi theo yêu cầu */
         .btn-start {
-            background: #198754;
+            background: #198754; 
             color: white;
-            font-size: 1.2rem;
+            font-size: 1rem; /* Thu nhỏ cỡ chữ */
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* Font hệ chuẩn */
             font-weight: 800;
-            padding: 12px 40px;
+            padding: 12px 35px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -354,7 +343,10 @@
             <div class="dashboard-card">
                 <div class="center-area">
                     <div class="room-label"><i class="fa-solid fa-door-open"></i> Mã Phòng</div>
-                    <div class="room-code" id="displayRoomId">------</div>
+                    <div class="room-code-container">
+                        <div class="room-code" id="displayRoomId">------</div>
+                        <button id="btnCopyRoomCode" class="btn-copy-code" title="Sao chép mã phòng"><i class="fa-solid fa-copy"></i></button>
+                    </div>
                     <div class="exam-name" id="displayExamName"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải thông tin...</div>
                 </div>
 
@@ -368,7 +360,10 @@
                             <i class="fa-solid fa-user-plus"></i> Mời bạn bè
                         </button>
                         <button class="btn-panel btn-copy-link" id="btnCopyLink">
-                            <i class="fa-solid fa-copy"></i> Copy Link
+                            <i class="fa-solid fa-link"></i> Sao chép Link
+                        </button>
+                        <button class="btn-panel btn-lock-room" id="btnLockRoom" data-locked="false">
+                            <i class="fa-solid fa-lock-open"></i> Khóa phòng
                         </button>
                     </div>
                 </div>
