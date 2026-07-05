@@ -485,15 +485,22 @@ function renderExams() {
             }
 
             // --- GHÉP CARD VÀO TRONG ROW HTML, THÊM MARGIN CHO CÁC THẺ ---
+            // CẬP NHẬT UI ĐÁNH GIÁ VÀ LƯỢT THI
             rowHtml += `
                 <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: hidden; position: relative;">
                     <div class="card-body p-4 d-flex flex-column h-100">
                         ${headerHtml}
                         ${mergedTagsHtml}
                         
-                        <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; font-size: 0.9rem; color: #6c757d; margin-bottom: 20px;">
-                            <div class="rating"><span class="fw-bold text-dark">${exam.rating}</span> <i class="fa-solid fa-star text-warning"></i> <span>(${exam.ratingCount})</span></div>
-                            <div class="attempts"><i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi</div>
+                        <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #6b7280; font-weight: normal; margin-bottom: 20px;">
+                            <div class="rating" style="display: flex; align-items: center; gap: 5px;">
+                                <span>${exam.rating}</span> 
+                                <i class="fa-solid fa-star" style="color: #fbbf24;"></i> 
+                                <span>(${exam.ratingCount})</span>
+                            </div>
+                            <div class="attempts" style="display: flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi
+                            </div>
                         </div>
                         
                         <div>
