@@ -58,80 +58,115 @@ const tabTitleMap = {
 
 // Hàm điều hướng tab dùng chung toàn bộ hệ thống (Export để file khác có thể gọi)
 export function switchTab(targetTabId, titleOverride) {
-    mainMenuItems.forEach(m => m.classList.remove('active'));
-    accordionHeaders.forEach(h => h.classList.remove('active'));
-    subMenuItems.forEach(sm => sm.classList.remove('active'));
-    tabPanes.forEach(pane => pane.classList.remove('active'));
+    if (mainMenuItems) mainMenuItems.forEach(m => m.classList.remove('active'));
+    if (accordionHeaders) accordionHeaders.forEach(h => h.classList.remove('active'));
+    if (subMenuItems) subMenuItems.forEach(sm => sm.classList.remove('active'));
+    if (tabPanes) tabPanes.forEach(pane => pane.classList.remove('active'));
 
     const targetPane = document.getElementById(targetTabId);
     if (targetPane) {
         targetPane.classList.add('active');
+    }
+    
+    if (currentTabTitle) {
         currentTabTitle.textContent = titleOverride || tabTitleMap[targetTabId] || 'Bảng Điều Khiển';
     }
 }
 
 // Đăng ký sự kiện Click cho các Menu độc lập
-mainMenuItems.forEach(item => {
-    item.addEventListener('click', () => {
-        const targetId = item.getAttribute('data-target');
-        switchTab(targetId);
-        item.classList.add('active');
+if (mainMenuItems) {
+    mainMenuItems.forEach(item => {
+        if (item) {
+            item.addEventListener('click', () => {
+                const targetId = item.getAttribute('data-target');
+                if (targetId) {
+                    switchTab(targetId);
+                }
+                item.classList.add('active');
+            });
+        }
     });
-});
+}
 
 // Đăng ký sự kiện Click cho Accordion Header
-accordionHeaders.forEach(header => {
-    header.addEventListener('click', () => {
-        const content = header.nextElementSibling;
-        const icon = header.querySelector('.accordion-icon');
-        
-        content.classList.toggle('show');
-        if (icon) icon.style.transform = content.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
+if (accordionHeaders) {
+    accordionHeaders.forEach(header => {
+        if (header) {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                if (!content) return;
+                
+                const icon = header.querySelector('.accordion-icon');
+                
+                content.classList.toggle('show');
+                if (icon) icon.style.transform = content.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
 
-        const targetId = header.getAttribute('data-target');
-        switchTab(targetId, `${tabTitleMap[targetId]} - Tất cả`);
-        header.classList.add('active');
-        
-        const allSubMenu = content.querySelector('.sub-menu-item[data-technique="all"]');
-        if (allSubMenu) allSubMenu.classList.add('active');
+                const targetId = header.getAttribute('data-target');
+                if (targetId) {
+                    switchTab(targetId, `${tabTitleMap[targetId]} - Tất cả`);
+                }
+                header.classList.add('active');
+                
+                const allSubMenu = content.querySelector('.sub-menu-item[data-technique="all"]');
+                if (allSubMenu) allSubMenu.classList.add('active');
+            });
+        }
     });
-});
+}
 
 // Đăng ký sự kiện Click cho các Sub-menus (MRI, CT, Đã lưu...)
-subMenuItems.forEach(subItem => {
-    subItem.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const parentAccordion = subItem.closest('.menu-accordion');
-        const parentHeader = parentAccordion.querySelector('.accordion-header');
-        const targetId = parentHeader.getAttribute('data-target');
-        
-        const techniqueName = subItem.textContent.trim();
-        switchTab(targetId, `${tabTitleMap[targetId]} - ${techniqueName}`);
-        
-        subItem.classList.add('active');
-        parentHeader.classList.add('active');
+if (subMenuItems) {
+    subMenuItems.forEach(subItem => {
+        if (subItem) {
+            subItem.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const parentAccordion = subItem.closest('.menu-accordion');
+                
+                if (parentAccordion) {
+                    const parentHeader = parentAccordion.querySelector('.accordion-header');
+                    if (parentHeader) {
+                        const targetId = parentHeader.getAttribute('data-target');
+                        const techniqueName = subItem.textContent.trim();
+                        if (targetId) {
+                            switchTab(targetId, `${tabTitleMap[targetId]} - ${techniqueName}`);
+                        }
+                        parentHeader.classList.add('active');
+                    }
+                }
+                
+                subItem.classList.add('active');
+            });
+        }
     });
-});
+}
 
 // Xử lý Logic Dropdown Menu ở Topbar
 const userMenuToggle = document.getElementById('userMenuToggle');
 const userDropdown = document.getElementById('userDropdown');
 const btnManageProfile = document.getElementById('btnManageProfile');
 
-userMenuToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    userDropdown.classList.toggle('show');
-});
+if (userMenuToggle) {
+    userMenuToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (userDropdown) {
+            userDropdown.classList.toggle('show');
+        }
+    });
+}
 
 document.addEventListener('click', (e) => {
-    if (!userMenuToggle.contains(e.target)) {
-        userDropdown.classList.remove('show');
+    if (userMenuToggle && !userMenuToggle.contains(e.target)) {
+        if (userDropdown) {
+            userDropdown.classList.remove('show');
+        }
     }
 });
 
-btnManageProfile.addEventListener('click', () => {
-    switchTab('tab-profile');
-});
+if (btnManageProfile) {
+    btnManageProfile.addEventListener('click', () => {
+        switchTab('tab-profile');
+    });
+}
 
 // =========================================================================
 // 4. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI TOPBAR
@@ -151,25 +186,46 @@ function renderAuthInfo(user) {
     const name = user.displayName || "Người dùng ẩn danh";
     const fallbackPhotoUrl = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0056b3&color=fff`;
 
-    document.getElementById("topbarName").textContent = name;
-    document.getElementById("topbarAvatar").src = fallbackPhotoUrl;
+    const elTopbarName = document.getElementById("topbarName");
+    if (elTopbarName) elTopbarName.textContent = name;
 
-    document.getElementById("displayEmail").textContent = email;
-    document.getElementById("paymentEmail").textContent = email; 
-    document.getElementById("displayName").textContent = name;
-    document.getElementById("userAvatar").src = fallbackPhotoUrl;
+    const elTopbarAvatar = document.getElementById("topbarAvatar");
+    if (elTopbarAvatar) elTopbarAvatar.src = fallbackPhotoUrl;
+
+    const elDisplayEmail = document.getElementById("displayEmail");
+    if (elDisplayEmail) elDisplayEmail.textContent = email;
+
+    const elPaymentEmail = document.getElementById("paymentEmail");
+    if (elPaymentEmail) elPaymentEmail.textContent = email; 
+
+    const elDisplayName = document.getElementById("displayName");
+    if (elDisplayName) elDisplayName.textContent = name;
+
+    const elUserAvatar = document.getElementById("userAvatar");
+    if (elUserAvatar) elUserAvatar.src = fallbackPhotoUrl;
     
     const inputName = document.getElementById("inputName");
     if(inputName) inputName.value = user.displayName || "";
 }
 
 function setVipInactive() {
-    document.getElementById("vipStatusBadge").textContent = "Chưa kích hoạt";
-    document.getElementById("vipStatusBadge").className = "status-badge status-unactive";
-    document.getElementById("vipStatusTab3").textContent = "Chưa kích hoạt Tài khoản Pro";
-    document.getElementById("vipStatusTab3").className = "status-badge status-unactive";
-    document.getElementById("vipStartDate").textContent = "Không xác định";
-    document.getElementById("vipEndDate").textContent = "Không xác định";
+    const elVipStatusBadge = document.getElementById("vipStatusBadge");
+    if (elVipStatusBadge) {
+        elVipStatusBadge.textContent = "Chưa kích hoạt";
+        elVipStatusBadge.className = "status-badge status-unactive";
+    }
+
+    const elVipStatusTab3 = document.getElementById("vipStatusTab3");
+    if (elVipStatusTab3) {
+        elVipStatusTab3.textContent = "Chưa kích hoạt Tài khoản Pro";
+        elVipStatusTab3.className = "status-badge status-unactive";
+    }
+
+    const elVipStartDate = document.getElementById("vipStartDate");
+    if (elVipStartDate) elVipStartDate.textContent = "Không xác định";
+
+    const elVipEndDate = document.getElementById("vipEndDate");
+    if (elVipEndDate) elVipEndDate.textContent = "Không xác định";
     
     const statAccount = document.getElementById("statAccountStatus");
     if (statAccount) statAccount.textContent = "Thường";
@@ -204,18 +260,34 @@ async function fetchUserData(user) {
             }
 
             if (currentUserData.avatarBase64) {
-                document.getElementById("userAvatar").src = currentUserData.avatarBase64;
-                document.getElementById("topbarAvatar").src = currentUserData.avatarBase64; 
+                const elUserAvatar = document.getElementById("userAvatar");
+                if (elUserAvatar) elUserAvatar.src = currentUserData.avatarBase64;
+
+                const elTopbarAvatar = document.getElementById("topbarAvatar");
+                if (elTopbarAvatar) elTopbarAvatar.src = currentUserData.avatarBase64; 
             }
 
             if (currentUserData.isVip) {
-                document.getElementById("vipStatusBadge").textContent = "Đã kích hoạt Pro";
-                document.getElementById("vipStatusBadge").className = "status-badge status-active";
-                document.getElementById("vipStatusTab3").textContent = "Tài khoản PRO đang hoạt động";
-                document.getElementById("vipStatusTab3").className = "status-badge status-active";
-                document.getElementById("vipStartDate").textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
-                document.getElementById("vipEndDate").textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
-                document.getElementById("statAccountStatus").textContent = "PRO";
+                const elVipStatusBadge = document.getElementById("vipStatusBadge");
+                if (elVipStatusBadge) {
+                    elVipStatusBadge.textContent = "Đã kích hoạt Pro";
+                    elVipStatusBadge.className = "status-badge status-active";
+                }
+
+                const elVipStatusTab3 = document.getElementById("vipStatusTab3");
+                if (elVipStatusTab3) {
+                    elVipStatusTab3.textContent = "Tài khoản PRO đang hoạt động";
+                    elVipStatusTab3.className = "status-badge status-active";
+                }
+
+                const elVipStartDate = document.getElementById("vipStartDate");
+                if (elVipStartDate) elVipStartDate.textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
+
+                const elVipEndDate = document.getElementById("vipEndDate");
+                if (elVipEndDate) elVipEndDate.textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
+
+                const statAccount = document.getElementById("statAccountStatus");
+                if (statAccount) statAccount.textContent = "PRO";
 
                 if (topbarVipContainer) {
                     topbarVipContainer.innerHTML = `
@@ -254,10 +326,16 @@ onAuthStateChanged(auth, async (user) => {
 // =========================================================================
 // 5. SỰ KIỆN NÚT CƠ BẢN
 // =========================================================================
-document.getElementById("btnLogout").addEventListener("click", () => {
-    signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
-});
+const btnLogout = document.getElementById("btnLogout");
+if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+        signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
+    });
+}
 
-document.getElementById("btnConfirmPayment").addEventListener("click", () => {
-    alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
-});
+const btnConfirmPayment = document.getElementById("btnConfirmPayment");
+if (btnConfirmPayment) {
+    btnConfirmPayment.addEventListener("click", () => {
+        alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
+    });
+}
