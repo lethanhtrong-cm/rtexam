@@ -50,7 +50,7 @@
         
         /* ---------------- STATE 1: PHÒNG CHỜ ---------------- */
         #state1Waiting {
-            display: block; /* Sẽ được JS điều khiển */
+            display: block; 
             flex: 1;
         }
         .center-area {
@@ -192,6 +192,9 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
             animation: popIn 0.5s ease forwards;
             border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .participant-card:hover {
             transform: scale(1.08);
@@ -203,7 +206,7 @@
             height: 70px;
             border-radius: 50%;
             border: 3px solid #ffdf00;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             object-fit: cover;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
@@ -213,7 +216,20 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            width: 100%;
         }
+        .grid-badge {
+            display: inline-block;
+            margin-top: 6px;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .grid-badge-playing { background: #3498db; color: white; }
+        .grid-badge-finished { background: #2ecc71; color: white; }
+        .grid-badge-waiting { background: #95a5a6; color: white; }
 
         /* Footer Action */
         .footer-action {
@@ -263,7 +279,7 @@
 
         /* ---------------- STATE 2: LEADERBOARD ---------------- */
         #state2Leaderboard {
-            display: none; /* Sẽ được JS điều khiển */
+            display: none; 
             flex: 1;
             padding: 40px 20px 100px 20px;
             max-width: 1000px;
@@ -315,12 +331,8 @@
             font-size: 1.1rem;
             font-weight: 700;
         }
-        .lb-table tr:last-child td {
-            border-bottom: none;
-        }
-        .lb-table tbody tr:hover {
-            background: rgba(255,255,255,0.05);
-        }
+        .lb-table tr:last-child td { border-bottom: none; }
+        .lb-table tbody tr:hover { background: rgba(255,255,255,0.05); }
         .td-user {
             display: flex;
             align-items: center;
@@ -347,7 +359,7 @@
         .badge-playing { background: #3498db; color: white; box-shadow: 0 0 10px rgba(52,152,219,0.5); animation: pulse 1.5s infinite; }
         .badge-finished { background: #2ecc71; color: white; }
 
-        /* End Room Button */
+        /* Action Buttons */
         .btn-end-room {
             background: #e74c3c;
             color: white;
@@ -361,29 +373,33 @@
             box-shadow: 0 6px 0 #c0392b;
             transition: all 0.2s;
             display: block;
-            margin: 30px auto 0 auto;
+            margin: 30px auto 15px auto;
         }
-        .btn-end-room:active {
-            transform: translateY(6px);
-            box-shadow: none;
+        .btn-end-room:active { transform: translateY(6px); box-shadow: none; }
+        
+        .btn-secondary {
+            background: #7f8c8d;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 900;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 6px 0 #576574;
+            transition: all 0.2s;
+            display: block;
+            margin: 15px auto 0 auto;
         }
+        .btn-secondary:active { transform: translateY(6px); box-shadow: none; }
 
         /* Modal Mời Bạn Bè */
         .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.3s ease;
-            z-index: 999;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 999;
         }
         .modal.active { opacity: 1; pointer-events: auto; }
         .modal-content {
@@ -476,6 +492,7 @@
         </div>
 
         <button id="btnEndRoom" class="btn-end-room" style="display: none;"><i class="fa-solid fa-flag-checkered"></i> KẾT THÚC PHÒNG THI</button>
+        <button id="btnBackToLobby" class="btn-secondary"><i class="fa-solid fa-arrow-left"></i> QUAY LẠI PHÒNG CHỜ</button>
     </div>
 
     <div class="modal" id="inviteFriendModal">
