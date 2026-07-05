@@ -93,6 +93,19 @@ function switchUIState(state) {
     }
 }
 
+// Hàm phân tích thời gian an toàn tránh crash
+function parseTimeSafely(timeVal) {
+    if (typeof timeVal === 'number') return timeVal;
+    if (typeof timeVal === 'string') {
+        const parts = timeVal.split(':');
+        if (parts.length === 2) {
+            return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        }
+    }
+    // Trả về một con số cực lớn nếu undefined hoặc lỗi format (để bị xếp chót)
+    return 999999;
+}
+
 async function initLobby() {
     const roomRef = doc(db, 'rooms', roomId);
     const participantRef = doc(db, `rooms/${roomId}/participants/${currentUser.uid}`);
@@ -124,7 +137,6 @@ async function initLobby() {
         });
 
         // 2. LẮNG NGHE REAL-TIME DANH SÁCH PARTICIPANTS (RENDER UI CHO TẤT CẢ MỌI NGƯỜI)
-        // Đặt lắng nghe này ở cấp cao nhất để đảm bảo Guest luôn thấy dữ liệu bảng xếp hạng
         onSnapshot(participantsColl, (snapshot) => {
             // Cập nhật lại trạng thái local của bản thân
             snapshot.forEach(pDoc => {
@@ -142,16 +154,26 @@ async function initLobby() {
             const pArray = [];
             snapshot.forEach(doc => pArray.push(doc.data()));
             
-            // Thuật toán xếp hạng: Điểm cao xếp trên, nếu bằng điểm thì ai hoàn thành nhanh hơn xếp trên
+            // THUẬT TOÁN XẾP HẠNG AN TOÀN TUYỆT ĐỐI (3 LỚP ƯU TIÊN)
             pArray.sort((a, b) => {
-                const scoreA = typeof a.score === 'number' ? a.score : 0;
-                const scoreB = typeof b.score === 'number' ? b.score : 0;
+                // Ưu tiên 1: Người thi xong (finished) luôn nằm trên cùng
+                const isAFinished = (a.status === 'finished') ? 1 : 0;
+                const isBFinished = (b.status === 'finished') ? 1 : 0;
+                if (isAFinished !== isBFinished) {
+                    return isBFinished - isAFinished; // 1 (finished) xếp trước 0
+                }
+
+                // Ưu tiên 2: Điểm số giảm dần
+                const scoreA = (typeof a.score === 'number') ? a.score : 0;
+                const scoreB = (typeof b.score === 'number') ? b.score : 0;
                 if (scoreB !== scoreA) {
                     return scoreB - scoreA; 
                 }
-                const timeA = a.timeTaken || '99:99';
-                const timeB = b.timeTaken || '99:99';
-                return timeA.localeCompare(timeB); 
+
+                // Ưu tiên 3: Thời gian làm bài nhanh hơn (tăng dần)
+                const timeSecA = parseTimeSafely(a.timeTaken);
+                const timeSecB = parseTimeSafely(b.timeTaken);
+                return timeSecA - timeSecB;
             });
 
             // Lặp qua mảng và render HTML cho CẢ 2 TRẠNG THÁI (Waiting Grid & Leaderboard Table)
@@ -172,7 +194,7 @@ async function initLobby() {
                 } else if (pData.status === 'finished') {
                     badgeHTML = '<span class="badge badge-finished"><i class="fa-solid fa-check-double"></i> Đã nộp bài</span>';
                     displayScore = `${pData.score || 0} đ`;
-                    displayTime = pData.timeTaken || '00:00';
+                    displayTime = typeof pData.timeTaken === 'string' ? pData.timeTaken : '00:00';
                 } else {
                     badgeHTML = '<span class="badge badge-waiting"><i class="fa-solid fa-hourglass-half"></i> Đang chờ</span>';
                 }
