@@ -441,19 +441,43 @@
         .stat-card-account { border-left: 5px solid #d97706; }
         .stat-card-account .stat-icon { color: #d97706; background: rgba(217, 119, 6, 0.12); }
 
-        /* ACTION BAR HIỆN ĐẠI */
+        /* ACTION BAR HIỆN ĐẠI (TÁI CẤU TRÚC THEO DÒNG) */
         .action-bar {
-            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-            gap: 20px; background: var(--white); padding: 15px 20px; border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 25px; border: 1px solid var(--border-color);
+            display: flex; 
+            flex-direction: column; 
+            background: var(--white); 
+            padding: 20px; 
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03); 
+            margin-bottom: 25px; 
+            border: 1px solid var(--border-color);
         }
-        .action-left { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; flex: 1; }
-        .action-search { position: relative; flex: 0 1 320px; min-width: 220px; }
+        
+        .action-search { position: relative; min-width: 220px; }
         .action-search i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.95rem; pointer-events: none; }
         .search-input { width: 100%; padding: 9px 20px 9px 40px; border-radius: 30px; border: 1px solid var(--border-color); background-color: var(--gray-bg); color: var(--text-main); font-family: inherit; font-size: 0.95rem; outline: none; transition: all 0.2s ease; box-sizing: border-box; }
         .search-input:focus { background-color: var(--white); border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
 
-        .action-right { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        /* Nút Tạo phòng thi nổi bật */
+        #btnOpenCreateRoom {
+            background: linear-gradient(135deg, #3b82f6, #2563eb) !important; 
+            color: white !important; 
+            border: none; 
+            font-weight: 600; 
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); 
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #btnOpenCreateRoom:hover {
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+        }
+
         .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .filter-label { font-weight: 600; color: var(--text-main); font-size: 0.95rem; }
         .pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -663,54 +687,62 @@
                         </div>
                     </div>
 
+                    <!-- ACTION BAR ĐÃ ĐƯỢC TÁI CẤU TRÚC -->
                     <div class="action-bar">
-                        <div class="action-left">
-                            <div class="action-search">
+                        
+                        <!-- DÒNG 1: Tìm kiếm & Nút Tạo phòng thi -->
+                        <div style="display: flex; justify-content: space-between; gap: 15px; width: 100%; align-items: center;">
+                            <div class="action-search" style="flex: 1;">
                                 <i class="fa-solid fa-magnifying-glass"></i>
                                 <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm...">
                             </div>
-                            <div class="filter-group">
-                                <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
-                                <div class="pill-group" id="levelFilter">
-                                    <button class="pill-btn active" data-level="all">Tất cả</button>
-                                    <button class="pill-btn" data-level="Khó">Khó</button>
-                                    <button class="pill-btn" data-level="Trung bình">Trung bình</button>
-                                    <button class="pill-btn" data-level="Dễ">Dễ</button>
-                                </div>
-                            </div>
-                            <div class="filter-group">
-                                <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
-                                <div class="pill-group" id="timeFilter">
-                                    <button class="pill-btn active" data-time="all">Tất cả</button>
-                                    <button class="pill-btn" data-time="15">15 phút</button>
-                                    <button class="pill-btn" data-time="30">30 phút</button>
-                                    <button class="pill-btn" data-time="45">45 phút</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="action-right">
-                            <!-- NÚT TẠO PHÒNG THI MỚI THÊM VÀO -->
-                            <button id="btnOpenCreateRoom" class="btn-primary btn-success">
+                            <button id="btnOpenCreateRoom">
                                 <i class="fa-solid fa-people-roof"></i> Tạo phòng thi
                             </button>
+                        </div>
 
-                            <div class="sort-wrapper">
-                                <i class="fa-solid fa-sort-amount-down"></i>
-                                <select id="sortFilter" class="modern-select">
-                                    <option value="newest">Mới nhất</option>
-                                    <option value="highest_rating">Đánh giá cao nhất</option>
-                                    <option value="most_attempts">Lượt thi nhiều nhất</option>
-                                    <option value="only_vip">Chỉ hiện đề PRO</option>
-                                    <option value="only_free">Chỉ hiện đề Miễn phí</option>
-                                </select>
+                        <!-- DÒNG 2: Bộ lọc chi tiết -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%; margin-top: 15px;">
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+                                <div class="filter-group">
+                                    <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
+                                    <div class="pill-group" id="levelFilter">
+                                        <button class="pill-btn active" data-level="all">Tất cả</button>
+                                        <button class="pill-btn" data-level="Khó">Khó</button>
+                                        <button class="pill-btn" data-level="Trung bình">Trung bình</button>
+                                        <button class="pill-btn" data-level="Dễ">Dễ</button>
+                                    </div>
+                                </div>
+                                <div class="filter-group">
+                                    <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
+                                    <div class="pill-group" id="timeFilter">
+                                        <button class="pill-btn active" data-time="all">Tất cả</button>
+                                        <button class="pill-btn" data-time="15">15 phút</button>
+                                        <button class="pill-btn" data-time="30">30 phút</button>
+                                        <button class="pill-btn" data-time="45">45 phút</button>
+                                    </div>
+                                </div>
                             </div>
                             
-                            <div class="view-toggle-group">
-                                <button class="view-btn active" data-view="grid"><i class="fa-solid fa-border-all"></i></button>
-                                <button class="view-btn" data-view="list"><i class="fa-solid fa-list"></i></button>
+                            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                                <div class="sort-wrapper">
+                                    <i class="fa-solid fa-sort-amount-down"></i>
+                                    <select id="sortFilter" class="modern-select">
+                                        <option value="newest">Mới nhất</option>
+                                        <option value="highest_rating">Đánh giá cao nhất</option>
+                                        <option value="most_attempts">Lượt thi nhiều nhất</option>
+                                        <option value="only_vip">Chỉ hiện đề PRO</option>
+                                        <option value="only_free">Chỉ hiện đề Miễn phí</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="view-toggle-group">
+                                    <button class="view-btn active" data-view="grid"><i class="fa-solid fa-border-all"></i></button>
+                                    <button class="view-btn" data-view="list"><i class="fa-solid fa-list"></i></button>
+                                </div>
                             </div>
                         </div>
+
                     </div>
 
                     <div id="examListContainer" class="grid-view">
