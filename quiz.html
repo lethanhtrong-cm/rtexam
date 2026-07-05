@@ -9,7 +9,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #f3f4f6; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
         
-        /* 1. LỚP CSS CHỐNG BÔI ĐEN */
+        /* LỚP CSS CHỐNG BÔI ĐEN */
         body.no-select {
             user-select: none;
             -webkit-user-select: none;
@@ -146,7 +146,7 @@
         <div class="timer-container" id="timer-container-box"><span id="countdown">15:00</span></div>
         
         <div class="header-actions">
-            <button id="btn-back-dashboard" class="btn-logout" title="Quay về Dashboard">Về phòng chờ</button>
+            <button id="btn-back-dashboard" class="btn-logout" title="Quay về">Về phòng chờ</button>
             <button id="btn-logout" class="btn-logout">Đăng xuất</button>
         </div>
     </header>
@@ -182,7 +182,7 @@
     <!-- Toast Message -->
     <div id="toast-message">Thông báo</div>
 
-    <!-- HTML Modal Xác nhận nộp bài (thay cho confirm() hệ thống) -->
+    <!-- HTML Modal Xác nhận nộp bài -->
     <div id="confirm-submit-modal" class="modal-overlay" style="z-index: 10000;">
         <div class="modal-content" style="max-width: 400px; padding: 30px;">
             <div class="modal-title" style="color: #1f2937; margin-bottom: 15px; font-size: 20px;">Xác nhận nộp bài</div>
@@ -281,7 +281,7 @@
             }
         }
         
-        // --- HÀM HỖ TRỢ HIỂN THỊ THÔNG BÁO UI ---
+        // HÀM HỖ TRỢ HIỂN THỊ THÔNG BÁO UI
         function showToast(msg) {
             const toast = document.getElementById('toast-message');
             toast.innerText = msg;
@@ -296,15 +296,25 @@
         const urlParams = new URLSearchParams(window.location.search);
         let currentExamId = urlParams.get('examId'); 
         const currentResultId = urlParams.get('resultId'); 
+        const currentRoomId = urlParams.get('roomId'); // Lấy mã phòng nếu có
+
+        // Xử lý điều hướng thông minh giữa Lobby và Dashboard
+        function returnToLobbyOrDashboard() {
+            if (currentRoomId) {
+                redirect(`lobby.html?roomId=${currentRoomId}`);
+            } else if (currentResultId) {
+                redirect('profile.html');
+            } else {
+                redirect('dashboard.html');
+            }
+        }
 
         if (!currentExamId && !currentResultId) {
             document.body.innerHTML = `<h2 style='text-align:center; padding: 50px;'>Lỗi: Không tìm thấy mã đề thi hay bài làm. Đang chuyển hướng...</h2>`;
-            setTimeout(() => redirect('dashboard.html'), 2000);
+            setTimeout(() => returnToLobbyOrDashboard(), 2000);
         }
 
-        // ========================================================
-        // ================= ANTI CHEATING LOGIC ==================
-        // ========================================================
+        // ================= ANTI CHEATING LOGIC =================
         let warningCount = 0;
 
         function updateAntiCheatState() {
@@ -403,6 +413,14 @@
             
             btnSubmit.onclick = () => submitExam(false);
 
+            // ================= TÍNH NĂNG ROOM: BÁO ĐANG THI =================
+            if (currentRoomId && currentUser) {
+                const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
+                setDoc(participantRef, { status: 'playing' }, { merge: true })
+                    .catch(err => console.error("Lỗi cập nhật trạng thái phòng:", err));
+            }
+            // ================================================================
+
             renderAll();
             startTimer();
         }
@@ -430,10 +448,10 @@
                 document.getElementById('timer-container-box').style.display = 'none'; 
                 
                 const btnSubmit = document.getElementById('btn-submit-exam');
-                btnSubmit.innerText = "Quay lại Profile";
+                btnSubmit.innerText = "Quay lại";
                 btnSubmit.disabled = false;
                 btnSubmit.style.backgroundColor = "#3b82f6";
-                btnSubmit.onclick = () => redirect('profile.html'); 
+                btnSubmit.onclick = () => returnToLobbyOrDashboard(); 
 
                 await fetchQuestionsFromFirestore();
                 
@@ -491,7 +509,6 @@
             document.getElementById('countdown').innerText = `${minutes}:${seconds}`;
         }
 
-        // TÁCH LOGIC NỘP BÀI ĐỂ DỄ QUẢN LÝ TỰ ĐỘNG THU BÀI & MODAL
         async function executeSubmit() {
             stopTimer(); 
             isSubmitted = true; 
@@ -515,18 +532,14 @@
             let score = (correctCount / total) * 10;
             score = Math.round(score * 100) / 100; 
 
-            // ========================================================
-            // ===== TÍNH NĂNG LEADERBOARD: CỘNG ĐIỂM XP LẦN ĐẦU ======
-            // ========================================================
+            // ===== TÍNH NĂNG LEADERBOARD TOÀN CỤC: CỘNG ĐIỂM XP LẦN ĐẦU ======
             let gainedXP = 0;
             try {
-                // Bước 1: Kiểm tra xem đã từng làm mã đề này chưa
                 const resultsRef = collection(db, "results");
                 const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId));
                 const resultSnapshot = await getDocs(qResult);
                 
                 if (resultSnapshot.empty) {
-                    // Chưa làm bao giờ -> Đây là lần đầu thi
                     gainedXP = Math.round((correctCount / total) * 10 * 10);
                     
                     if (gainedXP > 0) {
@@ -535,17 +548,30 @@
                             displayName: currentUser.displayName || currentUser.email.split('@')[0],
                             email: currentUser.email,
                             photoURL: currentUser.photoURL || "",
-                            totalXP: increment(gainedXP) // Cộng dồn điểm bằng hàm increment
+                            totalXP: increment(gainedXP) 
                         }, { merge: true });
                         
-                        // Hiển thị thông báo vui vẻ
                         showToast(`🎉 Bạn đã nhận được +${gainedXP} XP cho lần đầu hoàn thành!`);
                     }
                 }
             } catch (xpError) {
                 console.error("Lỗi khi tính XP Leaderboard:", xpError);
             }
-            // ========================================================
+
+            // ================= TÍNH NĂNG ROOM: BÁO NỘP BÀI =================
+            if (currentRoomId && currentUser) {
+                try {
+                    const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
+                    await setDoc(participantRef, {
+                        status: 'finished',
+                        score: score,
+                        timeTaken: timeSpent
+                    }, { merge: true });
+                } catch (roomErr) {
+                    console.error("Lỗi cập nhật điểm vào phòng chờ:", roomErr);
+                }
+            }
+            // ================================================================
 
             renderAll(); 
             btnSubmit.innerText = "Đã nộp bài";
@@ -680,8 +706,8 @@
             document.getElementById('result-modal').classList.remove('active');
         }
 
-        document.getElementById('btn-modal-dashboard-modal').onclick = () => redirect('dashboard.html');
-        document.getElementById('btn-back-dashboard').onclick = () => redirect('dashboard.html');
+        document.getElementById('btn-modal-dashboard-modal').onclick = () => returnToLobbyOrDashboard();
+        document.getElementById('btn-back-dashboard').onclick = () => returnToLobbyOrDashboard();
 
         document.getElementById('btn-modal-retry').onclick = () => {
             closeModal();
@@ -698,7 +724,7 @@
             btnSubmit.disabled = false;
             btnSubmit.style.backgroundColor = "#3b82f6";
             btnSubmit.innerText = "Về phòng chờ";
-            btnSubmit.onclick = () => redirect('dashboard.html');
+            btnSubmit.onclick = () => returnToLobbyOrDashboard();
         };
 
         function handleOptionSelect(idx) {
@@ -723,7 +749,6 @@
                 }
             }, 300);
         }
-
 
         function renderAll() {
             if (questions.length === 0) return;
