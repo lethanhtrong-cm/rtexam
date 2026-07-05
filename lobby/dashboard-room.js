@@ -1,5 +1,5 @@
 import { auth, db } from "./dashboard-core.js";
-import { collection, addDoc, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, addDoc, setDoc, doc, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // DOM Elements - Modal Tạo Phòng
 const btnOpenCreateRoom = document.getElementById('btnOpenCreateRoom');
@@ -11,6 +11,9 @@ const btnSubmitCreateRoom = document.getElementById('btnSubmitCreateRoom');
 const roomCreatedArea = document.getElementById('roomCreatedArea');
 const generatedRoomCode = document.getElementById('generatedRoomCode');
 const btnOpenInviteModal = document.getElementById('btnOpenInviteModal');
+
+// Thêm biến để chứa nút "Vào phòng chờ" (sẽ tự động tạo nếu HTML chưa có)
+let btnEnterLobby = document.getElementById('btnEnterLobby');
 
 // DOM Elements - Modal Mời Bạn Bè
 const modalInvite = document.getElementById('inviteFriendModal');
@@ -31,6 +34,7 @@ btnOpenCreateRoom.addEventListener('click', async () => {
     roomCreatedArea.style.display = 'none';
     btnOpenInviteModal.style.display = 'none';
     btnSubmitCreateRoom.style.display = 'block';
+    if (btnEnterLobby) btnEnterLobby.style.display = 'none';
 });
 
 btnCloseCreateRoom.addEventListener('click', () => modalCreateRoom.classList.remove('active'));
@@ -80,7 +84,7 @@ btnSubmitCreateRoom.addEventListener('click', async () => {
         const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
         const roomCode = `ROOM-${randomStr}`;
 
-        // Lưu vào Firestore collection `rooms`
+        // Lưu vào Firestore collection `rooms`. Dùng setDoc để document ID chính là mã phòng
         const roomData = {
             roomId: roomCode,
             examId: selectedExamId,
@@ -89,7 +93,7 @@ btnSubmitCreateRoom.addEventListener('click', async () => {
             createdAt: serverTimestamp()
         };
 
-        await addDoc(collection(db, "rooms"), roomData);
+        await setDoc(doc(db, "rooms", roomCode), roomData);
 
         // Hiển thị UI thành công
         currentActiveRoomCode = roomCode;
@@ -97,7 +101,30 @@ btnSubmitCreateRoom.addEventListener('click', async () => {
         
         btnSubmitCreateRoom.style.display = 'none';
         roomCreatedArea.style.display = 'block';
-        btnOpenInviteModal.style.display = 'block';
+        btnOpenInviteModal.style.display = 'inline-block';
+
+        // Tạo/Hiển thị nút "Vào phòng chờ ngay"
+        if (!btnEnterLobby) {
+            btnEnterLobby = document.createElement('button');
+            btnEnterLobby.id = 'btnEnterLobby';
+            btnEnterLobby.textContent = '🚀 Vào phòng chờ ngay';
+            // Style cơ bản để nổi bật
+            btnEnterLobby.style.padding = '10px 20px';
+            btnEnterLobby.style.marginLeft = '10px';
+            btnEnterLobby.style.backgroundColor = '#28a745';
+            btnEnterLobby.style.color = '#fff';
+            btnEnterLobby.style.border = 'none';
+            btnEnterLobby.style.borderRadius = '5px';
+            btnEnterLobby.style.cursor = 'pointer';
+            btnEnterLobby.style.fontWeight = 'bold';
+            roomCreatedArea.appendChild(btnEnterLobby);
+        }
+        btnEnterLobby.style.display = 'inline-block';
+        
+        // Sự kiện chuyển hướng cho Chủ phòng
+        btnEnterLobby.onclick = () => {
+            window.location.href = `lobby.html?roomId=${currentActiveRoomCode}`;
+        };
 
     } catch (error) {
         console.error("Lỗi khi tạo phòng thi:", error);
@@ -127,7 +154,7 @@ btnSendInvite.addEventListener('click', async () => {
             fromEmail: user.email,
             type: 'room_invite',
             message: `<b>${user.displayName || user.email}</b> đã mời bạn vào phòng thi cá nhân. Mã phòng: <b style="color:var(--primary-blue)">${currentActiveRoomCode}</b>`,
-            roomCode: currentActiveRoomCode,
+            roomId: currentActiveRoomCode, // Sửa thành roomId để khớp với logic check bên file notification
             isRead: false,
             createdAt: serverTimestamp()
         };
