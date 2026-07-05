@@ -10,8 +10,8 @@ import { collection, doc, setDoc, addDoc } from "https://www.gstatic.com/firebas
 const GEMINI_API_KEY = "AQ.Ab8RN6KDYMMLfGbBKyL7r_8BoQxsVxxS7zM5p_pK152_EIlnXQ";
 
 // URL endpoint của mô hình gemini-1.5-flash để gọi API tạo text
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY;
-
+// Thay dòng khai báo GEMINI_URL cũ của bạn bằng cách này:
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + encodeURIComponent(GEMINI_API_KEY);
 // =========================================================================
 // 2. HÀM GỌI API GEMINI (AI GENERATION LOGIC)
 // =========================================================================
