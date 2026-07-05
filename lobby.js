@@ -1,12 +1,11 @@
 import { auth, db } from "./dashboard-core.js";
 import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// DOM Elements: Header & State Containers
+// DOM Elements
 const headerUserName = document.getElementById('headerUserName');
 const state1Waiting = document.getElementById('state1Waiting');
 const state2Leaderboard = document.getElementById('state2Leaderboard');
 
-// DOM Elements: State 1 (Phòng Chờ)
 const displayRoomId = document.getElementById('displayRoomId');
 const displayExamName = document.getElementById('displayExamName');
 const participantsGrid = document.getElementById('participantsGrid');
@@ -18,14 +17,10 @@ const selectExamInLobby = document.getElementById('selectExamInLobby');
 const btnOpenInviteModal = document.getElementById('btnOpenInviteModal');
 const btnCopyLink = document.getElementById('btnCopyLink');
 
-// DOM Elements: State 2 (Leaderboard)
 const leaderboardBody = document.getElementById('leaderboardBody');
 const btnEndRoom = document.getElementById('btnEndRoom');
 const btnBackToLobby = document.getElementById('btnBackToLobby');
-const lbMainTitle = document.getElementById('lbMainTitle');
-const lbSubTitle = document.getElementById('lbSubTitle');
 
-// DOM Elements: Modal Mời Bạn
 const inviteFriendModal = document.getElementById('inviteFriendModal');
 const closeInviteModalBtn = document.getElementById('closeInviteModalBtn');
 const inviteEmailInput = document.getElementById('inviteEmailInput');
@@ -37,10 +32,13 @@ const roomId = urlParams.get('roomId');
 let currentUser = null;
 let isExamsLoaded = false;
 let currentRoomStatus = 'waiting';
-let myParticipantStatus = 'waiting'; // waiting, playing, finished
-
-// Cờ kiểm soát luồng UI: Tránh văng lại Leaderboard khi chủ động về phòng chờ
+let myParticipantStatus = 'waiting';
 let forceLobbyView = false; 
+
+// Biến phụ trợ render UI chung
+let currentHostEmail = null;
+let currentParticipantsArray = [];
+let isKicked = false;
 
 if (!roomId) {
     alert("Không tìm thấy mã phòng hợp lệ!");
@@ -49,7 +47,6 @@ if (!roomId) {
     displayRoomId.textContent = roomId;
 }
 
-// Chờ trạng thái Đăng nhập sẵn sàng
 document.addEventListener('authReady', (e) => {
     const user = e.detail ? e.detail.user : auth.currentUser;
     if (user) {
@@ -66,19 +63,16 @@ document.addEventListener('authReady', (e) => {
     }
 });
 
-// Sự kiện chủ động quay về phòng chờ
 btnBackToLobby.addEventListener('click', () => {
     forceLobbyView = true;
     switchUIState('waiting');
 });
 
-// Load bộ đề cho Host
 async function loadExamsToDropdown() {
     if (isExamsLoaded) return;
     try {
         const examsRef = collection(db, "exams");
         const snapshot = await getDocs(query(examsRef));
-        
         selectExamInLobby.innerHTML = '<option value="">-- Chọn bộ đề để thi --</option>';
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
@@ -91,7 +85,6 @@ async function loadExamsToDropdown() {
     }
 }
 
-// Chuyển đổi giao diện (UI Toggling)
 function switchUIState(state) {
     if (state === 'waiting') {
         state1Waiting.style.display = 'block';
@@ -102,17 +95,79 @@ function switchUIState(state) {
     }
 }
 
-// Hàm phân tích thời gian an toàn tránh crash
 function parseTimeSafely(timeVal) {
     if (typeof timeVal === 'number') return timeVal;
     if (typeof timeVal === 'string') {
         const parts = timeVal.split(':');
-        if (parts.length === 2) {
-            return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-        }
+        if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
     }
     return 999999;
 }
+
+// HÀM RENDER CHUNG ĐỂ BẢO ĐẢM TÍNH ĐỒNG BỘ UI
+function renderUI() {
+    participantsGrid.innerHTML = '';
+    leaderboardBody.innerHTML = '';
+    playerCount.textContent = currentParticipantsArray.length;
+    
+    const isCurrentUserHost = (currentHostEmail === currentUser.email);
+
+    currentParticipantsArray.forEach(pData => {
+        // --- 1. RENDER STATE 1 (Phòng chờ) ---
+        let miniBadge = '';
+        if (pData.status === 'playing') miniBadge = '<span class="grid-badge grid-badge-playing">Đang thi</span>';
+        else if (pData.status === 'finished') miniBadge = '<span class="grid-badge grid-badge-finished">Đã xong</span>';
+        else miniBadge = '<span class="grid-badge grid-badge-waiting">Sẵn sàng</span>';
+
+        // Nút Kick (Chỉ xuất hiện nếu mình là Host và người đang vẽ không phải mình)
+        let kickBtnHTML = '';
+        if (isCurrentUserHost && pData.uid !== currentUser.uid) {
+            kickBtnHTML = `<button class="btn-kick" data-uid="${pData.uid}" title="Đuổi khỏi phòng"><i class="fa-solid fa-trash-can"></i></button>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'participant-card';
+        card.innerHTML = `${kickBtnHTML}<img src="${pData.photoURL}" alt="avatar" class="participant-avatar"><div class="participant-name">${pData.displayName}</div>${miniBadge}`;
+        participantsGrid.appendChild(card);
+
+        // --- 2. RENDER STATE 2 (Bảng xếp hạng) ---
+        let badgeHTML = '';
+        let displayScore = '-';
+        let displayTime = '-';
+
+        if (pData.status === 'playing') {
+            badgeHTML = '<span class="badge badge-playing"><i class="fa-solid fa-pen"></i> Đang thi</span>';
+        } else if (pData.status === 'finished') {
+            badgeHTML = '<span class="badge badge-finished"><i class="fa-solid fa-check"></i> Đã nộp bài</span>';
+            displayScore = `${pData.score || 0} đ`;
+            displayTime = typeof pData.timeTaken === 'string' ? pData.timeTaken : '00:00';
+        } else {
+            badgeHTML = '<span class="badge badge-waiting"><i class="fa-solid fa-clock"></i> Đang chờ</span>';
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="td-user"><img src="${pData.photoURL}" alt="avatar"><span>${pData.displayName}</span></td>
+            <td>${badgeHTML}</td>
+            <td style="color: #0d6efd; font-weight: 800;">${displayScore}</td>
+            <td>${displayTime}</td>
+        `;
+        leaderboardBody.appendChild(tr);
+    });
+
+    // GẮN SỰ KIỆN CHO CÁC NÚT KICK (Vừa được tạo ra)
+    document.querySelectorAll('.btn-kick').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const uidToKick = e.currentTarget.getAttribute('data-uid');
+            if (confirm("Bạn có chắc chắn muốn mời người chơi này ra khỏi phòng?")) {
+                try {
+                    await deleteDoc(doc(db, `rooms/${roomId}/participants/${uidToKick}`));
+                } catch (err) { console.error("Lỗi kick:", err); }
+            }
+        });
+    });
+}
+
 
 async function initLobby() {
     const roomRef = doc(db, 'rooms', roomId);
@@ -120,121 +175,70 @@ async function initLobby() {
     const participantsColl = collection(db, `rooms/${roomId}/participants`);
 
     try {
-        // 1. KIỂM TRA SỨC CHỨA & KHỞI TẠO TRẠNG THÁI CÁ NHÂN
+        // KIỂM TRA SỨC CHỨA & KHỞI TẠO TRẠNG THÁI
         const pSnap = await getDoc(participantRef);
-        
         if (pSnap.exists()) {
-            // ĐÃ TỒN TẠI (Người cũ tải lại trang/rớt mạng): Cho phép tiếp tục và cập nhật lại Avatar/Tên
-            await setDoc(participantRef, {
-                displayName: currentUser.displayName,
-                photoURL: currentUser.photoURL
-            }, { merge: true });
+            await setDoc(participantRef, { displayName: currentUser.displayName, photoURL: currentUser.photoURL }, { merge: true });
             myParticipantStatus = pSnap.data().status || 'waiting';
         } else {
-            // CHƯA TỒN TẠI (Người mới): Kiểm tra sức chứa tối đa 50 người
             const currentParticipants = await getDocs(participantsColl);
             if (currentParticipants.size >= 50) {
                 alert("Rất tiếc! Phòng thi này đã đạt giới hạn tối đa 50 người tham gia.");
                 window.location.href = 'dashboard.html';
-                return; // Dừng lập tức luồng code bên dưới, chặn Listeners
+                return;
             }
-
-            // Phòng còn chỗ: Ghi danh người mới
             await setDoc(participantRef, {
-                uid: currentUser.uid,
-                displayName: currentUser.displayName,
-                photoURL: currentUser.photoURL,
-                joinedAt: serverTimestamp(),
-                status: 'waiting',
-                score: 0,
-                timeTaken: '00:00'
+                uid: currentUser.uid, displayName: currentUser.displayName, photoURL: currentUser.photoURL,
+                joinedAt: serverTimestamp(), status: 'waiting', score: 0, timeTaken: '00:00'
             });
             myParticipantStatus = 'waiting';
         }
 
-        // Dọn dẹp data nếu đóng tab khi phòng đang chờ
         window.addEventListener('beforeunload', () => {
-            if (currentRoomStatus === 'waiting') {
-                deleteDoc(participantRef);
-            }
+            if (currentRoomStatus === 'waiting' && !isKicked) deleteDoc(participantRef);
         });
 
-        // 2. LẮNG NGHE REAL-TIME DANH SÁCH PARTICIPANTS
+        // LẮNG NGHE PARTICIPANTS (VẼ DANH SÁCH & BẪY KICK)
         onSnapshot(participantsColl, (snapshot) => {
-            snapshot.forEach(pDoc => {
-                if(pDoc.id === currentUser.uid) {
-                    myParticipantStatus = pDoc.data().status || 'waiting';
+            let amIInRoom = false;
+            currentParticipantsArray = [];
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                currentParticipantsArray.push(data);
+                if (data.uid === currentUser.uid) {
+                    amIInRoom = true;
+                    myParticipantStatus = data.status || 'waiting';
                 }
             });
 
-            participantsGrid.innerHTML = '';
-            leaderboardBody.innerHTML = '';
-            playerCount.textContent = snapshot.size;
-            
-            const pArray = [];
-            snapshot.forEach(doc => pArray.push(doc.data()));
-            
+            // BẪY KICK: Nếu không tìm thấy mình trong DB, phòng đang mở và chưa bị kick
+            if (!amIInRoom && currentRoomStatus === 'waiting' && !isKicked) {
+                isKicked = true;
+                alert("Bạn đã bị chủ phòng mời ra ngoài.");
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
             // SẮP XẾP AN TOÀN
-            pArray.sort((a, b) => {
+            currentParticipantsArray.sort((a, b) => {
                 const isAFinished = (a.status === 'finished') ? 1 : 0;
                 const isBFinished = (b.status === 'finished') ? 1 : 0;
-                if (isAFinished !== isBFinished) {
-                    return isBFinished - isAFinished; 
-                }
+                if (isAFinished !== isBFinished) return isBFinished - isAFinished; 
 
                 const scoreA = (typeof a.score === 'number') ? a.score : 0;
                 const scoreB = (typeof b.score === 'number') ? b.score : 0;
-                if (scoreB !== scoreA) {
-                    return scoreB - scoreA; 
-                }
+                if (scoreB !== scoreA) return scoreB - scoreA; 
 
                 const timeSecA = parseTimeSafely(a.timeTaken);
                 const timeSecB = parseTimeSafely(b.timeTaken);
                 return timeSecA - timeSecB;
             });
 
-            pArray.forEach(pData => {
-                // RENDER STATE 1 (Phòng chờ) - Kèm Badge mini
-                let miniBadge = '';
-                if (pData.status === 'playing') miniBadge = '<span class="grid-badge grid-badge-playing">Đang thi</span>';
-                else if (pData.status === 'finished') miniBadge = '<span class="grid-badge grid-badge-finished">Đã xong</span>';
-                else miniBadge = '<span class="grid-badge grid-badge-waiting">Sẵn sàng</span>';
-
-                const card = document.createElement('div');
-                card.className = 'participant-card';
-                card.innerHTML = `<img src="${pData.photoURL}" alt="avatar" class="participant-avatar"><div class="participant-name">${pData.displayName}</div>${miniBadge}`;
-                participantsGrid.appendChild(card);
-
-                // RENDER STATE 2 (Bảng xếp hạng)
-                let badgeHTML = '';
-                let displayScore = '-';
-                let displayTime = '-';
-
-                if (pData.status === 'playing') {
-                    badgeHTML = '<span class="badge badge-playing"><i class="fa-solid fa-pen-nib"></i> Đang thi</span>';
-                } else if (pData.status === 'finished') {
-                    badgeHTML = '<span class="badge badge-finished"><i class="fa-solid fa-check-double"></i> Đã nộp bài</span>';
-                    displayScore = `${pData.score || 0} đ`;
-                    displayTime = typeof pData.timeTaken === 'string' ? pData.timeTaken : '00:00';
-                } else {
-                    badgeHTML = '<span class="badge badge-waiting"><i class="fa-solid fa-hourglass-half"></i> Đang chờ</span>';
-                }
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="td-user">
-                        <img src="${pData.photoURL}" alt="avatar">
-                        <span>${pData.displayName}</span>
-                    </td>
-                    <td>${badgeHTML}</td>
-                    <td style="color: #00e5ff; font-weight: 900;">${displayScore}</td>
-                    <td>${displayTime}</td>
-                `;
-                leaderboardBody.appendChild(tr);
-            });
+            renderUI();
         });
 
-        // 3. LẮNG NGHE REAL-TIME DOCUMENT CỦA PHÒNG
+        // LẮNG NGHE ROOM (CÀI ĐẶT HOST & ĐIỀU HƯỚNG)
         onSnapshot(roomRef, async (docSnap) => {
             if (!docSnap.exists()) {
                 alert("Phòng thi này không tồn tại hoặc đã bị đóng!");
@@ -244,14 +248,15 @@ async function initLobby() {
 
             const roomData = docSnap.data();
             currentRoomStatus = roomData.status;
+            currentHostEmail = roomData.hostEmail; // Lưu toàn cục cho hàm renderUI
 
             if (roomData.examId) {
-                displayExamName.innerHTML = `<i class="fa-solid fa-book"></i> ${roomData.examName || "Đề thi đã chọn"}`;
+                displayExamName.innerHTML = `<i class="fa-solid fa-book-open"></i> ${roomData.examName || "Đề thi đã chọn"}`;
             } else {
-                displayExamName.innerHTML = `<i class="fa-solid fa-circle-dot fa-pulse" style="color: #ffdf00;"></i> Chủ phòng đang chọn đề...`;
+                displayExamName.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Chủ phòng đang chọn đề...`;
             }
 
-            const isHost = (roomData.hostEmail === currentUser.email);
+            const isHost = (currentHostEmail === currentUser.email);
             
             if (isHost) {
                 hostPanel.style.display = 'block';
@@ -275,12 +280,14 @@ async function initLobby() {
                 btnStart.style.display = 'none';
                 waitingText.style.display = 'block';
                 btnEndRoom.style.display = 'none'; 
-                waitingText.textContent = roomData.examId ? "Đang chờ chủ phòng bấm nút bắt đầu thi..." : "Đang chờ chủ phòng chọn đề thi...";
+                waitingText.textContent = roomData.examId ? "Đang chờ chủ phòng bắt đầu thi..." : "Đang chờ chủ phòng chọn đề thi...";
             }
 
-            // ĐIỀU HƯỚNG TRẠNG THÁI (KÈM CỜ FORCE LOBBY)
+            // Gọi lại render để nhỡ Host load chậm thì nút kick vẫn hiện sau đó
+            renderUI();
+
+            // ĐIỀU HƯỚNG TRẠNG THÁI
             if (currentRoomStatus === 'waiting') {
-                // Khi phòng chuyển về waiting (Reset room), hủy forceLobbyView và show waiting
                 forceLobbyView = false;
                 switchUIState('waiting');
             } 
@@ -291,59 +298,41 @@ async function initLobby() {
                     }
                     window.location.href = `quiz.html?examId=${roomData.examId}&roomId=${roomId}`;
                 } else {
-                    // Nếu đã thi xong, chỉ show Leaderboard nếu user không bấm nút "Quay lại phòng chờ"
-                    if (!forceLobbyView) {
-                        switchUIState('playing');
-                    }
+                    if (!forceLobbyView) switchUIState('playing');
                 }
             } 
             else if (currentRoomStatus === 'closed') {
                 forceLobbyView = false;
                 switchUIState('closed');
-                lbMainTitle.innerHTML = `<i class="fa-solid fa-flag-checkered"></i> KẾT QUẢ CHUNG CUỘC`;
-                lbSubTitle.textContent = "Phòng thi đã chính thức kết thúc";
                 if (isHost) btnEndRoom.style.display = 'none';
             }
         });
 
-        // 4. LOGIC BẢNG ĐIỀU KHIỂN CHỦ PHÒNG VÀ RESET DATA HÀNG LOẠT
+        // LOGIC CHỦ PHÒNG (ĐỔI ĐỀ, START, END)
         selectExamInLobby.addEventListener('change', async () => {
             const selectedExamId = selectExamInLobby.value;
             const selectedExamName = selectedExamId ? selectExamInLobby.options[selectExamInLobby.selectedIndex].text : null;
             try {
-                // Đổi đề thi và ép trạng thái phòng về waiting
-                await updateDoc(roomRef, { 
-                    examId: selectedExamId || null, 
-                    examName: selectedExamName,
-                    status: 'waiting' 
-                });
-
-                // Xóa điểm cũ, ép toàn bộ người chơi về 'waiting'
+                await updateDoc(roomRef, { examId: selectedExamId || null, examName: selectedExamName, status: 'waiting' });
+                
                 const batch = writeBatch(db);
                 const pSnapshot = await getDocs(participantsColl);
                 pSnapshot.forEach((docItem) => {
-                    batch.update(docItem.ref, {
-                        status: 'waiting',
-                        score: 0,
-                        timeTaken: '00:00'
-                    });
+                    batch.update(docItem.ref, { status: 'waiting', score: 0, timeTaken: '00:00' });
                 });
                 await batch.commit();
-
-                // Reset cờ UI để Host thấy phòng chờ chuẩn
                 forceLobbyView = false;
-            } catch (err) { console.error("Lỗi cập nhật đề & reset phòng:", err); }
+            } catch (err) { console.error("Lỗi reset phòng:", err); }
         });
 
         btnStart.addEventListener('click', async () => {
             btnStart.setAttribute('disabled', 'true');
-            btnStart.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ĐANG KHỞI ĐỘNG...';
+            btnStart.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ĐANG KHỞI ĐỘNG...';
             try {
                 await updateDoc(roomRef, { status: 'playing' });
             } catch (error) {
-                console.error("Lỗi:", error);
                 btnStart.removeAttribute('disabled');
-                btnStart.innerHTML = '<i class="fa-solid fa-rocket"></i> BẮT ĐẦU THI';
+                btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
             }
         });
 
@@ -354,23 +343,15 @@ async function initLobby() {
                     btnEndRoom.innerHTML = 'Đang xử lý...';
                     await updateDoc(roomRef, { status: 'closed' });
                 } catch (error) {
-                    console.error("Lỗi kết thúc phòng:", error);
                     btnEndRoom.disabled = false;
-                    btnEndRoom.innerHTML = '<i class="fa-solid fa-flag-checkered"></i> KẾT THÚC PHÒNG THI';
+                    btnEndRoom.innerHTML = '<i class="fa-solid fa-flag-checkered"></i> KẾT THÚC PHÒNG';
                 }
             }
         });
 
-        // 5. XỬ LÝ MODAL & COPY LINK
-        btnOpenInviteModal.addEventListener('click', () => { 
-            inviteFriendModal.classList.add('active'); 
-            inviteEmailInput.focus(); 
-        });
-        
-        closeInviteModalBtn.addEventListener('click', () => { 
-            inviteFriendModal.classList.remove('active'); 
-            inviteEmailInput.value = ""; 
-        });
+        // MODAL & COPY LINK
+        btnOpenInviteModal.addEventListener('click', () => { inviteFriendModal.classList.add('active'); inviteEmailInput.focus(); });
+        closeInviteModalBtn.addEventListener('click', () => { inviteFriendModal.classList.remove('active'); inviteEmailInput.value = ""; });
 
         btnSendInvite.addEventListener('click', async () => {
             const toEmail = inviteEmailInput.value.trim();
@@ -378,33 +359,24 @@ async function initLobby() {
             try {
                 btnSendInvite.disabled = true;
                 const notiData = {
-                    toEmail: toEmail,
-                    fromEmail: currentUser.email,
-                    type: 'room_invite',
-                    message: `<b>${currentUser.displayName || currentUser.email}</b> đã mời bạn vào phòng thi. Mã phòng: <b style="color:#00e5ff">${roomId}</b>`,
-                    roomId: roomId,
-                    isRead: false,
-                    createdAt: serverTimestamp()
+                    toEmail: toEmail, fromEmail: currentUser.email, type: 'room_invite',
+                    message: `<b>${currentUser.displayName || currentUser.email}</b> đã mời bạn vào phòng thi. Mã phòng: <b style="color:#0d6efd">${roomId}</b>`,
+                    roomId: roomId, isRead: false, createdAt: serverTimestamp()
                 };
                 await setDoc(doc(collection(db, "notifications")), notiData);
-                alert(`Đã gửi thành công lời mời tới ${toEmail}!`);
+                alert(`Đã gửi lời mời tới ${toEmail}!`);
                 inviteFriendModal.classList.remove('active');
-            } catch (error) { 
-                alert("Lỗi khi gửi mời, vui lòng thử lại sau."); 
-            } finally { 
-                btnSendInvite.disabled = false; 
-            }
+            } catch (error) { alert("Lỗi khi gửi mời."); } 
+            finally { btnSendInvite.disabled = false; }
         });
 
         btnCopyLink.addEventListener('click', async () => {
             try {
                 await navigator.clipboard.writeText(window.location.href);
                 const old = btnCopyLink.innerHTML;
-                btnCopyLink.innerHTML = '<i class="fa-solid fa-check"></i> Đã sao chép!';
+                btnCopyLink.innerHTML = '<i class="fa-solid fa-check"></i> Đã copy!';
                 setTimeout(() => btnCopyLink.innerHTML = old, 2000);
-            } catch (err) { 
-                alert("Trình duyệt không hỗ trợ tự động sao chép. Hãy tự copy URL thanh địa chỉ nhé."); 
-            }
+            } catch (err) { alert("Hãy tự copy URL thanh địa chỉ nhé."); }
         });
 
     } catch (error) {
