@@ -8,7 +8,7 @@ const state2Leaderboard = document.getElementById('state2Leaderboard');
 
 const displayRoomId = document.getElementById('displayRoomId');
 const displayExamName = document.getElementById('displayExamName');
-const btnCopyRoomCode = document.getElementById('btnCopyRoomCode'); // Nút copy mã mới
+const btnCopyRoomCode = document.getElementById('btnCopyRoomCode'); 
 const participantsGrid = document.getElementById('participantsGrid');
 const playerCount = document.getElementById('playerCount');
 const btnStart = document.getElementById('btnStart');
@@ -17,7 +17,7 @@ const hostPanel = document.getElementById('hostPanel');
 const selectExamInLobby = document.getElementById('selectExamInLobby');
 const btnOpenInviteModal = document.getElementById('btnOpenInviteModal');
 const btnCopyLink = document.getElementById('btnCopyLink');
-const btnLockRoom = document.getElementById('btnLockRoom'); // Nút khóa phòng mới
+const btnLockRoom = document.getElementById('btnLockRoom'); 
 
 const leaderboardBody = document.getElementById('leaderboardBody');
 const btnEndRoom = document.getElementById('btnEndRoom');
@@ -357,7 +357,8 @@ async function initLobby() {
                     if (myParticipantStatus === 'waiting') {
                         await updateDoc(participantRef, { status: 'playing' });
                     }
-                    window.location.href = `quiz.html?examId=${roomData.examId}&roomId=${roomId}`;
+                    // CẬP NHẬT CHUYỂN HƯỚNG SANG quiz-room.html
+                    window.location.href = `quiz-room.html?examId=${roomData.examId}&roomId=${roomId}`;
                 } else {
                     if (!forceLobbyView) switchUIState('playing');
                 }
