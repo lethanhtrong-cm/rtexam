@@ -95,14 +95,22 @@ function initNotifications(userEmail) {
         document.querySelectorAll('.noti-item').forEach(item => {
             item.addEventListener('click', async () => {
                 const notiId = item.getAttribute('data-id');
+                // Lấy lại data tương ứng với thông báo được click
+                const notiDataDoc = snapshot.docs.find(d => d.id === notiId);
+                const notiData = notiDataDoc ? notiDataDoc.data() : null;
+
                 if (item.classList.contains('unread')) {
                     try {
                         const docRef = doc(db, 'notifications', notiId);
                         await updateDoc(docRef, { isRead: true });
-                        // Click vào lời mời phòng thi có thể auto chuyển hướng tại đây nếu muốn
                     } catch (error) {
                         console.error("Lỗi cập nhật thông báo:", error);
                     }
+                }
+
+                // XỬ LÝ CHUYỂN HƯỚNG NẾU LÀ LỜI MỜI PHÒNG THI
+                if (notiData && notiData.type === 'room_invite' && notiData.roomId) {
+                    window.location.href = `lobby.html?roomId=${notiData.roomId}`;
                 }
             });
         });
