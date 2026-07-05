@@ -50,26 +50,26 @@
         /* Center Area: Room Code & Exam Name */
         .center-area {
             text-align: center;
-            padding: 40px 20px;
+            padding: 30px 20px 15px 20px;
             animation: bounceIn 1s ease;
         }
         .room-label {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             text-transform: uppercase;
             letter-spacing: 3px;
             margin-bottom: 5px;
             color: #b3a2c7;
         }
         .room-code {
-            font-size: 5rem;
+            font-size: 4.5rem;
             font-weight: 900;
-            letter-spacing: 8px;
+            letter-spacing: 6px;
             color: white;
             text-shadow: 4px 4px 0px rgba(0,0,0,0.3);
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
         .exam-name {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 700;
             color: #00e5ff;
             background: rgba(0, 229, 255, 0.1);
@@ -77,98 +77,283 @@
             border-radius: 50px;
             display: inline-block;
             border: 2px solid rgba(0, 229, 255, 0.3);
+            max-width: 90%;
+            word-wrap: break-word;
         }
+
+        /* Host Control Panel Zone */
+        .host-panel {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px dashed #ffdf00;
+            border-radius: 20px;
+            max-width: 800px;
+            margin: 15px auto;
+            padding: 20px;
+            width: calc(100% - 40px);
+            display: none; /* Hiển thị bằng JS nếu là Host */
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            animation: fadeIn 0.5s ease;
+        }
+        .host-panel-title {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #ffdf00;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        .host-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+        .host-select {
+            flex: 1;
+            min-width: 280px;
+            padding: 12px 15px;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: 700;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: #2c3e50;
+            color: white;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .host-select:focus {
+            border-color: #00e5ff;
+            box-shadow: 0 0 10px rgba(0,229,255,0.5);
+        }
+        .btn-panel {
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: inherit;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            color: white;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+        }
+        .btn-panel:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+        .btn-invite-friend {
+            background: #9b59b6;
+        }
+        .btn-invite-friend:hover { background: #8e44ad; }
+        .btn-copy-link {
+            background: #34495e;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn-copy-link:hover { background: #2c3e50; }
+
         /* Grid: Participants */
         .participants-container {
             flex: 1;
-            padding: 0 40px 100px 40px;
+            padding: 20px 40px 120px 40px;
             max-width: 1200px;
             margin: 0 auto;
             width: 100%;
         }
         .participants-count {
             text-align: center;
-            font-size: 1.2rem;
-            margin-bottom: 20px;
+            font-size: 1.3rem;
+            margin-bottom: 25px;
             font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 25px;
             justify-items: center;
         }
         .participant-card {
             background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 15px;
+            padding: 20px 15px;
+            border-radius: 18px;
             text-align: center;
             width: 100%;
-            transition: transform 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
             animation: popIn 0.5s ease forwards;
+            border: 1px solid rgba(255,255,255,0.05);
         }
         .participant-card:hover {
-            transform: translateY(-5px);
+            transform: scale(1.08);
             background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
         }
         .participant-avatar {
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
             border: 3px solid #ffdf00;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             object-fit: cover;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
         .participant-name {
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: 700;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         /* Footer Area */
         .footer-action {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
+            padding: 22px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(15px);
             text-align: center;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 2px solid rgba(255,255,255,0.1);
+            z-index: 99;
         }
         .btn-start {
             background: #00e676;
             color: #000;
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             font-weight: 900;
-            padding: 15px 50px;
+            padding: 14px 60px;
             border: none;
             border-radius: 50px;
             cursor: pointer;
             text-transform: uppercase;
             box-shadow: 0 8px 0 #00b25c;
-            transition: all 0.2s;
-            display: none; /* Ẩn mặc định */
+            transition: all 0.1s;
+            display: none; /* Hiện bằng JS nếu là Host */
             margin: 0 auto;
         }
-        .btn-start:active {
+        .btn-start:disabled {
+            background: #78909c !important;
+            box-shadow: 0 8px 0 #455a64 !important;
+            color: #b0bec5 !important;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-start:active:not(:disabled) {
             transform: translateY(8px);
             box-shadow: none;
         }
         .waiting-text {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             font-weight: 700;
             color: #b3a2c7;
             animation: pulse 1.5s infinite;
         }
 
+        /* Modern Modal Mời Bạn Bè */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 999;
+        }
+        .modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: #2c3e50;
+            border: 3px solid #9b59b6;
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            transform: translateY(-30px);
+            transition: all 0.3s ease;
+            color: white;
+        }
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #9b59b6;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2);
+            color: white;
+            outline: none;
+            margin-bottom: 20px;
+            font-family: inherit;
+            text-align: center;
+        }
+        .modal-input:focus {
+            border-color: #9b59b6;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-modal-submit {
+            background: #9b59b6;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-modal-close {
+            background: #7f8c8d;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
         /* Animations */
         @keyframes bounceIn {
             0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.03); }
             100% { transform: scale(1); opacity: 1; }
         }
         @keyframes popIn {
@@ -178,6 +363,10 @@
         @keyframes pulse {
             0%, 100% { opacity: 0.6; }
             50% { opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -197,15 +386,43 @@
         <div class="exam-name" id="displayExamName"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải thông tin...</div>
     </div>
 
+    <div class="host-panel" id="hostPanel">
+        <div class="host-panel-title">
+            <i class="fa-solid fa-crown"></i> Bảng điều khiển của chủ phòng
+        </div>
+        <div class="host-controls">
+            <select class="host-select" id="selectExamInLobby">
+                <option value="">-- Đang tải bộ đề từ hệ thống... --</option>
+            </select>
+            <button class="btn-panel btn-invite-friend" id="btnOpenInviteModal">
+                <i class="fa-solid fa-user-plus"></i> Mời bạn bè
+            </button>
+            <button class="btn-panel btn-copy-link" id="btnCopyLink">
+                <i class="fa-solid fa-copy"></i> Sao chép Link
+            </button>
+        </div>
+    </div>
+
     <div class="participants-container">
-        <div class="participants-count">Người chơi: <span id="playerCount">0</span></div>
+        <div class="participants-count">Người chơi trong phòng: <span id="playerCount">0</span></div>
         <div class="grid" id="participantsGrid">
             </div>
     </div>
 
     <div class="footer-action">
-        <button id="btnStart" class="btn-start"><i class="fa-solid fa-rocket"></i> BẮT ĐẦU THI</button>
-        <div id="waitingText" class="waiting-text">Đang chờ chủ phòng bắt đầu...</div>
+        <button id="btnStart" class="btn-start" disabled><i class="fa-solid fa-rocket"></i> BẮT ĐẦU THI</button>
+        <div id="waitingText" class="waiting-text">Đang chờ chủ phòng cấu hình bài thi...</div>
+    </div>
+
+    <div class="modal" id="inviteFriendModal">
+        <div class="modal-content">
+            <div class="modal-title"><i class="fa-solid fa-envelope"></i> Mời Bạn Bè Tham Gia</div>
+            <input type="email" class="modal-input" id="inviteEmailInput" placeholder="Nhập email của bạn bè...">
+            <div class="modal-actions">
+                <button class="btn-modal-submit" id="btnSendInvite">Gửi lời mời ngay</button>
+                <button class="btn-modal-close" id="closeInviteModalBtn">Đóng</button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="dashboard-core.js"></script>
