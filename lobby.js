@@ -113,21 +113,39 @@ function renderUI() {
     const isCurrentUserHost = (currentHostEmail === currentUser.email);
 
     currentParticipantsArray.forEach(pData => {
-        // --- 1. RENDER STATE 1 (Phòng chờ) ---
-        let miniBadge = '';
-        if (pData.status === 'playing') miniBadge = '<span class="grid-badge grid-badge-playing">Đang thi</span>';
-        else if (pData.status === 'finished') miniBadge = '<span class="grid-badge grid-badge-finished">Đã xong</span>';
-        else miniBadge = '<span class="grid-badge grid-badge-waiting">Sẵn sàng</span>';
+        // --- 1. RENDER STATE 1 (Phòng chờ) - UI Thẻ hiện đại ---
+        let badgeBg, badgeColor, badgeText;
+        if (pData.status === 'playing') {
+            badgeBg = '#fef3c7'; badgeColor = '#d97706'; badgeText = 'Đang thi';
+        } else if (pData.status === 'finished') {
+            badgeBg = '#d1fae5'; badgeColor = '#059669'; badgeText = 'Đã xong';
+        } else {
+            badgeBg = '#e0f2fe'; badgeColor = '#0369a1'; badgeText = 'Sẵn sàng';
+        }
+        
+        let miniBadge = `<span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-top: 8px; display: inline-block;">${badgeText}</span>`;
 
-        // Nút Kick (Chỉ xuất hiện nếu mình là Host và người đang vẽ không phải mình)
+        // Nút Kick: Góc trên bên phải thẻ
         let kickBtnHTML = '';
         if (isCurrentUserHost && pData.uid !== currentUser.uid) {
-            kickBtnHTML = `<button class="btn-kick" data-uid="${pData.uid}" title="Đuổi khỏi phòng"><i class="fa-solid fa-trash-can"></i></button>`;
+            kickBtnHTML = `<button class="btn-kick" data-uid="${pData.uid}" title="Đuổi khỏi phòng" style="position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: #dc3545; color: white; border: none; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;"><i class="fa-solid fa-xmark"></i></button>`;
         }
 
         const card = document.createElement('div');
+        // Thêm các inline styles để ép thiết kế mà không cần đổi CSS gốc
         card.className = 'participant-card';
-        card.innerHTML = `${kickBtnHTML}<img src="${pData.photoURL}" alt="avatar" class="participant-avatar"><div class="participant-name">${pData.displayName}</div>${miniBadge}`;
+        card.style.cssText = "background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; padding: 16px 8px; position: relative; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease, box-shadow 0.2s ease;";
+        
+        // Hiệu ứng Hover nổi lên
+        card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 6px 12px rgba(0,0,0,0.1)'; };
+        card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; };
+
+        card.innerHTML = `
+            ${kickBtnHTML}
+            <img src="${pData.photoURL}" alt="avatar" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid #3b82f6; padding: 2px; object-fit: cover; margin-bottom: 4px;">
+            <div style="font-weight: 600; color: #1f2937; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.9rem;" title="${pData.displayName}">${pData.displayName}</div>
+            ${miniBadge}
+        `;
         participantsGrid.appendChild(card);
 
         // --- 2. RENDER STATE 2 (Bảng xếp hạng) ---
@@ -155,7 +173,7 @@ function renderUI() {
         leaderboardBody.appendChild(tr);
     });
 
-    // GẮN SỰ KIỆN CHO CÁC NÚT KICK (Vừa được tạo ra)
+    // GẮN SỰ KIỆN CHO CÁC NÚT KICK VỪA TẠO
     document.querySelectorAll('.btn-kick').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const uidToKick = e.currentTarget.getAttribute('data-uid');
