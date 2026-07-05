@@ -8,6 +8,7 @@ const state2Leaderboard = document.getElementById('state2Leaderboard');
 
 const displayRoomId = document.getElementById('displayRoomId');
 const displayExamName = document.getElementById('displayExamName');
+const btnCopyRoomCode = document.getElementById('btnCopyRoomCode'); // Nút copy mã mới
 const participantsGrid = document.getElementById('participantsGrid');
 const playerCount = document.getElementById('playerCount');
 const btnStart = document.getElementById('btnStart');
@@ -16,6 +17,7 @@ const hostPanel = document.getElementById('hostPanel');
 const selectExamInLobby = document.getElementById('selectExamInLobby');
 const btnOpenInviteModal = document.getElementById('btnOpenInviteModal');
 const btnCopyLink = document.getElementById('btnCopyLink');
+const btnLockRoom = document.getElementById('btnLockRoom'); // Nút khóa phòng mới
 
 const leaderboardBody = document.getElementById('leaderboardBody');
 const btnEndRoom = document.getElementById('btnEndRoom');
@@ -68,6 +70,16 @@ btnBackToLobby.addEventListener('click', () => {
     switchUIState('waiting');
 });
 
+// Sự kiện Copy Mã Phòng
+btnCopyRoomCode.addEventListener('click', async () => {
+    try {
+        await navigator.clipboard.writeText(roomId);
+        alert("Đã sao chép mã phòng!");
+    } catch (err) {
+        console.error("Lỗi copy:", err);
+    }
+});
+
 async function loadExamsToDropdown() {
     if (isExamsLoaded) return;
     try {
@@ -113,7 +125,7 @@ function renderUI() {
     const isCurrentUserHost = (currentHostEmail === currentUser.email);
 
     currentParticipantsArray.forEach(pData => {
-        // --- 1. RENDER STATE 1 (Phòng chờ) - UI Thẻ hiện đại ---
+        // --- 1. RENDER STATE 1 (Phòng chờ) - CẬP NHẬT GIAO DIỆN MỚI ---
         let badgeBg, badgeColor, badgeText;
         if (pData.status === 'playing') {
             badgeBg = '#fef3c7'; badgeColor = '#d97706'; badgeText = 'Đang thi';
@@ -125,25 +137,24 @@ function renderUI() {
         
         let miniBadge = `<span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-top: 8px; display: inline-block;">${badgeText}</span>`;
 
-        // Nút Kick: Góc trên bên phải thẻ
+        // Nút Kick (Chỉ xuất hiện nếu mình là Host và người đang vẽ không phải mình)
         let kickBtnHTML = '';
         if (isCurrentUserHost && pData.uid !== currentUser.uid) {
-            kickBtnHTML = `<button class="btn-kick" data-uid="${pData.uid}" title="Đuổi khỏi phòng" style="position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: #dc3545; color: white; border: none; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;"><i class="fa-solid fa-xmark"></i></button>`;
+            kickBtnHTML = `<button class="btn-kick" data-uid="${pData.uid}" title="Đuổi khỏi phòng"><i class="fa-solid fa-xmark"></i></button>`;
         }
 
         const card = document.createElement('div');
-        // Thêm các inline styles để ép thiết kế mà không cần đổi CSS gốc
         card.className = 'participant-card';
-        card.style.cssText = "background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; padding: 16px 8px; position: relative; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease, box-shadow 0.2s ease;";
+        // Ép styles trực tiếp theo chuẩn thiết kế mới
+        card.style.cssText = "background: #ffffff; border: 2px solid #0d6efd; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); text-align: center; padding: 12px 8px; position: relative; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease, box-shadow 0.2s ease;";
         
-        // Hiệu ứng Hover nổi lên
-        card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 6px 12px rgba(0,0,0,0.1)'; };
-        card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; };
+        card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 6px 15px rgba(0,0,0,0.2)'; };
+        card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = '0 4px 10px rgba(0,0,0,0.15)'; };
 
         card.innerHTML = `
             ${kickBtnHTML}
             <img src="${pData.photoURL}" alt="avatar" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid #3b82f6; padding: 2px; object-fit: cover; margin-bottom: 4px;">
-            <div style="font-weight: 600; color: #1f2937; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.9rem;" title="${pData.displayName}">${pData.displayName}</div>
+            <div style="font-weight: 600; color: #1f2937; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.9rem;" title="${pData.displayName}">${pData.displayName}</div>
             ${miniBadge}
         `;
         participantsGrid.appendChild(card);
@@ -173,7 +184,7 @@ function renderUI() {
         leaderboardBody.appendChild(tr);
     });
 
-    // GẮN SỰ KIỆN CHO CÁC NÚT KICK VỪA TẠO
+    // GẮN SỰ KIỆN CHO CÁC NÚT KICK (Vừa được tạo ra)
     document.querySelectorAll('.btn-kick').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const uidToKick = e.currentTarget.getAttribute('data-uid');
@@ -193,18 +204,37 @@ async function initLobby() {
     const participantsColl = collection(db, `rooms/${roomId}/participants`);
 
     try {
+        // LẤY THÔNG TIN PHÒNG TRƯỚC ĐỂ KIỂM TRA BẢO VỆ CỬA VÀO (GATEKEEPER)
+        const initRoomSnap = await getDoc(roomRef);
+        if (!initRoomSnap.exists()) {
+            alert("Phòng thi này không tồn tại!");
+            window.location.href = "dashboard.html";
+            return;
+        }
+        const initialRoomData = initRoomSnap.data();
+
         // KIỂM TRA SỨC CHỨA & KHỞI TẠO TRẠNG THÁI
         const pSnap = await getDoc(participantRef);
+        
         if (pSnap.exists()) {
+            // ĐÃ TỒN TẠI (Người cũ tải lại trang/rớt mạng): Cho qua bình thường
             await setDoc(participantRef, { displayName: currentUser.displayName, photoURL: currentUser.photoURL }, { merge: true });
             myParticipantStatus = pSnap.data().status || 'waiting';
         } else {
+            // CHƯA TỒN TẠI (Người mới): Phải kiểm tra Khóa phòng và Sức chứa
+            if (initialRoomData.isLocked === true) {
+                alert("Phòng thi này đã bị khóa bởi Chủ phòng.");
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
             const currentParticipants = await getDocs(participantsColl);
             if (currentParticipants.size >= 50) {
                 alert("Rất tiếc! Phòng thi này đã đạt giới hạn tối đa 50 người tham gia.");
                 window.location.href = 'dashboard.html';
                 return;
             }
+
             await setDoc(participantRef, {
                 uid: currentUser.uid, displayName: currentUser.displayName, photoURL: currentUser.photoURL,
                 joinedAt: serverTimestamp(), status: 'waiting', score: 0, timeTaken: '00:00'
@@ -256,7 +286,7 @@ async function initLobby() {
             renderUI();
         });
 
-        // LẮNG NGHE ROOM (CÀI ĐẶT HOST & ĐIỀU HƯỚNG)
+        // LẮNG NGHE ROOM (CÀI ĐẶT HOST, TRẠNG THÁI KHÓA & ĐIỀU HƯỚNG)
         onSnapshot(roomRef, async (docSnap) => {
             if (!docSnap.exists()) {
                 alert("Phòng thi này không tồn tại hoặc đã bị đóng!");
@@ -283,6 +313,19 @@ async function initLobby() {
                 
                 if (currentRoomStatus === 'playing') btnEndRoom.style.display = 'block';
                 else btnEndRoom.style.display = 'none';
+
+                // Cập nhật giao diện nút Khóa phòng
+                if (roomData.isLocked) {
+                    btnLockRoom.innerHTML = '<i class="fa-solid fa-lock"></i> Mở khóa';
+                    btnLockRoom.style.background = '#ffc107'; // Cảnh báo vàng
+                    btnLockRoom.style.color = '#000';
+                    btnLockRoom.setAttribute('data-locked', 'true');
+                } else {
+                    btnLockRoom.innerHTML = '<i class="fa-solid fa-lock-open"></i> Khóa phòng';
+                    btnLockRoom.style.background = '#dc3545'; // Đỏ nguy hiểm
+                    btnLockRoom.style.color = '#fff';
+                    btnLockRoom.setAttribute('data-locked', 'false');
+                }
 
                 await loadExamsToDropdown();
                 if (roomData.examId && selectExamInLobby.value !== roomData.examId) {
@@ -326,7 +369,7 @@ async function initLobby() {
             }
         });
 
-        // LOGIC CHỦ PHÒNG (ĐỔI ĐỀ, START, END)
+        // LOGIC CHỦ PHÒNG (ĐỔI ĐỀ, START, END, LOCK)
         selectExamInLobby.addEventListener('change', async () => {
             const selectedExamId = selectExamInLobby.value;
             const selectedExamName = selectedExamId ? selectExamInLobby.options[selectExamInLobby.selectedIndex].text : null;
@@ -364,6 +407,16 @@ async function initLobby() {
                     btnEndRoom.disabled = false;
                     btnEndRoom.innerHTML = '<i class="fa-solid fa-flag-checkered"></i> KẾT THÚC PHÒNG';
                 }
+            }
+        });
+
+        // Sự kiện Khóa / Mở khóa phòng
+        btnLockRoom.addEventListener('click', async () => {
+            const currentLockedState = btnLockRoom.getAttribute('data-locked') === 'true';
+            try {
+                await updateDoc(roomRef, { isLocked: !currentLockedState });
+            } catch (err) {
+                console.error("Lỗi khi thay đổi trạng thái khóa phòng:", err);
             }
         });
 
