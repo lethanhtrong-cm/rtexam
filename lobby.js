@@ -120,9 +120,26 @@ async function initLobby() {
     const participantsColl = collection(db, `rooms/${roomId}/participants`);
 
     try {
-        // 1. KIỂM TRA & KHỞI TẠO TRẠNG THÁI CÁ NHÂN
+        // 1. KIỂM TRA SỨC CHỨA & KHỞI TẠO TRẠNG THÁI CÁ NHÂN
         const pSnap = await getDoc(participantRef);
-        if (!pSnap.exists()) {
+        
+        if (pSnap.exists()) {
+            // ĐÃ TỒN TẠI (Người cũ tải lại trang/rớt mạng): Cho phép tiếp tục và cập nhật lại Avatar/Tên
+            await setDoc(participantRef, {
+                displayName: currentUser.displayName,
+                photoURL: currentUser.photoURL
+            }, { merge: true });
+            myParticipantStatus = pSnap.data().status || 'waiting';
+        } else {
+            // CHƯA TỒN TẠI (Người mới): Kiểm tra sức chứa tối đa 50 người
+            const currentParticipants = await getDocs(participantsColl);
+            if (currentParticipants.size >= 50) {
+                alert("Rất tiếc! Phòng thi này đã đạt giới hạn tối đa 50 người tham gia.");
+                window.location.href = 'dashboard.html';
+                return; // Dừng lập tức luồng code bên dưới, chặn Listeners
+            }
+
+            // Phòng còn chỗ: Ghi danh người mới
             await setDoc(participantRef, {
                 uid: currentUser.uid,
                 displayName: currentUser.displayName,
@@ -133,8 +150,6 @@ async function initLobby() {
                 timeTaken: '00:00'
             });
             myParticipantStatus = 'waiting';
-        } else {
-            myParticipantStatus = pSnap.data().status || 'waiting';
         }
 
         // Dọn dẹp data nếu đóng tab khi phòng đang chờ
