@@ -6,80 +6,41 @@ import { auth, db } from './dashboard-core.js';
 // Import các hàm tương tác với Firestore từ CDN của Firebase
 import { collection, doc, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Khai báo hằng số chứa API Key của Google Gemini (Đã cập nhật Key thực tế)
-const GEMINI_API_KEY = "AQ.Ab8RN6Jyocy3svkH0Sd_S4UT47UAlibPeX6x4gclSdWLo553vg";
-
-// URL endpoint của mô hình gemini-1.5-flash để gọi API tạo text
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY;
+// ĐÃ XÓA KHAI BÁO API KEY BẢO MẬT Ở FRONTEND - CHUYỂN SANG BACKEND VERCEL
 
 // =========================================================================
-// 2. HÀM GỌI API GEMINI (AI GENERATION LOGIC)
+// 2. HÀM GỌI API GEMINI (AI GENERATION LOGIC - ĐÃ CHUYỂN QUA BACKEND)
 // =========================================================================
 /**
- * Hàm gọi API Gemini để tạo danh sách câu hỏi trắc nghiệm
+ * Hàm gọi API Gemini thông qua Serverless Backend (Vercel) để tạo đề
  * @param {string} promptText - Nội dung tài liệu người dùng nhập
  * @param {number|string} questionCount - Số lượng câu hỏi muốn tạo
  * @param {string} difficulty - Mức độ khó của đề thi
  * @returns {Promise<Array>} Trả về một mảng chứa các Object câu hỏi
  */
 async function generateQuizFromGemini(promptText, questionCount, difficulty) {
-    // Xây dựng câu lệnh hệ thống (System Instruction) chặt chẽ để ép AI trả về đúng định dạng
-    const systemInstruction = `Bạn là một chuyên gia ra đề thi trắc nghiệm chuyên ngành Kỹ thuật Hình ảnh Y học. Hãy dựa vào nội dung tài liệu được cung cấp để tạo ra đúng ${questionCount} câu hỏi trắc nghiệm ở mức độ ${difficulty}. 
-QUY TẮC TỐI THƯỢNG: Chỉ trả về duy nhất một mảng JSON chứa các câu hỏi, KHÔNG có bất kỳ lời giải thích, chào hỏi hay text thừa nào ở đầu/cuối, KHÔNG bọc mảng trong ký tự markdown như \`\`\`json hay \`\`\`. 
-Cấu trúc chính xác của mỗi object câu hỏi trong mảng phải là: 
-{ 
-  "text": "Nội dung câu hỏi ở đây", 
-  "options": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"], 
-  "correctAnswer": [Chỉ số index của đáp án đúng, là số nguyên từ 0 đến 3], 
-  "explanation": "Giải thích ngắn gọn tại sao đáp án đó đúng" 
-}`;
-
-    // Tạo payload (dữ liệu gửi đi) tuân thủ cấu trúc của Google Gemini API
-    const requestBody = {
-        contents: [{
-            parts: [{
-                text: promptText // Nội dung người dùng truyền vào
-            }]
-        }],
-        systemInstruction: {
-            parts: [{
-                text: systemInstruction // Câu lệnh hệ thống đã định nghĩa ở trên
-            }]
-        },
-        // Mẹo nhỏ: Bật tham số này để hướng mô hình trả về JSON chuẩn xác hơn
-        generationConfig: {
-            responseMimeType: "application/json"
-        }
-    };
-
-    // Gửi HTTP POST Request tới Gemini API
-    const response = await fetch(GEMINI_URL, {
-        method: "POST",
+    // Giao diện web bây giờ chỉ gọi đến "căn phòng kín" /api/generate
+    const response = await fetch('/api/generate', {
+        method: 'POST',
         headers: {
-            "Content-Type": "application/json"
+            'Content-Type': 'application/json'
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+            promptText: promptText,
+            questionCount: questionCount,
+            difficulty: difficulty
+        })
     });
 
-    // Kiểm tra nếu API lỗi (ví dụ: Hết hạn ngạch, sai key, lỗi mạng...)
     if (!response.ok) {
-        throw new Error("Lỗi kết nối tới API Gemini (Mã lỗi: " + response.status + ")");
+        const errData = await response.json();
+        throw new Error(errData.error || "Lỗi máy chủ nội bộ");
     }
 
-    // Trích xuất dữ liệu trả về từ API
-    const data = await response.json();
-    let responseText = data.candidates[0].content.parts[0].text;
-
-    // LÀM SẠCH DỮ LIỆU: Sử dụng Regular Expression (RegEx) để loại bỏ các ký tự Markdown thừa
-    // Đề phòng trường hợp AI quên luật và bọc kết quả trong ```json ... ```
-    responseText = responseText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
-
-    // Chuyển đổi chuỗi JSON thành mảng JavaScript thực thụ
-    const questions = JSON.parse(responseText);
-
-    // Xác thực an toàn: Đảm bảo kết quả là một mảng và có chứa dữ liệu
+    const questions = await response.json();
+    
     if (!Array.isArray(questions) || questions.length === 0) {
-        throw new Error("AI không trả về mảng dữ liệu hợp lệ. Vui lòng thử lại!");
+        throw new Error("AI không trả về mảng dữ liệu hợp lệ.");
     }
 
     return questions;
@@ -124,6 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
             aiPromptInput.value = '';
             aiFormArea.style.display = 'block';
             aiLoadingSpinner.style.display = 'none';
+            
+            // Khôi phục lại trạng thái của nút
+            if (btnSubmitAiGenerate) btnSubmitAiGenerate.disabled = false;
+            if (btnCancelAi) btnCancelAi.disabled = false;
         }, 300);
     };
 
@@ -160,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Bước 3: Khối Try-Catch xử lý Gọi API và Lưu Database
             try {
-                // Đợi AI tạo và trả về mảng câu hỏi
+                // Đợi AI tạo và trả về mảng câu hỏi (Bây giờ gọi qua Serverless Vercel)
                 const generatedQuestions = await generateQuizFromGemini(prompt, questionCount, difficulty);
                 
                 // Khởi tạo mã đề thi ngẫu nhiên duy nhất
