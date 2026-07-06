@@ -13,7 +13,7 @@ export default async function handler(req, res) {
         }
 
         // 1. Cập nhật tên mô hình thành gemini-2.5-flash (Vì bản 1.5 đã bị khai tử)
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
 
         // 2. Viết câu lệnh cực kỳ chặt chẽ để ép model trả về JSON thuần
         const systemInstruction = `Bạn là một chuyên gia ra đề thi trắc nghiệm Kỹ thuật Hình ảnh Y học. Hãy tạo ra đúng ${questionCount} câu hỏi mức độ ${difficulty} dựa vào tài liệu sau.
