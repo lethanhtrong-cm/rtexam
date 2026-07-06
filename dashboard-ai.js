@@ -7,7 +7,7 @@ import { auth, db } from './dashboard-core.js';
 import { collection, doc, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Khai báo hằng số chứa API Key của Google Gemini (Đã cập nhật Key thực tế)
-const GEMINI_API_KEY = "AQ.Ab8RN6KDYMMLfGbBKyL7r_8BoQxsVxxS7zM5p_pK152_EIlnXQ";
+const GEMINI_API_KEY = "AQ.Ab8RN6Jyocy3svkH0Sd_S4UT47UAlibPeX6x4gclSdWLo553vg";
 
 // URL endpoint của mô hình gemini-1.5-flash để gọi API tạo text
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY;
