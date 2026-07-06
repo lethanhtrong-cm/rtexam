@@ -36,16 +36,21 @@ if (aiGenerateModal) {
     });
 }
 
+// Hàm dọn dẹp form mỗi lần mở lại
 function resetAiForm() {
     if (aiPromptInput) aiPromptInput.value = '';
     if (aiQuestionCount) aiQuestionCount.value = '10';
     if (aiDifficulty) aiDifficulty.value = 'medium'; 
     if (aiFormArea) aiFormArea.style.display = 'block';
     if (aiLoadingSpinner) aiLoadingSpinner.style.display = 'none';
+    
+    // Dọn dẹp giao diện chúc mừng thành công (nếu có từ lần tạo trước)
+    const successArea = document.getElementById('aiSuccessArea');
+    if (successArea) successArea.remove();
 }
 
 // =========================================================================
-// LOGIC GỌI API (VERCEL) & LƯU VÀO FIRESTORE (ĐÃ BỔ SUNG PHÂN QUYỀN)
+// LOGIC GỌI API (VERCEL) & LƯU VÀO FIRESTORE 
 // =========================================================================
 if (btnSubmitAiGenerate) {
     btnSubmitAiGenerate.addEventListener('click', async () => {
@@ -53,6 +58,7 @@ if (btnSubmitAiGenerate) {
         const questionCount = aiQuestionCount.value;
         const difficulty = aiDifficulty.value;
 
+        // 1. Kiểm tra dữ liệu đầu vào
         if (!prompt) {
             alert("Vui lòng nhập chủ đề hoặc tài liệu cần tạo đề!");
             return;
@@ -63,20 +69,19 @@ if (btnSubmitAiGenerate) {
             return;
         }
 
-        // Hiển thị Spinner
+        // 2. Chuyển đổi UI sang trạng thái Loading chờ AI xử lý
         aiFormArea.style.display = 'none';
         aiLoadingSpinner.style.display = 'block';
 
         try {
-            // --- 1. GỌI API VERCEL ĐỂ TẠO ĐỀ ---
-            // Gọi lên serverless function của Vercel (đã sửa payload thành promptText)
+            // --- 3. GỌI API VERCEL ĐỂ TẠO ĐỀ ---
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    promptText: prompt, 
+                    promptText: prompt, // Phải gửi đúng biến promptText cho Vercel nhận diện
                     questionCount: questionCount,
                     difficulty: difficulty
                 })
@@ -94,16 +99,15 @@ if (btnSubmitAiGenerate) {
                 throw new Error("AI không tạo được câu hỏi nào hoặc dữ liệu trả về bị sai cấu trúc.");
             }
 
-            // --- 2. TẠO ID ĐỀ THI ---
+            // --- 4. TẠO ID ĐỀ THI ---
             const examId = "AI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-            // --- 3. LƯU TỪNG CÂU HỎI VÀO COLLECTION "questions" ---
-            // Lặp qua mảng câu hỏi và lưu vào Firestore
+            // --- 5. LƯU TỪNG CÂU HỎI VÀO COLLECTION "questions" ---
             const savePromises = questions.map((q, i) => {
                 const questionId = `${examId}-Q${i + 1}`;
                 return setDoc(doc(db, "questions", questionId), {
                     examId: examId,
-                    // Bọc thép dữ liệu: Quét mọi tên key mà AI có thể trả về để khớp với file quiz.html
+                    // Bọc thép dữ liệu: Quét mọi tên biến AI có thể nhả ra
                     text: q.text || q.questionText || q.question || q.content || "Lỗi: AI không có nội dung",
                     options: q.options || q.answers || [],
                     correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : (q.correct || 0),
@@ -112,10 +116,10 @@ if (btnSubmitAiGenerate) {
                 });
             });
 
-            // Chờ lưu toàn bộ câu hỏi xong
+            // Chờ lưu toàn bộ câu hỏi lên Firestore thành công
             await Promise.all(savePromises);
 
-            // --- 4. GHI THÔNG TIN GÓI ĐỀ THI VÀO COLLECTION "exams" ---
+            // --- 6. GHI THÔNG TIN GÓI ĐỀ THI VÀO COLLECTION "exams" ---
             await setDoc(doc(db, "exams", examId), {
                 id: examId,
                 technique: "AI Tự Động",
@@ -130,23 +134,52 @@ if (btnSubmitAiGenerate) {
                 isPublic: false
             });
 
-            // Hoàn thành
-            closeAiModal();
+            // --- 7. TẠO GIAO DIỆN LỰA CHỌN: "BẮT ĐẦU THI" HOẶC "LƯU ĐỀ" ---
+            aiLoadingSpinner.style.display = 'none'; // Tắt vòng xoay chờ
+
+            // Tạo khung giao diện chúc mừng
+            const successArea = document.createElement('div');
+            successArea.id = 'aiSuccessArea';
+            successArea.innerHTML = `
+                <div style="text-align: center; padding: 20px 0; animation: fadeIn 0.4s ease;">
+                    <div style="font-size: 60px; margin-bottom: 10px;">🎉</div>
+                    <h3 style="color: #1f2937; margin-bottom: 10px;">Tạo đề thi thành công!</h3>
+                    <p style="color: #6b7280; margin-bottom: 25px;">Mã đề của bạn là: <strong style="color: #10b981;">${examId}</strong></p>
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        <button id="btnCancelGoToQuiz" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #d1d5db; background: #f9fafb; color: #4b5563; font-weight: bold; cursor: pointer; transition: background 0.2s;">
+                            Lưu đề
+                        </button>
+                        <button id="btnGoToQuiz" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); transition: transform 0.2s;">
+                            Bắt đầu thi ngay
+                        </button>
+                    </div>
+                </div>
+            `;
             
-            // Chuyển hướng thẳng vào trang thi và mang theo mã đề
-            window.location.href = `quiz.html?examId=${examId}`;
-            
-            // Tải lại giao diện danh sách đề thi trên Dashboard
-            if (typeof window.loadAggregatedExamData === 'function') {
-                window.loadAggregatedExamData();
-            } else {
-                location.reload(); 
-            }
+            // Chèn khung này vào bên trong Modal (Ngay chỗ Form đã bị ẩn)
+            aiFormArea.parentNode.appendChild(successArea);
+
+            // Xử lý Sự kiện Nút "Lưu đề"
+            document.getElementById('btnCancelGoToQuiz').onclick = () => {
+                closeAiModal(); // Đóng popup
+                // Cập nhật lại danh sách đề thi dưới nền để hiển thị ngay đề vừa tạo
+                if (typeof window.loadAggregatedExamData === 'function') {
+                    window.loadAggregatedExamData();
+                } else {
+                    location.reload(); 
+                }
+            };
+
+            // Xử lý Sự kiện Nút "Bắt đầu thi ngay"
+            document.getElementById('btnGoToQuiz').onclick = () => {
+                // Đẩy người dùng thẳng vào phòng thi, mang theo mã đề thi
+                window.location.href = `quiz.html?examId=${examId}`;
+            };
 
         } catch (error) {
             console.error("Lỗi tạo đề thi AI:", error);
             alert("Đã xảy ra lỗi trong quá trình tạo đề bằng AI: " + error.message);
-            resetAiForm();
+            resetAiForm(); // Nếu lỗi thì khôi phục lại Form nhập liệu để thử lại
         }
     });
 }
