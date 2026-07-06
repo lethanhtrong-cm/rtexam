@@ -132,7 +132,9 @@ if (btnSubmitAiGenerate) {
 
             // Hoàn thành
             closeAiModal();
-            alert(`Tạo đề thi thành công! Mã đề của bạn là: ${examId}`);
+            
+            // Chuyển hướng thẳng vào trang thi và mang theo mã đề
+            window.location.href = `quiz.html?examId=${examId}`;
             
             // Tải lại giao diện danh sách đề thi trên Dashboard
             if (typeof window.loadAggregatedExamData === 'function') {
