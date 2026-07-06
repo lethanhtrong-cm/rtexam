@@ -14,7 +14,7 @@ export default async function handler(req, res) {
         }
 
         // 2. Sử dụng đúng endpoint chuẩn của Google Gemini 1.5 Flash
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const systemInstruction = `Bạn là một chuyên gia ra đề thi trắc nghiệm... (giữ nguyên phần này của bạn)`;
 
