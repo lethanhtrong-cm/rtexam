@@ -244,6 +244,9 @@ async function loadAggregatedExamData() {
         eSnap.forEach((doc) => {
             const eId = doc.id;
             if (examMap[eId]) {
+                // ĐÁNH DẤU: Đề này đã lọt qua bộ lọc phân quyền (Đề của tôi hoặc đề Public)
+                examMap[eId].isValid = true; 
+                
                 const conf = doc.data();
                 examMap[eId].isVip = conf.isVip || false;
                 examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
@@ -271,6 +274,12 @@ async function loadAggregatedExamData() {
         });
 
         Object.keys(examMap).forEach(eId => {
+            // LỌC RÁC: Nếu đề không được đánh dấu hợp lệ -> Xóa bỏ ngay lập tức!
+            if (!examMap[eId].isValid) {
+                delete examMap[eId];
+                return; // Bỏ qua, không gán mặc định gì hết
+            }
+
             if (examMap[eId].timeLimit === undefined) examMap[eId].timeLimit = 15;
             if (examMap[eId].isVip === undefined) examMap[eId].isVip = false;
             if (examMap[eId].attemptCount === undefined) examMap[eId].attemptCount = 0;
