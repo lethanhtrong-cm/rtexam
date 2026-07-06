@@ -31,7 +31,7 @@ if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
     style.id = styleId;
     style.innerHTML = `
-        /* Ẩn thanh cuộn scrollbar cho giao diện băng chuyền */
+        /* Ẩn thanh cuộn scrollbar cho giao diện băng chuyền (dự phòng) */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -353,10 +353,13 @@ function renderExams() {
     groups.forEach(group => {
         if (group.data.length === 0) return; // Bỏ qua nếu nhóm không có đề thi
 
+        // NÂNG CẤP SLIDER: Thêm wrapper và các nút mũi tên trái phải
         let rowHtml = `
             <div class="exam-category-row mb-5">
                 <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
-                <div class="d-flex overflow-x-auto hide-scrollbar" style="flex-wrap: nowrap; scroll-snap-type: x mandatory; padding: 10px 5px; padding-bottom: 20px;">
+                <div class="swimlane-wrapper">
+                    <button class="slider-btn left" onclick="slideLeft(this)"><i class="fa-solid fa-chevron-left"></i></button>
+                    <div class="swimlane-scroll-container hide-scrollbar">
         `;
 
         group.data.forEach(exam => {
@@ -511,7 +514,10 @@ function renderExams() {
             `;
         });
 
+        // Đóng div container và thêm nút phải
         rowHtml += `
+                    </div>
+                    <button class="slider-btn right" onclick="slideRight(this)"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
             </div>
         `;
@@ -582,5 +588,24 @@ window.goToHistory = function(examId) {
         window.open(url, '_blank');
     } else {
         alert("Không tìm thấy dữ liệu bài thi cũ để xem lại.");
+    }
+};
+
+// =========================================================================
+// 7. CÁC HÀM XỬ LÝ SLIDER (BĂNG CHUYỀN)
+// =========================================================================
+window.slideLeft = function(button) {
+    const container = button.parentElement.querySelector('.swimlane-scroll-container');
+    if (container) {
+        // Cuộn lùi 1 khoảng bằng thẻ + margin (340 + 24 = 364px). Mình để 364 để cuộn 1 thẻ 1 lần
+        container.scrollBy({ left: -364, behavior: 'smooth' });
+    }
+};
+
+window.slideRight = function(button) {
+    const container = button.parentElement.querySelector('.swimlane-scroll-container');
+    if (container) {
+        // Cuộn tới 1 khoảng 364px
+        container.scrollBy({ left: 364, behavior: 'smooth' });
     }
 };
