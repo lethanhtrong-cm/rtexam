@@ -6,8 +6,6 @@ import { auth, db } from './dashboard-core.js';
 // Import các hàm tương tác với Firestore từ CDN của Firebase
 import { collection, doc, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// ĐÃ XÓA KHAI BÁO API KEY BẢO MẬT Ở FRONTEND - CHUYỂN SANG BACKEND VERCEL
-
 // =========================================================================
 // 2. HÀM GỌI API GEMINI (AI GENERATION LOGIC - ĐÃ CHUYỂN QUA BACKEND)
 // =========================================================================
@@ -146,8 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const savePromises = generatedQuestions.map((questionObj, index) => {
                     return addDoc(collection(db, "questions"), {
                         examId: examId,
-                        // Bọc thép dữ liệu: Quét mọi tên key mà AI có thể trả về
-                        questionText: questionObj.text || questionObj.question || questionObj.content || "Lỗi: AI không trả về nội dung câu hỏi",
+                        
+                        // Đã sửa thành 'text' để khớp hoàn toàn với file quiz.html
+                        text: questionObj.text || questionObj.question || questionObj.content || "Lỗi: AI không có nội dung",
+                        
                         options: questionObj.options || [],
                         correctAnswer: questionObj.correctAnswer || 0,
                         explanation: questionObj.explanation || "Không có giải thích",
