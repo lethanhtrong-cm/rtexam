@@ -11,8 +11,8 @@ export default async function handler(req, res) {
 
         // 3. Lấy API Key bí mật từ Biến môi trường của Vercel
         const apiKey = process.env.GEMINI_API_KEY;
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
+        // Thay dòng khai báo url cũ bằng dòng này trong file api/generate.js
+const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
         // 4. Lệnh System Prompt
         const systemInstruction = `Bạn là một chuyên gia ra đề thi trắc nghiệm chuyên ngành Kỹ thuật Hình ảnh Y học. Hãy dựa vào nội dung tài liệu được cung cấp để tạo ra đúng ${questionCount} câu hỏi trắc nghiệm ở mức độ ${difficulty}. 
         QUY TẮC TỐI THƯỢNG: Chỉ trả về duy nhất một mảng JSON chứa các câu hỏi, KHÔNG bọc mảng trong ký tự markdown như \`\`\`json hay \`\`\`. 
