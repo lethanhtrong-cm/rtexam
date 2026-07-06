@@ -17,123 +17,134 @@ const aiQuestionCount = document.getElementById('aiQuestionCount');
 const aiDifficulty = document.getElementById('aiDifficulty');
 
 // Mở Modal
-btnAutoGenerate.addEventListener('click', () => {
-    aiGenerateModal.classList.add('active');
-    resetAiForm();
-});
+if (btnAutoGenerate) {
+    btnAutoGenerate.addEventListener('click', () => {
+        aiGenerateModal.classList.add('active');
+        resetAiForm();
+    });
+}
 
 // Đóng Modal
 const closeAiModal = () => aiGenerateModal.classList.remove('active');
-closeAiModalBtn.addEventListener('click', closeAiModal);
-btnCancelAi.addEventListener('click', closeAiModal);
+if (closeAiModalBtn) closeAiModalBtn.addEventListener('click', closeAiModal);
+if (btnCancelAi) btnCancelAi.addEventListener('click', closeAiModal);
 
 // Đóng khi click ra ngoài vùng mờ
-aiGenerateModal.addEventListener('click', (e) => {
-    if (e.target === aiGenerateModal) closeAiModal();
-});
+if (aiGenerateModal) {
+    aiGenerateModal.addEventListener('click', (e) => {
+        if (e.target === aiGenerateModal) closeAiModal();
+    });
+}
 
 function resetAiForm() {
-    aiPromptInput.value = '';
-    aiQuestionCount.value = '10';
-    aiDifficulty.value = 'medium'; 
-    aiFormArea.style.display = 'block';
-    aiLoadingSpinner.style.display = 'none';
+    if (aiPromptInput) aiPromptInput.value = '';
+    if (aiQuestionCount) aiQuestionCount.value = '10';
+    if (aiDifficulty) aiDifficulty.value = 'medium'; 
+    if (aiFormArea) aiFormArea.style.display = 'block';
+    if (aiLoadingSpinner) aiLoadingSpinner.style.display = 'none';
 }
 
 // =========================================================================
 // LOGIC GỌI API (VERCEL) & LƯU VÀO FIRESTORE (ĐÃ BỔ SUNG PHÂN QUYỀN)
 // =========================================================================
-btnSubmitAiGenerate.addEventListener('click', async () => {
-    const prompt = aiPromptInput.value.trim();
-    const questionCount = aiQuestionCount.value;
-    const difficulty = aiDifficulty.value;
+if (btnSubmitAiGenerate) {
+    btnSubmitAiGenerate.addEventListener('click', async () => {
+        const prompt = aiPromptInput.value.trim();
+        const questionCount = aiQuestionCount.value;
+        const difficulty = aiDifficulty.value;
 
-    if (!prompt) {
-        alert("Vui lòng nhập chủ đề hoặc tài liệu cần tạo đề!");
-        return;
-    }
-
-    if (!auth.currentUser) {
-        alert("Vui lòng đăng nhập để sử dụng tính năng AI!");
-        return;
-    }
-
-    // Hiển thị Spinner
-    aiFormArea.style.display = 'none';
-    aiLoadingSpinner.style.display = 'block';
-
-    try {
-        // --- 1. GỌI API VERCEL ĐỂ TẠO ĐỀ ---
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                prompt: prompt,
-                questionCount: questionCount,
-                difficulty: difficulty
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Lỗi gọi API: ${response.status}`);
+        if (!prompt) {
+            alert("Vui lòng nhập chủ đề hoặc tài liệu cần tạo đề!");
+            return;
         }
 
-        const data = await response.json();
-        
-        // Lấy danh sách câu hỏi từ API trả về
-        const questions = data.questions || [];
-        if (questions.length === 0) {
-            throw new Error("AI không tạo được câu hỏi nào.");
+        if (!auth.currentUser) {
+            alert("Vui lòng đăng nhập để sử dụng tính năng AI!");
+            return;
         }
 
-        // --- 2. TẠO ID ĐỀ THI ---
-        const examId = "AI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        // Hiển thị Spinner
+        aiFormArea.style.display = 'none';
+        aiLoadingSpinner.style.display = 'block';
 
-        // --- 3. LƯU TỪNG CÂU HỎI VÀO COLLECTION "questions" ---
-        for (let i = 0; i < questions.length; i++) {
-            const q = questions[i];
-            const questionId = `${examId}-Q${i + 1}`;
-            await setDoc(doc(db, "questions", questionId), {
-                examId: examId,
-                questionText: q.questionText || q.question || "",
-                options: q.options || q.answers || [],
-                correctAnswer: q.correctAnswer || q.correct || "",
-                explanation: q.explanation || "Không có giải thích",
-                order: i + 1
+        try {
+            // --- 1. GỌI API VERCEL ĐỂ TẠO ĐỀ ---
+            // Gọi lên serverless function của Vercel (đã sửa payload thành promptText)
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    promptText: prompt, 
+                    questionCount: questionCount,
+                    difficulty: difficulty
+                })
             });
-        }
 
-        // --- 4. GHI THÔNG TIN GÓI ĐỀ THI VÀO COLLECTION "exams" ---
-        await setDoc(doc(db, "exams", examId), {
-            id: examId,
-            technique: "AI Tự Động",
-            level: difficulty === 'easy' ? 'Dễ' : (difficulty === 'hard' ? 'Khó' : 'Trung bình'),
-            timeLimit: parseInt(questionCount), 
-            createdAt: Date.now(),
-            isVip: false,
-            attemptCount: 0,
+            if (!response.ok) {
+                const errorData = await response.text();
+                throw new Error(`Lỗi gọi API (${response.status}): ${errorData}`);
+            }
+
+            // Hứng trực tiếp mảng câu hỏi từ Vercel trả về
+            const questions = await response.json();
             
-            // BỔ SUNG 2 DÒNG NÀY VÀO LÀ ĐỦ:
-            creatorId: auth.currentUser.uid,
-            isPublic: false
-        });
+            if (!Array.isArray(questions) || questions.length === 0) {
+                throw new Error("AI không tạo được câu hỏi nào hoặc dữ liệu trả về bị sai cấu trúc.");
+            }
 
-        // Hoàn thành
-        closeAiModal();
-        alert(`Tạo đề thi thành công! Mã đề của bạn là: ${examId}`);
-        
-        // Tải lại giao diện danh sách đề thi (Nó sẽ tự query bằng OR bên dashboard-exams.js)
-        if (typeof window.loadAggregatedExamData === 'function') {
-            window.loadAggregatedExamData();
-        } else {
-            location.reload(); 
+            // --- 2. TẠO ID ĐỀ THI ---
+            const examId = "AI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+            // --- 3. LƯU TỪNG CÂU HỎI VÀO COLLECTION "questions" ---
+            // Lặp qua mảng câu hỏi và lưu vào Firestore
+            const savePromises = questions.map((q, i) => {
+                const questionId = `${examId}-Q${i + 1}`;
+                return setDoc(doc(db, "questions", questionId), {
+                    examId: examId,
+                    // Bọc thép dữ liệu: Quét mọi tên key mà AI có thể trả về để khớp với file quiz.html
+                    text: q.text || q.questionText || q.question || q.content || "Lỗi: AI không có nội dung",
+                    options: q.options || q.answers || [],
+                    correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : (q.correct || 0),
+                    explanation: q.explanation || "Không có giải thích chi tiết",
+                    order: i + 1
+                });
+            });
+
+            // Chờ lưu toàn bộ câu hỏi xong
+            await Promise.all(savePromises);
+
+            // --- 4. GHI THÔNG TIN GÓI ĐỀ THI VÀO COLLECTION "exams" ---
+            await setDoc(doc(db, "exams", examId), {
+                id: examId,
+                technique: "AI Tự Động",
+                level: difficulty === 'easy' ? 'Dễ' : (difficulty === 'hard' ? 'Khó' : 'Trung bình'),
+                timeLimit: parseInt(questionCount), 
+                createdAt: Date.now(),
+                isVip: false,
+                attemptCount: 0,
+                
+                // Phân quyền hiển thị: Đề này chỉ mình người tạo thấy
+                creatorId: auth.currentUser.uid,
+                isPublic: false
+            });
+
+            // Hoàn thành
+            closeAiModal();
+            alert(`Tạo đề thi thành công! Mã đề của bạn là: ${examId}`);
+            
+            // Tải lại giao diện danh sách đề thi trên Dashboard
+            if (typeof window.loadAggregatedExamData === 'function') {
+                window.loadAggregatedExamData();
+            } else {
+                location.reload(); 
+            }
+
+        } catch (error) {
+            console.error("Lỗi tạo đề thi AI:", error);
+            alert("Đã xảy ra lỗi trong quá trình tạo đề bằng AI: " + error.message);
+            resetAiForm();
         }
-
-    } catch (error) {
-        console.error("Lỗi tạo đề thi AI:", error);
-        alert("Đã xảy ra lỗi trong quá trình tạo đề bằng AI. Vui lòng thử lại!");
-        resetAiForm();
-    }
-});
+    });
+}
