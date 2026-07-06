@@ -181,17 +181,21 @@
         .btn-premium-pro {
             background: linear-gradient(135deg, #8ec5fc 0%, #e0c3fc 100%) !important;
             color: #2c3e50 !important;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            border: none !important;
+            padding: 8px 16px !important;
+            border-radius: 20px !important;
+            font-weight: bold !important;
+            font-size: 0.9rem !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
             box-shadow: 0 4px 10px rgba(142, 197, 252, 0.4) !important;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+            
+            /* 2 DÒNG QUAN TRỌNG NHẤT ĐỂ FIX LỖI: */
+            white-space: nowrap !important; 
+            flex-shrink: 0 !important;
         }
         .btn-premium-pro:hover {
             transform: translateY(-2px);
