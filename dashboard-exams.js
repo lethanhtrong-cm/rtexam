@@ -1,5 +1,6 @@
 import { auth, db, safeRedirect } from "./dashboard-core.js";
-import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// ĐÃ THÊM: Import hàm 'or' từ thư viện firestore
+import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, query, where, or } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // 1. BIẾN TOÀN CỤC & TRẠNG THÁI BỘ LỌC ĐA LỚP
@@ -200,7 +201,7 @@ function handleSortFilterChange() {
 }
 
 // =========================================================================
-// 4. TẢI VÀ TỔNG HỢP SIÊU DỮ LIỆU TỪ FIRESTORE
+// 4. TẢI VÀ TỔNG HỢP SIÊU DỮ LIỆU TỪ FIRESTORE (ĐÃ TỐI ƯU QUERY)
 // =========================================================================
 async function loadAggregatedExamData() {
     try {
@@ -217,8 +218,29 @@ async function loadAggregatedExamData() {
             }
         });
 
+        // ---------------------------------------------------------
+        // NÂNG CẤP BẢO MẬT & CHI PHÍ: TRUY VẤN CÓ CHỌN LỌC BẰNG OR()
+        // ---------------------------------------------------------
         const examsConfigRef = collection(db, "exams");
-        const eSnap = await getDocs(examsConfigRef);
+        let examsQuery;
+
+        if (auth.currentUser) {
+            // Lấy đề thi Public HOẶC đề thi do chính User tạo ra
+            examsQuery = query(
+                examsConfigRef, 
+                or(
+                    where("isPublic", "==", true),
+                    where("creatorId", "==", auth.currentUser.uid)
+                )
+            );
+        } else {
+            // Nếu chưa đăng nhập (guest), chỉ lấy đề Public
+            examsQuery = query(examsConfigRef, where("isPublic", "==", true));
+        }
+
+        const eSnap = await getDocs(examsQuery);
+        // ---------------------------------------------------------
+
         eSnap.forEach((doc) => {
             const eId = doc.id;
             if (examMap[eId]) {
@@ -275,7 +297,7 @@ async function loadAggregatedExamData() {
 
     } catch (error) {
         console.error("Lỗi khi tổng hợp dữ liệu đề thi:", error);
-        examListContainer.innerHTML = '<div class="loading-text" style="color:red;">Lỗi tải dữ liệu khóa học!</div>';
+        examListContainer.innerHTML = '<div class="loading-text" style="color:red;">Lỗi tải dữ liệu đề thi, vui lòng thử lại!</div>';
     }
 }
 
@@ -353,7 +375,6 @@ function renderExams() {
     groups.forEach(group => {
         if (group.data.length === 0) return; // Bỏ qua nếu nhóm không có đề thi
 
-        // NÂNG CẤP SLIDER: Thêm wrapper và các nút mũi tên trái phải
         let rowHtml = `
             <div class="exam-category-row mb-5">
                 <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
@@ -393,14 +414,13 @@ function renderExams() {
                 </div>
             `;
 
-            // 3. DẢI BADGE PASTEL 4 THÔNG SỐ (Minimalist Style)
-            let levelColor = '#d97706'; // Vàng cam cho Trung bình
+            let levelColor = '#d97706';
             let levelIcon = 'fa-chart-bar';
             if (exam.level === 'Dễ') {
-                levelColor = '#059669'; // Xanh lá
+                levelColor = '#059669';
                 levelIcon = 'fa-arrow-trend-up';
             } else if (exam.level === 'Khó') {
-                levelColor = '#dc2626'; // Đỏ
+                levelColor = '#dc2626';
                 levelIcon = 'fa-fire';
             }
 
@@ -423,7 +443,6 @@ function renderExams() {
                 </div>
             `;
 
-            // 4. ACTION BUTTON THÔNG MINH (CÓ VÒNG TRÒN ĐIỂM SỐ SVG)
             let actionAreaHtml = '';
             if (isExamVip && !isUserVip) {
                 actionAreaHtml = `
@@ -487,8 +506,6 @@ function renderExams() {
                 `;
             }
 
-            // --- GHÉP CARD VÀO TRONG ROW HTML, THÊM MARGIN CHO CÁC THẺ ---
-            // CẬP NHẬT UI ĐÁNH GIÁ VÀ LƯỢT THI
             rowHtml += `
                 <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: hidden; position: relative;">
                     <div class="card-body p-4 d-flex flex-column h-100">
@@ -514,7 +531,6 @@ function renderExams() {
             `;
         });
 
-        // Đóng div container và thêm nút phải
         rowHtml += `
                     </div>
                     <button class="slider-btn right" onclick="slideRight(this)"><i class="fa-solid fa-chevron-right"></i></button>
@@ -597,7 +613,7 @@ window.goToHistory = function(examId) {
 window.slideLeft = function(button) {
     const container = button.parentElement.querySelector('.swimlane-scroll-container');
     if (container) {
-        // Cuộn lùi 1 khoảng bằng thẻ + margin (340 + 24 = 364px). Mình để 364 để cuộn 1 thẻ 1 lần
+        // Cuộn lùi 1 khoảng bằng thẻ + margin (340 + 24 = 364px)
         container.scrollBy({ left: -364, behavior: 'smooth' });
     }
 };
@@ -605,7 +621,6 @@ window.slideLeft = function(button) {
 window.slideRight = function(button) {
     const container = button.parentElement.querySelector('.swimlane-scroll-container');
     if (container) {
-        // Cuộn tới 1 khoảng 364px
         container.scrollBy({ left: 364, behavior: 'smooth' });
     }
 };
