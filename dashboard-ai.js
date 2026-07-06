@@ -143,14 +143,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 // Lặp qua mảng câu hỏi, tạo từng Promise để ghi vào collection "questions"
-                // Cách dùng Promise.all này giúp lưu hàng loạt câu hỏi cực kỳ nhanh gọn
                 const savePromises = generatedQuestions.map((questionObj, index) => {
                     return addDoc(collection(db, "questions"), {
-                        examId: examId, // Gắn mã đề để liên kết dữ liệu
-                        questionText: questionObj.text,
-                        options: questionObj.options,
-                        correctAnswer: questionObj.correctAnswer,
-                        explanation: questionObj.explanation,
+                        examId: examId,
+                        // Bọc thép dữ liệu: Quét mọi tên key mà AI có thể trả về
+                        questionText: questionObj.text || questionObj.question || questionObj.content || "Lỗi: AI không trả về nội dung câu hỏi",
+                        options: questionObj.options || [],
+                        correctAnswer: questionObj.correctAnswer || 0,
+                        explanation: questionObj.explanation || "Không có giải thích",
                         order: index + 1 // Lưu thứ tự câu hỏi
                     });
                 });
