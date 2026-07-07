@@ -82,8 +82,23 @@
                 <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: #a855f7; margin-bottom: 15px;"></i>
                 <p style="color: var(--text-muted); font-weight: 500;">AI đang phân tích và soạn đề...<br>Vui lòng đợi từ 5-10 giây</p>
             </div>
+
+            <div id="aiSuccessArea" style="display: none; text-align: center; padding: 10px 0; animation: fadeIn 0.4s ease;">
+                <div style="font-size: 60px; margin-bottom: 10px;">🎉</div>
+                <h3 style="color: #1f2937; margin-bottom: 10px; font-weight: bold;">Tạo đề thi thành công!</h3>
+                <p style="color: #6b7280; margin-bottom: 25px; font-size: 0.95rem;">Mã đề của bạn là: <strong id="generatedAiExamCode" style="color: #10b981; font-size: 1.15rem; letter-spacing: 1px;">AI-XXXXXX</strong></p>
+                
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button id="btnCancelGoToQuiz" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: #f9fafb; color: #4b5563; font-weight: bold; cursor: pointer; transition: background 0.2s;">
+                        Lưu đề
+                    </button>
+                    <button id="btnGoToQuiz" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); transition: transform 0.2s;">
+                        Bắt đầu thi ngay
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="custom-modal-footer">
+        <div class="custom-modal-footer" id="aiModalFooter">
             <button class="btn-primary" id="btnCancelAi" style="background: #9ca3af;">Hủy</button>
             <button class="btn-primary" id="btnSubmitAiGenerate" style="background: linear-gradient(135deg, #a855f7, #7e22ce); border: none;">Bắt đầu tạo</button>
         </div>
@@ -102,7 +117,6 @@
             <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
                 Bạn có thể gửi thông báo trực tiếp qua Email nội bộ hệ thống hoặc Copy link để gửi cho bạn bè.
             </p>
-            
             <div class="form-group" style="margin-bottom: 25px;">
                 <label style="font-weight: 600; color: var(--primary-blue);"><i class="fa-regular fa-envelope"></i> Gửi thông báo đến Email:</label>
                 <div style="display: flex; gap: 10px; margin-top: 8px;">
@@ -112,9 +126,7 @@
                     </button>
                 </div>
             </div>
-
             <hr style="border: 0; border-top: 1px dashed var(--border-color); margin: 20px 0;">
-
             <div class="form-group" style="margin-bottom: 0;">
                 <label style="font-weight: 600; color: var(--primary-blue);"><i class="fa-solid fa-link"></i> Link trực tiếp của đề thi:</label>
                 <div style="display: flex; gap: 10px; margin-top: 8px;">
