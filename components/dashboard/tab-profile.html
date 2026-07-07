@@ -1,1 +1,51 @@
+<div class="profile-grid-layout">
+    <div class="profile-column">
+        <div class="card">
+            <h3><i class="fa-solid fa-address-card"></i> Thông tin chung</h3>
+            <div class="profile-container">
+                <div class="profile-avatar">
+                    <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar">
+                </div>
+                <div class="profile-info">
+                    <p><strong>Tên hiển thị:</strong> <span id="displayName">Đang tải...</span></p>
+                    <p><strong>Email:</strong> <span id="displayEmail">Đang tải...</span></p>
+                    <p>
+                        <strong>Trạng thái VIP:</strong> 
+                        <span id="vipStatusBadge" class="status-badge status-unactive">Đang kiểm tra...</span>
+                    </p>
+                    <p><strong>Ngày kích hoạt:</strong> <span id="vipStartDate">Không xác định</span></p>
+                    <p><strong>Ngày hết hạn:</strong> <span id="vipEndDate">Không xác định</span></p>
+                </div>
+            </div>
+        </div>
 
+        <div class="card">
+            <h3>🔒 Đổi Mật Khẩu</h3>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label for="inputNewPassword">Mật khẩu mới:</label>
+                    <input type="password" id="inputNewPassword" placeholder="Nhập mật khẩu mới..." required minlength="6">
+                </div>
+                <button type="submit" id="btnChangePassword" class="btn-primary">Cập nhật mật khẩu</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="profile-column">
+        <div class="card" style="height: 100%;">
+            <h3><i class="fa-solid fa-pen-to-square"></i> Cập nhật hồ sơ</h3>
+            <form id="updateProfileForm">
+                <div class="form-group">
+                    <label for="inputName">Tên hiển thị mới:</label>
+                    <input type="text" id="inputName" placeholder="Nhập tên của bạn...">
+                </div>
+                <div class="form-group">
+                    <label for="inputAvatarFile">Tải lên ảnh đại diện:</label>
+                    <input type="file" id="inputAvatarFile" accept="image/*">
+                    <small style="display: block; color: #666; margin-top: 5px;">Ảnh sẽ được nén tự động xuống 200x200 pixel.</small>
+                </div>
+                <button type="submit" id="btnUpdateProfile" class="btn-primary">Lưu thay đổi</button>
+            </form>
+        </div>
+    </div>
+</div>
