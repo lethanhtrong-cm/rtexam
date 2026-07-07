@@ -40,24 +40,25 @@ export function formatDate(dateData) {
 }
 
 // =========================================================================
-// 3. LOGIC UI: SIDEBAR ACCORDION, ĐIỀU HƯỚNG TAB & TOPBAR
+// 3. LOGIC UI: XỬ LÝ CHUYỂN TAB ĐỘNG
 // =========================================================================
-
-const mainMenuItems = document.querySelectorAll('.sidebar-menu > .menu-item[data-target]');
-const accordionHeaders = document.querySelectorAll('.accordion-header');
-const subMenuItems = document.querySelectorAll('.sub-menu-item');
-const tabPanes = document.querySelectorAll('.tab-pane');
-const currentTabTitle = document.getElementById("currentTabTitle");
 
 const tabTitleMap = {
     'tab-exams': 'Kho Đề Thi',
     'tab-profile': 'Hồ Sơ Cá Nhân',
     'tab-history': 'Lịch Sử Làm Bài',
-    'tab-vip': 'Nâng Cấp Tài Khoản Pro'
+    'tab-vip': 'Nâng Cấp Tài Khoản Pro',
+    'leaderboard': 'Bảng Xếp Hạng'
 };
 
-// Hàm điều hướng tab dùng chung toàn bộ hệ thống (Export để file khác có thể gọi)
+// Hàm điều hướng tab dùng chung (Đã sửa để query DOM động tại thời điểm gọi)
 export function switchTab(targetTabId, titleOverride) {
+    const mainMenuItems = document.querySelectorAll('.sidebar-menu > .menu-item[data-target]');
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    const subMenuItems = document.querySelectorAll('.sub-menu-item');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    const currentTabTitle = document.getElementById("currentTabTitle");
+
     if (mainMenuItems) mainMenuItems.forEach(m => m.classList.remove('active'));
     if (accordionHeaders) accordionHeaders.forEach(h => h.classList.remove('active'));
     if (subMenuItems) subMenuItems.forEach(sm => sm.classList.remove('active'));
@@ -73,31 +74,48 @@ export function switchTab(targetTabId, titleOverride) {
     }
 }
 
-// Đăng ký sự kiện Click cho các Menu độc lập
-if (mainMenuItems) {
-    mainMenuItems.forEach(item => {
-        if (item) {
+// =========================================================================
+// 4. QUẢN LÝ VÒNG ĐỜI & GẮN SỰ KIỆN KHI DOM SẴN SÀNG (BƯỚC 4)
+// =========================================================================
+
+let isComponentsLoaded = false;
+let currentUserInstance = null; // Lưu cache lại user nếu Firebase tải xong trước DOM
+
+// Lắng nghe sự kiện báo hiệu các file HTML con đã được nạp xong
+document.addEventListener('ComponentsLoaded', () => {
+    isComponentsLoaded = true;
+    initDOMListeners();
+    
+    // Nếu Firebase Auth đã xác thực xong từ trước, tiến hành render giao diện
+    if (currentUserInstance) {
+        executeAuthUI(currentUserInstance);
+    }
+});
+
+function initDOMListeners() {
+    const mainMenuItems = document.querySelectorAll('.sidebar-menu > .menu-item[data-target]');
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    const subMenuItems = document.querySelectorAll('.sub-menu-item');
+    
+    // Click Main Menu
+    if (mainMenuItems) {
+        mainMenuItems.forEach(item => {
             item.addEventListener('click', () => {
                 const targetId = item.getAttribute('data-target');
-                if (targetId) {
-                    switchTab(targetId);
-                }
+                if (targetId) switchTab(targetId);
                 item.classList.add('active');
             });
-        }
-    });
-}
+        });
+    }
 
-// Đăng ký sự kiện Click cho Accordion Header
-if (accordionHeaders) {
-    accordionHeaders.forEach(header => {
-        if (header) {
+    // Click Accordion Header
+    if (accordionHeaders) {
+        accordionHeaders.forEach(header => {
             header.addEventListener('click', () => {
                 const content = header.nextElementSibling;
                 if (!content) return;
                 
                 const icon = header.querySelector('.accordion-icon');
-                
                 content.classList.toggle('show');
                 if (icon) icon.style.transform = content.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
 
@@ -110,14 +128,12 @@ if (accordionHeaders) {
                 const allSubMenu = content.querySelector('.sub-menu-item[data-technique="all"]');
                 if (allSubMenu) allSubMenu.classList.add('active');
             });
-        }
-    });
-}
+        });
+    }
 
-// Đăng ký sự kiện Click cho các Sub-menus (MRI, CT, Đã lưu...)
-if (subMenuItems) {
-    subMenuItems.forEach(subItem => {
-        if (subItem) {
+    // Click Sub-menus (MRI, CT...)
+    if (subMenuItems) {
+        subMenuItems.forEach(subItem => {
             subItem.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const parentAccordion = subItem.closest('.menu-accordion');
@@ -127,59 +143,67 @@ if (subMenuItems) {
                     if (parentHeader) {
                         const targetId = parentHeader.getAttribute('data-target');
                         const techniqueName = subItem.textContent.trim();
-                        if (targetId) {
-                            switchTab(targetId, `${tabTitleMap[targetId]} - ${techniqueName}`);
-                        }
+                        if (targetId) switchTab(targetId, `${tabTitleMap[targetId]} - ${techniqueName}`);
                         parentHeader.classList.add('active');
                     }
                 }
-                
                 subItem.classList.add('active');
             });
-        }
-    });
-}
-
-// Xử lý Logic Dropdown Menu ở Topbar
-const userMenuToggle = document.getElementById('userMenuToggle');
-const userDropdown = document.getElementById('userDropdown');
-const btnManageProfile = document.getElementById('btnManageProfile');
-
-if (userMenuToggle) {
-    userMenuToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (userDropdown) {
-            userDropdown.classList.toggle('show');
-        }
-    });
-}
-
-document.addEventListener('click', (e) => {
-    if (userMenuToggle && !userMenuToggle.contains(e.target)) {
-        if (userDropdown) {
-            userDropdown.classList.remove('show');
-        }
+        });
     }
-});
 
-if (btnManageProfile) {
-    btnManageProfile.addEventListener('click', () => {
-        switchTab('tab-profile');
-    });
-}
+    // Logic Topbar User Menu
+    const userMenuToggle = document.getElementById('userMenuToggle');
+    const userDropdown = document.getElementById('userDropdown');
+    const btnManageProfile = document.getElementById('btnManageProfile');
 
-// =========================================================================
-// 4. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI TOPBAR
-// =========================================================================
+    if (userMenuToggle) {
+        userMenuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (userDropdown) userDropdown.classList.toggle('show');
+        });
+    }
 
-const topbarVipContainer = document.getElementById('topbar-vip-container');
-if (topbarVipContainer) {
-    topbarVipContainer.addEventListener('click', (e) => {
-        if (e.target.closest('#btnUpgradeVipTopbar')) {
-            switchTab('tab-vip');
+    document.addEventListener('click', (e) => {
+        if (userMenuToggle && !userMenuToggle.contains(e.target)) {
+            if (userDropdown) userDropdown.classList.remove('show');
         }
     });
+
+    if (btnManageProfile) {
+        btnManageProfile.addEventListener('click', () => switchTab('tab-profile'));
+    }
+
+    // Nút VIP trên Topbar
+    const topbarVipContainer = document.getElementById('topbar-vip-container');
+    if (topbarVipContainer) {
+        topbarVipContainer.addEventListener('click', (e) => {
+            if (e.target.closest('#btnUpgradeHeader') || e.target.closest('#btnUpgradeVipTopbar')) {
+                switchTab('tab-vip');
+            }
+        });
+    }
+
+    // Nút đăng xuất
+    const btnLogout = document.getElementById("btnLogout");
+    if (btnLogout) {
+        btnLogout.addEventListener("click", () => {
+            signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
+        });
+    }
+
+    // Nút xác nhận chuyển khoản VIP
+    const btnConfirmPayment = document.getElementById("btnConfirmPayment");
+    if (btnConfirmPayment) {
+        btnConfirmPayment.addEventListener("click", () => {
+            alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
+        });
+    }
 }
+
+// =========================================================================
+// 5. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI THÔNG TIN USER
+// =========================================================================
 
 function renderAuthInfo(user) {
     const email = user.email;
@@ -230,10 +254,11 @@ function setVipInactive() {
     const statAccount = document.getElementById("statAccountStatus");
     if (statAccount) statAccount.textContent = "Thường";
 
+    const topbarVipContainer = document.getElementById('topbar-vip-container');
     if (topbarVipContainer) {
         topbarVipContainer.innerHTML = `
-            <button id="btnUpgradeVipTopbar" class="topbar-vip-btn">
-                🚀 Nâng cấp Pro
+            <button class="btn-premium-pro" id="btnUpgradeHeader">
+                <i class="fa-solid fa-gem"></i> Nâng cấp Pro
             </button>
         `;
     }
@@ -248,7 +273,6 @@ async function fetchUserData(user) {
         if (userDocSnap.exists()) {
             currentUserData = userDocSnap.data();
             
-            // Khởi tạo mảng bookmarks mặc định rỗng nếu chưa tồn tại
             if (!currentUserData.bookmarks) {
                 currentUserData.bookmarks = [];
             }
@@ -289,6 +313,7 @@ async function fetchUserData(user) {
                 const statAccount = document.getElementById("statAccountStatus");
                 if (statAccount) statAccount.textContent = "PRO";
 
+                const topbarVipContainer = document.getElementById('topbar-vip-container');
                 if (topbarVipContainer) {
                     topbarVipContainer.innerHTML = `
                         <div class="topbar-vip-badge">
@@ -309,33 +334,27 @@ async function fetchUserData(user) {
     return currentUserData;
 }
 
+// Hàm khởi chạy cập nhật dữ liệu UI
+async function executeAuthUI(user) {
+    renderAuthInfo(user);
+    const currentUserData = await fetchUserData(user);
+    
+    if (currentUserData) {
+        // Bắn ra event cho các module khác (dashboard-exams, dashboard-profile) biết dữ liệu User đã sẵn sàng
+        const authReadyEvent = new CustomEvent("authReady", { detail: { user, currentUserData } });
+        document.dispatchEvent(authReadyEvent);
+    }
+}
+
+// Theo dõi trạng thái đăng nhập
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        renderAuthInfo(user);
-        const currentUserData = await fetchUserData(user);
-        
-        if (currentUserData) {
-            const authReadyEvent = new CustomEvent("authReady", { detail: { user, currentUserData } });
-            document.dispatchEvent(authReadyEvent);
+        currentUserInstance = user; // Lưu lại để dùng nếu DOM chưa load xong
+        // Chỉ thao tác lên DOM khi HTML loader đã nạp xong các component
+        if (isComponentsLoaded) {
+            executeAuthUI(user);
         }
     } else {
         safeRedirect('index.html');
     }
 });
-
-// =========================================================================
-// 5. SỰ KIỆN NÚT CƠ BẢN
-// =========================================================================
-const btnLogout = document.getElementById("btnLogout");
-if (btnLogout) {
-    btnLogout.addEventListener("click", () => {
-        signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
-    });
-}
-
-const btnConfirmPayment = document.getElementById("btnConfirmPayment");
-if (btnConfirmPayment) {
-    btnConfirmPayment.addEventListener("click", () => {
-        alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
-    });
-}
