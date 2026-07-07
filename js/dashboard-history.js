@@ -4,12 +4,15 @@ import { collection, query, where, getDocs, doc, deleteDoc } from "https://www.g
 let userEmail = null;
 let examVipMap = {};
 
+const historyTableBody = document.getElementById("historyTableBody");
+const statCompletedExams = document.getElementById("statCompletedExams");
+const statAvgScore = document.getElementById("statAvgScore");
+
 window.safeRedirect = safeRedirect;
 
 // =========================================================================
-// 1. LẮNG NGHE CÁC SỰ KIỆN
+// 1. LẮNG NGHE SỰ KIỆN TỪ HỆ THỐNG MODULES
 // =========================================================================
-
 document.addEventListener("authReady", (e) => {
     userEmail = e.detail.user.email;
 });
@@ -28,15 +31,9 @@ document.addEventListener("examsReady", async (e) => {
 });
 
 // =========================================================================
-// 2. TẢI DỮ LIỆU LỊCH SỬ LÀM BÀI
+// 2. TẢI DỮ LIỆU LỊCH SỬ LÀM BÀI & CẬP NHẬT GIAO DIỆN
 // =========================================================================
 async function fetchHistory(email) {
-    const historyTableBody = document.getElementById("historyTableBody");
-    const statCompletedExams = document.getElementById("statCompletedExams");
-    const statAvgScore = document.getElementById("statAvgScore");
-
-    if (!historyTableBody) return;
-
     try {
         const resultsRef = collection(db, "results");
         const q = query(resultsRef, where("email", "==", email));
@@ -70,6 +67,7 @@ async function fetchHistory(email) {
             }
         });
 
+        // --- TÍNH TOÁN QUICK STATS ---
         let totalScoreSum = 0;
         const uniqueExamsCount = Object.keys(firstAttempts).length;
 
@@ -84,6 +82,7 @@ async function fetchHistory(email) {
         if (statCompletedExams) statCompletedExams.textContent = uniqueExamsCount;
         if (statAvgScore) statAvgScore.textContent = averageScoreResult;
 
+        // --- SẮP XẾP VÀ RENDER BẢNG ---
         resultsArray.sort((a, b) => {
             const dateA = a.timestamp && typeof a.timestamp.toDate === 'function' ? a.timestamp.toDate() : new Date(a.timestamp || a.submittedAt || 0);
             const dateB = b.timestamp && typeof b.timestamp.toDate === 'function' ? b.timestamp.toDate() : new Date(b.timestamp || b.submittedAt || 0);
@@ -95,12 +94,19 @@ async function fetchHistory(email) {
         resultsArray.forEach((data) => {
             const tr = document.createElement("tr");
             const quizId = data.examId || data.examCode || "Không rõ";
-            const score = data.score !== undefined ? data.score : 0;
-            const correctAnswers = data.correctAnswers !== undefined ? data.correctAnswers : 0;
+            
+            // FIX LỖI LOGIC ĐIỂM SỐ CHÍNH XÁC: 
+            // Dữ liệu 'score' lưu trên db thực chất là 'số câu đúng'.
+            const correctCount = data.score !== undefined ? data.score : 0;
+            const totalQ = data.totalQuestions || data.total || 1;
+            
+            // Tính toán ra thang điểm 10
+            let displayScore = (correctCount / totalQ) * 10;
+            displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(2));
             
             const isVipExam = examVipMap[quizId] === true;
-            const badgeHtml = isVipExam ? '<span style="background:#ffc107;color:#856404;padding:2px 5px;border-radius:4px;font-size:0.75rem;">VIP</span>' 
-                                        : '<span style="background:#e2e3e5;color:#383d41;padding:2px 5px;border-radius:4px;font-size:0.75rem;">Free</span>';
+            const badgeHtml = isVipExam ? '<span style="background:linear-gradient(135deg, #FFD700 0%, #FDB931 100%);color:#856404;padding:4px 8px;border-radius:6px;font-size:0.7rem;font-weight:bold;margin-left:8px;box-shadow:0 2px 4px rgba(255,215,0,0.3);">PRO</span>' 
+                                        : '<span style="background:#e5e7eb;color:#4b5563;padding:4px 8px;border-radius:6px;font-size:0.7rem;font-weight:bold;margin-left:8px;">Free</span>';
 
             let timeSpentStr = "Không rõ";
             if (data.timeSpent !== undefined) {
@@ -117,18 +123,20 @@ async function fetchHistory(email) {
             }
 
             tr.innerHTML = `
-                <td><strong>${quizId}</strong> ${badgeHtml}</td>
-                <td>${timeSpentStr}</td>
-                <td>${submitTime}</td>
-                <td>${correctAnswers} câu</td>
-                <td style="color: var(--primary-blue); font-weight: bold;">${score}</td>
+                <td><strong style="color: var(--text-main); font-size: 1.05rem;">${quizId}</strong> ${badgeHtml}</td>
+                <td><i class="fa-regular fa-clock" style="color: #9ca3af; margin-right: 5px;"></i> ${timeSpentStr}</td>
+                <td style="color: #6b7280;">${submitTime}</td>
+                <td><span style="background: #f3f4f6; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.9rem;">${correctCount} / ${totalQ} câu</span></td>
+                <td><span class="score-highlight">${displayScore}</span></td>
                 <td>
-                    <button class="btn-review" onclick="safeRedirect('quiz.html?resultId=${data.id}')">
-                        <i class="fa-solid fa-eye"></i> Xem lại
-                    </button>
-                    <button class="btn-delete-history" data-id="${data.id}">
-                        <i class="fa-solid fa-trash"></i> Xóa
-                    </button>
+                    <div class="history-action-btns">
+                        <button class="btn-history-action btn-review-modern" onclick="safeRedirect('quiz.html?resultId=${data.id}')" title="Xem chi tiết bài làm">
+                            <i class="fa-solid fa-eye"></i> Xem chi tiết
+                        </button>
+                        <button class="btn-history-action btn-delete-modern btn-delete-history" data-id="${data.id}" title="Xóa vĩnh viễn">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
                 </td>
             `;
             historyTableBody.appendChild(tr);
@@ -136,34 +144,35 @@ async function fetchHistory(email) {
 
     } catch (error) {
         console.error("Lỗi khi tải bảng lịch sử:", error);
-        historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text" style="color: red;">Lỗi khi tải dữ liệu lịch sử!</td></tr>';
+        historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text" style="color: var(--danger-red);">Lỗi khi tải dữ liệu lịch sử. Vui lòng tải lại trang!</td></tr>';
     }
 }
 
 // =========================================================================
-// 3. ỦY QUYỀN SỰ KIỆN: XÓA LỊCH SỬ THI
+// 3. SỰ KIỆN XÓA BẢN GHI LỊCH SỬ THI
 // =========================================================================
-document.addEventListener('ComponentsLoaded', () => {
-    const historyTableBody = document.getElementById("historyTableBody");
-    if (historyTableBody) {
-        historyTableBody.addEventListener('click', async (e) => {
-            const deleteBtn = e.target.closest('.btn-delete-history');
-            if (deleteBtn) {
-                const docId = deleteBtn.getAttribute('data-id');
-                if (confirm("Bạn có chắc chắn muốn xóa kết quả bài thi này khỏi lịch sử hệ thống?")) {
-                    try {
-                        await deleteDoc(doc(db, "results", docId));
-                        alert("Đã xóa kết quả bài thi thành công!");
-                        
-                        if (userEmail) {
-                            await fetchHistory(userEmail);
-                        }
-                    } catch (error) {
-                        console.error("Lỗi khi xóa kết quả bài làm:", error);
-                        alert("Đã xảy ra lỗi hệ thống khi thực hiện xóa: " + error.message);
-                    }
+historyTableBody.addEventListener('click', async (e) => {
+    const deleteBtn = e.target.closest('.btn-delete-history');
+    if (deleteBtn) {
+        const docId = deleteBtn.getAttribute('data-id');
+        if (confirm("Bạn có chắc chắn muốn xóa kết quả bài thi này khỏi lịch sử hệ thống? Hành động này không thể hoàn tác.")) {
+            const originalHtml = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            deleteBtn.disabled = true;
+
+            try {
+                await deleteDoc(doc(db, "results", docId));
+                
+                // Cập nhật lại giao diện sau khi xóa
+                if (userEmail) {
+                    await fetchHistory(userEmail);
                 }
+            } catch (error) {
+                console.error("Lỗi khi xóa kết quả bài làm:", error);
+                alert("Đã xảy ra lỗi hệ thống khi thực hiện xóa: " + error.message);
+                deleteBtn.innerHTML = originalHtml;
+                deleteBtn.disabled = false;
             }
-        });
+        }
     }
 });
