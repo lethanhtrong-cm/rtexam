@@ -14,8 +14,14 @@ async function initDashboard() {
     await Promise.all([
         loadComponent('topbar-container', './components/dashboard/topbar.html'),
         loadComponent('sidebar-container', './components/dashboard/sidebar.html'),
+        
+        // Nạp toàn bộ 5 tab nội dung
         loadComponent('tab-exams', './components/dashboard/tab-exams.html'),
         loadComponent('tab-profile', './components/dashboard/tab-profile.html'),
+        loadComponent('tab-history', './components/dashboard/tab-history.html'),
+        loadComponent('leaderboard', './components/dashboard/tab-leaderboard.html'),
+        loadComponent('tab-vip', './components/dashboard/tab-vip.html'),
+        
         loadComponent('modals-container', './components/dashboard/modals.html')
     ]);
     
