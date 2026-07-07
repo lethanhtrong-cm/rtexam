@@ -399,7 +399,7 @@ function renderExams() {
         { title: "🧲 Khối kiến thức MRI", data: displayData.filter(exam => exam.technique === 'MRI') },
         { title: "☢️ Khối kiến thức CT Scanner", data: displayData.filter(exam => exam.technique === 'CT') },
         { title: "🩻 Khối kiến thức X-Quang", data: displayData.filter(exam => exam.technique === 'X quang') },
-        { title: "🧩 Khối kiến thức Hỗn hợp & Khác", data: displayData.filter(exam => exam.technique === 'Hỗn hợp' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) }
+        { title: "🧩 Đề AI và Hỗn hợp", data: displayData.filter(exam => exam.technique === 'Hỗn hợp' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) }
     ];
 
     groups.forEach(group => {
