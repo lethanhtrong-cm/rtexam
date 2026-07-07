@@ -4,10 +4,6 @@ import { collection, query, where, getDocs, doc, deleteDoc } from "https://www.g
 let userEmail = null;
 let examVipMap = {};
 
-const historyTableBody = document.getElementById("historyTableBody");
-const statCompletedExams = document.getElementById("statCompletedExams");
-const statAvgScore = document.getElementById("statAvgScore");
-
 window.safeRedirect = safeRedirect;
 
 // =========================================================================
@@ -34,6 +30,13 @@ document.addEventListener("examsReady", async (e) => {
 // 2. TẢI DỮ LIỆU LỊCH SỬ LÀM BÀI & CẬP NHẬT GIAO DIỆN
 // =========================================================================
 async function fetchHistory(email) {
+    // ĐƯA CÁC BIẾN DOM VÀO TRONG HÀM ĐỂ TRÁNH LỖI NULL KHI CHƯA LOAD XONG HTML
+    const historyTableBody = document.getElementById("historyTableBody");
+    const statCompletedExams = document.getElementById("statCompletedExams");
+    const statAvgScore = document.getElementById("statAvgScore");
+
+    if (!historyTableBody) return; // Thoát nếu giao diện chưa sẵn sàng
+
     try {
         const resultsRef = collection(db, "results");
         const q = query(resultsRef, where("email", "==", email));
@@ -95,12 +98,9 @@ async function fetchHistory(email) {
             const tr = document.createElement("tr");
             const quizId = data.examId || data.examCode || "Không rõ";
             
-            // FIX LỖI LOGIC ĐIỂM SỐ CHÍNH XÁC: 
-            // Dữ liệu 'score' lưu trên db thực chất là 'số câu đúng'.
             const correctCount = data.score !== undefined ? data.score : 0;
             const totalQ = data.totalQuestions || data.total || 1;
             
-            // Tính toán ra thang điểm 10
             let displayScore = (correctCount / totalQ) * 10;
             displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(2));
             
@@ -144,35 +144,43 @@ async function fetchHistory(email) {
 
     } catch (error) {
         console.error("Lỗi khi tải bảng lịch sử:", error);
-        historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text" style="color: var(--danger-red);">Lỗi khi tải dữ liệu lịch sử. Vui lòng tải lại trang!</td></tr>';
+        if (historyTableBody) {
+            historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text" style="color: var(--danger-red);">Lỗi khi tải dữ liệu lịch sử. Vui lòng tải lại trang!</td></tr>';
+        }
     }
 }
 
 // =========================================================================
-// 3. SỰ KIỆN XÓA BẢN GHI LỊCH SỬ THI
+// 3. SỰ KIỆN XÓA BẢN GHI LỊCH SỬ THI (CHỜ LOAD XONG GIAO DIỆN)
 // =========================================================================
-historyTableBody.addEventListener('click', async (e) => {
-    const deleteBtn = e.target.closest('.btn-delete-history');
-    if (deleteBtn) {
-        const docId = deleteBtn.getAttribute('data-id');
-        if (confirm("Bạn có chắc chắn muốn xóa kết quả bài thi này khỏi lịch sử hệ thống? Hành động này không thể hoàn tác.")) {
-            const originalHtml = deleteBtn.innerHTML;
-            deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            deleteBtn.disabled = true;
+document.addEventListener('ComponentsLoaded', () => {
+    const historyTableBody = document.getElementById("historyTableBody");
+    
+    if (historyTableBody) {
+        historyTableBody.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.btn-delete-history');
+            if (deleteBtn) {
+                const docId = deleteBtn.getAttribute('data-id');
+                if (confirm("Bạn có chắc chắn muốn xóa kết quả bài thi này khỏi lịch sử hệ thống? Hành động này không thể hoàn tác.")) {
+                    const originalHtml = deleteBtn.innerHTML;
+                    deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    deleteBtn.disabled = true;
 
-            try {
-                await deleteDoc(doc(db, "results", docId));
-                
-                // Cập nhật lại giao diện sau khi xóa
-                if (userEmail) {
-                    await fetchHistory(userEmail);
+                    try {
+                        await deleteDoc(doc(db, "results", docId));
+                        
+                        // Cập nhật lại giao diện sau khi xóa
+                        if (userEmail) {
+                            await fetchHistory(userEmail);
+                        }
+                    } catch (error) {
+                        console.error("Lỗi khi xóa kết quả bài làm:", error);
+                        alert("Đã xảy ra lỗi hệ thống khi thực hiện xóa: " + error.message);
+                        deleteBtn.innerHTML = originalHtml;
+                        deleteBtn.disabled = false;
+                    }
                 }
-            } catch (error) {
-                console.error("Lỗi khi xóa kết quả bài làm:", error);
-                alert("Đã xảy ra lỗi hệ thống khi thực hiện xóa: " + error.message);
-                deleteBtn.innerHTML = originalHtml;
-                deleteBtn.disabled = false;
             }
-        }
+        });
     }
 });
