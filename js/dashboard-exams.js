@@ -15,14 +15,6 @@ let currentSearchQuery = '';
 let completedExams = {}; 
 let currentShareExamId = null;
 
-const examListContainer = document.getElementById('examListContainer');
-const sortFilter = document.getElementById('sortFilter');
-const viewBtns = document.querySelectorAll('.view-btn');
-const subMenuItems = document.querySelectorAll('.sub-menu-item');
-const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
-const timePills = document.querySelectorAll('#timeFilter .pill-btn');
-const searchInput = document.getElementById('searchInput');
-
 // =========================================================================
 // 2. LẮNG NGHE SỰ KIỆN AUTH READY & KHỞI CHẠY THÔNG BÁO REALTIME
 // =========================================================================
@@ -48,7 +40,7 @@ document.addEventListener("authReady", async (e) => {
                             score: data.score || 0,
                             total: data.totalQuestions || data.total || 1,
                             timestamp: ts,
-                            resultId: doc.id // <--- Lưu lại ID của kết quả để xem lại
+                            resultId: doc.id
                         };
                     }
                 }
@@ -278,6 +270,15 @@ function setupToolbarEvents() {
 }
 
 function setupFilterEvents() {
+    // Khai báo lại các DOM trong hàm để tránh lỗi null
+    const searchInput = document.getElementById('searchInput');
+    const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
+    const timePills = document.querySelectorAll('#timeFilter .pill-btn');
+    const sortFilter = document.getElementById('sortFilter');
+    const viewBtns = document.querySelectorAll('.view-btn');
+    const subMenuItems = document.querySelectorAll('.sub-menu-item');
+    const examListContainer = document.getElementById('examListContainer');
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.toLowerCase();
@@ -446,6 +447,9 @@ async function loadAggregatedExamData() {
 }
 
 function renderExams() {
+    const examListContainer = document.getElementById('examListContainer');
+    const sortFilter = document.getElementById('sortFilter');
+    
     if (!examListContainer) return;
 
     if (allExamsData.length === 0) {
@@ -573,7 +577,6 @@ function renderExams() {
             } else if (isCompleted) {
                 const correctAnswers = completedExams[exam.id].score || 0;
                 const total = completedExams[exam.id].total || 1;
-                // [FIX LỖI]: Lấy resultId từ dữ liệu completedExams
                 const resultId = completedExams[exam.id].resultId; 
 
                 let displayScore = (correctAnswers / total) * 10;
@@ -698,7 +701,6 @@ window.goToQuiz = function(examId) {
     safeRedirect(`quiz.html?examId=${examId}`); 
 };
 
-// [FIX LỖI]: Hàm chuyển hướng xem lại bài làm theo ID kết quả
 window.goToReview = function(resultId) { 
     safeRedirect(`quiz.html?resultId=${resultId}`); 
 };
