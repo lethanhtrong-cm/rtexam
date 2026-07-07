@@ -1,5 +1,4 @@
 import { auth, db, safeRedirect } from "./dashboard-core.js";
-// ĐÃ THÊM: Import hàm 'addDoc', 'onSnapshot', 'serverTimestamp' để xử lý logic Share & Thông báo
 import { collection, getDocs, doc, updateDoc, arrayUnion, arrayRemove, query, where, or, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
@@ -14,16 +13,9 @@ let currentLevel = 'all';
 let currentTime = 'all';      
 let currentSearchQuery = '';  
 let completedExams = {}; 
-let currentShareExamId = null; // Lưu ID đề thi đang được click Chia sẻ
+let currentShareExamId = null;
 
-// DOM Elements
-const examListContainer = document.getElementById('examListContainer');
-const sortFilter = document.getElementById('sortFilter');
-const viewBtns = document.querySelectorAll('.view-btn');
-const subMenuItems = document.querySelectorAll('.sub-menu-item');
-const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
-const timePills = document.querySelectorAll('#timeFilter .pill-btn');
-const searchInput = document.getElementById('searchInput');
+// Bỏ khai báo DOM tĩnh ở ngoài cùng để tránh lỗi null khi load
 
 // =========================================================================
 // 2. LẮNG NGHE SỰ KIỆN AUTH READY & KHỞI CHẠY THÔNG BÁO REALTIME
@@ -37,7 +29,7 @@ document.addEventListener("authReady", async (e) => {
     try {
         if (e.detail.user && e.detail.user.email) {
             
-            // 2.1 - Lấy lịch sử thi cũ (Code giữ nguyên)
+            // 2.1 - Lấy lịch sử thi cũ
             const resultsRef = collection(db, "results");
             const q = query(resultsRef, where("email", "==", e.detail.user.email));
             const snap = await getDocs(q);
@@ -57,7 +49,7 @@ document.addEventListener("authReady", async (e) => {
                 }
             });
 
-            // 2.2 - KÍCH HOẠT LẮNG NGHE THÔNG BÁO REALTIME TỪ FIRESTORE
+            // 2.2 - KÍCH HOẠT LẮNG NGHE THÔNG BÁO REALTIME
             setupRealtimeNotifications(e.detail.user.email);
         }
     } catch (err) {
@@ -70,21 +62,18 @@ document.addEventListener("authReady", async (e) => {
 });
 
 // =========================================================================
-// 3. LOGIC XỬ LÝ CHUÔNG THÔNG BÁO THEO THỜI GIAN THỰC (REALTIME)
+// 3. LOGIC XỬ LÝ CHUÔNG THÔNG BÁO THEO THỜI GIAN THỰC
 // =========================================================================
 function setupRealtimeNotifications(userEmail) {
     const notiRef = collection(db, "notifications");
-    // Lấy toàn bộ thông báo gửi đến email này (để sắp xếp và lọc trong JS tránh tạo Index phức tạp)
     const q = query(notiRef, where("toEmail", "==", userEmail));
     
-    // onSnapshot lắng nghe thay đổi Realtime
     onSnapshot(q, (snapshot) => {
         let notis = [];
         snapshot.forEach(doc => {
             notis.push({ id: doc.id, ...doc.data() });
         });
 
-        // Sắp xếp giảm dần theo thời gian (Mới nhất lên đầu)
         notis.sort((a, b) => {
             const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : 0;
             const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : 0;
@@ -96,11 +85,9 @@ function setupRealtimeNotifications(userEmail) {
         console.error("Lỗi khi lắng nghe thông báo Realtime:", error);
     });
 
-    // Cài đặt Toggle cho menu Chuông
     const bellToggle = document.getElementById('bellToggle');
     const notiDropdown = document.getElementById('notiDropdown');
     if (bellToggle && notiDropdown) {
-        // Xóa event cũ nếu có (tránh duplicate)
         bellToggle.replaceWith(bellToggle.cloneNode(true));
         const newBellToggle = document.getElementById('bellToggle');
         
@@ -123,7 +110,6 @@ function renderNotifications(notis) {
     
     if (!notiListContainer || !notiBadgeCount) return;
 
-    // Lọc đếm số lượng chưa đọc
     const unreadCount = notis.filter(n => n.status === 'unread').length;
     
     if (unreadCount > 0) {
@@ -141,7 +127,6 @@ function renderNotifications(notis) {
     let html = '';
     notis.forEach(n => {
         const isUnread = n.status === 'unread';
-        // Hiển thị ngày giờ gọn nhẹ
         const dateObj = n.timestamp?.toDate ? n.timestamp.toDate() : new Date();
         const timeString = `${dateObj.getHours()}:${String(dateObj.getMinutes()).padStart(2, '0')} - ${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
 
@@ -165,11 +150,8 @@ function renderNotifications(notis) {
 
 window.readNotificationAndRedirect = async function(notiId, examId) {
     try {
-        // Cập nhật trạng thái thông báo thành 'read'
         const notiRef = doc(db, "notifications", notiId);
         await updateDoc(notiRef, { status: 'read' });
-        
-        // Chuyển hướng đến bài thi
         safeRedirect(`quiz.html?examId=${examId}`);
     } catch (error) {
         console.error("Lỗi xử lý thông báo:", error);
@@ -178,31 +160,31 @@ window.readNotificationAndRedirect = async function(notiId, examId) {
 };
 
 // =========================================================================
-// 4. LOGIC CHIA SẺ (SHARE MODAL & COPY LINK)
+// 4. LOGIC CHIA SẺ
 // =========================================================================
 window.openShareModal = function(examId) {
     currentShareExamId = examId;
-    
-    // Tự động generate Link dựa trên Base URL hiện tại
     const currentUrl = window.location.href;
     const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
     const fullLink = `${baseUrl}quiz.html?examId=${examId}`;
     
-    document.getElementById('shareLinkInput').value = fullLink;
-    document.getElementById('shareEmailInput').value = '';
-    
-    document.getElementById('shareExamModal').classList.add('active');
+    const shareLinkInput = document.getElementById('shareLinkInput');
+    const shareEmailInput = document.getElementById('shareEmailInput');
+    const shareExamModal = document.getElementById('shareExamModal');
+
+    if(shareLinkInput) shareLinkInput.value = fullLink;
+    if(shareEmailInput) shareEmailInput.value = '';
+    if(shareExamModal) shareExamModal.classList.add('active');
 };
 
 window.copyShareLink = function() {
     const copyText = document.getElementById('shareLinkInput');
-    
-    // Select nội dung
+    if(!copyText) return;
+
     copyText.select();
-    copyText.setSelectionRange(0, 99999); // Cho mobile
+    copyText.setSelectionRange(0, 99999); 
     
     try {
-        // API execCommand tương thích tốt nhất kể cả khi bị nhúng trong iFrame Canvas
         document.execCommand('copy');
         alert("Đã copy link thành công vào bộ nhớ tạm!");
     } catch (err) {
@@ -211,7 +193,10 @@ window.copyShareLink = function() {
 };
 
 window.sendShareNotification = async function() {
-    const toEmail = document.getElementById('shareEmailInput').value.trim();
+    const toEmailInput = document.getElementById('shareEmailInput');
+    if(!toEmailInput) return;
+    const toEmail = toEmailInput.value.trim();
+    
     if (!toEmail) {
         alert("Vui lòng nhập Email người nhận!");
         return;
@@ -228,7 +213,6 @@ window.sendShareNotification = async function() {
     }
 
     try {
-        // Tạo document vào Collection notifications
         await addDoc(collection(db, "notifications"), {
             examId: currentShareExamId,
             fromEmail: auth.currentUser.email,
@@ -246,11 +230,11 @@ window.sendShareNotification = async function() {
 };
 
 // =========================================================================
-// CÁC HÀM CŨ (Đã Nâng Cấp Giao Diện Render)
+// HÀM CŨ & RENDER ĐỀ THI
 // =========================================================================
-function setupFilterEvents() { /* Giữ nguyên hàm cũ */ }
-function setupToolbarEvents() { /* Giữ nguyên hàm cũ */ }
-function handleSortFilterChange() { /* Giữ nguyên hàm cũ */ }
+function setupFilterEvents() { /* Hàm cũ */ }
+function setupToolbarEvents() { /* Hàm cũ */ }
+function handleSortFilterChange() { /* Hàm cũ */ }
 
 async function loadAggregatedExamData() {
     try {
@@ -288,7 +272,6 @@ async function loadAggregatedExamData() {
             const eId = doc.id;
             if (examMap[eId]) {
                 examMap[eId].isValid = true; 
-                
                 const conf = doc.data();
                 examMap[eId].isVip = conf.isVip || false;
                 examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
@@ -347,6 +330,12 @@ async function loadAggregatedExamData() {
 }
 
 function renderExams() {
+    // Lấy DOM Elements bên trong hàm
+    const examListContainer = document.getElementById('examListContainer');
+    const sortFilter = document.getElementById('sortFilter');
+
+    if (!examListContainer) return;
+
     if (allExamsData.length === 0) {
         examListContainer.innerHTML = '<div class="loading-text">Hiện tại chưa có khóa học / đề thi nào.</div>';
         return;
@@ -355,7 +344,6 @@ function renderExams() {
     let displayData = [...allExamsData];
     const userBookmarks = (currentUserData && currentUserData.bookmarks) ? currentUserData.bookmarks : [];
 
-    // Filter Logic...
     if (currentTechnique === 'saved') {
         displayData = displayData.filter(exam => userBookmarks.includes(exam.id));
     } else if (currentTechnique !== 'all') {
@@ -363,6 +351,8 @@ function renderExams() {
     }
     if (currentLevel !== 'all') displayData = displayData.filter(exam => exam.level === currentLevel);
     if (currentTime !== 'all') displayData = displayData.filter(exam => exam.timeLimit === parseInt(currentTime));
+    
+    // An toàn kiểm tra query search
     if (currentSearchQuery !== '') {
         displayData = displayData.filter(exam => 
             exam.id.toLowerCase().includes(currentSearchQuery) || 
@@ -370,7 +360,7 @@ function renderExams() {
         );
     }
 
-    const filterType = sortFilter.value;
+    const filterType = sortFilter ? sortFilter.value : 'newest';
     if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
     else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
 
@@ -455,7 +445,6 @@ function renderExams() {
 
             let actionAreaHtml = '';
             
-            // Tích hợp Nút CHIA SẺ vào phần Action Area
             if (isExamVip && !isUserVip) {
                 actionAreaHtml = `
                     <button onclick="goToUpgrade()" style="width: 100%; display: block; padding: 12px; border: none; background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); color: #997404; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(255, 230, 156, 0.4);">
@@ -532,7 +521,6 @@ function renderExams() {
     });
 }
 
-// Logic API cuộn trượt
 window.slideLeft = function(button) {
     const container = button.parentElement.querySelector('.swimlane-scroll-container');
     if (container) container.scrollBy({ left: -364, behavior: 'smooth' });
