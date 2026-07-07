@@ -1,47 +1,42 @@
 import { db, formatDate, safeRedirect } from "./dashboard-core.js";
 import { collection, query, where, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Biến cục bộ lưu trữ trạng thái trong Module
 let userEmail = null;
 let examVipMap = {};
 
-// DOM Elements
-const historyTableBody = document.getElementById("historyTableBody");
-const statCompletedExams = document.getElementById("statCompletedExams");
-const statAvgScore = document.getElementById("statAvgScore");
-
-// Expose safeRedirect ra window scope để phục vụ cho sự kiện onclick="safeRedirect(...)" từ HTML
 window.safeRedirect = safeRedirect;
 
 // =========================================================================
-// 1. LẮNG NGHE CÁC SỰ KIỆN ĐỒNG BỘ TỪ HỆ THỐNG MODULES
+// 1. LẮNG NGHE CÁC SỰ KIỆN
 // =========================================================================
 
-// Lắng nghe sự kiện Auth sẵn sàng để lấy Email người dùng
 document.addEventListener("authReady", (e) => {
     userEmail = e.detail.user.email;
 });
 
-// Lắng nghe sự kiện cấu hình Kho đề thi sẵn sàng để lấy bản đồ VIP/Free của các Đề thi
 document.addEventListener("examsReady", async (e) => {
     const allExamsData = e.detail.allExamsData;
     
-    // Tạo map tra cứu nhanh trạng thái VIP của đề thi theo Id
     examVipMap = {};
     allExamsData.forEach(exam => {
         examVipMap[exam.id] = exam.isVip;
     });
 
-    // Tiến hành tải lịch sử thi ngay khi có đầy đủ dữ liệu Email và Bản đồ phân quyền Đề thi
     if (userEmail) {
         await fetchHistory(userEmail);
     }
 });
 
 // =========================================================================
-// 2. TẢI DỮ LIỆU LỊCH SỬ LÀM BÀI & CẬP NHẬT QUICK STATS
+// 2. TẢI DỮ LIỆU LỊCH SỬ LÀM BÀI
 // =========================================================================
 async function fetchHistory(email) {
+    const historyTableBody = document.getElementById("historyTableBody");
+    const statCompletedExams = document.getElementById("statCompletedExams");
+    const statAvgScore = document.getElementById("statAvgScore");
+
+    if (!historyTableBody) return;
+
     try {
         const resultsRef = collection(db, "results");
         const q = query(resultsRef, where("email", "==", email));
@@ -55,20 +50,17 @@ async function fetchHistory(email) {
         }
 
         const resultsArray = [];
-        const firstAttempts = {}; // Lưu lần thi ĐẦU TIÊN của mỗi mã đề
+        const firstAttempts = {}; 
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             resultsArray.push({ id: doc.id, ...data });
             
             const examId = data.examId || data.examCode || "Unknown";
-            
-            // Quy chuẩn thời gian về milliseconds để so sánh
             const ts = data.timestamp && typeof data.timestamp.toMillis === 'function' 
                 ? data.timestamp.toMillis() 
                 : new Date(data.timestamp || data.submittedAt || 0).getTime();
 
-            // Lọc lần thi đầu tiên: Nếu chưa có, HOẶC lần thi đang xét CŨ HƠN (nhỏ hơn) lần đã lưu
             if (!firstAttempts[examId] || ts < firstAttempts[examId].timestamp) {
                 firstAttempts[examId] = {
                     score: data.score !== undefined ? parseFloat(data.score) : 0,
@@ -78,7 +70,6 @@ async function fetchHistory(email) {
             }
         });
 
-        // --- TÍNH TOÁN QUICK STATS (Thang điểm 10 - Chỉ lấy lần đầu) ---
         let totalScoreSum = 0;
         const uniqueExamsCount = Object.keys(firstAttempts).length;
 
@@ -93,7 +84,6 @@ async function fetchHistory(email) {
         if (statCompletedExams) statCompletedExams.textContent = uniqueExamsCount;
         if (statAvgScore) statAvgScore.textContent = averageScoreResult;
 
-        // --- RENDER BẢNG LỊCH SỬ (Vẫn hiện tất cả, mới nhất xếp trên) ---
         resultsArray.sort((a, b) => {
             const dateA = a.timestamp && typeof a.timestamp.toDate === 'function' ? a.timestamp.toDate() : new Date(a.timestamp || a.submittedAt || 0);
             const dateB = b.timestamp && typeof b.timestamp.toDate === 'function' ? b.timestamp.toDate() : new Date(b.timestamp || b.submittedAt || 0);
@@ -122,7 +112,6 @@ async function fetchHistory(email) {
             
             let submitTime = "Không xác định";
             if (data.timestamp || data.submittedAt) {
-                // Sử dụng lại hàm formatDate từ dashboard-core.js
                 const d = data.timestamp && typeof data.timestamp.toDate === 'function' ? data.timestamp.toDate() : new Date(data.timestamp || data.submittedAt);
                 submitTime = d.toLocaleString('vi-VN'); 
             }
@@ -152,26 +141,29 @@ async function fetchHistory(email) {
 }
 
 // =========================================================================
-// 3. ỦY QUYỀN SỰ KIỆN (EVENT DELEGATION): XÓA BẢN GHI LỊCH SỬ THI
+// 3. ỦY QUYỀN SỰ KIỆN: XÓA LỊCH SỬ THI
 // =========================================================================
-historyTableBody.addEventListener('click', async (e) => {
-    const deleteBtn = e.target.closest('.btn-delete-history');
-    if (deleteBtn) {
-        const docId = deleteBtn.getAttribute('data-id');
-        if (confirm("Bạn có chắc chắn muốn xóa kết quả bài thi này khỏi lịch sử hệ thống?")) {
-            try {
-                // Thực hiện thao tác xóa tài liệu trên Firestore kết nối qua core
-                await deleteDoc(doc(db, "results", docId));
-                alert("Đã xóa kết quả bài thi thành công!");
-                
-                // Tải lại bảng lịch sử làm bài sau khi xóa thành công để đồng bộ giao diện và Quick Stats
-                if (userEmail) {
-                    await fetchHistory(userEmail);
+document.addEventListener('ComponentsLoaded', () => {
+    const historyTableBody = document.getElementById("historyTableBody");
+    if (historyTableBody) {
+        historyTableBody.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.btn-delete-history');
+            if (deleteBtn) {
+                const docId = deleteBtn.getAttribute('data-id');
+                if (confirm("Bạn có chắc chắn muốn xóa kết quả bài thi này khỏi lịch sử hệ thống?")) {
+                    try {
+                        await deleteDoc(doc(db, "results", docId));
+                        alert("Đã xóa kết quả bài thi thành công!");
+                        
+                        if (userEmail) {
+                            await fetchHistory(userEmail);
+                        }
+                    } catch (error) {
+                        console.error("Lỗi khi xóa kết quả bài làm:", error);
+                        alert("Đã xảy ra lỗi hệ thống khi thực hiện xóa: " + error.message);
+                    }
                 }
-            } catch (error) {
-                console.error("Lỗi khi xóa kết quả bài làm:", error);
-                alert("Đã xảy ra lỗi hệ thống khi thực hiện xóa: " + error.message);
             }
-        }
+        });
     }
 });
