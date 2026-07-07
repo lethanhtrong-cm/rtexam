@@ -89,3 +89,41 @@
         </div>
     </div>
 </div>
+
+<div class="custom-modal-overlay" id="shareExamModal">
+    <div class="custom-modal-content" style="max-width: 450px;">
+        <div class="custom-modal-header">
+            <h3><i class="fa-solid fa-share-nodes"></i> Chia sẻ đề thi</h3>
+            <button class="close-modal-btn" onclick="document.getElementById('shareExamModal').classList.remove('active')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="custom-modal-body">
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+                Bạn có thể gửi thông báo trực tiếp qua Email nội bộ hệ thống hoặc Copy link để gửi cho bạn bè.
+            </p>
+            
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label style="font-weight: 600; color: var(--primary-blue);"><i class="fa-regular fa-envelope"></i> Gửi thông báo đến Email:</label>
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                    <input type="email" id="shareEmailInput" placeholder="Nhập Email người nhận..." style="flex: 1; padding: 10px;">
+                    <button class="btn-action-primary" onclick="sendShareNotification()" style="border-radius: 6px;">
+                        Gửi thông báo
+                    </button>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px dashed var(--border-color); margin: 20px 0;">
+
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="font-weight: 600; color: var(--primary-blue);"><i class="fa-solid fa-link"></i> Link trực tiếp của đề thi:</label>
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                    <input type="text" id="shareLinkInput" readonly style="flex: 1; background-color: var(--gray-bg); color: var(--text-muted); cursor: copy; padding: 10px;">
+                    <button class="btn-action-secondary" onclick="copyShareLink()" style="border-radius: 6px;">
+                        <i class="fa-solid fa-copy"></i> Copy Link
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
