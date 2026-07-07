@@ -1,1 +1,91 @@
+<div class="custom-modal-overlay" id="createRoomModal">
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <h3><i class="fa-solid fa-house-medical"></i> Tạo phòng thi cá nhân</h3>
+            <button class="close-modal-btn" id="closeCreateRoomBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="custom-modal-body">
+            <div class="form-group">
+                <label>Chọn bộ đề để thi:</label>
+                <select id="selectExamForRoom">
+                    <option value="">-- Đang tải danh sách đề --</option>
+                </select>
+            </div>
+            
+            <div id="roomCreatedArea" style="display: none; text-align: center; margin-top: 20px; padding: 15px; background: var(--light-blue); border-radius: 8px; border: 1px dashed var(--primary-blue);">
+                <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Mã phòng của bạn là:</p>
+                <h2 id="generatedRoomCode" style="margin: 10px 0; color: var(--primary-blue); font-size: 2rem; letter-spacing: 2px;">ROOM-XXXXXX</h2>
+                <p style="font-size: 0.85rem; color: var(--warning-orange);"><i class="fa-solid fa-lock"></i> Đã bật yêu cầu xác thực đăng nhập</p>
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button class="btn-primary" id="btnSubmitCreateRoom">Tạo phòng & Lấy mã</button>
+            <button class="btn-primary btn-success" id="btnOpenInviteModal" style="display: none;"><i class="fa-solid fa-user-plus"></i> Mời bạn bè</button>
+        </div>
+    </div>
+</div>
 
+<div class="custom-modal-overlay" id="inviteFriendModal">
+    <div class="custom-modal-content" style="max-width: 400px;">
+        <div class="custom-modal-header">
+            <h3><i class="fa-solid fa-paper-plane"></i> Gửi lời mời</h3>
+            <button class="close-modal-btn" id="closeInviteModalBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="custom-modal-body">
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 15px;">Mời đồng nghiệp hoặc bạn bè tham gia phòng thi để cùng thảo luận và làm bài.</p>
+            <div class="form-group">
+                <label>Nhập Email của người được mời:</label>
+                <input type="email" id="inviteEmailInput" placeholder="Ví dụ: dongnghiep@gmail.com" required>
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button class="btn-primary" id="btnSendInvite">Gửi lời mời ngay</button>
+        </div>
+    </div>
+</div>
+
+<div class="custom-modal-overlay" id="aiGenerateModal">
+    <div class="custom-modal-content">
+        <div class="custom-modal-header" style="background: linear-gradient(135deg, #e0e7ff, #c7d2fe);">
+            <h3 style="color: #3730a3;"><i class="fa-solid fa-wand-magic-sparkles"></i> Tạo Đề Thi Tự Động (AI)</h3>
+            <button class="close-modal-btn" id="closeAiModalBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="custom-modal-body">
+            <div id="aiFormArea">
+                <div class="form-group">
+                    <label>Nhập chủ đề hoặc dán tài liệu:</label>
+                    <textarea id="aiPromptInput" rows="4" placeholder="Nhập tài liệu hoặc chủ đề..." style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                </div>
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Số lượng câu hỏi:</label>
+                        <select id="aiQuestionCount">
+                            <option value="10">10 câu</option>
+                            <option value="15">15 câu</option>
+                            <option value="20">20 câu</option>
+                            <option value="30">30 câu</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Độ khó:</label>
+                        <select id="aiDifficulty">
+                            <option value="easy">Dễ</option>
+                            <option value="medium">Trung bình</option>
+                            <option value="hard">Khó</option>
+                            <option value="mixed">Hỗn hợp</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="aiLoadingSpinner" style="display: none; text-align: center; padding: 20px 0;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: #a855f7; margin-bottom: 15px;"></i>
+                <p style="color: var(--text-muted); font-weight: 500;">AI đang phân tích và soạn đề...<br>Vui lòng đợi từ 5-10 giây</p>
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button class="btn-primary" id="btnCancelAi" style="background: #9ca3af;">Hủy</button>
+            <button class="btn-primary" id="btnSubmitAiGenerate" style="background: linear-gradient(135deg, #a855f7, #7e22ce); border: none;">Bắt đầu tạo</button>
+        </div>
+    </div>
+</div>
