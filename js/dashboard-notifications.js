@@ -1,38 +1,30 @@
 import { auth, db } from "./dashboard-core.js";
-import { collection, query, where, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, query, where, onSnapshot, doc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
-// 1. XỬ LÝ GIAO DIỆN DROPDOWN (CLICK CHUÔNG)
+// 1. GẮN SỰ KIỆN CLICK CHUÔNG SAU KHI GIAO DIỆN ĐÃ TẢI XONG
 // =========================================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('ComponentsLoaded', () => {
     const bellToggle = document.getElementById('bellToggle');
     const notiDropdown = document.getElementById('notiDropdown');
 
     if (bellToggle && notiDropdown) {
-        // Toggle khi click vào chuông
         bellToggle.addEventListener('click', (e) => {
-            e.stopPropagation(); 
+            e.stopPropagation(); // Ngăn click truyền ra ngoài
             notiDropdown.classList.toggle('show');
-            
-            // Nếu menu avatar đang mở thì đóng nó lại
-            const userDropdown = document.getElementById('userDropdown');
-            if (userDropdown) userDropdown.classList.remove('show');
         });
 
-        // Click ra ngoài thì đóng thông báo
+        // Click ra ngoài vùng dropdown thì tự động đóng lại
         document.addEventListener('click', (e) => {
             if (!bellToggle.contains(e.target) && !notiDropdown.contains(e.target)) {
                 notiDropdown.classList.remove('show');
             }
         });
-
-        // Không đóng khi click vào bên trong bảng thông báo
-        notiDropdown.addEventListener('click', (e) => e.stopPropagation());
     }
 });
 
 // =========================================================================
-// 2. LẮNG NGHE DỮ LIỆU THÔNG BÁO TỪ FIREBASE (REAL-TIME)
+// 2. LẤY THÔNG BÁO REAL-TIME TỪ FIREBASE
 // =========================================================================
 document.addEventListener('authReady', (e) => {
     const user = e.detail ? e.detail.user : auth.currentUser;
@@ -48,12 +40,18 @@ function initNotifications(userEmail) {
     if (!notiListContainer || !notiBadgeCount) return;
 
     const notiRef = collection(db, "notifications");
-    // Chỉ lọc theo email người nhận (Không dùng orderBy để tránh lỗi thiếu Index của Firebase)
-    const q = query(notiRef, where("toEmail", "==", userEmail));
+    
+    // Query lấy thông báo của user này, sắp xếp thời gian mới nhất lên đầu
+    const q = query(
+        notiRef, 
+        where("toEmail", "==", userEmail),
+        orderBy("createdAt", "desc")
+    );
 
+    // Lắng nghe Real-time từ Firestore
     onSnapshot(q, (snapshot) => {
         let unreadCount = 0;
-        let htmlContent = '';
+        notiListContainer.innerHTML = '';
 
         if (snapshot.empty) {
             notiListContainer.innerHTML = '<div class="noti-empty">Bạn chưa có thông báo nào.</div>';
@@ -61,93 +59,72 @@ function initNotifications(userEmail) {
             return;
         }
 
-        // Tạo mảng để sắp xếp thời gian thủ công tại Client
-        const notiArray = [];
-        snapshot.forEach(doc => {
-            notiArray.push({ id: doc.id, ...doc.data() });
-        });
-        
-        // Sắp xếp mới nhất lên đầu
-        notiArray.sort((a, b) => {
-            const timeA = a.createdAt ? (typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : (a.timestamp ? new Date(a.timestamp).getTime() : 0);
-            const timeB = b.createdAt ? (typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : (b.timestamp ? new Date(b.timestamp).getTime() : 0);
-            return timeB - timeA;
-        });
-
-        notiArray.forEach((data) => {
-            // Kiểm tra trạng thái chưa đọc (Hỗ trợ cả chuẩn cũ và chuẩn mới)
-            const isUnread = (data.status === 'unread') || (data.isRead === false) || (data.status === undefined && data.isRead === undefined);
+        snapshot.forEach((docSnapshot) => {
+            const data = docSnapshot.data();
+            const id = docSnapshot.id;
             
-            if (isUnread) unreadCount++;
+            if (!data.isRead) {
+                unreadCount++;
+            }
 
-            // Hiển thị thời gian
+            // Định dạng thời gian
             let timeString = 'Vừa xong';
-            if (data.createdAt || data.timestamp) {
-                const ts = data.createdAt ? (typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() : new Date(data.createdAt)) : new Date(data.timestamp);
-                timeString = ts.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) + ' ' + ts.toLocaleDateString('vi-VN');
+            if (data.createdAt) {
+                const date = data.createdAt.toDate();
+                timeString = date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) + ' ' + date.toLocaleDateString('vi-VN');
             }
 
-            const itemClass = isUnread ? 'noti-item unread' : 'noti-item';
-            
-            // Tùy biến Nội dung & Icon dựa theo loại thông báo
-            let iconStr = '<i class="fa-solid fa-bell"></i>';
-            let messageStr = data.message || 'Bạn có một thông báo mới.';
-            
-            // Nếu là thông báo CHIA SẺ ĐỀ THI
-            if (data.examId) {
-                iconStr = '<i class="fa-solid fa-envelope-open-text"></i>';
-                messageStr = `<b>${data.fromEmail || "Một người bạn"}</b> vừa chia sẻ cho bạn đề thi <b>${data.examId}</b>`;
-            } 
-            // Nếu là thông báo MỜI VÀO PHÒNG
-            else if (data.type === 'room_invite') {
-                iconStr = '<i class="fa-solid fa-people-roof"></i>';
-            }
-
-            // Render HTML
-            htmlContent += `
-                <div class="${itemClass}" onclick="handleNotificationClick('${data.id}', '${data.examId || ''}', '${data.roomId || ''}')">
-                    <div class="noti-icon">${iconStr}</div>
+            const itemClass = data.isRead ? 'noti-item' : 'noti-item unread';
+            const html = `
+                <div class="${itemClass}" data-id="${id}" style="cursor: pointer; transition: background 0.2s;">
+                    <div class="noti-icon">
+                        <i class="fa-solid ${data.type === 'room_invite' ? 'fa-envelope-open-text' : 'fa-bell'}"></i>
+                    </div>
                     <div class="noti-content">
-                        <div class="noti-text">${messageStr}</div>
+                        <div class="noti-text">
+                            ${data.message || `<b>${data.fromEmail}</b> đã chia sẻ đề thi <b>${data.examId}</b> với bạn.`}
+                        </div>
                         <div class="noti-time">${timeString}</div>
                     </div>
                 </div>
             `;
+            notiListContainer.insertAdjacentHTML('beforeend', html);
         });
 
-        // Đổ HTML vào UI
-        notiListContainer.innerHTML = htmlContent;
-
-        // Cập nhật số đếm
+        // Cập nhật số đếm trên quả chuông màu đỏ
         if (unreadCount > 0) {
             notiBadgeCount.textContent = unreadCount > 99 ? '99+' : unreadCount;
             notiBadgeCount.style.display = 'block';
         } else {
             notiBadgeCount.style.display = 'none';
         }
+
+        // Sự kiện click vào một thông báo cụ thể
+        document.querySelectorAll('.noti-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const notiId = item.getAttribute('data-id');
+                const notiDataDoc = snapshot.docs.find(d => d.id === notiId);
+                const notiData = notiDataDoc ? notiDataDoc.data() : null;
+
+                // Đánh dấu đã đọc trên database
+                if (item.classList.contains('unread')) {
+                    try {
+                        const docRef = doc(db, 'notifications', notiId);
+                        await updateDoc(docRef, { isRead: true }); // Dùng chung trường isRead thay vì status
+                    } catch (error) {
+                        console.error("Lỗi cập nhật thông báo:", error);
+                    }
+                }
+
+                // Chuyển hướng
+                if (notiData) {
+                    if (notiData.type === 'room_invite' && notiData.roomId) {
+                        window.location.href = `lobby.html?roomId=${notiData.roomId}`;
+                    } else if (notiData.examId) {
+                        window.location.href = `quiz.html?examId=${notiData.examId}`;
+                    }
+                }
+            });
+        });
     });
 }
-
-// =========================================================================
-// 3. HÀM XỬ LÝ KHI CLICK VÀO 1 DÒNG THÔNG BÁO
-// =========================================================================
-window.handleNotificationClick = async function(notiId, examId, roomId) {
-    try {
-        const notiDocRef = doc(db, "notifications", notiId);
-        
-        // Đánh dấu đã đọc (Lưu cả 2 chuẩn để tương thích)
-        await updateDoc(notiDocRef, {
-            status: "read",
-            isRead: true
-        });
-
-        // Phân luồng chuyển hướng
-        if (examId) {
-            window.location.href = `quiz.html?examId=${examId}`;
-        } else if (roomId) {
-            window.location.href = `lobby.html?roomId=${roomId}`;
-        }
-    } catch (error) {
-        console.error("Lỗi khi đọc thông báo:", error);
-    }
-};
