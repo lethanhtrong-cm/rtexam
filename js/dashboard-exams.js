@@ -45,8 +45,6 @@ document.addEventListener("authReady", async (e) => {
                     }
                 }
             });
-
-            //setupRealtimeNotifications(e.detail.user.email);
         }
     } catch (err) {
         console.error("Lỗi khởi tạo Dashboard:", err);
@@ -58,105 +56,7 @@ document.addEventListener("authReady", async (e) => {
 });
 
 // =========================================================================
-// 3. LOGIC XỬ LÝ CHUÔNG THÔNG BÁO THEO THỜI GIAN THỰC (REALTIME)
-// =========================================================================
-function setupRealtimeNotifications(userEmail) {
-    const notiRef = collection(db, "notifications");
-    const q = query(notiRef, where("toEmail", "==", userEmail));
-    
-    onSnapshot(q, (snapshot) => {
-        let notis = [];
-        snapshot.forEach(doc => {
-            notis.push({ id: doc.id, ...doc.data() });
-        });
-
-        notis.sort((a, b) => {
-            const timeA = a.timestamp?.toMillis ? a.timestamp.toMillis() : 0;
-            const timeB = b.timestamp?.toMillis ? b.timestamp.toMillis() : 0;
-            return timeB - timeA;
-        });
-
-        renderNotifications(notis);
-    }, (error) => {
-        console.error("Lỗi khi lắng nghe thông báo Realtime:", error);
-    });
-
-    const bellToggle = document.getElementById('bellToggle');
-    const notiDropdown = document.getElementById('notiDropdown');
-    if (bellToggle && notiDropdown) {
-        bellToggle.replaceWith(bellToggle.cloneNode(true));
-        const newBellToggle = document.getElementById('bellToggle');
-        
-        newBellToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            notiDropdown.classList.toggle('show');
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (!newBellToggle.contains(e.target) && !notiDropdown.contains(e.target)) {
-                notiDropdown.classList.remove('show');
-            }
-        });
-    }
-}
-
-function renderNotifications(notis) {
-    const notiBadgeCount = document.getElementById('notiBadgeCount');
-    const notiListContainer = document.getElementById('notiListContainer');
-    
-    if (!notiListContainer || !notiBadgeCount) return;
-
-    const unreadCount = notis.filter(n => n.status === 'unread').length;
-    
-    if (unreadCount > 0) {
-        notiBadgeCount.textContent = unreadCount > 99 ? '99+' : unreadCount;
-        notiBadgeCount.style.display = 'block';
-    } else {
-        notiBadgeCount.style.display = 'none';
-    }
-
-    if (notis.length === 0) {
-        notiListContainer.innerHTML = '<div class="noti-empty">Bạn không có thông báo nào.</div>';
-        return;
-    }
-
-    let html = '';
-    notis.forEach(n => {
-        const isUnread = n.status === 'unread';
-        const dateObj = n.timestamp?.toDate ? n.timestamp.toDate() : new Date();
-        const timeString = `${dateObj.getHours()}:${String(dateObj.getMinutes()).padStart(2, '0')} - ${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
-
-        html += `
-            <div class="noti-item ${isUnread ? 'unread' : ''}" onclick="readNotificationAndRedirect('${n.id}', '${n.examId}')">
-                <div class="noti-icon">
-                    <i class="fa-solid fa-share-nodes"></i>
-                </div>
-                <div class="noti-content">
-                    <div class="noti-text">
-                        <b>${n.fromEmail}</b> đã chia sẻ đề thi <b>${n.examId}</b> với bạn. Hãy bấm vào để thi ngay!
-                    </div>
-                    <div class="noti-time">${timeString}</div>
-                </div>
-            </div>
-        `;
-    });
-    
-    notiListContainer.innerHTML = html;
-}
-
-window.readNotificationAndRedirect = async function(notiId, examId) {
-    try {
-        const notiRef = doc(db, "notifications", notiId);
-        await updateDoc(notiRef, { status: 'read' });
-        safeRedirect(`quiz.html?examId=${examId}`);
-    } catch (error) {
-        console.error("Lỗi xử lý thông báo:", error);
-        alert("Đã xảy ra lỗi, vui lòng thử lại!");
-    }
-};
-
-// =========================================================================
-// 4. LOGIC CHIA SẺ (SHARE MODAL & COPY LINK)
+// 3. LOGIC CHIA SẺ (SHARE MODAL & COPY LINK)
 // =========================================================================
 window.openShareModal = function(examId) {
     currentShareExamId = examId;
@@ -200,12 +100,14 @@ window.sendShareNotification = async function() {
     }
 
     try {
+        // ĐÃ SỬA: Đổi 'timestamp' thành 'createdAt' và 'status' thành 'isRead'
         await addDoc(collection(db, "notifications"), {
             examId: currentShareExamId,
             fromEmail: auth.currentUser.email,
             toEmail: toEmail,
-            status: 'unread',
-            timestamp: serverTimestamp()
+            isRead: false,
+            createdAt: serverTimestamp(),
+            type: 'exam_share'
         });
         
         alert("Đã gửi thông báo chia sẻ thành công tới " + toEmail);
@@ -217,7 +119,7 @@ window.sendShareNotification = async function() {
 };
 
 // =========================================================================
-// 5. THANH CÔNG CỤ & BỘ LỌC
+// 4. THANH CÔNG CỤ & BỘ LỌC
 // =========================================================================
 function setupToolbarEvents() {
     const btnOpenCreateRoom = document.getElementById('btnOpenCreateRoom');
@@ -270,7 +172,6 @@ function setupToolbarEvents() {
 }
 
 function setupFilterEvents() {
-    // Khai báo lại các DOM trong hàm để tránh lỗi null
     const searchInput = document.getElementById('searchInput');
     const levelPills = document.querySelectorAll('#levelFilter .pill-btn');
     const timePills = document.querySelectorAll('#timeFilter .pill-btn');
@@ -350,7 +251,7 @@ function setupFilterEvents() {
 }
 
 // =========================================================================
-// 6. TỔNG HỢP & RENDER KHO ĐỀ THI
+// 5. TỔNG HỢP & RENDER KHO ĐỀ THI
 // =========================================================================
 async function loadAggregatedExamData() {
     try {
@@ -647,7 +548,7 @@ function renderExams() {
 }
 
 // =========================================================================
-// 7. CÁC HÀM TIỆN ÍCH TOÀN CỤC (GẮN VÀO WINDOW CHO HTML CARD)
+// 6. CÁC HÀM TIỆN ÍCH TOÀN CỤC (GẮN VÀO WINDOW CHO HTML CARD)
 // =========================================================================
 
 window.slideLeft = function(button) {
