@@ -2,19 +2,32 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Đa Năng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Đa Năng - Hệ Thống Câu Hỏi Trắc Nghiệm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="./css/dashboard.css">
 </head>
 <body>
+
     <div id="topbar-container"></div>
 
     <div class="layout-wrapper">
         <div id="sidebar-container"></div>
+
         <div class="main-content">
             <div class="tab-content-container">
                 <div id="tab-exams" class="tab-pane active"></div>
                 <div id="tab-profile" class="tab-pane"></div>
-                </div>
+                <div id="tab-history" class="tab-pane"></div>
+                <div id="leaderboard" class="tab-pane"></div>
+                <div id="tab-vip" class="tab-pane"></div>
+            </div>
+            
+            <div class="sticky-user-rank" id="stickyUserRank" style="display: none;">
+                <p><i class="fa-solid fa-user-astronaut"></i> Thành tích của bạn:</p>
+                <div id="stickyUserStats">Đang tải...</div>
+            </div>
         </div>
     </div> 
 
@@ -23,5 +36,11 @@
     <script src="./js/html-loader.js"></script>
     <script type="module" src="./js/dashboard-core.js"></script>
     <script type="module" src="./js/dashboard-exams.js"></script>
-    </body>
+    <script type="module" src="./js/dashboard-profile.js"></script>
+    <script type="module" src="./js/dashboard-history.js"></script>
+    <script type="module" src="./js/leaderboard.js"></script>
+    <script type="module" src="./js/dashboard-notifications.js"></script>
+    <script type="module" src="./js/dashboard-room.js"></script>
+    <script type="module" src="./js/dashboard-ai.js"></script>
+</body>
 </html>
