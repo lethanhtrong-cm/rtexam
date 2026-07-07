@@ -549,3 +549,77 @@ table th { background-color: var(--light-blue); color: var(--primary-blue); }
 .step-3 .podium-rank-box { background: linear-gradient(135deg, #d38b55 0%, #a8622c 100%); }
 
 .sticky-user-rank { position: fixed; bottom: 0; left: 260px; right: 0; background: linear-gradient(135deg, #0056b3 0%, #004494 100%); color: var(--white); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 15px rgba(0,0,0,0.15); z-index: 100; transition: left 0.3s ease; }
+
+/* =========================================
+   3. GIAO DIỆN TRƯỢT NGANG (SWIMLANE LAYOUT)
+   ========================================= */
+.swimlane-view {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.swimlane-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.swimlane-scroll-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory; /* Bắt dính card khi cuộn */
+    padding: 10px 0 20px 0; /* Padding để shadow không bị cắt */
+    width: 100%;
+    gap: 0; /* Đã có margin-right inline trong JS */
+}
+
+/* Ẩn thanh cuộn mặc định cho hiện đại */
+.hide-scrollbar {
+    -ms-overflow-style: none;  /* IE và Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+/* Định dạng 2 nút mũi tên trượt trái/phải */
+.slider-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--white);
+    color: var(--primary-blue);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.slider-btn:hover {
+    background-color: var(--primary-blue);
+    color: var(--white);
+    box-shadow: 0 6px 16px rgba(0, 86, 179, 0.3);
+}
+
+.slider-btn.left { left: -15px; } /* Đẩy ra ngoài khung một chút */
+.slider-btn.right { right: -15px; }
+
+/* Hiệu ứng hover nổi bọt cho các Card thi */
+.exam-card-hover {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.exam-card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    border-color: #c7d2fe !important;
+}
