@@ -46,7 +46,7 @@ document.addEventListener("authReady", async (e) => {
                 }
             });
 
-            setupRealtimeNotifications(e.detail.user.email);
+            //setupRealtimeNotifications(e.detail.user.email);
         }
     } catch (err) {
         console.error("Lỗi khởi tạo Dashboard:", err);
