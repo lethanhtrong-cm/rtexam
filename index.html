@@ -499,8 +499,19 @@
                     } catch (error) {
                         console.error("Lỗi khi gác cổng lưu data:", error);
                     }
-                    // Chuyển hướng vô hình, không alert.
-                    window.location.href = 'dashboard.html';
+                    
+                    // [XỬ LÝ DEEP LINKING] Kiểm tra xem có URL đang chờ không
+                    const redirectUrl = localStorage.getItem('redirectAfterLogin');
+                    
+                    if (redirectUrl) {
+                        // Xóa biến khỏi localStorage để tránh bị kẹt vòng lặp cho các lần đăng nhập sau
+                        localStorage.removeItem('redirectAfterLogin');
+                        // Chuyển hướng tới link đề thi
+                        window.location.href = redirectUrl;
+                    } else {
+                        // Nếu không có link chờ, về màn hình chính bình thường
+                        window.location.href = 'dashboard.html';
+                    }
                 }
             });
         }
@@ -591,8 +602,18 @@
                         console.error("Lỗi cập nhật Firestore khi login email:", error);
                     }
                     
-                    // Chuyển hướng vô hình, không alert
-                    window.location.href = 'dashboard.html';
+                    // [XỬ LÝ DEEP LINKING] Kiểm tra xem có URL đang chờ không
+                    const redirectUrl = localStorage.getItem('redirectAfterLogin');
+                    
+                    if (redirectUrl) {
+                        // Xóa biến khỏi localStorage để tránh bị kẹt vòng lặp
+                        localStorage.removeItem('redirectAfterLogin');
+                        // Chuyển hướng tới link đề thi
+                        window.location.href = redirectUrl;
+                    } else {
+                        // Nếu không có link chờ, về màn hình chính bình thường
+                        window.location.href = 'dashboard.html';
+                    }
                 })
                 .catch((error) => {
                     setLoadingBtn(btnLogin, false);
@@ -670,8 +691,18 @@
                         console.error("Lỗi cập nhật Firestore khi login google:", error);
                     }
 
-                    // Chuyển hướng vô hình, không alert
-                    window.location.href = 'dashboard.html';
+                    // [XỬ LÝ DEEP LINKING] Kiểm tra xem có URL đang chờ không
+                    const redirectUrl = localStorage.getItem('redirectAfterLogin');
+                    
+                    if (redirectUrl) {
+                        // Xóa biến khỏi localStorage để tránh bị kẹt vòng lặp
+                        localStorage.removeItem('redirectAfterLogin');
+                        // Chuyển hướng tới link đề thi
+                        window.location.href = redirectUrl;
+                    } else {
+                        // Nếu không có link chờ, về màn hình chính bình thường
+                        window.location.href = 'dashboard.html';
+                    }
                 })
                 .catch((error) => {
                     setLoadingBtn(btnGoogle, false);
