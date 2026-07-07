@@ -1,23 +1,22 @@
 import { auth, db } from "./dashboard-core.js";
 import { collection, query, where, onSnapshot, doc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Khởi tạo các Element giao diện
-const bellToggle = document.getElementById('bellToggle');
-const notiDropdown = document.getElementById('notiDropdown');
-const notiBadgeCount = document.getElementById('notiBadgeCount');
-const notiListContainer = document.getElementById('notiListContainer');
+// Khởi tạo các Element giao diện sau khi Component đã tải
+document.addEventListener('ComponentsLoaded', () => {
+    const bellToggle = document.getElementById('bellToggle');
+    const notiDropdown = document.getElementById('notiDropdown');
 
-// Lắng nghe đóng mở dropdown chuông
-bellToggle.addEventListener('click', (e) => {
-    // Không đóng dropdown nếu bấm bên trong chính nó
-    if (e.target.closest('.notification-dropdown')) return; 
-    notiDropdown.classList.toggle('show');
-});
+    if (bellToggle && notiDropdown) {
+        bellToggle.addEventListener('click', (e) => {
+            if (e.target.closest('.notification-dropdown')) return; 
+            notiDropdown.classList.toggle('show');
+        });
 
-// Click ra ngoài thì đóng dropdown
-document.addEventListener('click', (e) => {
-    if (!bellToggle.contains(e.target)) {
-        notiDropdown.classList.remove('show');
+        document.addEventListener('click', (e) => {
+            if (!bellToggle.contains(e.target)) {
+                notiDropdown.classList.remove('show');
+            }
+        });
     }
 });
 
@@ -30,16 +29,19 @@ document.addEventListener('authReady', (e) => {
 });
 
 function initNotifications(userEmail) {
+    const notiListContainer = document.getElementById('notiListContainer');
+    const notiBadgeCount = document.getElementById('notiBadgeCount');
+
+    if (!notiListContainer || !notiBadgeCount) return;
+
     const notiRef = collection(db, "notifications");
     
-    // Query lấy thông báo của user này, sắp xếp thời gian
     const q = query(
         notiRef, 
         where("toEmail", "==", userEmail),
         orderBy("createdAt", "desc")
     );
 
-    // Lắng nghe Real-time
     onSnapshot(q, (snapshot) => {
         let unreadCount = 0;
         notiListContainer.innerHTML = '';
@@ -58,14 +60,12 @@ function initNotifications(userEmail) {
                 unreadCount++;
             }
 
-            // Định dạng thời gian
             let timeString = 'Vừa xong';
             if (data.createdAt) {
                 const date = data.createdAt.toDate();
                 timeString = date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) + ' ' + date.toLocaleDateString('vi-VN');
             }
 
-            // Dựng HTML cho từng thông báo - Đã thêm cursor: pointer
             const itemClass = data.isRead ? 'noti-item' : 'noti-item unread';
             const html = `
                 <div class="${itemClass}" data-id="${id}" style="cursor: pointer; transition: background 0.2s;">
@@ -83,7 +83,6 @@ function initNotifications(userEmail) {
             notiListContainer.insertAdjacentHTML('beforeend', html);
         });
 
-        // Cập nhật Badge đỏ
         if (unreadCount > 0) {
             notiBadgeCount.textContent = unreadCount > 99 ? '99+' : unreadCount;
             notiBadgeCount.style.display = 'block';
@@ -91,11 +90,9 @@ function initNotifications(userEmail) {
             notiBadgeCount.style.display = 'none';
         }
 
-        // Gắn sự kiện click đánh dấu đã đọc VÀ chuyển hướng
         document.querySelectorAll('.noti-item').forEach(item => {
             item.addEventListener('click', async () => {
                 const notiId = item.getAttribute('data-id');
-                // Tìm lại data của thông báo bị click để lấy roomId
                 const notiDataDoc = snapshot.docs.find(d => d.id === notiId);
                 const notiData = notiDataDoc ? notiDataDoc.data() : null;
 
@@ -108,7 +105,6 @@ function initNotifications(userEmail) {
                     }
                 }
 
-                // Chuyển hướng người dùng vào phòng chờ nếu là lời mời
                 if (notiData && notiData.type === 'room_invite' && notiData.roomId) {
                     window.location.href = `lobby.html?roomId=${notiData.roomId}`;
                 }
