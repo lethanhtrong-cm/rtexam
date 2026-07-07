@@ -179,10 +179,8 @@
         </aside>
     </main>
 
-    <!-- Toast Message -->
     <div id="toast-message">Thông báo</div>
 
-    <!-- HTML Modal Xác nhận nộp bài -->
     <div id="confirm-submit-modal" class="modal-overlay" style="z-index: 10000;">
         <div class="modal-content" style="max-width: 400px; padding: 30px;">
             <div class="modal-title" style="color: #1f2937; margin-bottom: 15px; font-size: 20px;">Xác nhận nộp bài</div>
@@ -194,7 +192,6 @@
         </div>
     </div>
 
-    <!-- HTML Modal Cảnh Báo Gian Lận -->
     <div id="cheat-warning-modal" class="modal-overlay" style="z-index: 10000;">
         <div class="modal-content" style="border: 2px solid #ef4444; max-width: 400px;">
             <div style="color: #ef4444; font-size: 48px; margin-bottom: 10px;">⚠️</div>
@@ -204,7 +201,6 @@
         </div>
     </div>
 
-    <!-- HTML Modal Kết quả -->
     <div id="result-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-title">Kết Quả Bài Thi</div>
@@ -365,6 +361,8 @@
 
         onAuthStateChanged(auth, (user) => {
             if (!user || user.isAnonymous) {
+                // [XỬ LÝ DEEP LINKING] Lưu lại URL hiện hành vào localStorage trước khi bị chuyển hướng
+                localStorage.setItem('redirectAfterLogin', window.location.href);
                 redirect('index.html');
             } else {
                 currentUser = user;
