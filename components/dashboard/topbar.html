@@ -1,1 +1,52 @@
+<header class="topbar-fullwidth">
+    <div class="d-flex align-items-center gap-3">
+        <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; font-size: 1.4rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <i class="fa-solid fa-laptop-medical"></i>
+        </div>
+        <div>
+            <h1 class="fw-bold mb-0 text-white" style="font-size: 1.25rem;">Hệ Thống Thi Trắc Nghiệm Trực Tuyến</h1>
+            <div style="margin-top: 3px;">
+                <span class="text-white fw-medium" style="font-size: 0.9rem; opacity: 0.9;">Chuyên ngành Kỹ thuật Hình ảnh Y học</span>
+                <span style="color: rgba(255,255,255,0.4); margin: 0 8px;">|</span>
+                <span id="currentTabTitle" class="text-white fw-bold" style="font-size: 0.9rem;">Kho Đề Thi - Tất cả</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="topbar-actions">
+        <div class="topbar-notifications" id="bellToggle">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notification-badge" id="notiBadgeCount">0</span>
+            
+            <div class="notification-dropdown" id="notiDropdown">
+                <div class="noti-header">
+                    <span>Thông báo</span>
+                    <i class="fa-solid fa-check-double" style="font-size: 0.9rem; cursor: pointer; color: var(--primary-blue);" title="Đánh dấu đã đọc tất cả"></i>
+                </div>
+                <div class="noti-list" id="notiListContainer">
+                    <div class="noti-empty">Đang tải thông báo...</div>
+                </div>
+            </div>
+        </div>
 
+        <div id="topbar-vip-container">
+            <button class="btn-premium-pro" id="btnUpgradeHeader" onclick="goToUpgrade()">
+                <i class="fa-solid fa-gem"></i> Nâng cấp Pro
+            </button>
+        </div>
+        
+        <div class="topbar-user" id="userMenuToggle">
+            <span class="topbar-greeting">Xin chào, <b id="topbarName">Đang tải...</b></span>
+            <img id="topbarAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar User">
+            
+            <div class="dropdown-menu" id="userDropdown">
+                <div class="dropdown-item" id="btnManageProfile">
+                    <i class="fa-solid fa-user-pen"></i> Quản lý Hồ Sơ
+                </div>
+                <div class="dropdown-item danger-text" id="btnLogout">
+                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
