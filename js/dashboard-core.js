@@ -85,6 +85,66 @@ document.addEventListener('ComponentsLoaded', () => {
     if (currentUserInstance) {
         executeAuthUI(currentUserInstance);
     }
+
+    // =========================================================
+    // THỦ THUẬT CLONE NODE: XÓA MỌI SỰ KIỆN CHUYỂN TRANG ẨN
+    // =========================================================
+    const oldBtnCreateRoom = document.getElementById('btnOpenCreateRoom');
+    
+    if (oldBtnCreateRoom) {
+        // Tẩy sạch sự kiện cũ
+        const btnCreateRoom = oldBtnCreateRoom.cloneNode(true);
+        oldBtnCreateRoom.parentNode.replaceChild(btnCreateRoom, oldBtnCreateRoom);
+
+        // Gắn sự kiện mới tạo tab an toàn
+        btnCreateRoom.addEventListener('click', async (e) => {
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            e.stopImmediatePropagation(); 
+
+            if (!auth.currentUser) {
+                alert("Vui lòng đăng nhập để tạo phòng thi.");
+                return;
+            }
+
+            const originalText = btnCreateRoom.innerHTML;
+            btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo...';
+            btnCreateRoom.style.pointerEvents = 'none'; 
+
+            const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const targetUrl = `lobby.html?roomId=${roomId}`;
+
+            // Mở tab trắng ngay lập tức
+            const newTab = window.open('about:blank', '_blank');
+
+            try {
+                const roomRef = doc(db, 'rooms', roomId);
+                await setDoc(roomRef, {
+                    hostEmail: auth.currentUser.email,
+                    hostUid: auth.currentUser.uid,
+                    status: 'waiting',
+                    isLocked: false,
+                    examId: null,   
+                    examName: null,
+                    createdAt: serverTimestamp()
+                });
+
+                if (newTab) {
+                    newTab.location.href = targetUrl;
+                }
+                
+                btnCreateRoom.innerHTML = originalText;
+                btnCreateRoom.style.pointerEvents = 'auto';
+                
+            } catch (error) {
+                console.error("Lỗi Firestore:", error);
+                if (newTab) newTab.close();
+                alert("Không thể tạo phòng! Vui lòng kiểm tra lại quyền ghi Database hoặc mạng.");
+                btnCreateRoom.innerHTML = originalText;
+                btnCreateRoom.style.pointerEvents = 'auto';
+            }
+        });
+    }
 });
 
 function initDOMListeners() {
@@ -92,7 +152,6 @@ function initDOMListeners() {
     const accordionHeaders = document.querySelectorAll('.accordion-header');
     const subMenuItems = document.querySelectorAll('.sub-menu-item');
     
-    // Click Main Menu
     if (mainMenuItems) {
         mainMenuItems.forEach(item => {
             item.addEventListener('click', () => {
@@ -103,7 +162,6 @@ function initDOMListeners() {
         });
     }
 
-    // Click Accordion Header
     if (accordionHeaders) {
         accordionHeaders.forEach(header => {
             header.addEventListener('click', () => {
@@ -115,9 +173,7 @@ function initDOMListeners() {
                 if (icon) icon.style.transform = content.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
 
                 const targetId = header.getAttribute('data-target');
-                if (targetId) {
-                    switchTab(targetId, `${tabTitleMap[targetId]} - Tất cả`);
-                }
+                if (targetId) switchTab(targetId, `${tabTitleMap[targetId]} - Tất cả`);
                 header.classList.add('active');
                 
                 const allSubMenu = content.querySelector('.sub-menu-item[data-technique="all"]');
@@ -126,13 +182,11 @@ function initDOMListeners() {
         });
     }
 
-    // Click Sub-menus (MRI, CT...)
     if (subMenuItems) {
         subMenuItems.forEach(subItem => {
             subItem.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const parentAccordion = subItem.closest('.menu-accordion');
-                
                 if (parentAccordion) {
                     const parentHeader = parentAccordion.querySelector('.accordion-header');
                     if (parentHeader) {
@@ -147,7 +201,6 @@ function initDOMListeners() {
         });
     }
 
-    // Logic Topbar User Menu
     const userMenuToggle = document.getElementById('userMenuToggle');
     const userDropdown = document.getElementById('userDropdown');
     const btnManageProfile = document.getElementById('btnManageProfile');
@@ -169,7 +222,6 @@ function initDOMListeners() {
         btnManageProfile.addEventListener('click', () => switchTab('tab-profile'));
     }
 
-    // Nút VIP trên Topbar
     const topbarVipContainer = document.getElementById('topbar-vip-container');
     if (topbarVipContainer) {
         topbarVipContainer.addEventListener('click', (e) => {
@@ -179,7 +231,6 @@ function initDOMListeners() {
         });
     }
 
-    // Nút đăng xuất
     const btnLogout = document.getElementById("btnLogout");
     if (btnLogout) {
         btnLogout.addEventListener("click", () => {
@@ -187,7 +238,6 @@ function initDOMListeners() {
         });
     }
 
-    // Nút xác nhận chuyển khoản VIP
     const btnConfirmPayment = document.getElementById("btnConfirmPayment");
     if (btnConfirmPayment) {
         btnConfirmPayment.addEventListener("click", () => {
@@ -346,68 +396,5 @@ onAuthStateChanged(auth, async (user) => {
         }
     } else {
         safeRedirect('index.html');
-    }
-});
-
-// =========================================================================
-// 6. XỬ LÝ SỰ KIỆN TOÀN CỤC (EVENT DELEGATION) CHO CÁC NÚT ĐỘNG
-// =========================================================================
-document.addEventListener('click', async (e) => {
-    // Bắt sự kiện click vào nút Tạo phòng thi
-    const btnCreateRoom = e.target.closest('#btnOpenCreateRoom');
-    
-    if (btnCreateRoom) {
-        e.preventDefault(); 
-        e.stopImmediatePropagation(); 
-
-        if (!auth.currentUser) {
-            alert("Vui lòng đăng nhập để tạo phòng thi.");
-            return;
-        }
-
-        const originalText = btnCreateRoom.innerHTML;
-        btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo...';
-        btnCreateRoom.style.pointerEvents = 'none'; 
-
-        // 1. Sinh mã phòng ngẫu nhiên đồng bộ ngay lập tức
-        const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const targetUrl = `lobby.html?roomId=${roomId}`;
-
-        // 2. MỞ TAB TRẮNG NGAY LẬP TỨC (để tránh bị trình duyệt chặn Pop-up)
-        const newTab = window.open('about:blank', '_blank');
-
-        try {
-            // 3. Thực hiện lưu dữ liệu Firebase (Tiến trình chạy ngầm)
-            const roomRef = doc(db, 'rooms', roomId);
-            await setDoc(roomRef, {
-                hostEmail: auth.currentUser.email,
-                hostUid: auth.currentUser.uid,
-                status: 'waiting',
-                isLocked: false,
-                examId: null,   
-                examName: null,
-                createdAt: serverTimestamp()
-            });
-
-            // 4. Khi Firebase lưu xong, thay thế nội dung tab trắng bằng giao diện Lobby
-            if (newTab) {
-                newTab.location.href = targetUrl;
-            }
-            
-            // Phục hồi lại nút ở tab hiện tại
-            btnCreateRoom.innerHTML = originalText;
-            btnCreateRoom.style.pointerEvents = 'auto';
-            
-        } catch (error) {
-            console.error("Lỗi Firestore:", error);
-            // Nếu có lỗi mạng hoặc database, đóng tab trắng vừa mở
-            if (newTab) newTab.close();
-            
-            alert("Không thể tạo phòng! Vui lòng kiểm tra lại quyền ghi Database hoặc mạng.");
-            
-            // Phục hồi nút 
-            btnCreateRoom.innerHTML = originalText;
-            btnCreateRoom.style.pointerEvents = 'auto';
-        }
     }
 });
