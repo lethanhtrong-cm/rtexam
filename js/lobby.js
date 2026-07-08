@@ -436,10 +436,13 @@ async function initLobby() {
             aiLoadingSpinner.style.display = 'block';
 
             try {
+                // TÁC ĐỘNG 1: Ép AI chỉ tạo đúng 4 đáp án
+                const strictPrompt = prompt + "\n\nYÊU CẦU BẮT BUỘC: Mỗi câu hỏi trắc nghiệm phải có CHÍNH XÁC 4 ĐÁP ÁN (A, B, C, D). Tuyệt đối không được tạo 5 đáp án.";
+
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ promptText: prompt, questionCount: questionCount, difficulty: difficulty })
+                    body: JSON.stringify({ promptText: strictPrompt, questionCount: questionCount, difficulty: difficulty })
                 });
 
                 if (!response.ok) {
@@ -454,11 +457,19 @@ async function initLobby() {
 
                 const savePromises = questions.map((q, i) => {
                     const questionId = `${examId}-Q${i + 1}`;
+                    
+                    // TÁC ĐỘNG 2: Màng lọc an toàn, ép mảng lựa chọn về số lượng 4
+                    let rawOptions = q.options || q.answers || [];
+                    let safeOptions = rawOptions.length > 4 ? rawOptions.slice(0, 4) : rawOptions;
+                    
+                    let safeCorrectAnswer = q.correctAnswer !== undefined ? q.correctAnswer : (q.correct || 0);
+                    if (safeCorrectAnswer > 3) safeCorrectAnswer = 0; 
+
                     return setDoc(doc(db, "questions", questionId), {
                         examId: examId,
                         text: q.text || q.questionText || q.question || q.content || "Lỗi AI",
-                        options: q.options || q.answers || [],
-                        correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : (q.correct || 0),
+                        options: safeOptions,
+                        correctAnswer: safeCorrectAnswer,
                         explanation: q.explanation || "Không có giải thích chi tiết",
                         order: i + 1
                     });
