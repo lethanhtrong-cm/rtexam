@@ -18,7 +18,7 @@
         }
         
         .quiz-header { background-color: #ffffff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 100; }
-        .quiz-title { font-size: 20px; font-weight: bold; color: #ea580c; /* Đổi màu cam nổi bật */ }
+        .quiz-title { font-size: 20px; font-weight: bold; color: #ea580c; }
         .timer-container { display: flex; align-items: center; gap: 10px; background-color: #fee2e2; color: #ef4444; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 18px; transition: all 0.3s ease; }
         
         .header-actions { display: flex; gap: 12px; }
@@ -168,7 +168,7 @@
         <div class="modal-content" style="max-width: 420px; padding: 30px;">
             <div style="color: #ef4444; font-size: 48px; margin-bottom: 10px;">⚠️</div>
             <div class="modal-title" style="color: #dc2626; margin-bottom: 15px; font-size: 22px;">Cảnh báo thoát!</div>
-            <p style="font-size: 16px; margin-bottom: 25px; line-height: 1.5; color: #4b5563;">Bạn đang trong quá trình làm bài.<br>Nếu thoát về phòng chờ lúc này, bạn sẽ <b>không</b> được ghi nhận kết quả.<br><br>Bạn có chắc chắn muốn thoát?</p>
+            <p style="font-size: 16px; margin-bottom: 25px; line-height: 1.5; color: #4b5563;">Bạn đang trong quá trình làm bài.<br>Nếu thoát về phòng chờ lúc này, bạn sẽ <b>bị tính 0 điểm</b>.<br><br>Bạn có chắc chắn muốn thoát?</p>
             <div style="display: flex; gap: 10px;">
                 <button class="btn-modal outline" id="btn-cancel-leave" style="flex: 1;">Ở lại thi tiếp</button>
                 <button class="btn-modal danger" id="btn-confirm-leave" style="flex: 1;">Xác nhận thoát</button>
