@@ -1,28 +1,19 @@
-// admin-users.js
 import { db, showToast } from './admin-core.js';
 import { 
     collection, onSnapshot, doc, updateDoc, query, where, getDocs 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Bộ nhớ đệm lưu trữ danh sách người dùng realtime từ Firestore
 let cachedUsers = [];
-
-// Các biến trạng thái bộ lọc tìm kiếm học viên toàn cục
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
 
-// =========================================================================
-// 1. LẮNG NGHE DỮ LIỆU REAL-TIME TỪ FIRESTORE (ONSNAPSHOT)
-// =========================================================================
 export function initRealtimeUserListener() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    // Thiết lập onSnapshot lắng nghe trực tiếp sự thay đổi của collection "users"
     onSnapshot(collection(db, "users"), (snapshot) => {
         cachedUsers = [];
         
-        // Khai báo đầy đủ các biến đếm ngay đầu callback của onSnapshot
         let totalUsersCount = 0;
         let totalVipsCount = 0;
         let totalOnlineCount = 0;
@@ -33,14 +24,12 @@ export function initRealtimeUserListener() {
             const email = user.email || 'Chưa cập nhật';
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
-            const isOnline = user.isOnline || false; // Trạng thái trực tuyến của học viên
+            const isOnline = user.isOnline || false; 
 
-            // Tăng tiến các biến đếm đã được khai báo chuẩn xác
             totalUsersCount++;
             if (isVip) totalVipsCount++; 
             if (isOnline && !isBanned) totalOnlineCount++; 
 
-            // Phân loại trạng thái phục vụ bộ lọc Frontend nhanh chóng
             let statusKey = 'normal';
             if (isBanned) statusKey = 'banned';
             else if (isVip) statusKey = 'vip';
@@ -55,7 +44,6 @@ export function initRealtimeUserListener() {
             });
         });
 
-        // Đồng bộ số liệu Real-time lên chính xác các thẻ Stats Cards ngoài giao diện HTML
         const totalUsersEl = document.getElementById('totalUsers');
         const totalVipUsersEl = document.getElementById('totalVipUsers');
         const totalOnlineUsersEl = document.getElementById('totalOnlineUsers');
@@ -64,7 +52,6 @@ export function initRealtimeUserListener() {
         if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
         if (totalOnlineUsersEl) totalOnlineUsersEl.innerText = totalOnlineCount;
 
-        // Tiến hành render kết xuất lại danh sách học viên ra bảng giao diện
         renderUserList();
     }, (error) => {
         console.error("Lỗi kết nối Firestore Real-time:", error);
@@ -80,14 +67,10 @@ export function initRealtimeUserListener() {
     });
 }
 
-// =========================================================================
-// 2. HÀM KẾT XUẤT DANH SÁCH USER (TINH CHỈNH NÚT BẤM TINH TẾ)
-// =========================================================================
 export function renderUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    // Lọc dữ liệu bộ nhớ đệm theo từ khóa tìm kiếm và tình trạng bộ lọc dropdown
     const filteredUsers = cachedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
         const matchStatus = currentFilterStatus === "all" || user.statusKey === currentFilterStatus;
@@ -114,10 +97,7 @@ export function renderUserList() {
             badgeText = 'VIP 👑';
         }
 
-        // Tách chữ cái đầu tiên của địa chỉ Email để hiển thị Avatar vòng tròn đại diện
         const firstLetter = user.email.charAt(0);
-
-        // Chuẩn hóa cấu trúc style và text cho hệ thống nút bấm hành động nâng cấp độc lập
         const vipBtnClass = user.isVip ? 'btn-user-vip-off' : 'btn-user-vip-on';
         const vipBtnText = user.isVip ? '💎 Tắt VIP' : '👑 Kích VIP';
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
@@ -139,17 +119,14 @@ export function renderUserList() {
             <td class="text-center"><span class="badge ${badgeClass}">${badgeText}</span></td>
             <td class="text-center">
                 <div class="user-action-group" style="display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap;">
-                    
                     <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" 
                             style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white;">
                         ${vipBtnText}
                     </button>
-                    
                     <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" 
                             style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white; background-color: #3b82f6;">
                         📊 Lịch Sử
                     </button>
-                    
                     <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" 
                             style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white;">
                         ${banBtnText}
@@ -161,16 +138,12 @@ export function renderUserList() {
     });
 }
 
-// Tạo bảng màu cố định tinh tế phối cho Avatar theo ký tự chữ cái đầu của Email
 function getAvatarColor(letter) {
     const charCode = letter.toUpperCase().charCodeAt(0) || 65;
     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
     return colors[charCode % colors.length];
 }
 
-// =========================================================================
-// 3. XỬ LÝ NGHIỆP VỤ TÀI KHOẢN (VIP, LOCK/BAN, XEM LỊCH SỬ THI)
-// =========================================================================
 async function handleToggleVip(userId, currentVipStatus) {
     try {
         const userRef = doc(db, "users", userId);
@@ -251,23 +224,17 @@ async function handleViewHistory(userEmail) {
     }
 }
 
-// =========================================================================
-// 4. ĐĂNG KÝ CÁC SỰ KIỆN KHỞI TẠO BAN ĐẦU
-// =========================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    // Kích hoạt trình kết nối lắng nghe Real-time Firestore ngay khi DOM sẵn sàng
+document.addEventListener('componentsLoaded', () => {
     initRealtimeUserListener();
 
-    // Lắng nghe sự kiện tìm kiếm nhập ký tự Email học viên
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.trim().toLowerCase();
-            renderUserList(); // Chạy bộ lọc mượt mà cục bộ từ bộ nhớ đệm cachedUsers
+            renderUserList(); 
         });
     }
 
-    // Lắng nghe sự kiện thay đổi dropdown lọc phân loại người dùng
     const filterSelect = document.getElementById('filterSelect');
     if (filterSelect) {
         filterSelect.addEventListener('change', (e) => {
@@ -276,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Cơ chế Event Delegation xử lý tập trung toàn bộ hành động click trên thân bảng học viên
     const usersBody = document.getElementById('usersTableBody');
     if (usersBody) {
         usersBody.addEventListener('click', (e) => {
@@ -291,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Cơ chế đóng cửa sổ Modal xem lịch sử điểm thi
     const closeHistoryBtn = document.getElementById('closeHistoryModalBtn');
     if (closeHistoryBtn) {
         closeHistoryBtn.onclick = () => {
