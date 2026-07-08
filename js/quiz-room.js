@@ -221,13 +221,13 @@ function updateTimerDisplay() {
     }
 }
 
-// XỬ LÝ NÚT VỀ PHÒNG CHỜ
+// ================= TÍNH NĂNG: XỬ LÝ NÚT VỀ PHÒNG CHỜ =================
 document.getElementById('btn-back-lobby').addEventListener('click', () => {
     if (isSubmitted) {
-        // Nếu đã nộp bài thì cho về luôn
+        // Nếu đã nộp bài rồi thì cho thoát luôn
         redirect(`lobby.html?roomId=${currentRoomId}`);
     } else {
-        // Chưa nộp bài thì hiện cảnh báo
+        // Nếu chưa nộp thì hiển thị cảnh báo
         document.getElementById('confirm-leave-modal').classList.add('active');
     }
 });
@@ -240,29 +240,35 @@ document.getElementById('btn-confirm-leave').addEventListener('click', async () 
     const btnConfirm = document.getElementById('btn-confirm-leave');
     const btnCancel = document.getElementById('btn-cancel-leave');
     
-    // Disable nút để tránh bấm nhiều lần
+    // Disable nút để tránh click nhiều lần
     btnConfirm.innerText = "Đang xử lý...";
     btnConfirm.disabled = true;
     btnCancel.disabled = true;
 
-    // Cập nhật trạng thái người chơi thành 'abandoned' (bỏ thi) để lobby không tự động đẩy lại vào thi
+    // Đánh dấu là đã nộp bài (để chặn Anti-cheat tự động báo lỗi khi chuyển trang)
+    isSubmitted = true;
+    updateAntiCheatState();
+    stopTimer();
+
+    // Cập nhật lên Firebase: Ép trạng thái thành 'finished' với số điểm 0
+    // Như vậy Lobby sẽ nghĩ người dùng đã hoàn thành bài thi và không tự động đá lại vào
     if (currentRoomId && currentUser) {
         try {
             const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
             await setDoc(participantRef, { 
-                status: 'abandoned',
-                score: 0, // Có thể gán điểm 0 nếu bỏ thi giữa chừng
-                timeTaken: 0
+                status: 'finished', // BẮT BUỘC DÙNG 'finished'
+                score: 0,
+                timeTaken: 0 
             }, { merge: true });
         } catch (err) {
-            console.error("Lỗi cập nhật trạng thái bỏ thi:", err);
+            console.error("Lỗi cập nhật trạng thái:", err);
         }
     }
 
-    // Sau khi cập nhật xong mới chuyển hướng về lobby
+    // Sau khi xử lý an toàn mới chuyển hướng
     redirect(`lobby.html?roomId=${currentRoomId}`);
 });
-// ==========================
+// ==================================================================
 
 async function executeSubmit() {
     stopTimer(); 
