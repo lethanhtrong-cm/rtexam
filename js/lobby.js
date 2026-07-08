@@ -1,7 +1,6 @@
 import { auth, db } from "./dashboard-core.js";
 import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// DOM Elements
 const headerUserName = document.getElementById('headerUserName');
 const state1Waiting = document.getElementById('state1Waiting');
 const state2Leaderboard = document.getElementById('state2Leaderboard');
@@ -28,7 +27,19 @@ const closeInviteModalBtn = document.getElementById('closeInviteModalBtn');
 const inviteEmailInput = document.getElementById('inviteEmailInput');
 const btnSendInvite = document.getElementById('btnSendInvite');
 
-// Biến toàn cục
+// DOM Elements cho chức năng tạo đề AI
+const btnOpenAiModal = document.getElementById('btnOpenAiModal');
+const aiGenerateModal = document.getElementById('aiGenerateModal');
+const closeAiModalBtn = document.getElementById('closeAiModalBtn');
+const btnCancelAi = document.getElementById('btnCancelAi');
+const btnSubmitAiGenerate = document.getElementById('btnSubmitAiGenerate');
+const aiFormArea = document.getElementById('aiFormArea');
+const aiLoadingSpinner = document.getElementById('aiLoadingSpinner');
+const aiModalFooter = document.getElementById('aiModalFooter');
+const aiPromptInput = document.getElementById('aiPromptInput');
+const aiQuestionCount = document.getElementById('aiQuestionCount');
+const aiDifficulty = document.getElementById('aiDifficulty');
+
 const urlParams = new URLSearchParams(window.location.search);
 const roomId = urlParams.get('roomId');
 let currentUser = null;
@@ -37,7 +48,6 @@ let currentRoomStatus = 'waiting';
 let myParticipantStatus = 'waiting';
 let forceLobbyView = false; 
 
-// Biến phụ trợ render UI chung
 let currentHostEmail = null;
 let currentParticipantsArray = [];
 let isKicked = false;
@@ -70,7 +80,6 @@ btnBackToLobby.addEventListener('click', () => {
     switchUIState('waiting');
 });
 
-// Sự kiện Copy Mã Phòng
 btnCopyRoomCode.addEventListener('click', async () => {
     try {
         await navigator.clipboard.writeText(roomId);
@@ -81,7 +90,6 @@ btnCopyRoomCode.addEventListener('click', async () => {
 });
 
 async function loadExamsToDropdown() {
-    if (isExamsLoaded) return;
     try {
         const examsRef = collection(db, "exams");
         const snapshot = await getDocs(query(examsRef));
@@ -89,7 +97,7 @@ async function loadExamsToDropdown() {
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
             const tech = data.technique || 'General';
-            selectExamInLobby.innerHTML += `<option value="${docSnap.id}">[${tech}] ${data.title}</option>`;
+            selectExamInLobby.innerHTML += `<option value="${docSnap.id}">[${tech}] ${data.title || docSnap.id}</option>`;
         });
         isExamsLoaded = true;
     } catch (error) {
@@ -116,7 +124,6 @@ function parseTimeSafely(timeVal) {
     return 999999;
 }
 
-// HÀM RENDER CHUNG ĐỂ BẢO ĐẢM TÍNH ĐỒNG BỘ UI
 function renderUI() {
     participantsGrid.innerHTML = '';
     leaderboardBody.innerHTML = '';
@@ -125,7 +132,6 @@ function renderUI() {
     const isCurrentUserHost = (currentHostEmail === currentUser.email);
 
     currentParticipantsArray.forEach(pData => {
-        // --- 1. RENDER STATE 1 (Phòng chờ) - CẬP NHẬT GIAO DIỆN MỚI ---
         let badgeBg, badgeColor, badgeText;
         if (pData.status === 'playing') {
             badgeBg = '#fef3c7'; badgeColor = '#d97706'; badgeText = 'Đang thi';
@@ -137,7 +143,6 @@ function renderUI() {
         
         let miniBadge = `<span style="background: ${badgeBg}; color: ${badgeColor}; padding: 4px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-top: 8px; display: inline-block;">${badgeText}</span>`;
 
-        // Nút Kick (Chỉ xuất hiện nếu mình là Host và người đang vẽ không phải mình)
         let kickBtnHTML = '';
         if (isCurrentUserHost && pData.uid !== currentUser.uid) {
             kickBtnHTML = `<button class="btn-kick" data-uid="${pData.uid}" title="Đuổi khỏi phòng"><i class="fa-solid fa-xmark"></i></button>`;
@@ -145,7 +150,6 @@ function renderUI() {
 
         const card = document.createElement('div');
         card.className = 'participant-card';
-        // Ép styles trực tiếp theo chuẩn thiết kế mới
         card.style.cssText = "background: #ffffff; border: 2px solid #0d6efd; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); text-align: center; padding: 12px 8px; position: relative; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease, box-shadow 0.2s ease;";
         
         card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 6px 15px rgba(0,0,0,0.2)'; };
@@ -159,7 +163,6 @@ function renderUI() {
         `;
         participantsGrid.appendChild(card);
 
-        // --- 2. RENDER STATE 2 (Bảng xếp hạng) ---
         let badgeHTML = '';
         let displayScore = '-';
         let displayTime = '-';
@@ -184,7 +187,6 @@ function renderUI() {
         leaderboardBody.appendChild(tr);
     });
 
-    // GẮN SỰ KIỆN CHO CÁC NÚT KICK (Vừa được tạo ra)
     document.querySelectorAll('.btn-kick').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const uidToKick = e.currentTarget.getAttribute('data-uid');
@@ -204,7 +206,6 @@ async function initLobby() {
     const participantsColl = collection(db, `rooms/${roomId}/participants`);
 
     try {
-        // LẤY THÔNG TIN PHÒNG TRƯỚC ĐỂ KIỂM TRA BẢO VỆ CỬA VÀO (GATEKEEPER)
         const initRoomSnap = await getDoc(roomRef);
         if (!initRoomSnap.exists()) {
             alert("Phòng thi này không tồn tại!");
@@ -213,15 +214,12 @@ async function initLobby() {
         }
         const initialRoomData = initRoomSnap.data();
 
-        // KIỂM TRA SỨC CHỨA & KHỞI TẠO TRẠNG THÁI
         const pSnap = await getDoc(participantRef);
         
         if (pSnap.exists()) {
-            // ĐÃ TỒN TẠI (Người cũ tải lại trang/rớt mạng): Cho qua bình thường
             await setDoc(participantRef, { displayName: currentUser.displayName, photoURL: currentUser.photoURL }, { merge: true });
             myParticipantStatus = pSnap.data().status || 'waiting';
         } else {
-            // CHƯA TỒN TẠI (Người mới): Phải kiểm tra Khóa phòng và Sức chứa
             if (initialRoomData.isLocked === true) {
                 alert("Phòng thi này đã bị khóa bởi Chủ phòng.");
                 window.location.href = 'dashboard.html';
@@ -246,7 +244,6 @@ async function initLobby() {
             if (currentRoomStatus === 'waiting' && !isKicked) deleteDoc(participantRef);
         });
 
-        // LẮNG NGHE PARTICIPANTS (VẼ DANH SÁCH & BẪY KICK)
         onSnapshot(participantsColl, (snapshot) => {
             let amIInRoom = false;
             currentParticipantsArray = [];
@@ -260,7 +257,6 @@ async function initLobby() {
                 }
             });
 
-            // BẪY KICK: Nếu không tìm thấy mình trong DB, phòng đang mở và chưa bị kick
             if (!amIInRoom && currentRoomStatus === 'waiting' && !isKicked) {
                 isKicked = true;
                 alert("Bạn đã bị chủ phòng mời ra ngoài.");
@@ -268,7 +264,6 @@ async function initLobby() {
                 return;
             }
 
-            // SẮP XẾP AN TOÀN
             currentParticipantsArray.sort((a, b) => {
                 const isAFinished = (a.status === 'finished') ? 1 : 0;
                 const isBFinished = (b.status === 'finished') ? 1 : 0;
@@ -286,7 +281,6 @@ async function initLobby() {
             renderUI();
         });
 
-        // LẮNG NGHE ROOM (CÀI ĐẶT HOST, TRẠNG THÁI KHÓA & ĐIỀU HƯỚNG)
         onSnapshot(roomRef, async (docSnap) => {
             if (!docSnap.exists()) {
                 alert("Phòng thi này không tồn tại hoặc đã bị đóng!");
@@ -296,12 +290,12 @@ async function initLobby() {
 
             const roomData = docSnap.data();
             currentRoomStatus = roomData.status;
-            currentHostEmail = roomData.hostEmail; // Lưu toàn cục cho hàm renderUI
+            currentHostEmail = roomData.hostEmail;
 
             if (roomData.examId) {
                 displayExamName.innerHTML = `<i class="fa-solid fa-book-open"></i> ${roomData.examName || "Đề thi đã chọn"}`;
             } else {
-                displayExamName.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Chủ phòng đang chọn đề...`;
+                displayExamName.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Chủ phòng đang cấu hình...`;
             }
 
             const isHost = (currentHostEmail === currentUser.email);
@@ -314,20 +308,22 @@ async function initLobby() {
                 if (currentRoomStatus === 'playing') btnEndRoom.style.display = 'block';
                 else btnEndRoom.style.display = 'none';
 
-                // Cập nhật giao diện nút Khóa phòng
                 if (roomData.isLocked) {
                     btnLockRoom.innerHTML = '<i class="fa-solid fa-lock"></i> Mở khóa';
-                    btnLockRoom.style.background = '#ffc107'; // Cảnh báo vàng
+                    btnLockRoom.style.background = '#ffc107'; 
                     btnLockRoom.style.color = '#000';
                     btnLockRoom.setAttribute('data-locked', 'true');
                 } else {
                     btnLockRoom.innerHTML = '<i class="fa-solid fa-lock-open"></i> Khóa phòng';
-                    btnLockRoom.style.background = '#dc3545'; // Đỏ nguy hiểm
+                    btnLockRoom.style.background = '#dc3545'; 
                     btnLockRoom.style.color = '#fff';
                     btnLockRoom.setAttribute('data-locked', 'false');
                 }
 
-                await loadExamsToDropdown();
+                if (!isExamsLoaded) {
+                    await loadExamsToDropdown();
+                }
+                
                 if (roomData.examId && selectExamInLobby.value !== roomData.examId) {
                     selectExamInLobby.value = roomData.examId;
                 } else if (!roomData.examId) {
@@ -341,13 +337,11 @@ async function initLobby() {
                 btnStart.style.display = 'none';
                 waitingText.style.display = 'block';
                 btnEndRoom.style.display = 'none'; 
-                waitingText.textContent = roomData.examId ? "Đang chờ chủ phòng bắt đầu thi..." : "Đang chờ chủ phòng chọn đề thi...";
+                waitingText.textContent = roomData.examId ? "Đang chờ chủ phòng bắt đầu thi..." : "Đang chờ chủ phòng cấu hình bài thi...";
             }
 
-            // Gọi lại render để nhỡ Host load chậm thì nút kick vẫn hiện sau đó
             renderUI();
 
-            // ĐIỀU HƯỚNG TRẠNG THÁI
             if (currentRoomStatus === 'waiting') {
                 forceLobbyView = false;
                 switchUIState('waiting');
@@ -357,7 +351,6 @@ async function initLobby() {
                     if (myParticipantStatus === 'waiting') {
                         await updateDoc(participantRef, { status: 'playing' });
                     }
-                    // CẬP NHẬT CHUYỂN HƯỚNG SANG quiz-room.html
                     window.location.href = `quiz-room.html?examId=${roomData.examId}&roomId=${roomId}`;
                 } else {
                     if (!forceLobbyView) switchUIState('playing');
@@ -370,7 +363,6 @@ async function initLobby() {
             }
         });
 
-        // LOGIC CHỦ PHÒNG (ĐỔI ĐỀ, START, END, LOCK)
         selectExamInLobby.addEventListener('change', async () => {
             const selectedExamId = selectExamInLobby.value;
             const selectedExamName = selectedExamId ? selectExamInLobby.options[selectExamInLobby.selectedIndex].text : null;
@@ -386,6 +378,105 @@ async function initLobby() {
                 forceLobbyView = false;
             } catch (err) { console.error("Lỗi reset phòng:", err); }
         });
+
+        // ================= LOGIC TẠO ĐỀ BẰNG AI TRONG LOBBY =================
+        function resetAiForm() {
+            if (aiPromptInput) aiPromptInput.value = '';
+            if (aiFormArea) aiFormArea.style.display = 'block';
+            if (aiLoadingSpinner) aiLoadingSpinner.style.display = 'none';
+            if (aiModalFooter) aiModalFooter.style.display = 'flex';
+        }
+
+        const closeAiModal = () => aiGenerateModal.classList.remove('active');
+        
+        btnOpenAiModal.addEventListener('click', () => {
+            aiGenerateModal.classList.add('active');
+            resetAiForm();
+        });
+        
+        if (closeAiModalBtn) closeAiModalBtn.addEventListener('click', closeAiModal);
+        if (btnCancelAi) btnCancelAi.addEventListener('click', closeAiModal);
+        aiGenerateModal.addEventListener('click', (e) => { if (e.target === aiGenerateModal) closeAiModal(); });
+
+        btnSubmitAiGenerate.addEventListener('click', async () => {
+            const prompt = aiPromptInput.value.trim();
+            const questionCount = aiQuestionCount.value;
+            const difficulty = aiDifficulty.value;
+
+            if (!prompt) return alert("Vui lòng nhập chủ đề cần tạo đề!");
+
+            aiFormArea.style.display = 'none';
+            aiModalFooter.style.display = 'none';
+            aiLoadingSpinner.style.display = 'block';
+
+            try {
+                // GỌI API VERCEL
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ promptText: prompt, questionCount: questionCount, difficulty: difficulty })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`Lỗi gọi API (${response.status}): ${errorData}`);
+                }
+
+                const questions = await response.json();
+                if (!Array.isArray(questions) || questions.length === 0) throw new Error("AI không tạo được câu hỏi nào.");
+
+                const examId = "AI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+                // LƯU CÂU HỎI VÀO FIRESTORE
+                const savePromises = questions.map((q, i) => {
+                    const questionId = `${examId}-Q${i + 1}`;
+                    return setDoc(doc(db, "questions", questionId), {
+                        examId: examId,
+                        text: q.text || q.questionText || q.question || q.content || "Lỗi AI",
+                        options: q.options || q.answers || [],
+                        correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : (q.correct || 0),
+                        explanation: q.explanation || "Không có giải thích chi tiết",
+                        order: i + 1
+                    });
+                });
+                await Promise.all(savePromises);
+
+                // GHI THÔNG TIN ĐỀ THI
+                await setDoc(doc(db, "exams", examId), {
+                    id: examId,
+                    technique: "AI Tự Động",
+                    title: `Đề AI tạo lúc ${new Date().toLocaleTimeString('vi-VN')}`,
+                    level: difficulty === 'easy' ? 'Dễ' : (difficulty === 'hard' ? 'Khó' : 'Trung bình'),
+                    timeLimit: parseInt(questionCount), 
+                    createdAt: Date.now(),
+                    isVip: false,
+                    attemptCount: 0,
+                    creatorId: auth.currentUser.uid,
+                    isPublic: false
+                });
+
+                // CẬP NHẬT TRỰC TIẾP VÀO PHÒNG LOBBY VÀ CẬP NHẬT DROPDOWN
+                await updateDoc(roomRef, { 
+                    examId: examId, 
+                    examName: `[AI Tự Động] Đề tạo lúc ${new Date().toLocaleTimeString('vi-VN')}`, 
+                    status: 'waiting' 
+                });
+                
+                // Load lại danh sách đề thi để lấy đề AI mới
+                isExamsLoaded = false;
+                await loadExamsToDropdown();
+                selectExamInLobby.value = examId;
+
+                alert("Tạo đề AI thành công và đã tự động gán vào phòng!");
+                closeAiModal();
+
+            } catch (error) {
+                console.error("Lỗi tạo đề thi AI:", error);
+                alert("Đã xảy ra lỗi: " + error.message);
+                resetAiForm(); 
+            }
+        });
+        // ====================================================================
 
         btnStart.addEventListener('click', async () => {
             btnStart.setAttribute('disabled', 'true');
@@ -411,7 +502,6 @@ async function initLobby() {
             }
         });
 
-        // Sự kiện Khóa / Mở khóa phòng
         btnLockRoom.addEventListener('click', async () => {
             const currentLockedState = btnLockRoom.getAttribute('data-locked') === 'true';
             try {
@@ -421,7 +511,6 @@ async function initLobby() {
             }
         });
 
-        // MODAL & COPY LINK
         btnOpenInviteModal.addEventListener('click', () => { inviteFriendModal.classList.add('active'); inviteEmailInput.focus(); });
         closeInviteModalBtn.addEventListener('click', () => { inviteFriendModal.classList.remove('active'); inviteEmailInput.value = ""; });
 
