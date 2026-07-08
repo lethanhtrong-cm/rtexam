@@ -1,6 +1,5 @@
 import { auth, db } from "./dashboard-core.js";
 import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// THÊM IMPORT Auth Firebase chuẩn để tự xác thực
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const headerUserName = document.getElementById('headerUserName');
@@ -62,7 +61,6 @@ if (!roomId) {
     if (displayRoomId) displayRoomId.textContent = roomId;
 }
 
-// FIX LỖI TREO: Dùng trực tiếp hàm onAuthStateChanged của Firebase
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = {
@@ -72,7 +70,7 @@ onAuthStateChanged(auth, (user) => {
             photoURL: user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email}&background=random&color=fff`
         };
         if (headerUserName) headerUserName.textContent = currentUser.displayName;
-        initLobby(); // Chạy khởi tạo phòng sau khi xác định được danh tính
+        initLobby(); 
     } else {
         window.location.href = "index.html";
     }
@@ -92,19 +90,46 @@ btnCopyRoomCode.addEventListener('click', async () => {
     }
 });
 
+// ==========================================
+// CẬP NHẬT: PHÂN LOẠI ĐỀ THI HỆ THỐNG & ĐỀ AI TỰ TẠO
+// ==========================================
 async function loadExamsToDropdown() {
     try {
         const examsRef = collection(db, "exams");
         const snapshot = await getDocs(query(examsRef));
-        selectExamInLobby.innerHTML = '<option value="">-- Chọn bộ đề để thi --</option>';
+        
+        let standardExams = '';
+        let aiExams = '';
+
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            const tech = data.technique || 'General';
-            selectExamInLobby.innerHTML += `<option value="${docSnap.id}">[${tech}] ${data.title || docSnap.id}</option>`;
+            const examId = docSnap.id;
+            const tech = data.technique || 'Tổng hợp';
+            const title = data.title || examId;
+            const optionHtml = `<option value="${examId}">[${tech}] ${title}</option>`;
+
+            // Nhận diện loại đề dựa vào trường dữ liệu cấu trúc technique
+            if (data.technique === "AI Tự Động") {
+                aiExams += optionHtml;
+            } else {
+                standardExams += optionHtml;
+            }
         });
+
+        // Đổ dữ liệu vào Dropdown dưới dạng optgroup phân lớp trực quan
+        selectExamInLobby.innerHTML = `
+            <option value="">-- Chọn bộ đề để thi --</option>
+            <optgroup label="📋 ĐỀ THI CÓ SẴN TRÊN HỆ THỐNG">
+                ${standardExams || '<option disabled>Không có đề sẵn trong hệ thống</option>'}
+            </optgroup>
+            <optgroup label="✨ ĐỀ THI DO AI TỰ ĐỘNG SOẠN">
+                ${aiExams || '<option disabled>Chưa có đề AI nào được tạo</option>'}
+            </optgroup>
+        `;
         isExamsLoaded = true;
     } catch (error) {
         console.error("Lỗi lấy danh sách đề:", error);
+        selectExamInLobby.innerHTML = '<option value="">-- Lỗi tải dữ liệu danh sách đề --</option>';
     }
 }
 
@@ -202,7 +227,6 @@ function renderUI() {
     });
 }
 
-
 async function initLobby() {
     const roomRef = doc(db, 'rooms', roomId);
     const participantRef = doc(db, `rooms/${roomId}/participants/${currentUser.uid}`);
@@ -216,7 +240,6 @@ async function initLobby() {
             return;
         }
         const initialRoomData = initRoomSnap.data();
-
         const pSnap = await getDoc(participantRef);
         
         if (pSnap.exists()) {
@@ -413,7 +436,6 @@ async function initLobby() {
             aiLoadingSpinner.style.display = 'block';
 
             try {
-                // GỌI API VERCEL
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -430,7 +452,6 @@ async function initLobby() {
 
                 const examId = "AI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-                // LƯU CÂU HỎI VÀO FIRESTORE
                 const savePromises = questions.map((q, i) => {
                     const questionId = `${examId}-Q${i + 1}`;
                     return setDoc(doc(db, "questions", questionId), {
@@ -444,7 +465,6 @@ async function initLobby() {
                 });
                 await Promise.all(savePromises);
 
-                // GHI THÔNG TIN ĐỀ THI
                 await setDoc(doc(db, "exams", examId), {
                     id: examId,
                     technique: "AI Tự Động",
@@ -458,14 +478,13 @@ async function initLobby() {
                     isPublic: false
                 });
 
-                // CẬP NHẬT TRỰC TIẾP VÀO PHÒNG LOBBY VÀ CẬP NHẬT DROPDOWN
+                // Cập nhật đề thi vừa tạo trực tiếp vào document của phòng thi hiện tại
                 await updateDoc(roomRef, { 
                     examId: examId, 
                     examName: `[AI Tự Động] Đề tạo lúc ${new Date().toLocaleTimeString('vi-VN')}`, 
                     status: 'waiting' 
                 });
                 
-                // Load lại danh sách đề thi để lấy đề AI mới
                 isExamsLoaded = false;
                 await loadExamsToDropdown();
                 selectExamInLobby.value = examId;
@@ -479,7 +498,6 @@ async function initLobby() {
                 resetAiForm(); 
             }
         });
-        // ====================================================================
 
         btnStart.addEventListener('click', async () => {
             btnStart.setAttribute('disabled', 'true');
@@ -527,7 +545,6 @@ async function initLobby() {
                     message: `<b>${currentUser.displayName || currentUser.email}</b> đã mời bạn vào phòng thi. Mã phòng: <b style="color:#0d6efd">${roomId}</b>`,
                     roomId: roomId, isRead: false, createdAt: serverTimestamp()
                 };
-                // Sửa nhỏ: Khớp trường status: 'unread' và timestamp để notification đọc được
                 await setDoc(doc(collection(db, "notifications")), {
                     ...notiData,
                     status: 'unread',
