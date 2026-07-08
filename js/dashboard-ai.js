@@ -23,7 +23,6 @@ document.addEventListener('ComponentsLoaded', () => {
     const aiDifficulty = document.getElementById('aiDifficulty');
     const generatedAiExamCode = document.getElementById('generatedAiExamCode');
 
-    // Nút chức năng ở màn hình thành công
     const btnCancelGoToQuiz = document.getElementById('btnCancelGoToQuiz');
     const btnGoToQuiz = document.getElementById('btnGoToQuiz');
 
@@ -35,12 +34,10 @@ document.addEventListener('ComponentsLoaded', () => {
         if (aiQuestionCount) aiQuestionCount.value = '10';
         if (aiDifficulty) aiDifficulty.value = 'medium'; 
         
-        // Bật Form, Tắt Loading và Success
         if (aiFormArea) aiFormArea.style.display = 'block';
         if (aiLoadingSpinner) aiLoadingSpinner.style.display = 'none';
         if (aiSuccessArea) aiSuccessArea.style.display = 'none';
         
-        // Bật lại các nút dưới Footer
         if (aiModalFooter) aiModalFooter.style.display = 'flex';
     }
 
@@ -71,7 +68,6 @@ document.addEventListener('ComponentsLoaded', () => {
             const questionCount = aiQuestionCount.value;
             const difficulty = aiDifficulty.value;
 
-            // Kiểm tra đầu vào
             if (!prompt) {
                 alert("Vui lòng nhập chủ đề hoặc tài liệu cần tạo đề!");
                 return;
@@ -82,13 +78,12 @@ document.addEventListener('ComponentsLoaded', () => {
                 return;
             }
 
-            // Chuyển UI sang trạng thái Loading chờ AI xử lý
             aiFormArea.style.display = 'none';
-            aiModalFooter.style.display = 'none'; // Giấu nút đi để user không bấm liên tục
+            aiModalFooter.style.display = 'none';
             aiLoadingSpinner.style.display = 'block';
 
             try {
-                // --- GỌI API VERCEL ĐỂ TẠO ĐỀ ---
+                // GỌI API VERCEL
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -104,17 +99,15 @@ document.addEventListener('ComponentsLoaded', () => {
                     throw new Error(`Lỗi gọi API (${response.status}): ${errorData}`);
                 }
 
-                // Hứng dữ liệu trả về
                 const questions = await response.json();
                 
                 if (!Array.isArray(questions) || questions.length === 0) {
                     throw new Error("AI không tạo được câu hỏi nào hoặc dữ liệu trả về bị sai cấu trúc.");
                 }
 
-                // --- TẠO ID ĐỀ THI ---
                 currentGeneratedExamId = "AI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-                // --- LƯU TỪNG CÂU HỎI VÀO FIRESTORE ---
+                // LƯU CÂU HỎI VÀO FIRESTORE
                 const savePromises = questions.map((q, i) => {
                     const questionId = `${currentGeneratedExamId}-Q${i + 1}`;
                     return setDoc(doc(db, "questions", questionId), {
@@ -129,7 +122,7 @@ document.addEventListener('ComponentsLoaded', () => {
 
                 await Promise.all(savePromises);
 
-                // --- GHI THÔNG TIN GÓI ĐỀ THI VÀO FIRESTORE ---
+                // GHI THÔNG TIN ĐỀ THI VÀO FIRESTORE
                 await setDoc(doc(db, "exams", currentGeneratedExamId), {
                     id: currentGeneratedExamId,
                     technique: "AI Tự Động",
@@ -142,7 +135,7 @@ document.addEventListener('ComponentsLoaded', () => {
                     isPublic: false
                 });
 
-                // --- HIỂN THỊ GIAO DIỆN CHÚC MỪNG ---
+                // HIỂN THỊ GIAO DIỆN CHÚC MỪNG
                 aiLoadingSpinner.style.display = 'none';
                 aiSuccessArea.style.display = 'block';
                 generatedAiExamCode.textContent = currentGeneratedExamId;
@@ -150,7 +143,7 @@ document.addEventListener('ComponentsLoaded', () => {
             } catch (error) {
                 console.error("Lỗi tạo đề thi AI:", error);
                 alert("Đã xảy ra lỗi trong quá trình tạo đề bằng AI: " + error.message);
-                resetAiForm(); // Nếu lỗi thì khôi phục Form về ban đầu
+                resetAiForm(); 
             }
         });
     }
@@ -161,7 +154,6 @@ document.addEventListener('ComponentsLoaded', () => {
     if (btnCancelGoToQuiz) {
         btnCancelGoToQuiz.addEventListener('click', () => {
             closeAiModal();
-            // Cập nhật lại danh sách đề thi dưới nền
             if (typeof window.loadAggregatedExamData === 'function') {
                 window.loadAggregatedExamData();
             } else {
@@ -172,8 +164,9 @@ document.addEventListener('ComponentsLoaded', () => {
 
     if (btnGoToQuiz) {
         btnGoToQuiz.addEventListener('click', () => {
-            // Đẩy người dùng thẳng vào phòng thi
-            window.location.href = `quiz.html?examId=${currentGeneratedExamId}`;
+            // ĐẨY NGƯỜI DÙNG SANG TAB MỚI KHI BẤM "BẮT ĐẦU THI NGAY"
+            const targetUrl = `quiz.html?examId=${currentGeneratedExamId}`;
+            window.open(targetUrl, '_blank');
         });
     }
 
