@@ -212,20 +212,37 @@ function initDOMListeners() {
             btnCreateRoom.disabled = true;
 
             try {
-                // Sinh mã phòng ngẫu nhiên gồm 6 kí tự viết hoa
-                const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-                const roomRef = doc(db, 'rooms', roomId);
-                
-                // Khởi tạo trạng thái phòng chờ trống trên Firestore trước khi chuyển hướng
-                await setDoc(roomRef, {
-                    hostEmail: auth.currentUser.email,
-                    hostUid: auth.currentUser.uid,
-                    status: 'waiting',
-                    isLocked: false,
-                    examId: null,   
-                    examName: null,
-                    createdAt: serverTimestamp()
-                });
+            // 1. Sinh mã phòng ngẫu nhiên
+            const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const roomRef = doc(db, 'rooms', roomId);
+            
+            // 2. Khởi tạo phòng thi trên Firestore
+            await setDoc(roomRef, {
+                hostEmail: auth.currentUser.email,
+                hostUid: auth.currentUser.uid,
+                status: 'waiting',
+                isLocked: false,
+                examId: null,   
+                examName: null,
+                createdAt: serverTimestamp()
+            });
+
+            // 3. MỞ SANG MỘT TAB MỚI 
+            const targetUrl = `lobby.html?roomId=${roomId}`;
+            window.open(targetUrl, '_blank');
+            
+            // 4. Phục hồi lại nút ở tab hiện tại để người dùng có thể bấm tiếp sau này
+            btnCreateRoom.innerHTML = originalText;
+            btnCreateRoom.style.pointerEvents = 'auto'; 
+            
+        } catch (error) {
+            console.error("Lỗi Firestore:", error);
+            alert("Không thể tạo phòng! Vui lòng kiểm tra lại quyền ghi Database hoặc mạng.");
+            
+            // Phục hồi nút nếu lỗi
+            btnCreateRoom.innerHTML = originalText;
+            btnCreateRoom.style.pointerEvents = 'auto';
+        }
 
                 safeRedirect(`lobby.html?roomId=${roomId}`);
             } catch (error) {
