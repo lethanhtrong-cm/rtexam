@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// Cập nhật dòng dưới: Thêm setDoc và serverTimestamp để phục vụ tạo phòng thi
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
@@ -195,64 +194,6 @@ function initDOMListeners() {
             alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
         });
     }
-
-    // ==========================================
-    // LOGIC THÊM VÀO: XỬ LÝ NÚT TẠO PHÒNG THI
-    // ==========================================
-    const btnCreateRoom = document.getElementById('btnOpenCreateRoom'); 
-    if (btnCreateRoom) {
-        btnCreateRoom.addEventListener('click', async () => {
-            if (!auth.currentUser) {
-                alert("Vui lòng đăng nhập để tạo phòng thi.");
-                return;
-            }
-
-            const originalText = btnCreateRoom.innerHTML;
-            btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo...';
-            btnCreateRoom.disabled = true;
-
-            try {
-            // 1. Sinh mã phòng ngẫu nhiên
-            const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const roomRef = doc(db, 'rooms', roomId);
-            
-            // 2. Khởi tạo phòng thi trên Firestore
-            await setDoc(roomRef, {
-                hostEmail: auth.currentUser.email,
-                hostUid: auth.currentUser.uid,
-                status: 'waiting',
-                isLocked: false,
-                examId: null,   
-                examName: null,
-                createdAt: serverTimestamp()
-            });
-
-            // 3. MỞ SANG MỘT TAB MỚI 
-            const targetUrl = `lobby.html?roomId=${roomId}`;
-            window.open(targetUrl, '_blank');
-            
-            // 4. Phục hồi lại nút ở tab hiện tại để người dùng có thể bấm tiếp sau này
-            btnCreateRoom.innerHTML = originalText;
-            btnCreateRoom.style.pointerEvents = 'auto'; 
-            
-        } catch (error) {
-            console.error("Lỗi Firestore:", error);
-            alert("Không thể tạo phòng! Vui lòng kiểm tra lại quyền ghi Database hoặc mạng.");
-            
-            // Phục hồi nút nếu lỗi
-            btnCreateRoom.innerHTML = originalText;
-            btnCreateRoom.style.pointerEvents = 'auto';
-        }
-
-                safeRedirect(`lobby.html?roomId=${roomId}`);
-            } catch (error) {
-                console.error("Lỗi khi tạo phòng thi:", error);
-                alert("Không thể tạo phòng thi. Vui lòng kiểm tra lại kết nối mạng.");
-                btnCreateRoom.innerHTML = originalText;
-                btnCreateRoom.disabled = false;
-            }
-        });
-    }
 }
 
 // =========================================================================
@@ -405,5 +346,60 @@ onAuthStateChanged(auth, async (user) => {
         }
     } else {
         safeRedirect('index.html');
+    }
+});
+
+// =========================================================================
+// 6. XỬ LÝ SỰ KIỆN TOÀN CỤC (EVENT DELEGATION) CHO CÁC NÚT ĐỘNG
+// =========================================================================
+document.addEventListener('click', async (e) => {
+    // Bắt sự kiện tạo phòng thi
+    const btnCreateRoom = e.target.closest('#btnOpenCreateRoom');
+    
+    if (btnCreateRoom) {
+        e.preventDefault(); 
+        e.stopImmediatePropagation(); 
+
+        if (!auth.currentUser) {
+            alert("Vui lòng đăng nhập để tạo phòng thi.");
+            return;
+        }
+
+        const originalText = btnCreateRoom.innerHTML;
+        btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo...';
+        btnCreateRoom.style.pointerEvents = 'none'; 
+
+        try {
+            // Sinh mã phòng ngẫu nhiên
+            const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const roomRef = doc(db, 'rooms', roomId);
+            
+            // Khởi tạo phòng thi trên Firestore
+            await setDoc(roomRef, {
+                hostEmail: auth.currentUser.email,
+                hostUid: auth.currentUser.uid,
+                status: 'waiting',
+                isLocked: false,
+                examId: null,   
+                examName: null,
+                createdAt: serverTimestamp()
+            });
+
+            // MỞ SANG MỘT TAB TRÌNH DUYỆT MỚI
+            const targetUrl = `lobby.html?roomId=${roomId}`;
+            window.open(targetUrl, '_blank');
+            
+            // Phục hồi lại nút ở tab hiện tại
+            btnCreateRoom.innerHTML = originalText;
+            btnCreateRoom.style.pointerEvents = 'auto';
+            
+        } catch (error) {
+            console.error("Lỗi Firestore:", error);
+            alert("Không thể tạo phòng! Vui lòng kiểm tra lại quyền ghi Database hoặc mạng.");
+            
+            // Phục hồi nút nếu lỗi
+            btnCreateRoom.innerHTML = originalText;
+            btnCreateRoom.style.pointerEvents = 'auto';
+        }
     }
 });
