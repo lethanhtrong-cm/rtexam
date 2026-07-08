@@ -1,1 +1,89 @@
+<!-- MODAL SỬA THUỘC TÍNH ĐỀ -->
+<div id="edit-properties-modal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>⚙️ Sửa Thuộc Tính Đề: <span id="edit-modal-exam-id" style="color: #3b82f6;"></span></h2>
+            <span class="close-modal" id="closeEditPropertiesModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group-vertical">
+                <div class="form-item-vertical">
+                    <label for="edit-select-technique">🩻 Chuyên khoa / Kỹ thuật:</label>
+                    <select id="edit-select-technique">
+                        <option value="MRI">MRI</option>
+                        <option value="CT">CT</option>
+                        <option value="X quang">X quang</option>
+                        <option value="Hỗn hợp">Hỗn hợp</option>
+                    </select>
+                </div>
+                <div class="form-item-vertical">
+                    <label for="edit-select-time">⏱️ Thời gian làm bài (Phút):</label>
+                    <select id="edit-select-time">
+                        <option value="15">15 phút</option>
+                        <option value="30">30 phút</option>
+                        <option value="45">45 phút</option>
+                    </select>
+                </div>
+                <div class="form-item-vertical">
+                    <label for="edit-select-level">📈 Cấp độ đề thi:</label>
+                    <select id="edit-select-level">
+                        <option value="Dễ">Dễ</option>
+                        <option value="Trung bình">Trung bình</option>
+                        <option value="Khó">Khó</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button id="btn-save-properties" class="btn btn-publish" style="padding: 10px 25px; font-size: 14px;">💾 Lưu Thay Đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- MODAL XEM ĐÁNH GIÁ -->
+<div id="feedback-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>⭐ Đánh Giá Đề Thi: <span id="modal-exam-id" style="color: #3b82f6;"></span></h2>
+            <span class="close-modal" id="closeFeedbackModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th width="25%">Email</th>
+                        <th class="text-center" width="15%">Số Sao</th>
+                        <th width="40%">Góp ý</th>
+                        <th class="text-center" width="20%">Thời gian</th>
+                    </tr>
+                </thead>
+                <tbody id="feedback-list-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL LỊCH SỬ THI -->
+<div id="historyModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Lịch sử thi của...</h2>
+            <span class="close-modal" id="closeHistoryModalBtn">&times;</span>
+        </div>
+        <div class="modal-body">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mã đề thi</th>
+                        <th class="text-center">Điểm số</th>
+                        <th>Thời gian nộp</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- VÙNG HIỂN THỊ THÔNG BÁO -->
+<div class="toast-container" id="toastContainer"></div>
