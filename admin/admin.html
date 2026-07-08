@@ -5,229 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard Ultra Pro - Hệ thống thi trắc nghiệm</title>
 
-    <!-- Thư viện SheetJS để xử lý Excel -->
+    <!-- Thư viện xử lý Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-
-    <style>
-        /* ================= CƠ BẢN & RESET ================= */
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f4f6f9; color: #1f2937; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* ================= SIDEBAR ACCORDION ================= */
-        .sidebar { width: 260px; background-color: #0f172a; color: white; display: flex; flex-direction: column; box-shadow: 4px 0 10px rgba(0,0,0,0.05); z-index: 10; }
-        .sidebar-header { padding: 25px 20px; background-color: #1e293b; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .sidebar-title { font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
-        .sidebar-subtitle { font-size: 12px; color: #94a3b8; margin-top: 5px; }
-        
-        .sidebar-menu { display: flex; flex-direction: column; padding-top: 15px; flex: 1; overflow-y: auto; }
-        
-        .menu-parent { width: 100%; padding: 14px 20px; background: none; border: none; color: #cbd5e1; text-align: left; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
-        .menu-parent:hover { background-color: rgba(255, 255, 255, 0.03); color: white; }
-        .menu-parent .parent-title { display: flex; align-items: center; gap: 10px; }
-        .menu-parent .arrow-icon { font-size: 10px; transition: transform 0.3s ease; color: #64748b; }
-        .menu-parent.open { color: white; }
-        .menu-parent.open .arrow-icon { transform: rotate(180deg); color: #3b82f6; }
-        
-        .submenu { display: none; background-color: #020617; padding: 4px 0; }
-        .submenu.show { display: block; }
-        
-        .menu-item { width: 100%; padding: 11px 20px 11px 45px; background: none; border: none; color: #94a3b8; text-align: left; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: block; position: relative; }
-        .menu-item:hover { background-color: #1e293b; color: white; }
-        .menu-item.active { background-color: rgba(59, 130, 246, 0.08); color: #3b82f6; font-weight: 600; }
-        .menu-item.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: #3b82f6; border-radius: 0 4px 4px 0; }
-        
-        .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
-        .btn-logout { background-color: #ef4444; color: white; width: 100%; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-logout:hover { background-color: #dc2626; }
-
-        /* ================= MAIN CONTENT WRAPPER ================= */
-        .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-        .topbar { background-color: #ffffff; padding: 15px 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; height: 60px; position: sticky; top: 0; z-index: 5; border-bottom: 1px solid #e2e8f0; }
-        .topbar h2 { font-size: 16.5px; color: #0f172a; font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; }
-        .admin-profile { font-size: 13px; color: #10b981; font-weight: 600; background-color: #d1fae5; padding: 5px 12px; border-radius: 20px; }
-        .content-container { padding: 30px; max-width: 1280px; margin: 0 auto; width: 100%; }
-        .content-section { display: none; animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .content-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* ================= PREMIUM CARDS & UI CHUNG ================= */
-        .card { background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); padding: 30px; border: 1px solid #e2e8f0; margin-bottom: 30px; position: relative; transition: box-shadow 0.3s; }
-        .card:hover { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05); }
-        .card-title { font-size: 16.5px; font-weight: 700; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
-        .card-description { color: #64748b; margin-bottom: 25px; line-height: 1.6; font-size: 14px; }
-        .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        
-        /* Modern Pill Filter Layout */
-        .filter-wrapper-pills-modern { display: flex; flex-direction: column; background-color: #ffffff; padding: 22px 24px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.01); }
-        .filter-flex-row { display: flex; gap: 30px; width: 100%; }
-        .filter-col-50 { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-        .filter-label-text { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-        .pill-container { display: flex; gap: 8px; flex-wrap: wrap; }
-        .pill-btn { background-color: #f1f5f9; border: none; color: #475569; padding: 8px 18px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #e2e8f0; }
-        .pill-btn:hover { background-color: #e2e8f0; color: #0f172a; }
-        .pill-btn.active { background-color: #3b82f6; color: white; border-color: #2563eb; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2); }
-
-        /* Search Engine Layout */
-        .search-wrapper-modern { margin-bottom: 16px; width: 100%; }
-        .search-input-modern { width: 100%; padding: 14px 20px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 15px; outline: none; box-shadow: 0 2px 8px rgba(0,0,0,0.01); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); color: #1f2937; font-weight: 500; background-color: #ffffff; }
-        .search-input-modern:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.12); }
-
-        /* ================= HIGH-END USER STATS CARDS ================= */
-        .stats-container { display: flex; gap: 20px; margin-bottom: 30px; width: 100%; }
-        .stat-card { background: white; flex: 1; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; position: relative; overflow: hidden; }
-        
-        .stat-card.total-users { background-color: #f0fdf4; border-left: 6px solid #10b981; }
-        .stat-card.vip-users { background-color: #fef9c3; border-left: 6px solid #eab308; }
-        .stat-card.online-users { background-color: #eff6ff; border-left: 6px solid #3b82f6; }
-        
-        .stat-card::after { content: "👤"; position: absolute; right: -10px; bottom: -15px; font-size: 90px; opacity: 0.04; pointer-events: none; font-family: sans-serif; }
-        .stat-card.vip-users::after { content: "👑"; }
-        .stat-card.online-users::after { content: "🌐"; }
-
-        .stat-info h3 { font-size: 12px; color: #64748b; text-transform: uppercase; margin-bottom: 6px; font-weight: 700; letter-spacing: 0.5px; }
-        .stat-info .number { font-size: 34px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
-        
-        .online-pulse-dot { width: 12px; height: 12px; background-color: #10b981; border-radius: 50%; display: inline-block; position: relative; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); animation: pulse-green 2s infinite; }
-        @keyframes pulse-green {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-
-        /* ================= REAL-TIME TOOLBAR & SEARCH ================= */
-        .toolbar-user-modern { display: flex; gap: 15px; margin-bottom: 25px; width: 100%; align-items: center; }
-        .search-user-container { flex: 1; position: relative; }
-        .search-user-container::before { content: "🔍"; position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 15px; color: #94a3b8; pointer-events: none; }
-        .search-user-input { width: 100%; padding: 12px 20px 12px 46px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; color: #334155; font-weight: 500; transition: all 0.2s; background-color: #ffffff; }
-        .search-user-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.1); }
-        
-        .select-user-filter { padding: 12px 40px 12px 18px; border: 1px solid #cbd5e1; border-radius: 10px; outline: none; font-size: 14.5px; font-weight: 600; color: #334155; background-color: #ffffff; min-width: 200px; cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 14px; }
-        .select-user-filter:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 131, 246, 0.1); }
-
-        /* ================= LAYOUT EMAIL BỔ SUNG AVATAR ================= */
-        .user-email-cell { display: flex; align-items: center; gap: 12px; }
-        .user-avatar-placeholder { width: 34px; height: 34px; border-radius: 50%; background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #475569; border: 2px solid #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-transform: uppercase; user-select: none; }
-
-        /* ================= MODERN USER ACTION BUTTONS ================= */
-        .user-action-group { display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .btn-user-action { padding: 8px 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); color: white; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        
-        .btn-user-vip-on { background-color: #10b981; } .btn-user-vip-on:hover { background-color: #059669; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-        .btn-user-vip-off { background-color: #eab308; color: #0f172a; } .btn-user-vip-off:hover { background-color: #ca8a04; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.2); }
-        .btn-user-history { background-color: #3b82f6; } .btn-user-history:hover { background-color: #2563eb; box-shadow: 0 4px 12px rgba(59, 131, 246, 0.2); }
-        .btn-user-ban { background-color: #ef4444; } .btn-user-ban:hover { background-color: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
-        .btn-user-unban { background-color: #64748b; } .btn-user-unban:hover { background-color: #475569; box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2); }
-
-        /* ================= EXAM CARD LIST VIEW ================= */
-        .exam-card-list { display: flex; flex-direction: column; gap: 16px; width: 100%; }
-        .exam-modern-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.015); transition: all 0.2s ease-in-out; }
-        .exam-modern-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04); border-color: #cbd5e1; }
-        .card-top-half { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 14px; }
-        .card-info-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-        .card-exam-title { font-size: 18px; font-weight: 700; color: #0f172a; }
-        .card-status-right { display: flex; align-items: center; gap: 10px; }
-        .card-divider { border: none; border-top: 1px solid #f1f5f9; margin: 0 0 14px 0; }
-        .card-bottom-half { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
-
-        .btn-outline-sm { padding: 7px 14px; border: 1px solid #cbd5e1; background-color: transparent; color: #475569; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s ease-in-out; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-outline-sm:hover { background-color: #f8fafc; color: #0f172a; border-color: #94a3b8; }
-        .btn-outline-sm.btn-properties-modern { color: #0f172a; border-color: #cbd5e1; }
-        .btn-outline-sm.btn-properties-modern:hover { background-color: #f1f5f9; border-color: #64748b; }
-        .btn-outline-sm.btn-feedback-modern { color: #d97706; border-color: #fde68a; }
-        .btn-outline-sm.btn-feedback-modern:hover { background-color: #fffbeb; border-color: #f59e0b; }
-        .btn-outline-sm.btn-vip-on-modern { color: #3b82f6; border-color: #bfdbfe; }
-        .btn-outline-sm.btn-vip-on-modern:hover { background-color: #eff6ff; border-color: #3b82f6; }
-        .btn-outline-sm.btn-vip-off-modern { color: #f97316; border-color: #fed7aa; }
-        .btn-outline-sm.btn-vip-off-modern:hover { background-color: #fff7ed; border-color: #f97316; }
-        .btn-outline-sm.btn-delete-modern { color: #ef4444; border-color: #fca5a5; }
-        .btn-outline-sm.btn-delete-modern:hover { background-color: #fee2e2; border-color: #ef4444; }
-
-        /* STEP BADGES & DRAG/DROP UI */
-        .step-badge { background-color: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; font-weight: 700; }
-        .step-badge.green { background-color: #10b981; }
-        .step-badge.orange { background-color: #f59e0b; }
-        .file-upload-wrapper { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 45px 20px; text-align: center; background-color: #f8fafc; transition: all 0.25s ease-in-out; position: relative; cursor: pointer; }
-        .file-upload-wrapper:hover { border-color: #3b82f6; background-color: #eff6ff; }
-        .file-upload-icon { font-size: 36px; color: #64748b; margin-bottom: 12px; transition: transform 0.2s; }
-        .file-upload-wrapper:hover .file-upload-icon { transform: translateY(-4px); color: #3b82f6; }
-        .file-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
-        .file-label { font-size: 14.5px; color: #475569; pointer-events: none; line-height: 1.5; }
-        .file-label span { color: #3b82f6; font-weight: 700; text-decoration: underline; }
-        .selected-file-name { margin-top: 15px; font-weight: 700; color: #10b981; font-size: 13.5px; background-color: #d1fae5; display: inline-block; padding: 4px 14px; border-radius: 20px; border: 1px solid #a7f3d0; }
-
-        /* BẢNG DỮ LIỆU CHUNG */
-        .table-container { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.01); }
-        .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .admin-table th, .admin-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-        .admin-table th { background-color: #f8fafc; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-        .admin-table tr:hover { background-color: #f8fafc; }
-        .badge-meta { background-color: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 12px; display: inline-block; border: 1px solid #bfdbfe; margin: 2px; }
-        .badge-meta.level-easy { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
-        .badge-meta.level-medium { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
-        .badge-meta.level-hard { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-        .text-center { text-align: center !important; }
-        .empty-message, .loading-text { text-align: center; padding: 40px !important; color: #64748b; font-style: italic; font-size: 13.5px; }
-
-        /* ================= MODALS COMPONENT ================= */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); animation: fadeIn 0.2s; }
-        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 850px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; border-radius: 12px 12px 0 0; }
-        .modal-header h2 { margin: 0; font-size: 16px; color: #0f172a; font-weight: 700; text-transform: uppercase; }
-        .close-modal { color: #94a3b8; font-size: 24px; font-weight: bold; cursor: pointer; transition: color 0.2s; }
-        .close-modal:hover { color: #334155; }
-        .modal-body { overflow-y: auto; flex: 1; padding: 25px; }
-    </style>
+    
+    <!-- Gọi file CSS từ thư mục con css/ của admin -->
+    <link rel="stylesheet" href="./css/admin.css">
 </head>
 <body>
 
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-title">Admin Panel</div>
-            <div class="sidebar-subtitle">Hệ thống thi trắc nghiệm</div>
-        </div>
-        <nav class="sidebar-menu">
-            
-            <div class="menu-group">
-                <button class="menu-parent open">
-                    <span class="parent-title">📋 Quản Lý Đề Thi</span>
-                    <span class="arrow-icon">▼</span>
-                </button>
-                <div class="submenu show">
-                    <button class="menu-item active" data-target="tab-exam-list" data-tech="MRI" data-title="Danh Sách Đề Thi: Chuyên Khoa MRI">
-                        📄 Danh sách: MRI
-                    </button>
-                    <button class="menu-item" data-target="tab-exam-list" data-tech="CT" data-title="Danh Sách Đề Thi: Chuyên Khoa CT">
-                        📄 Danh sách: CT
-                    </button>
-                    <button class="menu-item" data-target="tab-exam-list" data-tech="X quang" data-title="Danh Sách Đề Thi: Chuyên Khoa X quang">
-                        📄 Danh sách: X quang
-                    </button>
-                    <button class="menu-item" data-target="tab-exam-list" data-tech="Hỗn hợp" data-title="Danh Sách Đề Thi: Hệ Hỗn Hợp">
-                        📄 Danh sách: Hỗn hợp
-                    </button>
-                    <button class="menu-item" data-target="tab-exam-import" data-title="Import Đề Thi Vào Hệ Thống">
-                        🚀 Import đề thi
-                    </button>
-                </div>
-            </div>
-
-            <div class="menu-group">
-                <button class="menu-parent">
-                    <span class="parent-title">👥 Quản Lý Người Dùng</span>
-                    <span class="arrow-icon">▼</span>
-                </button>
-                <div class="submenu">
-                    <button class="menu-item" data-target="tab-user-list" data-title="Danh Sách Thành Viên & Cấp Quyền VIP">
-                        📄 Danh sách người dùng
-                    </button>
-                </div>
-            </div>
-
-        </nav>
-        <div class="sidebar-footer">
-            <button id="btnLogout" class="btn-logout">Đăng Xuất</button>
-        </div>
-    </aside>
+    <!-- COMPONENT: SIDEBAR (Sẽ được JS render động vào đây) -->
+    <aside class="sidebar" id="sidebar-container"></aside>
 
     <main class="main-wrapper">
         <header class="topbar">
@@ -235,6 +22,7 @@
             <div class="admin-profile">🟢 Đang hoạt động</div>
         </header>
 
+        <!-- KHOẢNG NỘI DUNG CHÍNH (Được giữ lại ở file cha vì chứa ID mapping động trực tiếp với logic JS) -->
         <div class="content-container">
             
             <section id="tab-exam-list" class="content-section active">
@@ -274,7 +62,7 @@
                 <div style="display: flex; gap: 25px; margin-bottom: 30px;">
                     <div class="card" style="flex: 1; margin-bottom: 0;">
                         <h2 class="card-title"><span class="step-badge">1</span> &nbsp; Chuẩn Bị File Mẫu</h2>
-                        <p class="card-description">Tải file Excel cấu chuẩn cấu trúc về máy để điền thông tin câu hỏi chính xác.</p>
+                        <p class="card-description">Tải file Excel chuẩn cấu trúc về máy để điền thông tin câu hỏi chính xác (Dùng chữ A, B, C, D cho đáp án đúng).</p>
                         <button id="btn-download-template" class="btn btn-template">⬇️ Tải File Excel Mẫu</button>
                     </div>
                     <div class="card" style="flex: 2; margin-bottom: 0;">
@@ -293,19 +81,19 @@
                     <h2 class="card-title"><span class="step-badge orange">3</span> &nbsp; Hàng Đợi Kiểm Tra Dữ Liệu Excel</h2>
                     <p class="card-description">Dữ liệu đọc tạm từ tệp Excel sẽ hiển thị ở đây. Hãy rà soát nội dung kỹ lưỡng trước khi thiết lập thuộc tính và xuất bản.</p>
                     
-                    <div class="table-container" style="max-height: 350px; overflow-y: auto; margin-bottom: 30px;">
-                        <table class="admin-table">
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 30px;">
+                        <table class="admin-table preview-table">
                             <thead>
                                 <tr>
                                     <th class="text-center" width="5%">STT</th>
                                     <th width="10%">Mã đề</th>
-                                    <th width="20%">Câu hỏi</th>
+                                    <th width="25%">Câu hỏi</th>
                                     <th width="10%">Đáp án A</th>
                                     <th width="10%">Đáp án B</th>
                                     <th width="10%">Đáp án C</th>
                                     <th width="10%">Đáp án D</th>
                                     <th class="text-center" width="10%">Đáp án đúng</th>
-                                    <th width="15%">Giải thích đáp án</th>
+                                    <th width="10%">Giải thích đáp án</th>
                                 </tr>
                             </thead>
                             <tbody id="preview-list-body">
@@ -350,7 +138,6 @@
             </section>
 
             <section id="tab-user-list" class="content-section">
-                
                 <div class="stats-container">
                     <div class="stat-card total-users">
                         <div class="stat-info">
@@ -405,96 +192,13 @@
                     </div>
                 </div>
             </section>
-
         </div>
     </main>
 
-    <div id="edit-properties-modal" class="modal">
-        <div class="modal-content" style="max-width: 500px;">
-            <div class="modal-header">
-                <h2>⚙️ Sửa Thuộc Tính Đề: <span id="edit-modal-exam-id" style="color: #3b82f6;"></span></h2>
-                <span class="close-modal" id="closeEditPropertiesModal">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group-vertical">
-                    <div class="form-item-vertical">
-                        <label for="edit-select-technique">🩻 Chuyên khoa / Kỹ thuật:</label>
-                        <select id="edit-select-technique">
-                            <option value="MRI">MRI</option>
-                            <option value="CT">CT</option>
-                            <option value="X quang">X quang</option>
-                            <option value="Hỗn hợp">Hỗn hợp</option>
-                        </select>
-                    </div>
-                    <div class="form-item-vertical">
-                        <label for="edit-select-time">⏱️ Thời gian làm bài (Phút):</label>
-                        <select id="edit-select-time">
-                            <option value="15">15 phút</option>
-                            <option value="30">30 phút</option>
-                            <option value="45">45 phút</option>
-                        </select>
-                    </div>
-                    <div class="form-item-vertical">
-                        <label for="edit-select-level">📈 Cấp độ đề thi:</label>
-                        <select id="edit-select-level">
-                            <option value="Dễ">Dễ</option>
-                            <option value="Trung bình">Trung bình</option>
-                            <option value="Khó">Khó</option>
-                        </select>
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-                    <button id="btn-save-properties" class="btn btn-publish" style="padding: 10px 25px; font-size: 14px;">💾 Lưu Thay Đổi</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- COMPONENT: MODALS CHUNG (Sẽ được JS render vào đây) -->
+    <div id="modals-container"></div>
 
-    <div id="feedback-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>⭐ Đánh Giá Đề Thi: <span id="modal-exam-id" style="color: #3b82f6;"></span></h2>
-                <span class="close-modal" id="closeFeedbackModal">&times;</span>
-            </div>
-            <div class="modal-body">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th width="25%">Email</th>
-                            <th class="text-center" width="15%">Số Sao</th>
-                            <th width="40%">Góp ý</th>
-                            <th class="text-center" width="20%">Thời gian</th>
-                        </tr>
-                    </thead>
-                    <tbody id="feedback-list-body"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div id="historyModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">Lịch sử thi của...</h2>
-                <span class="close-modal" id="closeHistoryModalBtn">&times;</span>
-            </div>
-            <div class="modal-body">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Mã đề thi</th>
-                            <th class="text-center">Điểm số</th>
-                            <th>Thời gian nộp</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="toast-container" id="toastContainer"></div>
-
+    <!-- Nhúng các module Javascript -->
     <script type="module" src="./admin-core.js"></script>
     <script type="module" src="./admin-exams.js"></script>
     <script type="module" src="./admin-users.js"></script>
