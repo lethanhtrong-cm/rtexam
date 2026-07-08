@@ -25,7 +25,7 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// HÀM TẢI COMPONENT HTML ĐỘNG TỪ THƯ MỤC KHÁC
+// HÀM TẢI COMPONENT HTML ĐỘNG (ĐÃ FIX ĐƯỜNG DẪN)
 async function loadComponent(elementId, filePath) {
     try {
         const response = await fetch(filePath);
@@ -40,18 +40,18 @@ async function loadComponent(elementId, filePath) {
 // KHỞI TẠO HỆ THỐNG GIAO DIỆN (CHẠY ASYNC)
 document.addEventListener('DOMContentLoaded', async () => {
     
-    // 1. Tải giao diện phụ từ thư mục components
-    await loadComponent('sidebar-container', './components/admin-sidebar.html');
-    await loadComponent('modals-container', './components/admin-modals.html');
+    // Tải giao diện phụ từ thư mục components con bên trong thư mục admin (Đã sửa theo tên file của bạn)
+    await loadComponent('sidebar-container', './components/sidebar.html');
+    await loadComponent('modals-container', './components/modal.html');
 
-    // 2. Kích hoạt logic điều hướng Sidebar sau khi HTML đã nạp
+    // Kích hoạt logic điều hướng Sidebar sau khi HTML đã nạp
     initSidebarEvents();
 
-    // 3. Kích hoạt logic đóng Modals và Đăng xuất
+    // Kích hoạt logic đóng Modals và Đăng xuất
     initModalEvents();
     initAuthEvents();
 
-    // 4. PHÁT SỰ KIỆN TÙY CHỈNH THÔNG BÁO "GIAO DIỆN ĐÃ SẴN SÀNG"
+    // PHÁT SỰ KIỆN TÙY CHỈNH THÔNG BÁO "GIAO DIỆN ĐÃ SẴN SÀNG"
     document.dispatchEvent(new Event('componentsLoaded'));
 });
 
