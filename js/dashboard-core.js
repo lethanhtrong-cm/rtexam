@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Cập nhật dòng dưới: Thêm setDoc và serverTimestamp để phục vụ tạo phòng thi
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // 1. CẤU HÌNH & KHỞI TẠO FIREBASE
@@ -42,7 +43,6 @@ export function formatDate(dateData) {
 // =========================================================================
 // 3. LOGIC UI: XỬ LÝ CHUYỂN TAB ĐỘNG
 // =========================================================================
-
 const tabTitleMap = {
     'tab-exams': 'Kho Đề Thi',
     'tab-profile': 'Hồ Sơ Cá Nhân',
@@ -51,7 +51,6 @@ const tabTitleMap = {
     'leaderboard': 'Bảng Xếp Hạng'
 };
 
-// Hàm điều hướng tab dùng chung (Đã sửa để query DOM động tại thời điểm gọi)
 export function switchTab(targetTabId, titleOverride) {
     const mainMenuItems = document.querySelectorAll('.sidebar-menu > .menu-item[data-target]');
     const accordionHeaders = document.querySelectorAll('.accordion-header');
@@ -75,18 +74,15 @@ export function switchTab(targetTabId, titleOverride) {
 }
 
 // =========================================================================
-// 4. QUẢN LÝ VÒNG ĐỜI & GẮN SỰ KIỆN KHI DOM SẴN SÀNG (BƯỚC 4)
+// 4. QUẢN LÝ VÒNG ĐỜI & GẮN SỰ KIỆN KHI DOM SẴN SÀNG
 // =========================================================================
-
 let isComponentsLoaded = false;
-let currentUserInstance = null; // Lưu cache lại user nếu Firebase tải xong trước DOM
+let currentUserInstance = null; 
 
-// Lắng nghe sự kiện báo hiệu các file HTML con đã được nạp xong
 document.addEventListener('ComponentsLoaded', () => {
     isComponentsLoaded = true;
     initDOMListeners();
     
-    // Nếu Firebase Auth đã xác thực xong từ trước, tiến hành render giao diện
     if (currentUserInstance) {
         executeAuthUI(currentUserInstance);
     }
@@ -199,12 +195,52 @@ function initDOMListeners() {
             alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
         });
     }
+
+    // ==========================================
+    // LOGIC THÊM VÀO: XỬ LÝ NÚT TẠO PHÒNG THI
+    // ==========================================
+    const btnCreateRoom = document.getElementById('btn-tao-phong-thi'); 
+    if (btnCreateRoom) {
+        btnCreateRoom.addEventListener('click', async () => {
+            if (!auth.currentUser) {
+                alert("Vui lòng đăng nhập để tạo phòng thi.");
+                return;
+            }
+
+            const originalText = btnCreateRoom.innerHTML;
+            btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo...';
+            btnCreateRoom.disabled = true;
+
+            try {
+                // Sinh mã phòng ngẫu nhiên gồm 6 kí tự viết hoa
+                const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const roomRef = doc(db, 'rooms', roomId);
+                
+                // Khởi tạo trạng thái phòng chờ trống trên Firestore trước khi chuyển hướng
+                await setDoc(roomRef, {
+                    hostEmail: auth.currentUser.email,
+                    hostUid: auth.currentUser.uid,
+                    status: 'waiting',
+                    isLocked: false,
+                    examId: null,   
+                    examName: null,
+                    createdAt: serverTimestamp()
+                });
+
+                safeRedirect(`lobby.html?roomId=${roomId}`);
+            } catch (error) {
+                console.error("Lỗi khi tạo phòng thi:", error);
+                alert("Không thể tạo phòng thi. Vui lòng kiểm tra lại kết nối mạng.");
+                btnCreateRoom.innerHTML = originalText;
+                btnCreateRoom.disabled = false;
+            }
+        });
+    }
 }
 
 // =========================================================================
 // 5. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI THÔNG TIN USER
 // =========================================================================
-
 function renderAuthInfo(user) {
     const email = user.email;
     const name = user.displayName || "Người dùng ẩn danh";
@@ -334,23 +370,19 @@ async function fetchUserData(user) {
     return currentUserData;
 }
 
-// Hàm khởi chạy cập nhật dữ liệu UI
 async function executeAuthUI(user) {
     renderAuthInfo(user);
     const currentUserData = await fetchUserData(user);
     
     if (currentUserData) {
-        // Bắn ra event cho các module khác (dashboard-exams, dashboard-profile) biết dữ liệu User đã sẵn sàng
         const authReadyEvent = new CustomEvent("authReady", { detail: { user, currentUserData } });
         document.dispatchEvent(authReadyEvent);
     }
 }
 
-// Theo dõi trạng thái đăng nhập
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        currentUserInstance = user; // Lưu lại để dùng nếu DOM chưa load xong
-        // Chỉ thao tác lên DOM khi HTML loader đã nạp xong các component
+        currentUserInstance = user; 
         if (isComponentsLoaded) {
             executeAuthUI(user);
         }
