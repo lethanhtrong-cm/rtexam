@@ -221,6 +221,28 @@ function updateTimerDisplay() {
     }
 }
 
+// XỬ LÝ NÚT VỀ PHÒNG CHỜ
+document.getElementById('btn-back-lobby').addEventListener('click', () => {
+    if (isSubmitted) {
+        // Nếu đã nộp bài thì cho về luôn
+        redirect(`lobby.html?roomId=${currentRoomId}`);
+    } else {
+        // Chưa nộp bài thì hiện cảnh báo
+        document.getElementById('confirm-leave-modal').classList.add('active');
+    }
+});
+
+document.getElementById('btn-cancel-leave').addEventListener('click', () => {
+    document.getElementById('confirm-leave-modal').classList.remove('active');
+});
+
+document.getElementById('btn-confirm-leave').addEventListener('click', () => {
+    // Có thể cập nhật trạng thái participant là 'left' hoặc 'abandoned' ở đây nếu muốn hệ thống biết họ bỏ thi
+    // Hiện tại chỉ đơn giản là chuyển hướng về lobby
+    redirect(`lobby.html?roomId=${currentRoomId}`);
+});
+// ==========================
+
 async function executeSubmit() {
     stopTimer(); 
     isSubmitted = true; 
