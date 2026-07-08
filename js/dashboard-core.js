@@ -353,7 +353,7 @@ onAuthStateChanged(auth, async (user) => {
 // 6. XỬ LÝ SỰ KIỆN TOÀN CỤC (EVENT DELEGATION) CHO CÁC NÚT ĐỘNG
 // =========================================================================
 document.addEventListener('click', async (e) => {
-    // Bắt sự kiện tạo phòng thi
+    // Bắt sự kiện click vào nút Tạo phòng thi
     const btnCreateRoom = e.target.closest('#btnOpenCreateRoom');
     
     if (btnCreateRoom) {
@@ -369,12 +369,16 @@ document.addEventListener('click', async (e) => {
         btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo...';
         btnCreateRoom.style.pointerEvents = 'none'; 
 
+        // 1. Sinh mã phòng ngẫu nhiên đồng bộ ngay lập tức
+        const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const targetUrl = `lobby.html?roomId=${roomId}`;
+
+        // 2. MỞ TAB TRẮNG NGAY LẬP TỨC (để tránh bị trình duyệt chặn Pop-up)
+        const newTab = window.open('about:blank', '_blank');
+
         try {
-            // Sinh mã phòng ngẫu nhiên
-            const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            // 3. Thực hiện lưu dữ liệu Firebase (Tiến trình chạy ngầm)
             const roomRef = doc(db, 'rooms', roomId);
-            
-            // Khởi tạo phòng thi trên Firestore
             await setDoc(roomRef, {
                 hostEmail: auth.currentUser.email,
                 hostUid: auth.currentUser.uid,
@@ -385,9 +389,10 @@ document.addEventListener('click', async (e) => {
                 createdAt: serverTimestamp()
             });
 
-            // MỞ SANG MỘT TAB TRÌNH DUYỆT MỚI
-            const targetUrl = `lobby.html?roomId=${roomId}`;
-            window.open(targetUrl, '_blank');
+            // 4. Khi Firebase lưu xong, thay thế nội dung tab trắng bằng giao diện Lobby
+            if (newTab) {
+                newTab.location.href = targetUrl;
+            }
             
             // Phục hồi lại nút ở tab hiện tại
             btnCreateRoom.innerHTML = originalText;
@@ -395,9 +400,12 @@ document.addEventListener('click', async (e) => {
             
         } catch (error) {
             console.error("Lỗi Firestore:", error);
+            // Nếu có lỗi mạng hoặc database, đóng tab trắng vừa mở
+            if (newTab) newTab.close();
+            
             alert("Không thể tạo phòng! Vui lòng kiểm tra lại quyền ghi Database hoặc mạng.");
             
-            // Phục hồi nút nếu lỗi
+            // Phục hồi nút 
             btnCreateRoom.innerHTML = originalText;
             btnCreateRoom.style.pointerEvents = 'auto';
         }
