@@ -1,5 +1,7 @@
 import { auth, db } from "./dashboard-core.js";
 import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// THÊM IMPORT Auth Firebase chuẩn để tự xác thực
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const headerUserName = document.getElementById('headerUserName');
 const state1Waiting = document.getElementById('state1Waiting');
@@ -52,15 +54,16 @@ let currentHostEmail = null;
 let currentParticipantsArray = [];
 let isKicked = false;
 
+// Đưa mã phòng lên UI ngay lập tức
 if (!roomId) {
     alert("Không tìm thấy mã phòng hợp lệ!");
     window.location.href = "dashboard.html";
 } else {
-    displayRoomId.textContent = roomId;
+    if (displayRoomId) displayRoomId.textContent = roomId;
 }
 
-document.addEventListener('authReady', (e) => {
-    const user = e.detail ? e.detail.user : auth.currentUser;
+// FIX LỖI TREO: Dùng trực tiếp hàm onAuthStateChanged của Firebase
+onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = {
             uid: user.uid,
@@ -68,10 +71,10 @@ document.addEventListener('authReady', (e) => {
             displayName: user.displayName || user.email.split('@')[0],
             photoURL: user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email}&background=random&color=fff`
         };
-        headerUserName.textContent = currentUser.displayName;
-        initLobby();
+        if (headerUserName) headerUserName.textContent = currentUser.displayName;
+        initLobby(); // Chạy khởi tạo phòng sau khi xác định được danh tính
     } else {
-        window.location.href = "login.html";
+        window.location.href = "index.html";
     }
 });
 
@@ -524,7 +527,12 @@ async function initLobby() {
                     message: `<b>${currentUser.displayName || currentUser.email}</b> đã mời bạn vào phòng thi. Mã phòng: <b style="color:#0d6efd">${roomId}</b>`,
                     roomId: roomId, isRead: false, createdAt: serverTimestamp()
                 };
-                await setDoc(doc(collection(db, "notifications")), notiData);
+                // Sửa nhỏ: Khớp trường status: 'unread' và timestamp để notification đọc được
+                await setDoc(doc(collection(db, "notifications")), {
+                    ...notiData,
+                    status: 'unread',
+                    timestamp: serverTimestamp()
+                });
                 alert(`Đã gửi lời mời tới ${toEmail}!`);
                 inviteFriendModal.classList.remove('active');
             } catch (error) { alert("Lỗi khi gửi mời."); } 
