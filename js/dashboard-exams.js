@@ -1,7 +1,9 @@
 import { auth, db, safeRedirect } from "./dashboard-core.js";
-// THÊM setDoc vào danh sách import
-import { collection, getDocs, doc, setDoc, updateDoc, arrayUnion, arrayRemove, query, where, or, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, doc, setDoc, updateDoc, arrayUnion, arrayRemove, query, where, or, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// =========================================================================
+// 1. BIẾN TOÀN CỤC & TRẠNG THÁI BỘ LỌC ĐA LỚP
+// =========================================================================
 export let allExamsData = []; 
 let currentUserData = null;
 let currentView = 'grid'; 
@@ -13,6 +15,9 @@ let currentSearchQuery = '';
 let completedExams = {}; 
 let currentShareExamId = null;
 
+// =========================================================================
+// 2. LẮNG NGHE SỰ KIỆN AUTH READY TỪ CORE
+// =========================================================================
 document.addEventListener("authReady", async (e) => {
     currentUserData = e.detail.currentUserData;
     if (currentUserData && !currentUserData.bookmarks) {
@@ -24,8 +29,8 @@ document.addEventListener("authReady", async (e) => {
             const resultsRef = collection(db, "results");
             const q = query(resultsRef, where("email", "==", e.detail.user.email));
             const snap = await getDocs(q);
-            snap.forEach(doc => {
-                const data = doc.data();
+            snap.forEach(docSnap => {
+                const data = docSnap.data();
                 const examId = data.examId || data.examCode;
                 if (examId) {
                     const ts = data.createdAt ? (typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : data.timestamp || 0;
@@ -34,7 +39,7 @@ document.addEventListener("authReady", async (e) => {
                             score: data.score || 0,
                             total: data.totalQuestions || data.total || 1,
                             timestamp: ts,
-                            resultId: doc.id
+                            resultId: docSnap.id
                         };
                     }
                 }
@@ -44,24 +49,34 @@ document.addEventListener("authReady", async (e) => {
         console.error("Lỗi khởi tạo Dashboard:", err);
     }
 
+    // Gắn sự kiện sau khi đã lấy xong dữ liệu User
     setupToolbarEvents(); 
     setupFilterEvents(); 
     await loadAggregatedExamData(); 
 });
 
+// =========================================================================
+// 3. LOGIC CHIA SẺ ĐỀ THI
+// =========================================================================
 window.openShareModal = function(examId) {
     currentShareExamId = examId;
     const currentUrl = window.location.href;
     const baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
     const fullLink = `${baseUrl}quiz.html?examId=${examId}`;
     
-    document.getElementById('shareLinkInput').value = fullLink;
-    document.getElementById('shareEmailInput').value = '';
-    document.getElementById('shareExamModal').classList.add('active');
+    const linkInput = document.getElementById('shareLinkInput');
+    const emailInput = document.getElementById('shareEmailInput');
+    const modal = document.getElementById('shareExamModal');
+
+    if (linkInput) linkInput.value = fullLink;
+    if (emailInput) emailInput.value = '';
+    if (modal) modal.classList.add('active');
 };
 
 window.copyShareLink = function() {
     const copyText = document.getElementById('shareLinkInput');
+    if (!copyText) return;
+    
     copyText.select();
     copyText.setSelectionRange(0, 99999); 
     try {
@@ -73,9 +88,12 @@ window.copyShareLink = function() {
 };
 
 window.sendShareNotification = async function() {
-    const toEmail = document.getElementById('shareEmailInput').value.trim();
+    const toEmailInput = document.getElementById('shareEmailInput');
+    if (!toEmailInput) return;
+    
+    const toEmail = toEmailInput.value.trim();
     if (!toEmail) return alert("Vui lòng nhập Email người nhận!");
-    if (!auth.currentUser || !auth.currentUser.email) return alert("Lỗi gửi thông báo. Vui lòng tải lại trang.");
+    if (!auth.currentUser || !auth.currentUser.email) return alert("Lỗi: Không xác định được Email người gửi. Vui lòng tải lại trang.");
     if (toEmail === auth.currentUser.email) return alert("Bạn không thể tự gửi thông báo cho chính mình.");
 
     try {
@@ -88,30 +106,34 @@ window.sendShareNotification = async function() {
             type: 'exam_share'
         });
         alert("Đã gửi thông báo chia sẻ thành công tới " + toEmail);
-        document.getElementById('shareExamModal').classList.remove('active');
+        const modal = document.getElementById('shareExamModal');
+        if (modal) modal.classList.remove('active');
     } catch (error) {
         console.error("Lỗi khi gửi thông báo:", error);
         alert("Đã xảy ra lỗi khi gửi. Vui lòng kiểm tra lại kết nối mạng!");
     }
 };
 
+// =========================================================================
+// 4. THANH CÔNG CỤ (TẠO PHÒNG LOBBY TRỰC TIẾP) & BỘ LỌC
+// =========================================================================
 function setupToolbarEvents() {
     const btnOpenCreateRoom = document.getElementById('btnOpenCreateRoom');
     const btnAutoGenerate = document.getElementById('btnAutoGenerate');
     const btnUploadExam = document.getElementById('btnUploadExam');
 
-    // MỚI: NHẤP TẠO PHÒNG LÀ SINH MÃ VÀ VÀO THẲNG LOBBY
+    // NÚT TẠO PHÒNG THI (LAO THẲNG VÀO LOBBY)
     if (btnOpenCreateRoom) {
         btnOpenCreateRoom.addEventListener('click', async () => {
             if (!auth.currentUser) return alert("Vui lòng đăng nhập để tạo phòng!");
             
+            const originalHtml = btnOpenCreateRoom.innerHTML;
             btnOpenCreateRoom.disabled = true;
             btnOpenCreateRoom.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang tạo...';
 
             try {
                 const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
                 
-                // Khởi tạo phòng trống (Chưa chọn đề)
                 await setDoc(doc(db, "rooms", newRoomId), {
                     hostEmail: auth.currentUser.email,
                     status: 'waiting',
@@ -121,13 +143,12 @@ function setupToolbarEvents() {
                     isLocked: false
                 });
                 
-                // Chuyển hướng vào phòng
                 window.location.href = `lobby.html?roomId=${newRoomId}`;
             } catch (error) {
                 console.error("Lỗi tạo phòng trực tiếp:", error);
                 alert("Đã xảy ra lỗi khi tạo phòng. Vui lòng thử lại!");
                 btnOpenCreateRoom.disabled = false;
-                btnOpenCreateRoom.innerHTML = '<i class="fa-solid fa-people-roof"></i> Tạo phòng thi';
+                btnOpenCreateRoom.innerHTML = originalHtml;
             }
         });
     }
@@ -201,7 +222,9 @@ function setupFilterEvents() {
     }
 
     if (sortFilter) {
-        sortFilter.addEventListener('change', () => renderExams());
+        sortFilter.addEventListener('change', () => {
+            renderExams();
+        });
     }
 
     if (viewBtns) {
@@ -239,14 +262,17 @@ function setupFilterEvents() {
     }
 }
 
+// =========================================================================
+// 5. TỔNG HỢP & RENDER KHO ĐỀ THI
+// =========================================================================
 async function loadAggregatedExamData() {
     try {
         const questionsRef = collection(db, "questions");
         const qSnap = await getDocs(questionsRef);
         const examMap = {}; 
         
-        qSnap.forEach((doc) => {
-            const data = doc.data();
+        qSnap.forEach((docSnap) => {
+            const data = docSnap.data();
             const eId = data.examId;
             if (eId) {
                 if (!examMap[eId]) examMap[eId] = { id: eId, questionCount: 0 };
@@ -271,11 +297,11 @@ async function loadAggregatedExamData() {
 
         const eSnap = await getDocs(examsQuery);
 
-        eSnap.forEach((doc) => {
-            const eId = doc.id;
+        eSnap.forEach((docSnap) => {
+            const eId = docSnap.id;
             if (examMap[eId]) {
                 examMap[eId].isValid = true; 
-                const conf = doc.data();
+                const conf = docSnap.data();
                 examMap[eId].isVip = conf.isVip || false;
                 examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
                 examMap[eId].attemptCount = conf.attemptCount || 0;
@@ -289,8 +315,8 @@ async function loadAggregatedExamData() {
         const fSnap = await getDocs(feedbacksRef);
         const ratingMap = {}; 
         
-        fSnap.forEach((doc) => {
-            const data = doc.data();
+        fSnap.forEach((docSnap) => {
+            const data = docSnap.data();
             const eId = data.examId;
             const stars = data.rating || 5; 
             if (eId) {
@@ -320,6 +346,7 @@ async function loadAggregatedExamData() {
         });
 
         allExamsData = Object.values(examMap);
+
         const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
         document.dispatchEvent(examsReadyEvent);
 
@@ -529,6 +556,10 @@ function renderExams() {
         examListContainer.insertAdjacentHTML('beforeend', rowHtml);
     });
 }
+
+// =========================================================================
+// 6. CÁC HÀM TIỆN ÍCH TOÀN CỤC (GẮN VÀO WINDOW CHO HTML CARD)
+// =========================================================================
 
 window.slideLeft = function(button) {
     const container = button.parentElement.querySelector('.swimlane-scroll-container');
