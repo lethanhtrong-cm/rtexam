@@ -236,9 +236,30 @@ document.getElementById('btn-cancel-leave').addEventListener('click', () => {
     document.getElementById('confirm-leave-modal').classList.remove('active');
 });
 
-document.getElementById('btn-confirm-leave').addEventListener('click', () => {
-    // Có thể cập nhật trạng thái participant là 'left' hoặc 'abandoned' ở đây nếu muốn hệ thống biết họ bỏ thi
-    // Hiện tại chỉ đơn giản là chuyển hướng về lobby
+document.getElementById('btn-confirm-leave').addEventListener('click', async () => {
+    const btnConfirm = document.getElementById('btn-confirm-leave');
+    const btnCancel = document.getElementById('btn-cancel-leave');
+    
+    // Disable nút để tránh bấm nhiều lần
+    btnConfirm.innerText = "Đang xử lý...";
+    btnConfirm.disabled = true;
+    btnCancel.disabled = true;
+
+    // Cập nhật trạng thái người chơi thành 'abandoned' (bỏ thi) để lobby không tự động đẩy lại vào thi
+    if (currentRoomId && currentUser) {
+        try {
+            const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
+            await setDoc(participantRef, { 
+                status: 'abandoned',
+                score: 0, // Có thể gán điểm 0 nếu bỏ thi giữa chừng
+                timeTaken: 0
+            }, { merge: true });
+        } catch (err) {
+            console.error("Lỗi cập nhật trạng thái bỏ thi:", err);
+        }
+    }
+
+    // Sau khi cập nhật xong mới chuyển hướng về lobby
     redirect(`lobby.html?roomId=${currentRoomId}`);
 });
 // ==========================
