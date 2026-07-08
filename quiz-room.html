@@ -21,6 +21,10 @@
         .quiz-title { font-size: 20px; font-weight: bold; color: #ea580c; /* Đổi màu cam nổi bật */ }
         .timer-container { display: flex; align-items: center; gap: 10px; background-color: #fee2e2; color: #ef4444; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 18px; transition: all 0.3s ease; }
         
+        .header-actions { display: flex; gap: 12px; }
+        .btn-logout { padding: 8px 16px; background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-logout:hover { background-color: #e5e7eb; color: #1f2937; }
+
         /* Animation nhấp nháy cho đồng hồ */
         @keyframes blink {
             0% { opacity: 1; }
@@ -85,6 +89,8 @@
         .btn-modal { padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.2s; border: none; }
         .btn-modal.success { background-color: #10b981; color: white; }
         .btn-modal.success:hover { background-color: #059669; }
+        .btn-modal.danger { background-color: #ef4444; color: white; }
+        .btn-modal.danger:hover { background-color: #dc2626; }
         .btn-modal.outline { background-color: transparent; border: 2px solid #d1d5db; color: #4b5563; }
         .btn-modal.outline:hover { background-color: #f3f4f6; border-color: #9ca3af; }
 
@@ -118,7 +124,10 @@
     <header class="quiz-header">
         <div class="quiz-title" id="quiz-title-display">Đang tải Đấu trường...</div>
         <div class="timer-container" id="timer-container-box"><span id="countdown">--:--</span></div>
-        </header>
+        <div class="header-actions">
+            <button id="btn-back-lobby" class="btn-logout" title="Quay về phòng chờ">Về phòng chờ</button>
+        </div>
+    </header>
 
     <main class="quiz-body">
         <section class="left-panel">
@@ -151,6 +160,18 @@
             <div style="display: flex; gap: 10px;">
                 <button class="btn-modal outline" id="btn-cancel-submit" style="flex: 1;">Hủy</button>
                 <button class="btn-modal success" id="btn-confirm-submit" style="flex: 1;">Nộp bài</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="confirm-leave-modal" class="modal-overlay" style="z-index: 10000;">
+        <div class="modal-content" style="max-width: 420px; padding: 30px;">
+            <div style="color: #ef4444; font-size: 48px; margin-bottom: 10px;">⚠️</div>
+            <div class="modal-title" style="color: #dc2626; margin-bottom: 15px; font-size: 22px;">Cảnh báo thoát!</div>
+            <p style="font-size: 16px; margin-bottom: 25px; line-height: 1.5; color: #4b5563;">Bạn đang trong quá trình làm bài.<br>Nếu thoát về phòng chờ lúc này, bạn sẽ <b>không</b> được ghi nhận kết quả.<br><br>Bạn có chắc chắn muốn thoát?</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-modal outline" id="btn-cancel-leave" style="flex: 1;">Ở lại thi tiếp</button>
+                <button class="btn-modal danger" id="btn-confirm-leave" style="flex: 1;">Xác nhận thoát</button>
             </div>
         </div>
     </div>
