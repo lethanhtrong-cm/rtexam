@@ -7,280 +7,66 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: #f4f6f8;
-            color: #1f2937;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
-        /* Header Đồng Bộ Dashboard */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-            background: #ffffff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 900;
-            color: #084298;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 700;
-            color: #4b5563;
-        }
-        .user-info i {
-            font-size: 1.2rem;
-            color: #198754;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Nunito', sans-serif; background-color: #f4f6f8; color: #1f2937; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-bottom: 1px solid #e5e7eb; }
+        .logo { font-size: 1.5rem; font-weight: 900; color: #084298; text-transform: uppercase; letter-spacing: 1px; }
+        .user-info { display: flex; align-items: center; gap: 10px; font-weight: 700; color: #4b5563; }
+        .user-info i { font-size: 1.2rem; color: #198754; }
 
-        /* Container Main */
-        .container {
-            max-width: 1000px;
-            margin: 30px auto;
-            padding: 0 20px;
-            width: 100%;
-            flex: 1;
-        }
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 20px; width: 100%; flex: 1; }
+        .dashboard-card { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 25px 30px; margin-bottom: 20px; border: 1px solid #e5e7eb; }
 
-        /* Dashboard Cards */
-        .dashboard-card {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            padding: 25px 30px;
-            margin-bottom: 20px;
-            border: 1px solid #e5e7eb;
-        }
-
-        /* ---------------- STATE 1: PHÒNG CHỜ ---------------- */
+        /* STATE 1: PHÒNG CHỜ */
         #state1Waiting { display: block; }
-        
-        /* Card 1: Top Area */
-        .center-area {
-            text-align: center;
-            margin-bottom: 20px;
-            animation: fadeInDown 0.5s ease;
-        }
-        .room-label {
-            font-size: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #6b7280;
-            margin-bottom: 5px;
-            font-weight: 700;
-        }
-        
-        /* Chứa Mã phòng & Nút Copy */
-        .room-code-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .room-code {
-            font-size: 4.5rem;
-            font-weight: 900;
-            letter-spacing: 8px;
-            color: #084298;
-            line-height: 1;
-            margin-bottom: 0;
-        }
-        .btn-copy-code {
-            background: transparent;
-            border: none;
-            color: #6b7280;
-            font-size: 1.8rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+        .center-area { text-align: center; margin-bottom: 20px; animation: fadeInDown 0.5s ease; }
+        .room-label { font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; color: #6b7280; margin-bottom: 5px; font-weight: 700; }
+        .room-code-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px; }
+        .room-code { font-size: 4.5rem; font-weight: 900; letter-spacing: 8px; color: #084298; line-height: 1; margin-bottom: 0; }
+        .btn-copy-code { background: transparent; border: none; color: #6b7280; font-size: 1.8rem; cursor: pointer; transition: all 0.2s ease; }
         .btn-copy-code:hover { transform: scale(1.1); color: #0d6efd; }
         .btn-copy-code:active { transform: scale(0.95); }
+        .exam-name { font-size: 1.4rem; font-weight: 700; color: #0d6efd; background: #e7f1ff; padding: 10px 25px; border-radius: 50px; display: inline-block; border: 1px solid #b6d4fe; max-width: 90%; word-wrap: break-word; }
 
-        .exam-name {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #0d6efd;
-            background: #e7f1ff;
-            padding: 10px 25px;
-            border-radius: 50px;
-            display: inline-block;
-            border: 1px solid #b6d4fe;
-            max-width: 90%;
-            word-wrap: break-word;
-        }
-
-        /* Host Control Panel (Trong Card 1) */
-        .host-panel {
-            background: #f8f9fa;
-            border: 1px dashed #ced4da;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-            display: none; /* Hiển thị bằng JS */
-        }
-        .host-panel-title {
-            font-size: 1rem;
-            font-weight: 800;
-            color: #4b5563;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .host-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-        }
-        .host-select {
-            flex: 1;
-            min-width: 250px;
-            padding: 10px 15px;
-            font-size: 1rem;
-            font-family: inherit;
-            font-weight: 600;
-            border-radius: 8px;
-            border: 1px solid #ced4da;
-            color: #1f2937;
-            background: #fff;
-            cursor: pointer;
-            outline: none;
-            transition: all 0.2s;
-        }
+        .host-panel { background: #f8f9fa; border: 1px dashed #ced4da; border-radius: 10px; padding: 20px; margin-top: 20px; display: none; }
+        .host-panel-title { font-size: 1rem; font-weight: 800; color: #4b5563; margin-bottom: 15px; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+        .host-controls { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .host-select { flex: 1; min-width: 250px; padding: 10px 15px; font-size: 1rem; font-family: inherit; font-weight: 600; border-radius: 8px; border: 1px solid #ced4da; color: #1f2937; background: #fff; cursor: pointer; outline: none; transition: all 0.2s; }
         .host-select:focus { border-color: #084298; box-shadow: 0 0 0 3px rgba(8,66,152,0.1); }
         
-        .btn-panel {
-            padding: 10px 20px;
-            font-size: 0.95rem;
-            font-weight: 700;
-            font-family: inherit;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-        /* Cập nhật màu sắc cho các nút */
+        .btn-panel { padding: 10px 20px; font-size: 0.95rem; font-weight: 700; font-family: inherit; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
         .btn-invite-friend { background: #6f42c1; color: white; }
         .btn-invite-friend:hover { background: #59339d; }
-        
         .btn-copy-link { background: #0d6efd; color: white; }
         .btn-copy-link:hover { background: #0b5ed7; }
-
         .btn-lock-room { background: #dc3545; color: white; }
         .btn-lock-room:hover { filter: brightness(0.9); }
-
-        /* Card 2: Participants Area */
-        .participants-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 15px;
-        }
-        .participants-count {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: #1f2937;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 20px;
-            justify-items: center;
-        }
         
-        /* Kick Button */
-        .btn-kick {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: #dc3545;
-            color: white;
-            border: none;
-            font-size: 0.8rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            opacity: 0;
-            visibility: hidden;
-            z-index: 10;
-        }
+        /* CSS cho nút AI mới */
+        .btn-ai-generate { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; }
+        .btn-ai-generate:hover { filter: brightness(1.1); box-shadow: 0 4px 10px rgba(109, 40, 217, 0.3); }
+
+        .participants-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; }
+        .participants-count { font-size: 1.1rem; font-weight: 800; color: #1f2937; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 20px; justify-items: center; }
+        
+        .btn-kick { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: #dc3545; color: white; border: none; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; opacity: 0; visibility: hidden; z-index: 10; }
         .participant-card:hover .btn-kick { opacity: 1; visibility: visible; }
         .btn-kick:hover { background: #bb2d3b; transform: scale(1.1); }
 
-        /* Action Area (Góc phải dưới Card 2) */
-        .card-footer-actions {
-            margin-top: 30px;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-        }
-        
-        /* Cập nhật nút Bắt đầu thi theo yêu cầu */
-        .btn-start {
-            background: #198754; 
-            color: white;
-            font-size: 1rem; /* Thu nhỏ cỡ chữ */
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* Font hệ chuẩn */
-            font-weight: 800;
-            padding: 12px 35px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            text-transform: uppercase;
-            box-shadow: 0 4px 0 #146c43;
-            transition: all 0.1s;
-            display: none;
-        }
+        .card-footer-actions { margin-top: 30px; display: flex; justify-content: flex-end; align-items: center; }
+        .btn-start { background: #198754; color: white; font-size: 1rem; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-weight: 800; padding: 12px 35px; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; box-shadow: 0 4px 0 #146c43; transition: all 0.1s; display: none; }
         .btn-start:disabled { background: #6c757d; box-shadow: 0 4px 0 #5c636a; cursor: not-allowed; }
         .btn-start:active:not(:disabled) { transform: translateY(4px); box-shadow: none; }
-        .waiting-text {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #6b7280;
-            font-style: italic;
-        }
+        .waiting-text { font-size: 1.1rem; font-weight: 700; color: #6b7280; font-style: italic; }
 
-        /* ---------------- STATE 2: LEADERBOARD ---------------- */
+        /* STATE 2: LEADERBOARD */
         #state2Leaderboard { display: none; }
         .leaderboard-header { text-align: center; margin-bottom: 25px; }
         .leaderboard-title { font-size: 2rem; font-weight: 900; color: #084298; text-transform: uppercase; margin-bottom: 5px; }
         .leaderboard-subtitle { font-size: 1.1rem; color: #6b7280; }
         
-        .table-container {
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
-        }
+        .table-container { border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; }
         .lb-table { width: 100%; border-collapse: collapse; text-align: center; background: #fff; }
         .lb-table th { background: #f8f9fa; padding: 15px; font-size: 1rem; font-weight: 800; text-transform: uppercase; color: #4b5563; border-bottom: 2px solid #e5e7eb; }
         .lb-table td { padding: 15px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; font-size: 1.05rem; font-weight: 700; color: #1f2937; }
@@ -289,42 +75,40 @@
         .td-user { display: flex; align-items: center; gap: 15px; justify-content: flex-start; padding-left: 20px !important; }
         .td-user img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #e5e7eb; object-fit: cover; }
         
-        /* Status Badges */
         .badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
         .badge-waiting { background: #e2e3e5; color: #41464b; }
         .badge-playing { background: #cfe2ff; color: #084298; }
         .badge-finished { background: #d1e7dd; color: #0f5132; }
 
-        /* Leaderboard Actions */
         .lb-actions { display: flex; flex-direction: column; gap: 15px; margin-top: 25px; align-items: center; }
         .btn-end-room { background: #dc3545; color: white; font-size: 1.1rem; font-weight: 800; padding: 10px 30px; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; transition: background 0.2s; }
         .btn-end-room:hover { background: #bb2d3b; }
         .btn-secondary { background: #6c757d; color: white; font-size: 1.1rem; font-weight: 800; padding: 10px 30px; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; transition: background 0.2s; }
         .btn-secondary:hover { background: #5c636a; }
 
-        /* Modal Mời Bạn Bè */
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px);
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 999;
-        }
+        /* Modal Mời Bạn Bè & Modal AI */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 999; }
         .modal.active { opacity: 1; pointer-events: auto; }
-        .modal-content {
-            background: #ffffff; border-radius: 12px; padding: 30px; width: 90%; max-width: 450px; text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); transform: translateY(-20px); transition: all 0.3s ease; border: 1px solid #e5e7eb;
-        }
+        .modal-content { background: #ffffff; border-radius: 12px; padding: 30px; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); transform: translateY(-20px); transition: all 0.3s ease; border: 1px solid #e5e7eb; overflow: hidden; }
         .modal.active .modal-content { transform: translateY(0); }
         .modal-title { font-size: 1.3rem; font-weight: 800; color: #1f2937; margin-bottom: 15px; }
-        .modal-input {
-            width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; border: 1px solid #ced4da;
-            outline: none; margin-bottom: 20px; font-family: inherit;
-        }
+        .modal-input { width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; border: 1px solid #ced4da; outline: none; margin-bottom: 20px; font-family: inherit; }
         .modal-input:focus { border-color: #0d6efd; }
         .modal-actions { display: flex; gap: 10px; justify-content: center; }
         .btn-modal-submit { background: #0d6efd; color: white; border: none; padding: 10px 20px; font-weight: 700; border-radius: 8px; cursor: pointer; font-family: inherit; }
         .btn-modal-close { background: #f8f9fa; color: #4b5563; border: 1px solid #ced4da; padding: 10px 20px; font-weight: 700; border-radius: 8px; cursor: pointer; font-family: inherit; }
 
+        /* HIỆU ỨNG GIAO DIỆN TẠO ĐỀ AI */
+        .ai-modal-header { background: linear-gradient(135deg, #f3e8ff 0%, #e0e7ff 100%); border-bottom: 2px solid #ddd6fe; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .ai-modal-title { margin: 0; color: #4c1d95; font-size: 1.2rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .ai-modal-title i { color: #8b5cf6; animation: pulse-magic 2s infinite; }
+        @keyframes pulse-magic { 0% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 0 rgba(139, 92, 246, 0)); } 50% { transform: scale(1.15); opacity: 0.8; filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6)); } 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 0 rgba(139, 92, 246, 0)); } }
+        .ai-input-custom { width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 12px; font-family: inherit; font-size: 0.95rem; color: #374151; background-color: #f9fafb; transition: all 0.3s ease; box-sizing: border-box; }
+        .ai-input-custom:focus { outline: none; border-color: #8b5cf6; background-color: #ffffff; box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); }
+        .btn-ai-magic { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none; padding: 12px 28px; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3); transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-ai-magic:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(109, 40, 217, 0.4); background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); }
+        .close-modal-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #6b7280; transition: 0.2s;}
+        .close-modal-btn:hover { color: #dc2626; }
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -356,6 +140,11 @@
                         <select class="host-select" id="selectExamInLobby">
                             <option value="">-- Chọn bộ đề để thi --</option>
                         </select>
+                        
+                        <button class="btn-panel btn-ai-generate" id="btnOpenAiModal">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Tạo đề AI
+                        </button>
+
                         <button class="btn-panel btn-invite-friend" id="btnOpenInviteModal">
                             <i class="fa-solid fa-user-plus"></i> Mời bạn bè
                         </button>
@@ -374,8 +163,7 @@
                     <div class="participants-count"><i class="fa-solid fa-users"></i> Người chơi: <span id="playerCount">0</span>/50</div>
                 </div>
                 
-                <div class="grid" id="participantsGrid">
-                    </div>
+                <div class="grid" id="participantsGrid"></div>
 
                 <div class="card-footer-actions">
                     <button id="btnStart" class="btn-start" disabled><i class="fa-solid fa-play"></i> BẮT ĐẦU THI</button>
@@ -400,8 +188,7 @@
                             <th>Thời gian</th>
                         </tr>
                     </thead>
-                    <tbody id="leaderboardBody">
-                        </tbody>
+                    <tbody id="leaderboardBody"></tbody>
                 </table>
             </div>
 
@@ -419,6 +206,58 @@
             <div class="modal-actions">
                 <button class="btn-modal-submit" id="btnSendInvite">Gửi ngay</button>
                 <button class="btn-modal-close" id="closeInviteModalBtn">Hủy bỏ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="aiGenerateModal">
+        <div class="modal-content" style="max-width: 500px; padding: 0; text-align: left;">
+            <div class="ai-modal-header">
+                <h3 class="ai-modal-title">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Tạo Đề Thi Tự Động (AI)
+                </h3>
+                <button class="close-modal-btn" id="closeAiModalBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="padding: 30px;">
+                <div id="aiFormArea">
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;"><i class="fa-solid fa-file-lines me-2" style="color: #6b7280;"></i> Nhập chủ đề hoặc dán tài liệu:</label>
+                        <textarea id="aiPromptInput" class="ai-input-custom" rows="5" placeholder="Ví dụ: Tạo cho tôi 15 câu hỏi về kỹ thuật chụp MRI sọ não..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 20px; margin-bottom: 5px;">
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">Số lượng:</label>
+                            <select id="aiQuestionCount" class="ai-input-custom">
+                                <option value="10">10 câu hỏi</option>
+                                <option value="15">15 câu hỏi</option>
+                                <option value="20">20 câu hỏi</option>
+                                <option value="30">30 câu hỏi</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">Độ khó:</label>
+                            <select id="aiDifficulty" class="ai-input-custom">
+                                <option value="easy">Dễ</option>
+                                <option value="medium" selected>Trung bình</option>
+                                <option value="hard">Khó</option>
+                                <option value="mixed">Hỗn hợp</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="aiLoadingSpinner" style="display: none; text-align: center; padding: 30px 0;">
+                    <i class="fa-solid fa-atom fa-spin" style="font-size: 3.5rem; color: #8b5cf6; margin-bottom: 20px;"></i>
+                    <h4 style="color: #4c1d95; margin: 0 0 10px 0; font-weight: bold;">Hệ thống AI đang xử lý...</h4>
+                    <p style="color: #6b7280; font-size: 0.95rem; margin: 0;">Việc đọc tài liệu và soạn câu hỏi có thể mất<br>từ <strong>5 đến 15 giây</strong>.</p>
+                </div>
+            </div>
+            
+            <div id="aiModalFooter" style="padding: 20px 30px; background: #f9fafb; border-top: 1px solid #f3f4f6; display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="btnCancelAi" style="background: #e5e7eb; color: #4b5563; border: none; border-radius: 10px; padding: 12px 24px; font-weight: bold; cursor: pointer;">Hủy bỏ</button>
+                <button class="btn-ai-magic" id="btnSubmitAiGenerate">
+                    <i class="fa-solid fa-bolt"></i> Bắt đầu soạn đề
+                </button>
             </div>
         </div>
     </div>
