@@ -1,23 +1,7 @@
-// admin-core.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { db, auth } from './firebase-config.js'; 
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// CẤU HÌNH CLOUD FIREBASE
-const firebaseConfig = {
-    apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
-    authDomain: "rt-examination.firebaseapp.com",
-    databaseURL: "https://rt-examination-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "rt-examination",
-    storageBucket: "rt-examination.firebasestorage.app",
-    messagingSenderId: "920482699854",
-    appId: "1:920482699854:web:44f9b0d735bdc001c6c11f",
-    measurementId: "G-8N7RTTREQM"
-};
-
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+export { db };
 
 // HÀM TOAST THÔNG BÁO CHUNG HỆ THỐNG
 export function showToast(message, type = 'success') {
@@ -41,21 +25,38 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-const btnLogout = document.getElementById('btnLogout');
-if (btnLogout) {
-    btnLogout.addEventListener('click', () => {
-        signOut(auth).then(() => {
-            window.location.href = 'login.html';
-        }).catch((error) => {
-            showToast("Lỗi khi đăng xuất: " + error.message, "error");
-        });
-    });
+// HÀM TẢI COMPONENT HTML ĐỘNG TỪ THƯ MỤC KHÁC
+async function loadComponent(elementId, filePath) {
+    try {
+        const response = await fetch(filePath);
+        if (!response.ok) throw new Error(`Lỗi HTTP status: ${response.status}`);
+        const html = await response.text();
+        document.getElementById(elementId).innerHTML = html;
+    } catch (error) {
+        console.error(`Không thể tải component ${filePath}:`, error);
+    }
 }
 
-// LOGIC SIDEBAR ACCORDION & ĐIỀU HƯỚNG TAB
-document.addEventListener('DOMContentLoaded', () => {
+// KHỞI TẠO HỆ THỐNG GIAO DIỆN (CHẠY ASYNC)
+document.addEventListener('DOMContentLoaded', async () => {
     
-    // 1. Nhấp chọn menu mẹ để Toggle khối accordion con
+    // 1. Tải giao diện phụ từ thư mục components
+    await loadComponent('sidebar-container', './components/admin-sidebar.html');
+    await loadComponent('modals-container', './components/admin-modals.html');
+
+    // 2. Kích hoạt logic điều hướng Sidebar sau khi HTML đã nạp
+    initSidebarEvents();
+
+    // 3. Kích hoạt logic đóng Modals và Đăng xuất
+    initModalEvents();
+    initAuthEvents();
+
+    // 4. PHÁT SỰ KIỆN TÙY CHỈNH THÔNG BÁO "GIAO DIỆN ĐÃ SẴN SÀNG"
+    document.dispatchEvent(new Event('componentsLoaded'));
+});
+
+// ---------------- CÁC HÀM XỬ LÝ SỰ KIỆN TRONG CORE ----------------
+function initSidebarEvents() {
     const parentMenus = document.querySelectorAll('.menu-parent');
     parentMenus.forEach(parent => {
         parent.addEventListener('click', (e) => {
@@ -68,34 +69,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 2. Nhấp chọn menu con để chuyển đổi Tab và kích hoạt lọc theo Chuyên khoa
     const menuItems = document.querySelectorAll('.menu-item');
     menuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             
-            // Đổi active trực quan menu
             menuItems.forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
 
-            // Đổi tiêu đề Topbar động
             const title = item.getAttribute('data-title');
             const topbarTitle = document.getElementById('topbar-title');
             if (topbarTitle) topbarTitle.innerText = title;
 
-            // Ẩn toàn bộ tab cũ
             document.querySelectorAll('.content-section').forEach(section => {
                 section.classList.remove('active');
             });
             
-            // Kích hoạt hiển thị tab đích
             const targetId = item.getAttribute('data-target');
             const targetSection = document.getElementById(targetId);
             if (targetSection) targetSection.classList.add('active');
         });
     });
+}
 
-    // Nhấp ra vùng ngoài modal để ẩn giao diện
+function initModalEvents() {
     window.onclick = function(event) {
         const editPropsModal = document.getElementById("edit-properties-modal");
         const feedbackModal = document.getElementById("feedback-modal");
@@ -104,4 +101,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target === feedbackModal) feedbackModal.style.display = "none";
         if (event.target === historyModal) historyModal.style.display = "none";
     };
-});
+}
+
+function initAuthEvents() {
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            signOut(auth).then(() => {
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                showToast("Lỗi khi đăng xuất: " + error.message, "error");
+            });
+        });
+    }
+}
