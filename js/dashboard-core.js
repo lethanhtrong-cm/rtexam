@@ -199,7 +199,7 @@ function initDOMListeners() {
     // ==========================================
     // LOGIC THÊM VÀO: XỬ LÝ NÚT TẠO PHÒNG THI
     // ==========================================
-    const btnCreateRoom = document.getElementById('btn-tao-phong-thi'); 
+    const btnCreateRoom = document.getElementById('btnOpenCreateRoom'); 
     if (btnCreateRoom) {
         btnCreateRoom.addEventListener('click', async () => {
             if (!auth.currentUser) {
