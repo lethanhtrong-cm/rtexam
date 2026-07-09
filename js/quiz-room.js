@@ -159,6 +159,10 @@ function initExamState() {
             if (snapshot.exists()) {
                 const roomData = snapshot.data();
                 if (roomData.status === 'closed' && !isSubmitted) {
+                    // SỬA LỖI: Hiện đúng thông báo bị ép nộp bài do chủ phòng đóng
+                    const overlayText = document.querySelector('#force-submit-overlay div:nth-child(2)');
+                    if (overlayText) overlayText.innerText = "Chủ phòng đã kết thúc bài thi. Đang tự động thu bài...";
+
                     document.getElementById('force-submit-overlay').classList.add('active');
                     executeSubmit();
                 }
@@ -222,52 +226,55 @@ function updateTimerDisplay() {
 }
 
 // ================= TÍNH NĂNG: XỬ LÝ NÚT VỀ PHÒNG CHỜ =================
-document.getElementById('btn-back-lobby').addEventListener('click', () => {
-    if (isSubmitted) {
-        // Nếu đã nộp bài rồi thì cho thoát luôn
-        redirect(`lobby.html?roomId=${currentRoomId}`);
-    } else {
-        // Nếu chưa nộp thì hiển thị cảnh báo
-        document.getElementById('confirm-leave-modal').classList.add('active');
-    }
-});
-
-document.getElementById('btn-cancel-leave').addEventListener('click', () => {
-    document.getElementById('confirm-leave-modal').classList.remove('active');
-});
-
-document.getElementById('btn-confirm-leave').addEventListener('click', async () => {
-    const btnConfirm = document.getElementById('btn-confirm-leave');
-    const btnCancel = document.getElementById('btn-cancel-leave');
-    
-    // Disable nút để tránh click nhiều lần
-    btnConfirm.innerText = "Đang xử lý...";
-    btnConfirm.disabled = true;
-    btnCancel.disabled = true;
-
-    // Đánh dấu là đã nộp bài (để chặn Anti-cheat tự động báo lỗi khi chuyển trang)
-    isSubmitted = true;
-    updateAntiCheatState();
-    stopTimer();
-
-    // Cập nhật lên Firebase: Ép trạng thái thành 'finished' với số điểm 0
-    // Như vậy Lobby sẽ nghĩ người dùng đã hoàn thành bài thi và không tự động đá lại vào
-    if (currentRoomId && currentUser) {
-        try {
-            const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
-            await setDoc(participantRef, { 
-                status: 'finished', // BẮT BUỘC DÙNG 'finished'
-                score: 0,
-                timeTaken: 0 
-            }, { merge: true });
-        } catch (err) {
-            console.error("Lỗi cập nhật trạng thái:", err);
+const btnBackLobby = document.getElementById('btn-back-lobby');
+if (btnBackLobby) {
+    btnBackLobby.addEventListener('click', () => {
+        if (isSubmitted) {
+            redirect(`lobby.html?roomId=${currentRoomId}`);
+        } else {
+            const confirmLeaveModal = document.getElementById('confirm-leave-modal');
+            if (confirmLeaveModal) confirmLeaveModal.classList.add('active');
         }
-    }
+    });
+}
 
-    // Sau khi xử lý an toàn mới chuyển hướng
-    redirect(`lobby.html?roomId=${currentRoomId}`);
-});
+const btnCancelLeave = document.getElementById('btn-cancel-leave');
+if (btnCancelLeave) {
+    btnCancelLeave.addEventListener('click', () => {
+        document.getElementById('confirm-leave-modal').classList.remove('active');
+    });
+}
+
+const btnConfirmLeave = document.getElementById('btn-confirm-leave');
+if (btnConfirmLeave) {
+    btnConfirmLeave.addEventListener('click', async () => {
+        const btnConfirm = document.getElementById('btn-confirm-leave');
+        const btnCancel = document.getElementById('btn-cancel-leave');
+        
+        btnConfirm.innerText = "Đang xử lý...";
+        btnConfirm.disabled = true;
+        btnCancel.disabled = true;
+
+        isSubmitted = true;
+        updateAntiCheatState();
+        stopTimer();
+
+        if (currentRoomId && currentUser) {
+            try {
+                const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
+                await setDoc(participantRef, { 
+                    status: 'finished', 
+                    score: 0,
+                    timeTaken: 0 
+                }, { merge: true });
+            } catch (err) {
+                console.error("Lỗi cập nhật trạng thái:", err);
+            }
+        }
+
+        redirect(`lobby.html?roomId=${currentRoomId}`);
+    });
+}
 // ==================================================================
 
 async function executeSubmit() {
@@ -356,7 +363,7 @@ async function executeSubmit() {
     }
 }
 
-async function submitExam(isAutoSubmit = false) {
+function submitExam(isAutoSubmit = false) {
     if (isSubmitted) return;
     const total = questions.length;
     const answeredCount = Object.keys(userAnswers).length;
@@ -368,6 +375,11 @@ async function submitExam(isAutoSubmit = false) {
         
         document.getElementById('btn-confirm-submit').onclick = () => {
             confirmModal.classList.remove('active');
+            
+            // SỬA LỖI UI: Đang tự nộp thì báo đang nộp
+            const overlayText = document.querySelector('#force-submit-overlay div:nth-child(2)');
+            if (overlayText) overlayText.innerText = "Đang xử lý nộp bài của bạn...";
+
             executeSubmit();
         };
         document.getElementById('btn-cancel-submit').onclick = () => {
@@ -375,6 +387,11 @@ async function submitExam(isAutoSubmit = false) {
         };
     } else {
         showToast("Hệ thống đang tự động thu bài!");
+        
+        // SỬA LỖI UI: Báo hết giờ
+        const overlayText = document.querySelector('#force-submit-overlay div:nth-child(2)');
+        if (overlayText) overlayText.innerText = "Đã hết thời gian làm bài. Đang tự động thu bài...";
+
         executeSubmit();
     }
 }
