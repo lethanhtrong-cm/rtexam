@@ -79,7 +79,7 @@ btnBackToLobby.addEventListener('click', () => {
     forceLobbyView = true;
     viewingHistoryMode = false;
     switchUIState('waiting');
-    renderUI(); // Để load lại list card
+    renderUI(); 
 });
 
 btnCopyRoomCode.addEventListener('click', async () => {
@@ -370,7 +370,7 @@ function renderUI() {
 }
 
 async function initLobby() {
-    enhanceLeaderboardUI(); // Khởi tạo DOM Left Sidebar
+    enhanceLeaderboardUI(); 
 
     const roomRef = doc(db, 'rooms', roomId);
     const participantRef = doc(db, `rooms/${roomId}/participants/${currentUser.uid}`);
@@ -526,18 +526,23 @@ async function initLobby() {
 
                     btnStart.style.display = 'block';
                     btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
+                    
+                    // Xóa inline style cũ để lớp CSS hoạt động
                     btnStart.style.background = '#0dcaf0'; 
                     btnStart.style.color = '#000';
+                    
                     btnStart.removeAttribute('disabled');
                 } else { 
-                    // Đang chờ bắt đầu
+                    // CHỜ THI: Nút xanh lá (Bắt đầu thi), Mở khóa chọn đề
                     btnEndRoom.style.display = 'none';
                     selectExamInLobby.removeAttribute('disabled');
                     
                     btnStart.style.display = 'block';
                     btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
-                    btnStart.style.background = '#198754';
-                    btnStart.style.color = '#fff';
+                    
+                    // SỬA LỖI UI (CƠ BẢN): Reset CSS nội tuyến, để thẻ `:disabled` trong CSS HTML lo liệu màu xám
+                    btnStart.style.background = '';
+                    btnStart.style.color = '';
                     
                     if (roomData.examId) btnStart.removeAttribute('disabled');
                     else btnStart.setAttribute('disabled', 'true');
@@ -607,6 +612,50 @@ async function initLobby() {
             } 
         });
 
+        // =========================================================================
+        // SỰ KIỆN KHI CHỦ PHÒNG CHỌN ĐỀ
+        // =========================================================================
+        selectExamInLobby.addEventListener('change', async () => {
+            const selectedExamId = selectExamInLobby.value;
+            const selectedExamName = selectedExamId ? selectExamInLobby.options[selectExamInLobby.selectedIndex].text : null;
+            
+            // UI Tối ưu: Cập nhật giao diện ngay lập tức để nút xám hóa xanh không bị lag
+            if (selectedExamId) {
+                btnStart.removeAttribute('disabled');
+                displayExamName.innerHTML = `<i class="fa-solid fa-book-open"></i> ${selectedExamName}`;
+            } else {
+                btnStart.setAttribute('disabled', 'true');
+                displayExamName.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Chủ phòng đang cấu hình...`;
+            }
+
+            try {
+                // Update Firebase
+                await updateDoc(roomRef, { examId: selectedExamId || null, examName: selectedExamName, status: 'waiting' });
+                
+                try {
+                    const batch = writeBatch(db);
+                    const pSnapshot = await getDocs(participantsColl);
+                    pSnapshot.forEach((docItem) => {
+                        batch.update(docItem.ref, { status: 'waiting', score: 0, timeTaken: '00:00' });
+                    });
+                    await batch.commit();
+                } catch (batchErr) {
+                    console.warn("Đã lưu đề thi (Lỗi batch reset điểm không ảnh hưởng giao diện).", batchErr);
+                }
+                
+                forceLobbyView = false;
+            } catch (err) { 
+                console.error("Lỗi cập nhật phòng:", err); 
+                alert("Lỗi: Không thể kết nối tới máy chủ. Vui lòng kiểm tra quyền hoặc kết nối mạng!");
+                
+                // Khôi phục UI nếu lỗi mạng
+                if (!roomData.examId) {
+                    btnStart.setAttribute('disabled', 'true');
+                    displayExamName.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Chủ phòng đang cấu hình...`;
+                }
+            }
+        });
+
         btnStart.addEventListener('click', async () => {
             if (currentRoomStatus === 'playing' || currentRoomStatus === 'closed') {
                 forceLobbyView = false;
@@ -633,7 +682,7 @@ async function initLobby() {
                 btnEndRoom.disabled = true;
                 btnEndRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang thu bài...';
                 try {
-                    // 1. Force close room (Ép người chơi nộp bài)
+                    // 1. Ép người chơi nộp bài ngầm
                     await updateDoc(roomRef, { status: 'closed' });
 
                     // 2. Chờ 3 giây để máy trạm của các thí sinh tự động chấm điểm và đẩy lên Firebase
@@ -641,7 +690,7 @@ async function initLobby() {
                     
                     btnEndRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu lịch sử...';
 
-                    // 3. Fetch current participants to save history
+                    // 3. Đọc dữ liệu điểm số cuối cùng
                     const pSnapshot = await getDocs(participantsColl);
                     let finalParticipants = [];
                     pSnapshot.forEach(d => finalParticipants.push(d.data()));
@@ -658,7 +707,7 @@ async function initLobby() {
                         return timeSecA - timeSecB;
                     });
 
-                    // 4. Save to History Collection
+                    // 4. Lưu toàn bộ vào Lịch sử
                     const currentRoomData = (await getDoc(roomRef)).data();
                     await setDoc(doc(collection(db, `rooms/${roomId}/history`)), {
                         examId: currentRoomData.examId || 'N/A',
@@ -667,14 +716,14 @@ async function initLobby() {
                         participants: finalParticipants
                     });
 
-                    // 5. Reset participants về Waiting
+                    // 5. Làm mới lại những người có trong phòng
                     const batch = writeBatch(db);
                     pSnapshot.forEach((docItem) => {
                         batch.update(docItem.ref, { status: 'waiting', score: 0, timeTaken: '00:00' });
                     });
                     await batch.commit();
 
-                    // 6. Reset room
+                    // 6. Kích hoạt vòng thi mới
                     await updateDoc(roomRef, { status: 'waiting' });
                     
                     forceLobbyView = false;
