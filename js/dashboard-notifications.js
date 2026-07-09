@@ -62,7 +62,7 @@ function initNotifications(userEmail) {
             const data = docSnapshot.data();
             const id = docSnapshot.id;
             
-            // Theo đúng logic của bạn: kiểm tra trường status là 'unread'
+            // Kiểm tra trường status là 'unread'
             if (data.status === 'unread') {
                 unreadCount++;
             }
@@ -105,19 +105,27 @@ function initNotifications(userEmail) {
                 const notiDataDoc = snapshot.docs.find(d => d.id === notiId);
                 const notiData = notiDataDoc ? notiDataDoc.data() : null;
 
+                // Cập nhật trạng thái thành đã đọc
                 if (item.classList.contains('unread')) {
                     try {
                         const docRef = doc(db, 'notifications', notiId);
-                        // Cập nhật status thành 'read'
                         await updateDoc(docRef, { status: 'read' });
                     } catch (error) {
                         console.error("Lỗi cập nhật thông báo:", error);
                     }
                 }
 
-                // Chuyển hướng người dùng sang trang thi
-                if (notiData && notiData.examId) {
-                    window.location.href = `quiz.html?examId=${notiData.examId}`;
+                // ======================================================
+                // CHỈNH SỬA Ở ĐÂY: Phân loại chuyển hướng dựa trên loại thông báo
+                // ======================================================
+                if (notiData) {
+                    if (notiData.type === 'room_invite' || notiData.roomId) {
+                        // Nhảy sang Phòng chờ (Lobby)
+                        window.location.href = `lobby.html?roomId=${notiData.roomId}`;
+                    } else if (notiData.examId) {
+                        // Nhảy sang màn hình thi cá nhân
+                        window.location.href = `quiz.html?examId=${notiData.examId}`;
+                    }
                 }
             });
         });
