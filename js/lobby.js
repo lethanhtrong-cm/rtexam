@@ -91,7 +91,7 @@ btnCopyRoomCode.addEventListener('click', async () => {
 });
 
 // ==========================================
-// CẬP NHẬT: PHÂN LOẠI ĐỀ THI HỆ THỐNG & ĐỀ AI TỰ TẠO
+// PHÂN LOẠI ĐỀ THI HỆ THỐNG & ĐỀ AI TỰ TẠO
 // ==========================================
 async function loadExamsToDropdown() {
     try {
@@ -108,7 +108,6 @@ async function loadExamsToDropdown() {
             const title = data.title || examId;
             const optionHtml = `<option value="${examId}">[${tech}] ${title}</option>`;
 
-            // Nhận diện loại đề dựa vào trường dữ liệu cấu trúc technique
             if (data.technique === "AI Tự Động") {
                 aiExams += optionHtml;
             } else {
@@ -116,7 +115,6 @@ async function loadExamsToDropdown() {
             }
         });
 
-        // Đổ dữ liệu vào Dropdown dưới dạng optgroup phân lớp trực quan
         selectExamInLobby.innerHTML = `
             <option value="">-- Chọn bộ đề để thi --</option>
             <optgroup label="📋 ĐỀ THI CÓ SẴN TRÊN HỆ THỐNG">
@@ -331,8 +329,31 @@ async function initLobby() {
                 btnStart.style.display = 'block';
                 waitingText.style.display = 'none';
                 
-                if (currentRoomStatus === 'playing') btnEndRoom.style.display = 'block';
-                else btnEndRoom.style.display = 'none';
+                if (currentRoomStatus === 'playing') {
+                    btnEndRoom.style.display = 'block';
+                    selectExamInLobby.setAttribute('disabled', 'true');
+
+                    // ===============================================
+                    // TÍNH NĂNG MỚI: Đổi nút BẮT ĐẦU thành XEM BXH
+                    // ===============================================
+                    btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
+                    btnStart.style.background = '#0dcaf0'; 
+                    btnStart.style.color = '#000';
+                    btnStart.removeAttribute('disabled');
+
+                } else if (currentRoomStatus === 'closed') {
+                    btnEndRoom.style.display = 'none';
+                    btnStart.style.display = 'none';
+                    selectExamInLobby.setAttribute('disabled', 'true');
+                } else {
+                    btnEndRoom.style.display = 'none';
+                    selectExamInLobby.removeAttribute('disabled');
+                    btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
+                    btnStart.style.background = '#198754';
+                    btnStart.style.color = '#fff';
+                    if (roomData.examId) btnStart.removeAttribute('disabled');
+                    else btnStart.setAttribute('disabled', 'true');
+                }
 
                 if (roomData.isLocked) {
                     btnLockRoom.innerHTML = '<i class="fa-solid fa-lock"></i> Mở khóa';
@@ -356,8 +377,6 @@ async function initLobby() {
                     selectExamInLobby.value = "";
                 }
 
-                if (roomData.examId) btnStart.removeAttribute('disabled');
-                else btnStart.setAttribute('disabled', 'true');
             } else {
                 hostPanel.style.display = 'none';
                 btnStart.style.display = 'none';
@@ -379,7 +398,15 @@ async function initLobby() {
                     }
                     window.location.href = `quiz-room.html?examId=${roomData.examId}&roomId=${roomId}`;
                 } else {
-                    if (!forceLobbyView) switchUIState('playing');
+                    // ==============================================================
+                    // SỬA LỖI UI: Chủ phòng nộp xong sẽ được xem màn hình các Thẻ (Card)
+                    // ==============================================================
+                    if (isHost && forceLobbyView === false) {
+                        forceLobbyView = true;
+                        switchUIState('waiting');
+                    } else if (!forceLobbyView) {
+                        switchUIState('playing'); // Người chơi bình thường văng ra là xem BXH ngay
+                    }
                 }
             } 
             else if (currentRoomStatus === 'closed') {
@@ -403,6 +430,25 @@ async function initLobby() {
                 await batch.commit();
                 forceLobbyView = false;
             } catch (err) { console.error("Lỗi reset phòng:", err); }
+        });
+
+        // ================= XỬ LÝ SỰ KIỆN NÚT BẮT ĐẦU / XEM BXH =================
+        btnStart.addEventListener('click', async () => {
+            if (currentRoomStatus === 'playing') {
+                // Đang thi -> Chủ phòng ấn nút này sẽ chuyển sang Bảng xếp hạng
+                forceLobbyView = false;
+                switchUIState('playing');
+            } else {
+                // Chưa thi -> Bắt đầu phát đề cho mọi người
+                btnStart.setAttribute('disabled', 'true');
+                btnStart.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ĐANG KHỞI ĐỘNG...';
+                try {
+                    await updateDoc(roomRef, { status: 'playing' });
+                } catch (error) {
+                    btnStart.removeAttribute('disabled');
+                    btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
+                }
+            }
         });
 
         // ================= LOGIC TẠO ĐỀ BẰNG AI TRONG LOBBY =================
@@ -489,7 +535,6 @@ async function initLobby() {
                     isPublic: false
                 });
 
-                // Cập nhật đề thi vừa tạo trực tiếp vào document của phòng thi hiện tại
                 await updateDoc(roomRef, { 
                     examId: examId, 
                     examName: `[AI Tự Động] Đề tạo lúc ${new Date().toLocaleTimeString('vi-VN')}`, 
@@ -507,17 +552,6 @@ async function initLobby() {
                 console.error("Lỗi tạo đề thi AI:", error);
                 alert("Đã xảy ra lỗi: " + error.message);
                 resetAiForm(); 
-            }
-        });
-
-        btnStart.addEventListener('click', async () => {
-            btnStart.setAttribute('disabled', 'true');
-            btnStart.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ĐANG KHỞI ĐỘNG...';
-            try {
-                await updateDoc(roomRef, { status: 'playing' });
-            } catch (error) {
-                btnStart.removeAttribute('disabled');
-                btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
             }
         });
 
