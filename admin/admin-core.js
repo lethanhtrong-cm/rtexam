@@ -1,11 +1,13 @@
 import { db, auth } from './firebase-config.js'; 
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// Import đầy đủ các hàm Firestore bao gồm cả getDoc để lấy dữ liệu 1 câu hỏi cụ thể
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// IMPORT ĐẦY ĐỦ CÁC HÀM CẦN THIẾT TỪ FIRESTORE
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export { db };
 
+// =========================================================================
 // HÀM TOAST THÔNG BÁO CHUNG HỆ THỐNG
+// =========================================================================
 export function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -39,28 +41,22 @@ async function loadComponent(elementId, filePath) {
     }
 }
 
-// KHỞI TẠO HỆ THỐNG GIAO DIỆN (CHẠY ASYNC)
+// KHỞI TẠO HỆ THỐNG GIAO DIỆN
 document.addEventListener('DOMContentLoaded', async () => {
-    
-    // Tải giao diện phụ từ thư mục components con bên trong thư mục admin
     await loadComponent('sidebar-container', './components/sidebar.html');
     await loadComponent('modals-container', './components/modal.html');
 
-    // Kích hoạt logic điều hướng Sidebar sau khi HTML đã nạp
     initSidebarEvents();
-
-    // Kích hoạt logic đóng Modals và Đăng xuất
     initModalEvents();
     initAuthEvents();
-
-    // KÍCH HOẠT LẮNG NGHE BÁO CÁO LỖI VÀO BẢNG
     initAdminReportListener();
 
-    // PHÁT SỰ KIỆN TÙY CHỈNH THÔNG BÁO "GIAO DIỆN ĐÃ SẴN SÀNG"
     document.dispatchEvent(new Event('componentsLoaded'));
 });
 
-// ---------------- CÁC HÀM XỬ LÝ SỰ KIỆN TRONG CORE ----------------
+// =========================================================================
+// CÁC HÀM XỬ LÝ SỰ KIỆN GIAO DIỆN CƠ BẢN
+// =========================================================================
 function initSidebarEvents() {
     const parentMenus = document.querySelectorAll('.menu-parent');
     parentMenus.forEach(parent => {
@@ -103,18 +99,24 @@ function initModalEvents() {
         const feedbackModal = document.getElementById("feedback-modal");
         const historyModal = document.getElementById("historyModal");
         const questionDetailModal = document.getElementById("question-detail-modal");
+        const adminReplyModal = document.getElementById("admin-reply-modal");
 
         if (event.target === editPropsModal) editPropsModal.style.display = "none";
         if (event.target === feedbackModal) feedbackModal.style.display = "none";
         if (event.target === historyModal) historyModal.style.display = "none";
         if (event.target === questionDetailModal) questionDetailModal.style.display = "none";
+        if (event.target === adminReplyModal) adminReplyModal.style.display = "none";
     };
 
-    // Lắng nghe sự kiện click trên toàn document để đóng Modal khi bấm nút X
+    // Lắng nghe đóng Modal bằng nút X
     document.addEventListener('click', (e) => {
         if (e.target && e.target.id === 'close-qd-modal') {
-            const modal = document.getElementById("question-detail-modal");
-            if (modal) modal.style.display = "none";
+            const m = document.getElementById("question-detail-modal");
+            if (m) m.style.display = "none";
+        }
+        if (e.target && e.target.id === 'close-admin-reply-modal') {
+            const r = document.getElementById("admin-reply-modal");
+            if (r) r.style.display = "none";
         }
     });
 }
@@ -144,7 +146,7 @@ function initAdminReportListener() {
     const reportsRef = collection(db, "reported_questions");
     const q = query(reportsRef, orderBy("timestamp", "desc"));
 
-    // Lắng nghe Realtime từ Firestore
+    // Lắng nghe Realtime
     onSnapshot(q, (snapshot) => {
         reportListBody.innerHTML = '';
         let pendingCount = 0;
@@ -175,17 +177,17 @@ function initAdminReportListener() {
 
             const isResolved = data.status === 'resolved';
             const rowOpacity = isResolved ? '0.6' : '1';
+            
+            // Render Nút Hành Động (Đã tích hợp nút Phản hồi)
             const actionButtons = isResolved 
                 ? `<span style="color: #10b981; font-weight: bold;"><i class="fa-solid fa-check"></i> Đã xử lý</span>`
                 : `
-                    <button class="btn-resolve-report" data-id="${reportId}" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; margin-right: 5px; transition: 0.2s;"><i class="fa-solid fa-check"></i> Xong</button>
+                    <button class="btn-reply-report" data-id="${reportId}" data-email="${data.reportedBy}" data-qid="${data.questionId}" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; margin-right: 5px; transition: 0.2s;"><i class="fa-solid fa-reply"></i> Phản hồi</button>
                     <button class="btn-delete-report" data-id="${reportId}" style="background: #f3f4f6; color: #dc2626; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: 0.2s;"><i class="fa-solid fa-trash"></i></button>
                   `;
 
             const tr = document.createElement('tr');
             tr.style.opacity = rowOpacity;
-            
-            // Tích hợp thêm nút "Xem" cạnh questionId để mở Modal chi tiết câu hỏi gốc
             tr.innerHTML = `
                 <td style="padding: 15px; border-bottom: 1px solid #f3f4f6;">${timeStr}</td>
                 <td style="padding: 15px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">${data.reportedBy}</td>
@@ -193,7 +195,7 @@ function initAdminReportListener() {
                     <span style="background: #e5e7eb; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">${data.examId}</span><br>
                     <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
                         <small style="color: #6b7280; font-family: monospace;">${data.questionId}</small>
-                        <button class="btn-view-question" data-qid="${data.questionId}" style="background: #3b82f6; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 0.7rem;" title="Xem chi tiết câu hỏi">
+                        <button class="btn-view-question" data-qid="${data.questionId}" style="background: #10b981; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 0.7rem;" title="Xem chi tiết câu hỏi">
                             <i class="fa-solid fa-eye"></i> Xem
                         </button>
                     </div>
@@ -210,6 +212,7 @@ function initAdminReportListener() {
             reportListBody.appendChild(tr);
         });
 
+        // Cập nhật thẻ Badge đếm số lượng
         pendingCountBadge.textContent = `${pendingCount} chờ xử lý`;
         if (pendingCount > 0) {
             pendingCountBadge.style.background = '#fee2e2'; pendingCountBadge.style.color = '#dc2626';
@@ -217,7 +220,9 @@ function initAdminReportListener() {
             pendingCountBadge.style.background = '#d1fae5'; pendingCountBadge.style.color = '#059669';
         }
 
-        // Gắn sự kiện Click cho danh sách nút Xem câu hỏi gốc vừa tạo
+        // ------------------ GẮN CÁC SỰ KIỆN NÚT ------------------
+        
+        // 1. Nút Xem chi tiết câu hỏi
         document.querySelectorAll('.btn-view-question').forEach(btn => {
             btn.addEventListener('click', function() {
                 const qId = this.getAttribute('data-qid');
@@ -225,21 +230,7 @@ function initAdminReportListener() {
             });
         });
 
-        // Gắn sự kiện đánh dấu đã xử lý
-        document.querySelectorAll('.btn-resolve-report').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const rId = this.getAttribute('data-id');
-                try {
-                    await updateDoc(doc(db, "reported_questions", rId), { status: 'resolved' });
-                    showToast("Đã đánh dấu xử lý xong!", "success");
-                } catch (err) { 
-                    console.error("Lỗi cập nhật:", err); 
-                    showToast("Có lỗi xảy ra khi cập nhật", "error");
-                }
-            });
-        });
-
-        // Gắn sự kiện xóa báo cáo
+        // 2. Nút Xóa Báo cáo
         document.querySelectorAll('.btn-delete-report').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const rId = this.getAttribute('data-id');
@@ -254,16 +245,86 @@ function initAdminReportListener() {
                 }
             });
         });
+
+        // 3. Logic Mở Modal Phản hồi Báo Cáo
+        let currentReportData = null; 
+        document.querySelectorAll('.btn-reply-report').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentReportData = {
+                    reportId: this.getAttribute('data-id'),
+                    toEmail: this.getAttribute('data-email'),
+                    questionId: this.getAttribute('data-qid')
+                };
+                
+                const replyModal = document.getElementById('admin-reply-modal');
+                if(!replyModal) {
+                    showToast("Chưa tải được HTML của Modal Phản hồi!", "error");
+                    return;
+                }
+                
+                document.getElementById('reply-to-email').innerText = currentReportData.toEmail;
+                document.getElementById('reply-question-id').innerText = currentReportData.questionId;
+                document.getElementById('adminReplyContent').value = ""; // Xóa text cũ
+                replyModal.style.display = 'block';
+            });
+        });
+
+        // 4. Xử lý Nút Gửi Phản Hồi Trong Modal
+        const btnSendReply = document.getElementById('btnSendAdminReply');
+        if (btnSendReply) {
+            // Clone node để tránh gắn sự kiện dồn cục nhiều lần do onSnapshot
+            const newBtnSendReply = btnSendReply.cloneNode(true);
+            btnSendReply.parentNode.replaceChild(newBtnSendReply, btnSendReply);
+
+            newBtnSendReply.addEventListener('click', async function() {
+                const replyMessage = document.getElementById('adminReplyContent').value.trim();
+                if (!replyMessage) {
+                    showToast("Vui lòng nhập nội dung phản hồi!", "error");
+                    return;
+                }
+
+                if (!currentReportData) return;
+
+                this.innerHTML = "⏳ Đang gửi...";
+                this.disabled = true;
+
+                try {
+                    // Cập nhật Document trạng thái Resolved
+                    await updateDoc(doc(db, "reported_questions", currentReportData.reportId), { 
+                        status: 'resolved' 
+                    });
+
+                    // Ghi Document vào collection notifications
+                    await addDoc(collection(db, "notifications"), {
+                        toEmail: currentReportData.toEmail,
+                        type: 'admin_reply',
+                        questionId: currentReportData.questionId,
+                        adminMessage: replyMessage,
+                        status: 'unread',
+                        timestamp: serverTimestamp()
+                    });
+
+                    showToast("Đã gửi phản hồi thành công!", "success");
+                    document.getElementById('admin-reply-modal').style.display = 'none';
+                } catch (err) {
+                    console.error("Lỗi khi gửi phản hồi:", err);
+                    showToast("Có lỗi xảy ra khi gửi", "error");
+                } finally {
+                    this.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Phản Hồi`;
+                    this.disabled = false;
+                }
+            });
+        }
     });
 }
 
 // =========================================================================
-// HÀM TRUY VẤN FIREBASE LẤY CHI TIẾT CÂU HỎI & ĐỔ DỮ LIỆU VÀO MODAL
+// HÀM TRUY VẤN FIRESTORE ĐỔ DỮ LIỆU CÂU HỎI VÀO MODAL
 // =========================================================================
 async function fetchAndShowQuestionDetail(questionId) {
-    // 1. Kiểm tra trạng thái xác thực hệ thống (Không cho phép user ẩn danh/guest truy cập)
+    // Check Auth - Ngăn chặn Guest truy cập nội bộ
     if (!auth.currentUser) {
-        alert("⛔ Lỗi bảo mật: Bạn cần đăng nhập tài khoản quyền Admin để thực hiện chức năng này.");
+        alert("⛔ Lỗi bảo mật: Bạn cần đăng nhập quyền Admin để xem chi tiết câu hỏi.");
         return;
     }
 
@@ -272,31 +333,27 @@ async function fetchAndShowQuestionDetail(questionId) {
     const contentDiv = document.getElementById('qd-content');
     
     if (!modal) {
-        showToast("Lỗi: Không tìm thấy HTML cấu trúc của Modal.", "error");
+        showToast("Lỗi: Không tìm thấy HTML của Modal chi tiết câu hỏi.", "error");
         return;
     }
 
-    // Thiết lập hiển thị modal ở trạng thái Loading ban đầu
     modal.style.display = 'block';
     loadingDiv.style.display = 'block';
     contentDiv.style.display = 'none';
 
     try {
-        // Định tuyến truy cập vào bộ dữ liệu collection "questions" bằng câu hỏi ID nhận được
         const docRef = doc(db, "questions", questionId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // 2. Áp dụng luật quét dữ liệu dự phòng (Fallback) cho Nội dung câu hỏi
+            // Fallback Logic cho Nội dung
             const questionText = data.text || data.questionText || data.question || data.content || "Không có nội dung câu hỏi";
             document.getElementById('qd-text').innerText = questionText;
 
-            // 3. Áp dụng luật quét dữ liệu dự phòng xử lý mảng cho 4 đáp án (options hoặc answers)
+            // Fallback Logic xử lý mảng Đáp án
             const optionsArray = data.options || data.answers || [];
-            
-            // Khai báo mảng phần tử DOM tương ứng cấu trúc HTML
             const domOptions = [
                 document.getElementById('qd-optA'),
                 document.getElementById('qd-optB'),
@@ -305,36 +362,27 @@ async function fetchAndShowQuestionDetail(questionId) {
             ];
 
             if (optionsArray.length > 0) {
-                // Vòng lặp tối đa 4 phần tử của mảng đáp án để đẩy văn bản vào HTML
                 for (let i = 0; i < 4; i++) {
-                    if (domOptions[i]) {
-                        domOptions[i].innerText = optionsArray[i] ? optionsArray[i] : "Không có dữ liệu đáp án";
-                    }
+                    if (domOptions[i]) domOptions[i].innerText = optionsArray[i] ? optionsArray[i] : "Không có dữ liệu đáp án";
                 }
             } else {
-                // Xử lý fallback khi mảng đáp án trống hoặc sai cấu trúc trường dữ liệu
                 for (let i = 0; i < 4; i++) {
-                    if (domOptions[i]) {
-                        domOptions[i].innerText = "Không có dữ liệu đáp án";
-                    }
+                    if (domOptions[i]) domOptions[i].innerText = "Không có dữ liệu đáp án";
                 }
             }
 
-            // 4. Đổ dữ liệu giữ nguyên logic trường Đáp án đúng & Giải thích chi tiết
             document.getElementById('qd-correct').innerText = data.correctAnswer || data.correct || "Chưa thiết lập";
             document.getElementById('qd-explanation').innerText = data.explanation || data.explain || "Không có giải thích cho câu hỏi này.";
 
-            // Hoàn tất tải dữ liệu: Ẩn thông báo Loading và kích hoạt khối nội dung
             loadingDiv.style.display = 'none';
             contentDiv.style.display = 'block';
         } else {
-            // Xử lý ngoại lệ dữ liệu không tồn tại trên Firestore (Bị xóa trước đó bởi thao tác khác)
             modal.style.display = 'none';
-            alert("⚠️ Lỗi: Câu hỏi này không còn tồn tại trên hệ thống (Có thể đã bị xóa dữ liệu gốc).");
+            alert("⚠️ Câu hỏi này không còn tồn tại trên hệ thống (Có thể đã bị xóa).");
         }
     } catch (error) {
-        console.error("Lỗi khi tải chi tiết câu hỏi từ Firebase:", error);
+        console.error("Lỗi khi tải chi tiết câu hỏi:", error);
         modal.style.display = 'none';
-        showToast("Lỗi khi kết nối đồng bộ cơ sở dữ liệu.", "error");
+        showToast("Lỗi khi kết nối đến cơ sở dữ liệu.", "error");
     }
 }
