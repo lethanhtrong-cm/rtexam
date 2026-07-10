@@ -10,7 +10,7 @@ let aiExamsData = [];
 // CẤU HÌNH PHÂN TRANG (PAGINATION)
 // ==========================================
 let currentPage = 1;
-const itemsPerPage = 10;
+const itemsPerPage = 10; // Hiển thị chuẩn 10 đề mỗi trang
 
 // ==========================================
 // 1. TẢI DỮ LIỆU ĐỀ THI AI TỪ FIRESTORE
@@ -18,6 +18,19 @@ const itemsPerPage = 10;
 async function loadAiExams() {
     const tbody = document.getElementById('ai-exam-list-body');
     if (!tbody) return;
+
+    // FIX UI: Tự động gỡ bỏ thanh cuộn (scrollbar) bị dính từ HTML cũ (max-height: 500px)
+    const tableContainer = document.querySelector('#tab-admin .table-container');
+    if (tableContainer) {
+        // Ép buộc xóa giới hạn chiều cao để bung toàn bộ 10 phần tử ra trang
+        tableContainer.style.cssText = 'max-height: none !important; overflow: visible !important;';
+    }
+
+    // Đổi tên Header của bảng thành "Tài khoản tạo đề"
+    const thElements = document.querySelectorAll('#tab-admin thead th');
+    if (thElements && thElements[2]) {
+        thElements[2].innerText = "TÀI KHOẢN TẠO ĐỀ";
+    }
     
     tbody.innerHTML = '<tr><td colspan="6" class="loading-text">⏳ Đang truy xuất dữ liệu đề AI từ hệ thống...</td></tr>';
     
@@ -25,13 +38,13 @@ async function loadAiExams() {
         // Query các đề thi có technique là "AI Tự Động"
         const examsQuery = query(collection(db, "exams"), where("technique", "==", "AI Tự Động"));
         
-        // Chạy song song: Lấy thông tin cấu hình đề (exams) và Lấy toàn bộ câu hỏi (questions)
+        // Chạy song song: Lấy thông tin cấu hình đề và câu hỏi
         const [examsSnap, questionsSnap] = await Promise.all([
             getDocs(examsQuery),
             getDocs(collection(db, "questions")) 
         ]);
         
-        // Cache lại toàn bộ câu hỏi để xử lý nội bộ
+        // Cache lại toàn bộ câu hỏi
         const allQuestions = [];
         questionsSnap.forEach(doc => allQuestions.push(doc.data()));
 
@@ -41,38 +54,45 @@ async function loadAiExams() {
             const examData = docSnap.data();
             const examQuestions = allQuestions.filter(q => q.examId === docSnap.id);
             
-            // Xử lý ngày tháng an toàn (Fix lỗi hiển thị dãy số Timestamp)
+            // 1. FIX LỖI NGÀY THÁNG (Ép kiểu chuỗi số mili-giây sang Date chuẩn)
             let formattedDate = 'Không rõ';
+            let rawTimeSort = 0;
             const rawDate = examData.createdAt || examData.timestamp; 
 
             if (rawDate) {
                 if (typeof rawDate.toDate === 'function') {
-                    // Định dạng Firebase Timestamp object
+                    // Chuẩn Firebase Timestamp
                     formattedDate = rawDate.toDate().toLocaleString('vi-VN');
-                } else if (!isNaN(Number(rawDate))) {
-                    // Định dạng dãy số ms (ví dụ: 1783618433169)
-                    formattedDate = new Date(Number(rawDate)).toLocaleString('vi-VN');
+                    rawTimeSort = rawDate.toDate().getTime();
                 } else {
-                    // Định dạng chuỗi ngày tháng thông thường
-                    formattedDate = new Date(rawDate).toLocaleString('vi-VN');
+                    // Nếu là chuỗi dãy số (VD: "1783618433169")
+                    const numDate = Number(rawDate);
+                    if (!isNaN(numDate) && numDate > 1000000000) { 
+                        formattedDate = new Date(numDate).toLocaleString('vi-VN');
+                        rawTimeSort = numDate;
+                    } else {
+                        // Chuỗi String thông thường
+                        formattedDate = new Date(rawDate).toLocaleString('vi-VN');
+                        rawTimeSort = new Date(rawDate).getTime();
+                    }
                 }
             }
 
-            // Lấy email người tạo (Tài khoản tạo đề)
+            // 2. Lấy TÀI KHOẢN người tạo
             const creatorAccount = examData.creatorEmail || examData.email || examData.creator || 'Hệ thống AI';
 
             aiExamsData.push({
                 id: docSnap.id,
                 creator: creatorAccount, 
                 createdAt: formattedDate,
-                rawTime: Number(rawDate) || 0, // Lưu lại thời gian gốc để sắp xếp
+                rawTime: rawTimeSort, 
                 questionCount: examQuestions.length,
                 questions: examQuestions, 
                 ...examData
             });
         });
         
-        // Sắp xếp đề thi mới nhất lên đầu
+        // Sắp xếp đề thi mới nhất lên đầu (Dựa vào thời gian gốc rawTime)
         aiExamsData.sort((a, b) => b.rawTime - a.rawTime);
 
         // Reset về trang 1 mỗi khi load lại dữ liệu
@@ -91,6 +111,10 @@ async function loadAiExams() {
 function renderAiExamsTable() {
     const tbody = document.getElementById('ai-exam-list-body');
     if (!tbody) return;
+
+    // Đảm bảo không có thanh cuộn mỗi khi render lại bảng
+    const tableContainer = document.querySelector('#tab-admin .table-container');
+    if (tableContainer) tableContainer.style.cssText = 'max-height: none !important; overflow: visible !important;';
     
     tbody.innerHTML = '';
     
@@ -109,11 +133,11 @@ function renderAiExamsTable() {
     
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const pagedData = aiExamsData.slice(startIndex, endIndex);
+    const pagedData = aiExamsData.slice(startIndex, endIndex); // Cắt chuẩn 10 phần tử
     
     let stt = startIndex + 1;
 
-    // --- VẼ DỮ LIỆU CỦA TRANG HIỆN TẠI ---
+    // --- VẼ DỮ LIỆU ĐỀ THI LÊN TRANG HIỆN TẠI ---
     pagedData.forEach(exam => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -123,6 +147,7 @@ function renderAiExamsTable() {
             <td class="text-center"><span class="badge-count" style="background:#eff6ff; color:#3b82f6;">${exam.questionCount} câu</span></td>
             <td class="text-center" style="font-size: 13px; color: #64748b;">${exam.createdAt}</td>
             <td class="text-center">
+                <!-- 3. NÚT XUẤT EXCEL & NÚT XÓA RIÊNG BIỆT -->
                 <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap;">
                     <button class="btn-outline-sm btn-export-ai-single" data-id="${exam.id}" style="color: #10b981; border-color: #a7f3d0;">
                         📥 Xuất Excel
@@ -136,7 +161,7 @@ function renderAiExamsTable() {
         tbody.appendChild(tr);
     });
 
-    // Vẽ thanh điều hướng trang
+    // Vẽ thanh điều hướng trang (Prev/Next)
     renderPagination(totalPages);
 }
 
@@ -152,13 +177,12 @@ function renderPagination(totalPages) {
         paginationContainer = document.createElement('div');
         paginationContainer.id = 'ai-pagination-container';
         paginationContainer.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding-bottom: 10px;';
-        // Chèn ngay bên dưới cái bảng
         tableContainer.parentNode.insertBefore(paginationContainer, tableContainer.nextSibling);
     }
 
-    paginationContainer.innerHTML = ''; // Xóa nút cũ
+    paginationContainer.innerHTML = ''; // Xóa sạch để vẽ lại
 
-    if (totalPages <= 1) return; // Ẩn phân trang nếu chỉ có 1 trang
+    if (totalPages <= 1) return; // Nếu chỉ có 1 trang thì ẩn luôn
 
     // Nút "Trang Trước"
     const prevBtn = document.createElement('button');
@@ -174,7 +198,7 @@ function renderPagination(totalPages) {
     };
     paginationContainer.appendChild(prevBtn);
 
-    // Hiển thị Số Trang
+    // Thông tin "Trang X / Y"
     const pageInfo = document.createElement('span');
     pageInfo.innerText = `Trang ${currentPage} / ${totalPages}`;
     pageInfo.style.cssText = 'font-size: 14px; font-weight: 600; color: #475569; margin: 0 10px;';
@@ -215,7 +239,7 @@ async function deleteAiExam(examId, btnElement) {
         await Promise.all(deletePromises);
 
         showToast(`Đã xóa thành công đề "${examId}"!`, "success");
-        loadAiExams(); // Tải lại bảng để cập nhật giao diện
+        loadAiExams(); // Tải lại bảng sau khi xóa
     } catch (error) {
         console.error("Lỗi khi xóa đề AI:", error);
         showToast("Lỗi hệ thống khi xóa dữ liệu", "error");
@@ -250,10 +274,10 @@ function exportAllAiExamsToExcel() {
     processAndDownloadExcel(aiExamsData, "Ngan_Hang_Tong_Hop_De_AI");
 }
 
-// Hàm hỗ trợ format và tạo file Excel dùng chung cho Cả 2 nút Xuất
+// Hàm hỗ trợ format và tải Excel chung (dùng cho 1 đề hoặc tất cả đề)
 function processAndDownloadExcel(examsArray, fileName) {
     const exportData = [];
-    const mapCorrectText = ['A', 'B', 'C', 'D']; // Map Index (0,1,2,3) về định dạng Text
+    const mapCorrectText = ['A', 'B', 'C', 'D']; // Map Index (0,1,2,3) về A, B, C, D
 
     examsArray.forEach(exam => {
         if (exam.questions && exam.questions.length > 0) {
@@ -299,7 +323,7 @@ function processAndDownloadExcel(examsArray, fileName) {
 // ==========================================
 document.addEventListener('componentsLoaded', () => {
     
-    // Load lười: Chỉ truy vấn Firestore khi Admin bấm vào Tab
+    // Lắng nghe sự kiện click mở tab "Quản lý Đề AI" từ Sidebar
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -316,7 +340,7 @@ document.addEventListener('componentsLoaded', () => {
         btnExport.addEventListener('click', exportAllAiExamsToExcel);
     }
 
-    // Kỹ thuật Event Delegation cho các nút "Xuất Excel Riêng Lẻ" và "Xóa" bên trong bảng
+    // Lắng nghe các nút click bên trong bảng (Xóa, Xuất Excel lẻ)
     const tbody = document.getElementById('ai-exam-list-body');
     if (tbody) {
         tbody.addEventListener('click', (e) => {
