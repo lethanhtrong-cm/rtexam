@@ -1019,4 +1019,32 @@ async function initLobby() {
                 btnSendInvite.disabled = true;
                 const notiData = {
                     toEmail: toEmail, fromEmail: currentUser.email, type: 'room_invite',
-                    message: `<b>${currentUser.displayName || currentUser.email}</b> đã mời bạn vào phòng thi. Mã phòng: <b style="color:#0d6efd">${
+                    message: `<b>${currentUser.displayName || currentUser.email}</b> đã mời bạn vào phòng thi. Mã phòng: <b style="color:#0d6efd">${roomId}</b>`,
+                    roomId: roomId, isRead: false, createdAt: serverTimestamp()
+                };
+                await setDoc(doc(collection(db, "notifications")), {
+                    ...notiData,
+                    status: 'unread',
+                    timestamp: serverTimestamp()
+                });
+                alert(`Đã gửi lời mời tới ${toEmail}!`);
+                inviteFriendModal.classList.remove('active');
+            } catch (error) { alert("Lỗi khi gửi mời."); } 
+            finally { btnSendInvite.disabled = false; }
+        });
+
+        btnCopyLink.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+                const old = btnCopyLink.innerHTML;
+                btnCopyLink.innerHTML = '<i class="fa-solid fa-check"></i> Đã copy!';
+                setTimeout(() => btnCopyLink.innerHTML = old, 2000);
+            } catch (err) { alert("Hãy tự copy URL thanh địa chỉ nhé."); }
+        });
+
+    } catch (error) {
+        console.error("Lỗi Lobby:", error);
+        alert("Có lỗi xảy ra khi đồng bộ phòng chờ.");
+        window.location.href = "dashboard.html";
+    }
+}
