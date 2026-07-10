@@ -7,6 +7,12 @@ import {
 let aiExamsData = [];
 
 // ==========================================
+// CẤU HÌNH PHÂN TRANG (PAGINATION)
+// ==========================================
+let currentPage = 1;
+const itemsPerPage = 10;
+
+// ==========================================
 // 1. TẢI DỮ LIỆU ĐỀ THI AI TỪ FIRESTORE
 // ==========================================
 async function loadAiExams() {
@@ -19,7 +25,7 @@ async function loadAiExams() {
         // Query các đề thi có technique là "AI Tự Động"
         const examsQuery = query(collection(db, "exams"), where("technique", "==", "AI Tự Động"));
         
-        // Chạy song song: Lấy thông tin cấu hình đề (exams) và Lấy toàn bộ câu hỏi (questions) để đếm/xuất excel
+        // Chạy song song: Lấy thông tin cấu hình đề (exams) và Lấy toàn bộ câu hỏi (questions)
         const [examsSnap, questionsSnap] = await Promise.all([
             getDocs(examsQuery),
             getDocs(collection(db, "questions")) 
@@ -33,27 +39,44 @@ async function loadAiExams() {
         
         examsSnap.forEach(docSnap => {
             const examData = docSnap.data();
-            // Lọc ra các câu hỏi thuộc mã đề hiện tại
             const examQuestions = allQuestions.filter(q => q.examId === docSnap.id);
             
-            // Xử lý ngày tháng an toàn
+            // Xử lý ngày tháng an toàn (Fix lỗi hiển thị dãy số Timestamp)
             let formattedDate = 'Không rõ';
-            if (examData.createdAt && typeof examData.createdAt.toDate === 'function') {
-                formattedDate = examData.createdAt.toDate().toLocaleString('vi-VN');
-            } else if (examData.createdAt) {
-                formattedDate = new Date(examData.createdAt).toLocaleString('vi-VN');
+            const rawDate = examData.createdAt || examData.timestamp; 
+
+            if (rawDate) {
+                if (typeof rawDate.toDate === 'function') {
+                    // Định dạng Firebase Timestamp object
+                    formattedDate = rawDate.toDate().toLocaleString('vi-VN');
+                } else if (!isNaN(Number(rawDate))) {
+                    // Định dạng dãy số ms (ví dụ: 1783618433169)
+                    formattedDate = new Date(Number(rawDate)).toLocaleString('vi-VN');
+                } else {
+                    // Định dạng chuỗi ngày tháng thông thường
+                    formattedDate = new Date(rawDate).toLocaleString('vi-VN');
+                }
             }
+
+            // Lấy email người tạo (Tài khoản tạo đề)
+            const creatorAccount = examData.creatorEmail || examData.email || examData.creator || 'Hệ thống AI';
 
             aiExamsData.push({
                 id: docSnap.id,
-                creator: examData.creatorEmail || examData.creator || 'Hệ thống AI', // Lấy thông tin người tạo AI
+                creator: creatorAccount, 
                 createdAt: formattedDate,
+                rawTime: Number(rawDate) || 0, // Lưu lại thời gian gốc để sắp xếp
                 questionCount: examQuestions.length,
-                questions: examQuestions, // Gắn kèm mảng câu hỏi để lát nữa Xuất Excel
+                questions: examQuestions, 
                 ...examData
             });
         });
         
+        // Sắp xếp đề thi mới nhất lên đầu
+        aiExamsData.sort((a, b) => b.rawTime - a.rawTime);
+
+        // Reset về trang 1 mỗi khi load lại dữ liệu
+        currentPage = 1;
         renderAiExamsTable();
 
     } catch (error) {
@@ -63,7 +86,7 @@ async function loadAiExams() {
 }
 
 // ==========================================
-// 2. RENDER BẢNG HIỂN THỊ
+// 2. RENDER BẢNG HIỂN THỊ (CÓ PHÂN TRANG)
 // ==========================================
 function renderAiExamsTable() {
     const tbody = document.getElementById('ai-exam-list-body');
@@ -73,30 +96,107 @@ function renderAiExamsTable() {
     
     if (aiExamsData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-message">Hiện chưa có đề thi nào được tạo bởi AI.</td></tr>';
+        renderPagination(0);
         return;
     }
     
-    let stt = 1;
-    aiExamsData.forEach(exam => {
+    // --- XỬ LÝ LOGIC PHÂN TRANG ---
+    const totalItems = aiExamsData.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pagedData = aiExamsData.slice(startIndex, endIndex);
+    
+    let stt = startIndex + 1;
+
+    // --- VẼ DỮ LIỆU CỦA TRANG HIỆN TẠI ---
+    pagedData.forEach(exam => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="text-center">${stt++}</td>
             <td><strong>${exam.id}</strong></td>
-            <td><div style="font-size: 13px; color: #475569; font-weight: 500;">${exam.creator}</div></td>
+            <td><div style="font-size: 13.5px; color: #0f172a; font-weight: 600;">${exam.creator}</div></td>
             <td class="text-center"><span class="badge-count" style="background:#eff6ff; color:#3b82f6;">${exam.questionCount} câu</span></td>
             <td class="text-center" style="font-size: 13px; color: #64748b;">${exam.createdAt}</td>
             <td class="text-center">
-                <button class="btn-outline-sm btn-delete-modern btn-delete-ai" data-id="${exam.id}">
-                    🗑️ Xóa Đề Này
-                </button>
+                <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap;">
+                    <button class="btn-outline-sm btn-export-ai-single" data-id="${exam.id}" style="color: #10b981; border-color: #a7f3d0;">
+                        📥 Xuất Excel
+                    </button>
+                    <button class="btn-outline-sm btn-delete-modern btn-delete-ai" data-id="${exam.id}">
+                        🗑️ Xóa Đề
+                    </button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
     });
+
+    // Vẽ thanh điều hướng trang
+    renderPagination(totalPages);
 }
 
 // ==========================================
-// 3. XÓA ĐỀ AI
+// 3. VẼ THANH ĐIỀU HƯỚNG PHÂN TRANG
+// ==========================================
+function renderPagination(totalPages) {
+    let paginationContainer = document.getElementById('ai-pagination-container');
+    
+    // Tạo vùng chứa phân trang nếu chưa có
+    if (!paginationContainer) {
+        const tableContainer = document.querySelector('#tab-admin .table-container');
+        paginationContainer = document.createElement('div');
+        paginationContainer.id = 'ai-pagination-container';
+        paginationContainer.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding-bottom: 10px;';
+        // Chèn ngay bên dưới cái bảng
+        tableContainer.parentNode.insertBefore(paginationContainer, tableContainer.nextSibling);
+    }
+
+    paginationContainer.innerHTML = ''; // Xóa nút cũ
+
+    if (totalPages <= 1) return; // Ẩn phân trang nếu chỉ có 1 trang
+
+    // Nút "Trang Trước"
+    const prevBtn = document.createElement('button');
+    prevBtn.innerHTML = '◀ Trước';
+    prevBtn.className = 'btn-outline-sm';
+    prevBtn.disabled = currentPage === 1;
+    if (currentPage === 1) prevBtn.style.opacity = '0.5';
+    prevBtn.onclick = () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderAiExamsTable();
+        }
+    };
+    paginationContainer.appendChild(prevBtn);
+
+    // Hiển thị Số Trang
+    const pageInfo = document.createElement('span');
+    pageInfo.innerText = `Trang ${currentPage} / ${totalPages}`;
+    pageInfo.style.cssText = 'font-size: 14px; font-weight: 600; color: #475569; margin: 0 10px;';
+    paginationContainer.appendChild(pageInfo);
+
+    // Nút "Trang Tiếp"
+    const nextBtn = document.createElement('button');
+    nextBtn.innerHTML = 'Tiếp ▶';
+    nextBtn.className = 'btn-outline-sm';
+    nextBtn.disabled = currentPage === totalPages;
+    if (currentPage === totalPages) nextBtn.style.opacity = '0.5';
+    nextBtn.onclick = () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderAiExamsTable();
+        }
+    };
+    paginationContainer.appendChild(nextBtn);
+}
+
+// ==========================================
+// 4. XÓA ĐỀ AI
 // ==========================================
 async function deleteAiExam(examId, btnElement) {
     if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn đề AI "${examId}" và toàn bộ câu hỏi bên trong không?`)) return;
@@ -106,13 +206,10 @@ async function deleteAiExam(examId, btnElement) {
     btnElement.disabled = true;
 
     try {
-        // Tìm và xóa các câu hỏi thuộc mã đề này
         const q = query(collection(db, "questions"), where("examId", "==", examId));
         const querySnapshot = await getDocs(q);
         
         const deletePromises = querySnapshot.docs.map(docSnap => deleteDoc(doc(db, "questions", docSnap.id)));
-        
-        // Xóa document cấu hình trong collection exams
         deletePromises.push(deleteDoc(doc(db, "exams", examId)));
         
         await Promise.all(deletePromises);
@@ -128,23 +225,39 @@ async function deleteAiExam(examId, btnElement) {
 }
 
 // ==========================================
-// 4. XUẤT EXCEL (SỬ DỤNG SHEETJS)
+// 5. XUẤT EXCEL 1 ĐỀ CỤ THỂ
 // ==========================================
-function exportAiExamsToExcel() {
+function exportSingleAiExam(examId) {
+    const exam = aiExamsData.find(e => e.id === examId);
+    if (!exam || !exam.questions || exam.questions.length === 0) {
+        showToast("Đề này hiện không có câu hỏi nào để xuất!", "error");
+        return;
+    }
+
+    showToast(`Đang chuẩn bị file Excel cho đề ${examId}...`, "success");
+    processAndDownloadExcel([exam], `De_AI_${examId}`);
+}
+
+// ==========================================
+// 6. XUẤT EXCEL TẤT CẢ CÁC ĐỀ AI
+// ==========================================
+function exportAllAiExamsToExcel() {
     if (aiExamsData.length === 0) {
         showToast("Chưa có dữ liệu đề AI để xuất ra Excel!", "error");
         return;
     }
+    showToast("Đang gom toàn bộ đề và chuẩn bị file Excel...", "success");
+    processAndDownloadExcel(aiExamsData, "Ngan_Hang_Tong_Hop_De_AI");
+}
 
-    showToast("Đang chuẩn bị file Excel, vui lòng đợi...", "success");
-    
+// Hàm hỗ trợ format và tạo file Excel dùng chung cho Cả 2 nút Xuất
+function processAndDownloadExcel(examsArray, fileName) {
     const exportData = [];
     const mapCorrectText = ['A', 'B', 'C', 'D']; // Map Index (0,1,2,3) về định dạng Text
 
-    aiExamsData.forEach(exam => {
+    examsArray.forEach(exam => {
         if (exam.questions && exam.questions.length > 0) {
             exam.questions.forEach(q => {
-                // Format lại object dữ liệu xuất ra Excel sao cho khớp với template nhập liệu chuẩn
                 exportData.push({
                     "Mã đề": q.examId || exam.id,
                     "Câu hỏi": q.text || "",
@@ -154,38 +267,26 @@ function exportAiExamsToExcel() {
                     "Đáp án D": q.options ? (q.options[3] || "") : "",
                     "Đáp án đúng": mapCorrectText[q.correctAnswer] || "",
                     "Giải thích đáp án": q.explanation || "",
-                    "Người tạo (Hệ thống AI)": exam.creator || ""
+                    "Tài khoản tạo đề": exam.creator || ""
                 });
             });
         }
     });
 
     if (exportData.length === 0) {
-        showToast("Các đề AI hiện đang rỗng (không chứa câu hỏi nào).", "error");
+        showToast("Không tìm thấy dữ liệu câu hỏi hợp lệ.", "error");
         return;
     }
 
     try {
-        // Tạo Sheet từ mảng JSON
         const ws = XLSX.utils.json_to_sheet(exportData);
-        
-        // Tùy chỉnh độ rộng các cột (Tính bằng ký tự) cho file Excel đẹp hơn
         ws['!cols'] = [
-            {wch: 15}, // Mã đề
-            {wch: 50}, // Câu hỏi
-            {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20}, // Đáp án A B C D
-            {wch: 15}, // Đáp án đúng
-            {wch: 40}, // Giải thích
-            {wch: 30}  // Người tạo
+            {wch: 15}, {wch: 50}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 20},
+            {wch: 15}, {wch: 40}, {wch: 30}
         ];
-
-        // Tạo Workbook và gắn Sheet vào
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "NganHangDeAI");
-
-        // Kích hoạt tải file xuống trình duyệt
-        XLSX.writeFile(wb, "Ngan_Hang_De_AI.xlsx");
-        
+        XLSX.utils.book_append_sheet(wb, ws, "DanhSachDeAI");
+        XLSX.writeFile(wb, `${fileName}.xlsx`);
         showToast("Tải file Excel thành công!", "success");
     } catch (error) {
         console.error("Lỗi xuất Excel:", error);
@@ -194,12 +295,11 @@ function exportAiExamsToExcel() {
 }
 
 // ==========================================
-// 5. KHỞI TẠO VÀ LẮNG NGHE SỰ KIỆN
+// 7. KHỞI TẠO VÀ LẮNG NGHE SỰ KIỆN
 // ==========================================
 document.addEventListener('componentsLoaded', () => {
     
-    // Lắng nghe sự kiện click mở tab "Quản lý Đề AI" từ Sidebar
-    // (Load lười - Lazy Load: Chỉ tải khi Admin click vào tab này để tiết kiệm chi phí đọc Database)
+    // Load lười: Chỉ truy vấn Firestore khi Admin bấm vào Tab
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', () => {
@@ -210,20 +310,28 @@ document.addEventListener('componentsLoaded', () => {
         });
     });
 
-    // Lắng nghe nút Xuất Excel
+    // Lắng nghe nút "Xuất Toàn Bộ Ra Excel"
     const btnExport = document.getElementById('btnExportAiExams');
     if (btnExport) {
-        btnExport.addEventListener('click', exportAiExamsToExcel);
+        btnExport.addEventListener('click', exportAllAiExamsToExcel);
     }
 
-    // Sử dụng kỹ thuật Event Delegation (Ủy quyền sự kiện) cho các nút Xóa nằm bên trong bảng sinh động
+    // Kỹ thuật Event Delegation cho các nút "Xuất Excel Riêng Lẻ" và "Xóa" bên trong bảng
     const tbody = document.getElementById('ai-exam-list-body');
     if (tbody) {
         tbody.addEventListener('click', (e) => {
+            // Nút xóa đề
             const deleteBtn = e.target.closest('.btn-delete-ai');
             if (deleteBtn) {
                 const examId = deleteBtn.getAttribute('data-id');
                 deleteAiExam(examId, deleteBtn);
+            }
+            
+            // Nút xuất Excel từng đề riêng lẻ
+            const exportBtn = e.target.closest('.btn-export-ai-single');
+            if (exportBtn) {
+                const examId = exportBtn.getAttribute('data-id');
+                exportSingleAiExam(examId);
             }
         });
     }
