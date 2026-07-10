@@ -1,7 +1,7 @@
 import { db, auth } from './firebase-config.js'; 
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// IMPORT THÊM CÁC HÀM XỬ LÝ FIRESTORE CHO BÁO CÁO LỖI
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// --- THÊM MỚI 1: Import thêm getDoc để truy vấn 1 document cụ thể
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export { db };
 
@@ -27,7 +27,7 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// HÀM TẢI COMPONENT HTML ĐỘNG (ĐÃ FIX ĐƯỜNG DẪN)
+// HÀM TẢI COMPONENT HTML ĐỘNG
 async function loadComponent(elementId, filePath) {
     try {
         const response = await fetch(filePath);
@@ -39,28 +39,19 @@ async function loadComponent(elementId, filePath) {
     }
 }
 
-// KHỞI TẠO HỆ THỐNG GIAO DIỆN (CHẠY ASYNC)
+// KHỞI TẠO HỆ THỐNG GIAO DIỆN
 document.addEventListener('DOMContentLoaded', async () => {
-    
-    // Tải giao diện phụ từ thư mục components con bên trong thư mục admin (Đã sửa theo tên file của bạn)
     await loadComponent('sidebar-container', './components/sidebar.html');
     await loadComponent('modals-container', './components/modal.html');
 
-    // Kích hoạt logic điều hướng Sidebar sau khi HTML đã nạp
     initSidebarEvents();
-
-    // Kích hoạt logic đóng Modals và Đăng xuất
     initModalEvents();
     initAuthEvents();
-
-    // THÊM MỚI: KÍCH HOẠT LẮNG NGHE BÁO CÁO LỖI
     initAdminReportListener();
 
-    // PHÁT SỰ KIỆN TÙY CHỈNH THÔNG BÁO "GIAO DIỆN ĐÃ SẴN SÀNG"
     document.dispatchEvent(new Event('componentsLoaded'));
 });
 
-// ---------------- CÁC HÀM XỬ LÝ SỰ KIỆN TRONG CORE ----------------
 function initSidebarEvents() {
     const parentMenus = document.querySelectorAll('.menu-parent');
     parentMenus.forEach(parent => {
@@ -102,10 +93,22 @@ function initModalEvents() {
         const editPropsModal = document.getElementById("edit-properties-modal");
         const feedbackModal = document.getElementById("feedback-modal");
         const historyModal = document.getElementById("historyModal");
+        
+        // --- THÊM MỚI: Xử lý click ra ngoài để đóng modal chi tiết câu hỏi
+        const questionDetailModal = document.getElementById("question-detail-modal");
+
         if (event.target === editPropsModal) editPropsModal.style.display = "none";
         if (event.target === feedbackModal) feedbackModal.style.display = "none";
         if (event.target === historyModal) historyModal.style.display = "none";
+        if (event.target === questionDetailModal) questionDetailModal.style.display = "none";
     };
+
+    // --- THÊM MỚI: Xử lý nút X để đóng modal chi tiết câu hỏi
+    document.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'close-qd-modal') {
+            document.getElementById("question-detail-modal").style.display = "none";
+        }
+    });
 }
 
 function initAuthEvents() {
@@ -173,12 +176,19 @@ function initAdminReportListener() {
 
             const tr = document.createElement('tr');
             tr.style.opacity = rowOpacity;
+            
+            // --- THÊM MỚI 2: Thêm nút "Xem gốc" ngay dưới QuestionID
             tr.innerHTML = `
                 <td style="padding: 15px; border-bottom: 1px solid #f3f4f6;">${timeStr}</td>
                 <td style="padding: 15px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">${data.reportedBy}</td>
                 <td style="padding: 15px; border-bottom: 1px solid #f3f4f6;">
                     <span style="background: #e5e7eb; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">${data.examId}</span><br>
-                    <small style="color: #6b7280; font-family: monospace;">${data.questionId}</small>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
+                        <small style="color: #6b7280; font-family: monospace;">${data.questionId}</small>
+                        <button class="btn-view-question" data-qid="${data.questionId}" style="background: #3b82f6; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 0.7rem;" title="Xem chi tiết câu hỏi">
+                            <i class="fa-solid fa-eye"></i> Xem
+                        </button>
+                    </div>
                 </td>
                 <td style="padding: 15px; border-bottom: 1px solid #f3f4f6;">
                     <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 4px;"><i>"${shortQuestionText}"</i></div>
@@ -198,6 +208,14 @@ function initAdminReportListener() {
         } else {
             pendingCountBadge.style.background = '#d1fae5'; pendingCountBadge.style.color = '#059669';
         }
+
+        // --- THÊM MỚI 3: Gắn sự kiện cho nút Xem câu hỏi
+        document.querySelectorAll('.btn-view-question').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const qId = this.getAttribute('data-qid');
+                fetchAndShowQuestionDetail(qId);
+            });
+        });
 
         // Gắn sự kiện đánh dấu đã xử lý
         document.querySelectorAll('.btn-resolve-report').forEach(btn => {
@@ -229,4 +247,52 @@ function initAdminReportListener() {
             });
         });
     });
+}
+
+// --- THÊM MỚI 4: Hàm truy vấn Firestore và hiển thị Modal
+async function fetchAndShowQuestionDetail(questionId) {
+    const modal = document.getElementById('question-detail-modal');
+    const loadingDiv = document.getElementById('qd-loading');
+    const contentDiv = document.getElementById('qd-content');
+    
+    if (!modal) {
+        showToast("Lỗi: Không tìm thấy HTML của Modal.", "error");
+        return;
+    }
+
+    // Hiển thị modal ở trạng thái loading
+    modal.style.display = 'block';
+    loadingDiv.style.display = 'block';
+    contentDiv.style.display = 'none';
+
+    try {
+        // Truy vấn vào collection 'questions' (Hãy đổi tên collection nếu DB của bạn khác)
+        const docRef = doc(db, "questions", questionId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Đổ dữ liệu vào HTML (Lưu ý: Bạn có thể cần đổi tên biến (ví dụ: data.A) cho khớp với field trong DB của bạn)
+            document.getElementById('qd-text').innerText = data.questionText || data.question || "Không có nội dung";
+            document.getElementById('qd-optA').innerText = data.A || data.optionA || "";
+            document.getElementById('qd-optB').innerText = data.B || data.optionB || "";
+            document.getElementById('qd-optC').innerText = data.C || data.optionC || "";
+            document.getElementById('qd-optD').innerText = data.D || data.optionD || "";
+            document.getElementById('qd-correct').innerText = data.correctAnswer || data.correct || "Chưa thiết lập";
+            document.getElementById('qd-explanation').innerText = data.explanation || data.explain || "Không có giải thích cho câu hỏi này.";
+
+            // Ẩn loading, hiện nội dung
+            loadingDiv.style.display = 'none';
+            contentDiv.style.display = 'block';
+        } else {
+            // Trường hợp câu hỏi đã bị admin xóa trước đó
+            modal.style.display = 'none'; // Tạm ẩn modal
+            alert("⚠️ Câu hỏi này không còn tồn tại trên hệ thống (Có thể đã bị xóa).");
+        }
+    } catch (error) {
+        console.error("Lỗi khi tải chi tiết câu hỏi:", error);
+        modal.style.display = 'none';
+        showToast("Lỗi khi kết nối đến cơ sở dữ liệu.", "error");
+    }
 }
