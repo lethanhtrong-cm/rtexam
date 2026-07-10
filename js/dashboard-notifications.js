@@ -41,7 +41,7 @@ function initNotifications(userEmail) {
 
     const notiRef = collection(db, "notifications");
     
-    // Lấy thông báo theo email người nhận, sắp xếp theo thời gian gửi (timestamp)
+    // Lấy thông báo theo email người nhận, sắp xếp theo thời gian
     const q = query(
         notiRef, 
         where("toEmail", "==", userEmail),
@@ -62,10 +62,7 @@ function initNotifications(userEmail) {
             const data = docSnapshot.data();
             const id = docSnapshot.id;
             
-            // Kiểm tra trường status là 'unread'
-            if (data.status === 'unread') {
-                unreadCount++;
-            }
+            if (data.status === 'unread') unreadCount++;
 
             let timeString = 'Vừa xong';
             if (data.timestamp) {
@@ -74,14 +71,30 @@ function initNotifications(userEmail) {
             }
 
             const itemClass = data.status === 'unread' ? 'noti-item unread' : 'noti-item';
+            
+            // XỬ LÝ NỘI DUNG VÀ ICON TÙY THEO LOẠI THÔNG BÁO
+            let iconHtml = '';
+            let textHtml = '';
+
+            if (data.type === 'admin_reply') {
+                iconHtml = '<i class="fa-solid fa-comment-dots" style="color: #3b82f6;"></i>';
+                textHtml = `<b>Admin</b> đã phản hồi báo cáo lỗi câu hỏi của bạn.`;
+            } else if (data.type === 'room_invite') {
+                iconHtml = '<i class="fa-solid fa-envelope-open-text" style="color: #10b981;"></i>';
+                textHtml = data.message || `<b>${data.fromEmail}</b> đã mời bạn vào phòng.`;
+            } else {
+                iconHtml = '<i class="fa-solid fa-share-nodes"></i>';
+                textHtml = data.message || `<b>${data.fromEmail}</b> đã chia sẻ đề thi <b>${data.examId}</b> với bạn.`;
+            }
+
             const html = `
                 <div class="${itemClass}" data-id="${id}" style="cursor: pointer; transition: background 0.2s;">
                     <div class="noti-icon">
-                        <i class="fa-solid ${data.type === 'room_invite' ? 'fa-envelope-open-text' : 'fa-share-nodes'}"></i>
+                        ${iconHtml}
                     </div>
                     <div class="noti-content">
                         <div class="noti-text">
-                            ${data.message || `<b>${data.fromEmail}</b> đã chia sẻ đề thi <b>${data.examId}</b> với bạn.`}
+                            ${textHtml}
                         </div>
                         <div class="noti-time">${timeString}</div>
                     </div>
@@ -98,14 +111,17 @@ function initNotifications(userEmail) {
             notiBadgeCount.style.display = 'none';
         }
 
-        // Xử lý sự kiện khi bấm vào thông báo
+        // ===================================================================
+        // XỬ LÝ SỰ KIỆN CLICK THÔNG BÁO (Tích hợp logic Admin Reply)
+        // ===================================================================
         document.querySelectorAll('.noti-item').forEach(item => {
             item.addEventListener('click', async () => {
                 const notiId = item.getAttribute('data-id');
+                // Lấy toàn bộ data gốc từ snapshot (Tuyệt đối an toàn không lo escape HTML)
                 const notiDataDoc = snapshot.docs.find(d => d.id === notiId);
                 const notiData = notiDataDoc ? notiDataDoc.data() : null;
 
-                // Cập nhật trạng thái thành đã đọc
+                // 1. Cập nhật trạng thái thành đã đọc (chung cho mọi loại thông báo)
                 if (item.classList.contains('unread')) {
                     try {
                         const docRef = doc(db, 'notifications', notiId);
@@ -115,15 +131,16 @@ function initNotifications(userEmail) {
                     }
                 }
 
-                // ======================================================
-                // CHỈNH SỬA Ở ĐÂY: Phân loại chuyển hướng dựa trên loại thông báo
-                // ======================================================
+                // 2. Phân loại chuyển hướng hoặc hiển thị Popup
                 if (notiData) {
-                    if (notiData.type === 'room_invite' || notiData.roomId) {
-                        // Nhảy sang Phòng chờ (Lobby)
+                    if (notiData.type === 'admin_reply') {
+                        // Gọi hàm hiển thị Modal phản hồi từ Admin
+                        window.openAdminReplyModal(notiData.adminMessage);
+                    } 
+                    else if (notiData.type === 'room_invite' || notiData.roomId) {
                         window.location.href = `lobby.html?roomId=${notiData.roomId}`;
-                    } else if (notiData.examId) {
-                        // Nhảy sang màn hình thi cá nhân
+                    } 
+                    else if (notiData.examId) {
                         window.location.href = `quiz.html?examId=${notiData.examId}`;
                     }
                 }
@@ -132,4 +149,22 @@ function initNotifications(userEmail) {
     }, (error) => {
         console.error("Lỗi khi lắng nghe thông báo Realtime:", error);
     });
+}
+
+// =========================================================================
+// 3. HÀM TOÀN CỤC: MỞ MODAL ĐỌC PHẢN HỒI CỦA ADMIN
+// =========================================================================
+window.openAdminReplyModal = function(message) {
+    const modal = document.getElementById('user-admin-reply-modal');
+    const msgContainer = document.getElementById('user-admin-message');
+    
+    if (modal && msgContainer) {
+        // Gán message an toàn (innerText chống XSS và giữ nguyên form, xuống dòng)
+        msgContainer.innerText = message || "Không có nội dung phản hồi.";
+        modal.style.display = 'block';
+    } else {
+        console.error("Không tìm thấy HTML của Modal hiển thị phản hồi.");
+        // Fallback dùng Alert nếu dev quên chèn HTML Modal
+        alert("Phản hồi từ Admin:\n\n" + message);
+    }
 }
