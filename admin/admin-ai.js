@@ -19,11 +19,11 @@ async function loadAiExams() {
     const tbody = document.getElementById('ai-exam-list-body');
     if (!tbody) return;
 
-    // FIX UI: Tự động gỡ bỏ thanh cuộn (scrollbar) bị dính từ HTML cũ (max-height: 500px)
+    // FIX UI: Triệt tiêu hoàn toàn thanh cuộn (scrollbar) từ thẻ HTML
     const tableContainer = document.querySelector('#tab-admin .table-container');
     if (tableContainer) {
-        // Ép buộc xóa giới hạn chiều cao để bung toàn bộ 10 phần tử ra trang
-        tableContainer.style.cssText = 'max-height: none !important; overflow: visible !important;';
+        tableContainer.style.maxHeight = 'none';
+        tableContainer.style.overflowY = 'visible';
     }
 
     // Đổi tên Header của bảng thành "Tài khoản tạo đề"
@@ -54,7 +54,7 @@ async function loadAiExams() {
             const examData = docSnap.data();
             const examQuestions = allQuestions.filter(q => q.examId === docSnap.id);
             
-            // 1. FIX LỖI NGÀY THÁNG (Ép kiểu chuỗi số mili-giây sang Date chuẩn)
+            // 1. FIX LỖI NGÀY THÁNG (Nhận diện chuỗi số mili-giây)
             let formattedDate = 'Không rõ';
             let rawTimeSort = 0;
             const rawDate = examData.createdAt || examData.timestamp; 
@@ -65,11 +65,12 @@ async function loadAiExams() {
                     formattedDate = rawDate.toDate().toLocaleString('vi-VN');
                     rawTimeSort = rawDate.toDate().getTime();
                 } else {
-                    // Nếu là chuỗi dãy số (VD: "1783618433169")
                     const numDate = Number(rawDate);
-                    if (!isNaN(numDate) && numDate > 1000000000) { 
-                        formattedDate = new Date(numDate).toLocaleString('vi-VN');
-                        rawTimeSort = numDate;
+                    // Nếu là chuỗi dãy số Timestamp (như trong ảnh của bạn: 1783618433169)
+                    if (!isNaN(numDate) && numDate > 100000000) { 
+                        let finalMs = numDate > 1000000000000 ? numDate : numDate * 1000;
+                        formattedDate = new Date(finalMs).toLocaleString('vi-VN');
+                        rawTimeSort = finalMs;
                     } else {
                         // Chuỗi String thông thường
                         formattedDate = new Date(rawDate).toLocaleString('vi-VN');
@@ -78,17 +79,17 @@ async function loadAiExams() {
                 }
             }
 
-            // 2. Lấy TÀI KHOẢN người tạo
-            const creatorAccount = examData.creatorEmail || examData.email || examData.creator || 'Hệ thống AI';
+            // 2. Lấy TÀI KHOẢN người tạo (Quét nhiều trường để tránh rỗng)
+            const creatorAccount = examData.creatorEmail || examData.userEmail || examData.email || examData.userId || examData.creator || 'Hệ thống AI';
 
             aiExamsData.push({
+                ...examData, // Đưa dữ liệu gốc lên trước để không bị ghi đè các trường bên dưới
                 id: docSnap.id,
-                creator: creatorAccount, 
-                createdAt: formattedDate,
+                displayCreator: creatorAccount, 
+                displayDate: formattedDate,
                 rawTime: rawTimeSort, 
                 questionCount: examQuestions.length,
-                questions: examQuestions, 
-                ...examData
+                questions: examQuestions 
             });
         });
         
@@ -112,9 +113,12 @@ function renderAiExamsTable() {
     const tbody = document.getElementById('ai-exam-list-body');
     if (!tbody) return;
 
-    // Đảm bảo không có thanh cuộn mỗi khi render lại bảng
+    // Đảm bảo triệt tiêu thanh cuộn một lần nữa
     const tableContainer = document.querySelector('#tab-admin .table-container');
-    if (tableContainer) tableContainer.style.cssText = 'max-height: none !important; overflow: visible !important;';
+    if (tableContainer) {
+        tableContainer.style.maxHeight = 'none';
+        tableContainer.style.overflowY = 'visible';
+    }
     
     tbody.innerHTML = '';
     
@@ -143,11 +147,10 @@ function renderAiExamsTable() {
         tr.innerHTML = `
             <td class="text-center">${stt++}</td>
             <td><strong>${exam.id}</strong></td>
-            <td><div style="font-size: 13.5px; color: #0f172a; font-weight: 600;">${exam.creator}</div></td>
+            <td><div style="font-size: 13.5px; color: #0f172a; font-weight: 600;">${exam.displayCreator}</div></td>
             <td class="text-center"><span class="badge-count" style="background:#eff6ff; color:#3b82f6;">${exam.questionCount} câu</span></td>
-            <td class="text-center" style="font-size: 13px; color: #64748b;">${exam.createdAt}</td>
+            <td class="text-center" style="font-size: 13px; color: #64748b;">${exam.displayDate}</td>
             <td class="text-center">
-                <!-- 3. NÚT XUẤT EXCEL & NÚT XÓA RIÊNG BIỆT -->
                 <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap;">
                     <button class="btn-outline-sm btn-export-ai-single" data-id="${exam.id}" style="color: #10b981; border-color: #a7f3d0;">
                         📥 Xuất Excel
@@ -291,7 +294,7 @@ function processAndDownloadExcel(examsArray, fileName) {
                     "Đáp án D": q.options ? (q.options[3] || "") : "",
                     "Đáp án đúng": mapCorrectText[q.correctAnswer] || "",
                     "Giải thích đáp án": q.explanation || "",
-                    "Tài khoản tạo đề": exam.creator || ""
+                    "Tài khoản tạo đề": exam.displayCreator || ""
                 });
             });
         }
