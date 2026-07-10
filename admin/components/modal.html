@@ -87,3 +87,39 @@
 
 <!-- VÙNG HIỂN THỊ THÔNG BÁO -->
 <div class="toast-container" id="toastContainer"></div>
+<div id="question-detail-modal" class="modal" style="display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content" style="background-color: #fff; margin: 5% auto; padding: 25px; border-radius: 12px; width: 50%; max-width: 600px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #111827; font-size: 1.25rem;">🔍 Chi tiết câu hỏi gốc</h3>
+            <span id="close-qd-modal" style="color: #9ca3af; font-size: 24px; font-weight: bold; cursor: pointer; line-height: 1;">&times;</span>
+        </div>
+
+        <div id="qd-loading" style="text-align: center; padding: 20px; color: #6b7280; font-style: italic;">
+            ⏳ Đang truy xuất dữ liệu từ Firebase...
+        </div>
+
+        <div id="qd-content" style="display: none;">
+            <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <strong style="color: #374151;">Câu hỏi:</strong>
+                <p id="qd-text" style="margin: 8px 0 0 0; color: #1f2937;"></p>
+            </div>
+            
+            <div style="margin-bottom: 15px; padding-left: 10px;">
+                <div style="margin-bottom: 8px;"><strong>A.</strong> <span id="qd-optA"></span></div>
+                <div style="margin-bottom: 8px;"><strong>B.</strong> <span id="qd-optB"></span></div>
+                <div style="margin-bottom: 8px;"><strong>C.</strong> <span id="qd-optC"></span></div>
+                <div style="margin-bottom: 8px;"><strong>D.</strong> <span id="qd-optD"></span></div>
+            </div>
+
+            <div style="background: #d1fae5; color: #065f46; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px;">
+                <strong>✅ Đáp án đúng:</strong> <span id="qd-correct" style="font-weight: bold;"></span>
+            </div>
+
+            <div style="background: #f3f4f6; color: #4b5563; padding: 10px 15px; border-radius: 8px;">
+                <strong>💡 Giải thích:</strong> <span id="qd-explanation"></span>
+            </div>
+        </div>
+
+    </div>
+</div>
