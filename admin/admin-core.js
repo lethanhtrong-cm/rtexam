@@ -163,49 +163,80 @@ function initAdminReportListener() {
             
             if (data.status === 'pending') pendingCount++;
 
+            // 1. Tách chuỗi thời gian và ngày tháng
             let timeStr = 'N/A';
+            let dateStr = '';
             if (data.timestamp) {
                 const d = data.timestamp.toDate();
-                timeStr = d.toLocaleTimeString('vi-VN') + '<br><small style="color:#9ca3af">' + d.toLocaleDateString('vi-VN') + '</small>';
+                timeStr = d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                dateStr = d.toLocaleDateString('vi-VN');
             }
 
-            let shortQuestionText = data.questionText && data.questionText.length > 50 ? data.questionText.substring(0, 50) + '...' : (data.questionText || "N/A");
+            // 2. Rút gọn text câu hỏi gốc
+            let shortQuestionText = data.questionText && data.questionText.length > 55 ? data.questionText.substring(0, 55) + '...' : (data.questionText || "N/A");
             
-            let errorBadgeColor = data.errorType === 'Sai đáp án' ? 'background: #fee2e2; color: #dc2626;' : 
-                                  data.errorType === 'Lỗi chuyên môn' ? 'background: #fef3c7; color: #d97706;' : 
-                                  'background: #e0e7ff; color: #4f46e5;';
+            // 3. Thiết kế lại Badge Lỗi: Bo góc tròn, nền pastel
+            let errorBadgeColor = data.errorType === 'Sai đáp án' ? 'background: #fef2f2; color: #ef4444; border: 1px solid #fca5a5;' : 
+                                  data.errorType === 'Lỗi chuyên môn' ? 'background: #fffbeb; color: #f59e0b; border: 1px solid #fcd34d;' : 
+                                  'background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe;';
 
             const isResolved = data.status === 'resolved';
-            const rowOpacity = isResolved ? '0.6' : '1';
+            const rowOpacity = isResolved ? '0.65' : '1';
             
-            // Render Nút Hành Động (Đã tích hợp nút Phản hồi)
-            const actionButtons = isResolved 
-                ? `<span style="color: #10b981; font-weight: bold;"><i class="fa-solid fa-check"></i> Đã xử lý</span>`
-                : `
-                    <button class="btn-reply-report" data-id="${reportId}" data-email="${data.reportedBy}" data-qid="${data.questionId}" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; margin-right: 5px; transition: 0.2s;"><i class="fa-solid fa-reply"></i> Phản hồi</button>
-                    <button class="btn-delete-report" data-id="${reportId}" style="background: #f3f4f6; color: #dc2626; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: 0.2s;"><i class="fa-solid fa-trash"></i></button>
-                  `;
+            // 4. Nút Hành động (Nút Xóa luôn hiện)
+            const deleteBtnHtml = `
+                <button class="btn-delete-report" data-id="${reportId}" style="background: #fff; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" title="Xóa báo cáo này">
+                    <i class="fa-regular fa-trash-can"></i>
+                </button>
+            `;
 
+            const actionButtons = isResolved 
+                ? `<div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                     <span style="color: #059669; font-weight: 600; font-size: 0.85rem; background: #d1fae5; padding: 5px 12px; border-radius: 20px; border: 1px solid #a7f3d0;"><i class="fa-solid fa-check"></i> Đã xử lý</span>
+                     ${deleteBtnHtml}
+                   </div>`
+                : `<div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <button class="btn-reply-report" data-id="${reportId}" data-email="${data.reportedBy}" data-qid="${data.questionId}" style="background: #3b82f6; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);">
+                        <i class="fa-solid fa-reply"></i> Phản hồi
+                    </button>
+                    ${deleteBtnHtml}
+                  </div>`;
+
+            // 5. Tạo dòng (Row) với hiệu ứng Hover màu nền
             const tr = document.createElement('tr');
             tr.style.opacity = rowOpacity;
+            tr.style.transition = "background 0.2s ease";
+            tr.onmouseover = function() { this.style.background = '#f8fafc'; }
+            tr.onmouseout = function() { this.style.background = 'transparent'; }
+
+            // 6. Cấu trúc HTML các cột
             tr.innerHTML = `
-                <td style="padding: 15px; border-bottom: 1px solid #f3f4f6;">${timeStr}</td>
-                <td style="padding: 15px; border-bottom: 1px solid #f3f4f6; font-weight: 600;">${data.reportedBy}</td>
-                <td style="padding: 15px; border-bottom: 1px solid #f3f4f6;">
-                    <span style="background: #e5e7eb; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">${data.examId}</span><br>
-                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
-                        <small style="color: #6b7280; font-family: monospace;">${data.questionId}</small>
-                        <button class="btn-view-question" data-qid="${data.questionId}" style="background: #10b981; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 0.7rem;" title="Xem chi tiết câu hỏi">
-                            <i class="fa-solid fa-eye"></i> Xem
+                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
+                    <div style="font-weight: 600; color: #475569; font-size: 0.9rem;">${timeStr}</div>
+                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">${dateStr}</div>
+                </td>
+                
+                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
+                    <div style="color: #3b82f6; font-weight: 500; font-size: 0.9rem;">${data.reportedBy}</div>
+                </td>
+                
+                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
+                    <span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid #e2e8f0;">${data.examId}</span>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                        <span style="color: #64748b; font-family: monospace; font-size: 0.8rem;">${data.questionId}</span>
+                        <button class="btn-view-question" data-qid="${data.questionId}" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.2s;" title="Xem chi tiết câu hỏi">
+                            Xem
                         </button>
                     </div>
                 </td>
-                <td style="padding: 15px; border-bottom: 1px solid #f3f4f6;">
-                    <div style="font-size: 0.85rem; color: #6b7280; margin-bottom: 4px;"><i>"${shortQuestionText}"</i></div>
-                    <span style="${errorBadgeColor} padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; display: inline-block; margin-bottom: 5px;">${data.errorType}</span><br>
-                    <b style="color: #1f2937; font-size: 0.95rem;">${data.description}</b>
+                
+                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
+                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px; font-style: italic; border-left: 2px solid #cbd5e1; padding-left: 10px;">"${shortQuestionText}"</div>
+                    <span style="${errorBadgeColor} padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; margin-bottom: 6px;">${data.errorType}</span>
+                    <div style="color: #1e293b; font-size: 0.95rem; font-weight: 500; margin-top: 4px;">${data.description}</div>
                 </td>
-                <td style="padding: 15px; border-bottom: 1px solid #f3f4f6; text-align: center;">
+                
+                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; text-align: center; vertical-align: top;">
                     ${actionButtons}
                 </td>
             `;
