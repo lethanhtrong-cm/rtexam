@@ -19,6 +19,7 @@ let userAnswers = {};
 
 let isSubmitted = false;
 let currentUser = null; 
+let isShowExplanation = false;
 
 let timerInterval;
 let examDuration = 15 * 60; 
@@ -69,7 +70,7 @@ function returnToLobbyOrDashboard() {
 let warningCount = 0;
 
 function updateAntiCheatState() {
-    if (!isSubmitted) {
+    if (!isSubmitted && !isShowExplanation) {
         document.body.classList.add('no-select');
     } else {
         document.body.classList.remove('no-select');
@@ -78,7 +79,7 @@ function updateAntiCheatState() {
 
 ['contextmenu', 'copy', 'cut', 'paste'].forEach(evt => {
     document.addEventListener(evt, (e) => {
-        if (!isSubmitted) {
+        if (!isSubmitted && !isShowExplanation) {
             e.preventDefault();
             showToast("⚠️ Hành động này bị vô hiệu hóa trong phòng thi!");
         }
@@ -86,7 +87,7 @@ function updateAntiCheatState() {
 });
 
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !isSubmitted && !document.getElementById('reviewExamModal').classList.contains('active')) {
+    if (document.hidden && !isSubmitted && !isShowExplanation && !document.getElementById('reviewExamModal').classList.contains('active')) {
         warningCount++;
         const warningModal = document.getElementById('cheat-warning-modal');
         const warningText = document.getElementById('cheat-warning-text');
@@ -144,6 +145,7 @@ function initExamState() {
     currentIndex = 0;
     userAnswers = {};
     isSubmitted = false;
+    isShowExplanation = false;
     warningCount = 0;
     
     updateAntiCheatState(); 
@@ -160,6 +162,32 @@ function initExamState() {
 
     renderAll();
     startTimer();
+}
+
+async function loadReviewMode(resultId) {
+    document.getElementById('question-text').innerText = "Đang tải dữ liệu bài làm...";
+    try {
+        const resultDocRef = doc(db, "results", resultId);
+        const resultDoc = await getDoc(resultDocRef);
+
+        if (!resultDoc.exists()) throw new Error("Không tìm thấy kết quả bài làm trên hệ thống.");
+
+        const resultData = resultDoc.data();
+        currentExamId = resultData.examId;
+        userAnswers = resultData.savedAnswers || {}; 
+        isSubmitted = true;
+        isShowExplanation = true;
+        updateAntiCheatState(); 
+
+        document.getElementById('quiz-title-display').innerText = `Xem lại bài thi: ${currentExamId}`;
+        document.getElementById('timer-container-box').style.display = 'none'; 
+        
+        await fetchQuestionsFromFirestore();
+        openReviewModal(resultData.score, resultData.correctCount, resultData.totalQuestions);
+    } catch (error) {
+        console.error("Lỗi tải Review Mode:", error);
+        document.getElementById('question-text').innerText = `Lỗi hệ thống: ${error.message}`;
+    }
 }
 
 async function fetchQuestionsFromFirestore() {
@@ -290,7 +318,7 @@ function submitExam(isAutoSubmit = false) {
     }
 }
 
-// ================= LOGIC XEM LẠI BÀI LÀM (POPUP) =================
+// ================= LOGIC XEM LẠI BÀI LÀM (POPUP ĐÃ TINH CHỈNH GIAO DIỆN) =================
 function openReviewModal(score, correctCount, total) {
     const modal = document.getElementById('reviewExamModal');
     const contentArea = document.getElementById('reviewContentArea');
@@ -340,31 +368,30 @@ function openReviewModal(score, correctCount, total) {
             `;
         }
 
-        let statusBadge = isUnanswered ? '<span style="background: #f3f4f6; color: #4b5563; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">Chưa chọn</span>' : 
-                          (userAns === correctAns) ? '<span style="background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">Đúng</span>' : 
-                          '<span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">Sai</span>';
+        let statusBadge = isUnanswered ? '<span style="background: #f3f4f6; color: #4b5563; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Chưa chọn</span>' : 
+                          (userAns === correctAns) ? '<span style="background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Đúng</span>' : 
+                          '<span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Sai</span>';
 
         html += `
-                <div style="background: #fff; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f3f4f6;">
-                    <div style="margin: 0 0 15px 0; color: #2d3748; font-weight: 600; font-size: 1.05rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 12px;">
-                        <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; margin-top: 2px;">Câu ${idx+1}</span>
-                        <div style="flex: 1;">${q.text} ${statusBadge}</div>
-                    </div>
-                    <div>${optionsHtml}</div>
-                    ${explanationHtml}
+            <div style="background: #fff; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f3f4f6;">
+                <div style="margin: 0 0 15px 0; color: #2d3748; font-weight: 600; font-size: 1.05rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 12px;">
+                    <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; margin-top: 2px;">Câu ${idx+1}</span>
+                    <div style="flex: 1;">${q.text} ${statusBadge}</div>
                 </div>
-            `;
+                <div>${optionsHtml}</div>
+                ${explanationHtml}
+            </div>
+        `;
+    });
 
     contentArea.innerHTML = html;
 }
 
 document.getElementById('closeReviewModalBtn').addEventListener('click', () => {
     document.getElementById('reviewExamModal').classList.remove('active');
-    // Nếu truy cập từ Deep Link Lịch Sử -> Về Dashboard/Lobby
     if (currentResultId) {
         returnToLobbyOrDashboard();
     } else {
-        // Nếu vừa thi xong, mở lại bảng Điểm
         document.getElementById('result-modal').classList.add('active');
     }
 });
@@ -376,34 +403,6 @@ document.getElementById('reviewExamModal').addEventListener('click', (e) => {
         else document.getElementById('result-modal').classList.add('active');
     }
 });
-
-// Xử lý truy cập Deep Link từ Lịch Sử (Lobby/Dashboard chuyển sang)
-async function loadReviewMode(resultId) {
-    document.getElementById('question-text').innerText = "Đang tải dữ liệu bài làm...";
-    try {
-        const resultDocRef = doc(db, "results", resultId);
-        const resultDoc = await getDoc(resultDocRef);
-
-        if (!resultDoc.exists()) throw new Error("Không tìm thấy kết quả bài làm trên hệ thống.");
-
-        const resultData = resultDoc.data();
-        currentExamId = resultData.examId;
-        userAnswers = resultData.savedAnswers || {}; 
-        isSubmitted = true;
-        updateAntiCheatState(); 
-
-        document.getElementById('quiz-title-display').innerText = `Lịch sử thi: ${currentExamId}`;
-        document.getElementById('timer-container-box').style.display = 'none'; 
-        
-        await fetchQuestionsFromFirestore();
-        
-        // Mở thẳng Review Popup
-        openReviewModal(resultData.score, resultData.correctCount, resultData.totalQuestions);
-    } catch (error) {
-        console.error("Lỗi tải Review Mode:", error);
-        document.getElementById('question-text').innerText = `Lỗi hệ thống: ${error.message}`;
-    }
-}
 // ==============================================================
 
 // ================= LOGIC FEEDBACK RATING =================
@@ -470,7 +469,6 @@ document.getElementById('btn-modal-retry').onclick = () => {
     initExamState();
 };
 
-// ĐỔI SỰ KIỆN NÚT: Gọi thẳng Popup Review Modal
 document.getElementById('btn-modal-explain').onclick = () => {
     closeModal();
     openReviewModal(finalScore, finalCorrectCount, finalTotal);
