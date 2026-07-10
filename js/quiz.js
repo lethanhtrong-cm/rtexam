@@ -345,16 +345,15 @@ function openReviewModal(score, correctCount, total) {
                           '<span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">Sai</span>';
 
         html += `
-            <div style="background: #fff; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f3f4f6;">
-                <h4 style="margin: 0 0 15px 0; color: #1f2937; font-weight: 800; font-size: 1.1rem; line-height: 1.5;">
-                    <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem; margin-right: 8px;">Câu ${idx+1}</span>
-                    ${q.text} ${statusBadge}
-                </h4>
-                <div>${optionsHtml}</div>
-                ${explanationHtml}
-            </div>
-        `;
-    });
+                <div style="background: #fff; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f3f4f6;">
+                    <div style="margin: 0 0 15px 0; color: #2d3748; font-weight: 600; font-size: 1.05rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 12px;">
+                        <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; margin-top: 2px;">Câu ${idx+1}</span>
+                        <div style="flex: 1;">${q.text} ${statusBadge}</div>
+                    </div>
+                    <div>${optionsHtml}</div>
+                    ${explanationHtml}
+                </div>
+            `;
 
     contentArea.innerHTML = html;
 }
