@@ -33,6 +33,22 @@
 
     <div id="modals-container"></div>
 
+    <div id="user-admin-reply-modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px);">
+        <div style="background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <h3 style="margin-top: 0; color: #10b981; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-envelope-circle-check"></i> Phản hồi từ Admin
+            </h3>
+            
+            <div style="background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 20px;">
+                <p id="user-admin-message" style="margin: 0; font-size: 0.95rem; color: #374151; white-space: pre-wrap; line-height: 1.5;"></p>
+            </div>
+            
+            <div style="text-align: right;">
+                <button onclick="document.getElementById('user-admin-reply-modal').style.display='none'" style="background: #e5e7eb; color: #374151; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <script src="./js/html-loader.js"></script>
     <script type="module" src="./js/dashboard-core.js"></script>
     <script type="module" src="./js/dashboard-exams.js"></script>
