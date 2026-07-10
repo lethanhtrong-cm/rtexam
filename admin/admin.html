@@ -5,15 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard Ultra Pro - Hệ thống thi trắc nghiệm</title>
 
-    <!-- Thư viện xử lý Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     
-    <!-- Gọi file CSS từ thư mục con css/ của admin -->
     <link rel="stylesheet" href="./css/admin.css">
 </head>
 <body>
 
-    <!-- COMPONENT: SIDEBAR (Sẽ được JS render động vào đây) -->
     <aside class="sidebar" id="sidebar-container"></aside>
 
     <main class="main-wrapper">
@@ -22,7 +19,6 @@
             <div class="admin-profile">🟢 Đang hoạt động</div>
         </header>
 
-        <!-- KHOẢNG NỘI DUNG CHÍNH (Được giữ lại ở file cha vì chứa ID mapping động trực tiếp với logic JS) -->
         <div class="content-container">
             
             <section id="tab-exam-list" class="content-section active">
@@ -193,7 +189,6 @@
                 </div>
             </section>
 
-            <!-- THÊM MỚI: TAB QUẢN LÝ ĐỀ AI -->
             <section id="tab-admin" class="content-section">
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
@@ -226,18 +221,43 @@
                 </div>
             </section>
 
+            <section id="tab-reports" class="content-section">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <h2 class="card-title"><i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Yêu Cầu Xử Lý Lỗi Câu Hỏi</h2>
+                            <p class="card-description" style="margin-bottom: 0;">Danh sách các báo cáo lỗi từ người dùng cần được kiểm tra và xử lý.</p>
+                        </div>
+                        <span id="pendingReportCount" style="background: #fee2e2; color: #dc2626; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;">0 chờ xử lý</span>
+                    </div>
+
+                    <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">Thời gian</th>
+                                    <th style="width: 15%;">Người báo cáo</th>
+                                    <th style="width: 15%;">Mã Đề / Câu</th>
+                                    <th style="width: 35%;">Nội dung lỗi</th>
+                                    <th class="text-center" style="width: 20%;">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminReportList">
+                                <tr><td colspan="5" class="empty-message">Đang kết nối tải dữ liệu báo cáo...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
         </div>
     </main>
 
-    <!-- COMPONENT: MODALS CHUNG (Sẽ được JS render vào đây) -->
     <div id="modals-container"></div>
 
-    <!-- Nhúng các module Javascript -->
     <script type="module" src="./admin-core.js"></script>
     <script type="module" src="./admin-exams.js"></script>
     <script type="module" src="./admin-users.js"></script>
-    
-    <!-- NHÚNG FILE LOGIC MỚI -->
     <script type="module" src="./admin-ai.js"></script>
 </body>
 </html>
