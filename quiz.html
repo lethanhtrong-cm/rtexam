@@ -225,6 +225,33 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="reportQuestionModal" style="z-index: 10005;">
+        <div class="modal-content" style="max-width: 500px; text-align: left; padding: 30px;">
+            <h3 style="margin-bottom: 15px; color: #dc2626; font-weight: bold; font-size: 1.3rem;">
+                <i class="fa-solid fa-flag"></i> Báo cáo lỗi câu hỏi
+            </h3>
+            <p style="font-size: 0.95rem; color: #4b5563; margin-bottom: 20px; background: #f3f4f6; padding: 10px; border-radius: 6px;">
+                Đang báo cáo: <strong id="reportQuestionTextPreview" style="color: #1f2937;">...</strong>
+            </p>
+            
+            <label style="font-weight: 700; margin-bottom: 5px; display: block; color: #374151;">Loại lỗi:</label>
+            <select id="reportErrorType" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 1rem; outline: none; background: #fff;">
+                <option value="Sai đáp án">Sai đáp án</option>
+                <option value="Lỗi chính tả">Lỗi chính tả / Hiển thị</option>
+                <option value="Lỗi chuyên môn">Lỗi kiến thức chuyên môn</option>
+                <option value="Khác">Lỗi khác</option>
+            </select>
+
+            <label style="font-weight: 700; margin-bottom: 5px; display: block; color: #374151;">Mô tả chi tiết:</label>
+            <textarea id="reportDescription" placeholder="Vui lòng mô tả rõ lỗi bạn gặp phải (Ví dụ: Câu này đáp án đúng phải là C...)" style="width: 100%; height: 110px; padding: 12px; margin-bottom: 25px; border-radius: 8px; border: 1px solid #d1d5db; resize: none; font-size: 0.95rem; outline: none; font-family: inherit;"></textarea>
+
+            <div style="display: flex; gap: 15px;">
+                <button class="btn-modal outline" id="btnCancelReport" style="flex: 1;">Hủy</button>
+                <button class="btn-modal" id="btnSubmitReport" style="flex: 1; background: #dc2626; color: white; border: none;">Gửi Báo Cáo</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/quiz.js"></script>
 </body>
 </html>
