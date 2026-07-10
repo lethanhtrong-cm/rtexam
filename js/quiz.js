@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, setDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// THÊM serverTimestamp VÀO IMPORT
+import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, setDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
@@ -25,10 +26,13 @@ let timerInterval;
 let examDuration = 15 * 60; 
 let timeRemaining = examDuration;
 
-// Biến lưu trữ điểm để truyền vào Modal Xem Lại
 let finalScore = 0;
 let finalCorrectCount = 0;
 let finalTotal = 0;
+
+// CÁC BIẾN LƯU THÔNG TIN ĐỂ BÁO CÁO LỖI
+let reportingQuestionId = null;
+let reportingQuestionText = "";
 
 const app = initializeApp(firebaseConfig);
 auth = getAuth(app);
@@ -248,7 +252,6 @@ async function executeSubmit() {
 
     finalScore = Math.round(((finalCorrectCount / finalTotal) * 10) * 100) / 100; 
 
-    // Cộng XP Leaderboard
     let gainedXP = 0;
     try {
         const resultsRef = collection(db, "results");
@@ -318,7 +321,7 @@ function submitExam(isAutoSubmit = false) {
     }
 }
 
-// ================= LOGIC XEM LẠI BÀI LÀM (POPUP ĐÃ TINH CHỈNH GIAO DIỆN) =================
+// ================= LOGIC XEM LẠI BÀI LÀM (REVIEW MODAL) =================
 function openReviewModal(score, correctCount, total) {
     const modal = document.getElementById('reviewExamModal');
     const contentArea = document.getElementById('reviewContentArea');
@@ -372,12 +375,23 @@ function openReviewModal(score, correctCount, total) {
                           (userAns === correctAns) ? '<span style="background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Đúng</span>' : 
                           '<span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Sai</span>';
 
+        // LÀM ĐẸP FONT CHỮ VÀ BỔ SUNG NÚT BÁO LỖI
+        let safeQuestionText = (q.text || "").replace(/"/g, '&quot;');
+        
         html += `
             <div style="background: #fff; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f3f4f6;">
-                <div style="margin: 0 0 15px 0; color: #2d3748; font-weight: 600; font-size: 1.05rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 12px;">
-                    <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; margin-top: 2px;">Câu ${idx+1}</span>
-                    <div style="flex: 1;">${q.text} ${statusBadge}</div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; gap: 15px;">
+                    <div style="color: #2d3748; font-weight: 600; font-size: 1.05rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 12px; flex: 1;">
+                        <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; margin-top: 2px;">Câu ${idx+1}</span>
+                        <div style="flex: 1;">${q.text} ${statusBadge}</div>
+                    </div>
+                    
+                    <button class="btn-report-error" data-qid="${q.id}" data-qtext="${safeQuestionText}" style="background: #fee2e2; border: 1px solid #f87171; color: #dc2626; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: 0.2s;">
+                        <i class="fa-solid fa-flag"></i> Báo lỗi
+                    </button>
                 </div>
+
                 <div>${optionsHtml}</div>
                 ${explanationHtml}
             </div>
@@ -385,7 +399,83 @@ function openReviewModal(score, correctCount, total) {
     });
 
     contentArea.innerHTML = html;
+
+    // Gắn sự kiện cho các nút "Báo lỗi" vừa Render
+    document.querySelectorAll('.btn-report-error').forEach(btn => {
+        btn.addEventListener('mouseover', function() { this.style.background = '#fca5a5'; });
+        btn.addEventListener('mouseout', function() { this.style.background = '#fee2e2'; });
+        btn.addEventListener('click', function() {
+            const qId = this.getAttribute('data-qid');
+            const qText = this.getAttribute('data-qtext');
+            openReportModal(qId, qText);
+        });
+    });
 }
+
+// ================= LOGIC XỬ LÝ REPORT LỖI (MỚI) =================
+function openReportModal(qId, qText) {
+    reportingQuestionId = qId;
+    reportingQuestionText = qText;
+    
+    // Cập nhật text preview cho user biết đang báo lỗi câu nào
+    let previewText = qText.length > 70 ? qText.substring(0, 70) + '...' : qText;
+    document.getElementById('reportQuestionTextPreview').innerText = previewText;
+    
+    // Reset form
+    document.getElementById('reportErrorType').value = 'Sai đáp án';
+    document.getElementById('reportDescription').value = '';
+    
+    document.getElementById('reportQuestionModal').classList.add('active');
+}
+
+// Nút hủy báo cáo
+document.getElementById('btnCancelReport').addEventListener('click', () => {
+    document.getElementById('reportQuestionModal').classList.remove('active');
+});
+
+// Nút Gửi Báo Cáo
+document.getElementById('btnSubmitReport').addEventListener('click', async () => {
+    if (!auth.currentUser) {
+        showToast("Bạn cần đăng nhập để gửi báo cáo!");
+        return;
+    }
+    
+    const errorType = document.getElementById('reportErrorType').value;
+    const description = document.getElementById('reportDescription').value.trim();
+    
+    if (!description) {
+        showToast("Vui lòng nhập mô tả chi tiết lỗi!");
+        return;
+    }
+    
+    const btnSubmit = document.getElementById('btnSubmitReport');
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+    
+    try {
+        await addDoc(collection(db, "reported_questions"), {
+            examId: currentExamId,
+            questionId: reportingQuestionId,
+            questionText: reportingQuestionText,
+            reportedBy: currentUser.email,
+            errorType: errorType,
+            description: description,
+            status: "pending",
+            timestamp: serverTimestamp() // Sử dụng timestamp từ Firestore
+        });
+        
+        showToast("Đã gửi báo cáo lỗi. Xin cảm ơn sự đóng góp của bạn!");
+        document.getElementById('reportQuestionModal').classList.remove('active');
+        
+    } catch (error) {
+        console.error("Lỗi khi gửi báo cáo:", error);
+        showToast("Đã xảy ra lỗi khi gửi dữ liệu. Vui lòng thử lại sau!");
+    } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = "Gửi Báo Cáo";
+    }
+});
+// ================================================================
 
 document.getElementById('closeReviewModalBtn').addEventListener('click', () => {
     document.getElementById('reviewExamModal').classList.remove('active');
@@ -403,7 +493,6 @@ document.getElementById('reviewExamModal').addEventListener('click', (e) => {
         else document.getElementById('result-modal').classList.add('active');
     }
 });
-// ==============================================================
 
 // ================= LOGIC FEEDBACK RATING =================
 let selectedStars = 0;
