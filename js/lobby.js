@@ -1,5 +1,5 @@
 import { auth, db } from "./dashboard-core.js";
-import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const headerUserName = document.getElementById('headerUserName');
@@ -53,6 +53,10 @@ let currentParticipantsArray = [];
 let isKicked = false;
 let viewingHistoryMode = false;
 
+// CÁC BIẾN THEO DÕI ĐỂ XEM LẠI BÀI LÀM
+let currentActiveExamId = null;
+let currentViewedExamId = null;
+
 if (!roomId) {
     alert("Không tìm thấy mã phòng hợp lệ!");
     window.location.href = "dashboard.html";
@@ -78,6 +82,7 @@ onAuthStateChanged(auth, (user) => {
 btnBackToLobby.addEventListener('click', () => {
     forceLobbyView = true;
     viewingHistoryMode = false;
+    currentViewedExamId = currentActiveExamId; // Reset lại mã đề đang xem về vòng hiện tại
     switchUIState('waiting');
     renderUI(); 
 });
@@ -149,7 +154,7 @@ function parseTimeSafely(timeVal) {
 }
 
 // ==============================================================
-// 1. GIAO DIỆN LB NÂNG CAO (LỊCH SỬ + LƯU ẢNH + HẠNG)
+// 1. GIAO DIỆN LB NÂNG CAO (LỊCH SỬ + LƯU ẢNH + XEM LẠI BÀI)
 // ==============================================================
 function enhanceLeaderboardUI() {
     if (document.getElementById('historySidebar')) return;
@@ -205,6 +210,49 @@ function enhanceLeaderboardUI() {
     const lbHeader = lbCard.querySelector('.leaderboard-header');
     lbHeader.parentNode.insertBefore(wrapper, lbHeader.nextSibling);
 
+    // BƠM NÚT XEM LẠI BÀI VÀO PHẦN ACTION
+    const lbActions = document.querySelector('.lb-actions');
+    if (lbActions && !document.getElementById('btnReviewExam')) {
+        const btnReview = document.createElement('button');
+        btnReview.id = 'btnReviewExam';
+        btnReview.className = 'btn-secondary';
+        btnReview.style.background = '#6f42c1';
+        btnReview.style.marginBottom = '5px'; // Khoảng cách với nút bên dưới
+        btnReview.innerHTML = '<i class="fa-solid fa-eye"></i> XEM LẠI BÀI LÀM';
+        lbActions.insertBefore(btnReview, document.getElementById('btnBackToLobby'));
+        
+        // Sự kiện Xem lại bài
+        btnReview.addEventListener('click', openReviewModal);
+    }
+
+    // BƠM MODAL XEM LẠI BÀI VÀO BODY
+    if (!document.getElementById('reviewExamModal')) {
+        const modalHtml = `
+        <div class="modal" id="reviewExamModal" style="z-index: 10000; padding-top: 2vh; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+            <div class="modal-content" style="max-width: 800px; width: 95%; height: 92vh; display: flex; flex-direction: column; padding: 0; background: #f4f6f8; overflow: hidden;">
+                <div style="padding: 15px 20px; background: #ffffff; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10;">
+                    <h3 style="margin: 0; color: #084298; font-weight: 900; font-size: 1.3rem;"><i class="fa-solid fa-file-signature"></i> CHI TIẾT BÀI LÀM</h3>
+                    <button id="closeReviewModalBtn" style="background: #f3f4f6; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #4b5563; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="reviewContentArea" style="padding: 20px; overflow-y: auto; text-align: left; flex: 1; scroll-behavior: smooth;">
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Nút đóng modal
+        const closeBtn = document.getElementById('closeReviewModalBtn');
+        closeBtn.addEventListener('click', () => document.getElementById('reviewExamModal').classList.remove('active'));
+        closeBtn.onmouseover = function() { this.style.background = '#e5e7eb'; this.style.color = '#dc2626'; };
+        closeBtn.onmouseout = function() { this.style.background = '#f3f4f6'; this.style.color = '#4b5563'; };
+        
+        // Đóng khi click ngoài
+        document.getElementById('reviewExamModal').addEventListener('click', (e) => {
+            if (e.target.id === 'reviewExamModal') e.target.classList.remove('active');
+        });
+    }
+
     // Kéo thư viện Html2Canvas
     if (!window.html2canvas) {
         const script = document.createElement('script');
@@ -212,7 +260,7 @@ function enhanceLeaderboardUI() {
         document.head.appendChild(script);
     }
 
-    // Sự kiện Lưu ảnh
+    // Sự kiện Lưu ảnh BXH
     document.getElementById('btnDownloadLb').addEventListener('click', async () => {
         const captureArea = document.getElementById('lbCaptureArea');
         const watermarkEl = document.getElementById('lbWatermark');
@@ -248,7 +296,131 @@ function enhanceLeaderboardUI() {
     }
 }
 
+// ==============================================================
+// 2. LOGIC XEM LẠI BÀI LÀM (FETCH FIREBASE & TẠO GIAO DIỆN)
+// ==============================================================
+async function openReviewModal() {
+    if (!currentViewedExamId) {
+        alert("Đề thi chưa được thiết lập!"); 
+        return;
+    }
+
+    const modal = document.getElementById('reviewExamModal');
+    const contentArea = document.getElementById('reviewContentArea');
+    modal.classList.add('active');
+    
+    contentArea.innerHTML = '<div style="text-align:center; padding: 50px;"><i class="fa-solid fa-circle-notch fa-spin fa-3x" style="color:#0d6efd"></i><h4 style="margin-top:20px; color:#4b5563;">Đang tải dữ liệu bài làm...</h4></div>';
+
+    try {
+        // 1. Kéo dữ liệu kết quả mới nhất của user cho mã đề này
+        const rSnap = await getDocs(query(collection(db, "results"), where("email", "==", currentUser.email), where("examId", "==", currentViewedExamId)));
+        let results = [];
+        rSnap.forEach(d => results.push(d.data()));
+
+        if (results.length === 0) {
+            contentArea.innerHTML = '<div style="text-align:center; padding: 40px; color: #dc3545; font-size: 1.1rem; background: #fff; border-radius: 12px;"><b><i class="fa-solid fa-triangle-exclamation" style="font-size: 3rem; margin-bottom: 15px;"></i><br>Bạn chưa có kết quả nộp bài cho lượt thi này!</b><br><small style="color:#6c757d; display:block; margin-top:10px;">Chỉ khi hoàn thành bài thi và nộp bài, bạn mới có thể xem lại đáp án.</small></div>';
+            return;
+        }
+
+        // Sắp xếp giảm dần theo thời gian để lấy bài thi mới nhất
+        results.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+        const latestResult = results[0];
+        const savedAnswers = latestResult.savedAnswers || {};
+
+        // 2. Kéo danh sách câu hỏi
+        const qSnap = await getDocs(query(collection(db, "questions"), where("examId", "==", currentViewedExamId)));
+        let questions = [];
+        qSnap.forEach(d => questions.push({id: d.id, ...d.data()}));
+        questions.sort((a, b) => a.order - b.order);
+
+        if (questions.length === 0) {
+            contentArea.innerHTML = '<div style="text-align:center; padding: 30px; color: red;"><b>Không tìm thấy dữ liệu câu hỏi!</b></div>';
+            return;
+        }
+
+        // 3. Render giao diện
+        let html = `
+            <div style="background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); color: #1e1b4b; text-align: center;">
+                <h2 style="margin: 0 0 5px 0; font-weight: 900;">ĐIỂM SỐ CỦA BẠN: <span style="color: #ea580c; font-size: 1.5em; background: #fff; padding: 2px 15px; border-radius: 20px;">${latestResult.score}</span></h2>
+                <p style="margin: 0; font-weight: 600; opacity: 0.8;">Trả lời đúng: ${latestResult.correctCount}/${latestResult.totalQuestions} câu</p>
+            </div>
+        `;
+
+        questions.forEach((q, idx) => {
+            const userAns = savedAnswers[idx];
+            const correctAns = q.correctAnswer;
+            let isUnanswered = userAns === undefined;
+
+            let optionsHtml = '';
+            const opts = q.options || [];
+            const labels = ['A','B','C','D', 'E', 'F'];
+
+            opts.forEach((optText, oIdx) => {
+                let bg = '#fff';
+                let border = '2px solid #e5e7eb';
+                let color = '#374151';
+                let icon = '';
+                let fw = 'normal';
+
+                // Định dạng màu sắc chuẩn: Xanh (Đúng), Đỏ (Sai)
+                if (oIdx === correctAns) {
+                    bg = '#d1fae5'; border = '2px solid #10b981'; color = '#065f46'; fw = 'bold';
+                    icon = '<i class="fa-solid fa-check-circle" style="color: #10b981; font-size: 1.2rem; float: right;"></i>';
+                } else if (oIdx === userAns && userAns !== correctAns) {
+                    bg = '#fee2e2'; border = '2px solid #ef4444'; color = '#991b1b'; fw = 'bold';
+                    icon = '<i class="fa-solid fa-circle-xmark" style="color: #ef4444; font-size: 1.2rem; float: right;"></i>';
+                }
+
+                optionsHtml += `
+                    <div style="padding: 12px 15px; margin-bottom: 10px; background: ${bg}; border: ${border}; border-radius: 8px; color: ${color}; font-weight: ${fw}; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;"><span style="display:inline-block; width: 25px; font-weight:900;">${labels[oIdx] !== undefined ? labels[oIdx] : oIdx}.</span> ${optText}</div>
+                        <div>${icon}</div>
+                    </div>
+                `;
+            });
+
+            // Giao diện giải thích
+            let explanationHtml = '';
+            if (q.explanation && q.explanation.trim() !== '' && q.explanation.toLowerCase() !== 'không có giải thích chi tiết') {
+                explanationHtml = `
+                    <div style="margin-top: 15px; padding: 15px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 0.95rem; color: #92400e;">
+                        <b style="color: #b45309;"><i class="fa-solid fa-lightbulb"></i> Giải thích:</b><br>${q.explanation}
+                    </div>
+                `;
+            }
+
+            let statusBadge = '';
+            if (isUnanswered) {
+                statusBadge = '<span style="background: #f3f4f6; color: #4b5563; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">Chưa chọn</span>';
+            } else if (userAns === correctAns) {
+                statusBadge = '<span style="background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">Đúng</span>';
+            } else {
+                statusBadge = '<span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">Sai</span>';
+            }
+
+            html += `
+                <div style="background: #fff; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f3f4f6;">
+                    <h4 style="margin: 0 0 15px 0; color: #1f2937; font-weight: 800; font-size: 1.1rem; line-height: 1.5;">
+                        <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.9rem; margin-right: 8px;">Câu ${idx+1}</span>
+                        ${q.text}
+                        ${statusBadge}
+                    </h4>
+                    <div>${optionsHtml}</div>
+                    ${explanationHtml}
+                </div>
+            `;
+        });
+
+        contentArea.innerHTML = html;
+    } catch (error) {
+        console.error("Lỗi xem lại bài:", error);
+        contentArea.innerHTML = '<div style="text-align:center; padding: 30px; color: red;"><b>Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại!</b></div>';
+    }
+}
+
 function renderHistoryLB(historyData) {
+    currentViewedExamId = historyData.examId; // Cập nhật ID đang xem để xem lại bài làm
+    
     document.getElementById('currentViewTitle').innerText = `Lịch sử thi`;
     document.getElementById('lbExamInfo').innerText = `Mã đề: ${historyData.examName || historyData.examId} | Ngày: ${historyData.createdAt ? historyData.createdAt.toDate().toLocaleString('vi-VN') : 'N/A'}`;
     
@@ -428,6 +600,7 @@ async function initLobby() {
                 document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
                 currBtn.classList.add('active');
                 viewingHistoryMode = false;
+                currentViewedExamId = currentActiveExamId; // Gán lại ID đang xem
                 renderUI();
             }
             container.appendChild(currBtn);
@@ -498,6 +671,11 @@ async function initLobby() {
             const roomData = docSnap.data();
             currentRoomStatus = roomData.status;
             currentHostEmail = roomData.hostEmail;
+            
+            currentActiveExamId = roomData.examId;
+            if (!viewingHistoryMode) {
+                currentViewedExamId = currentActiveExamId;
+            }
 
             if (roomData.examId) {
                 displayExamName.innerHTML = `<i class="fa-solid fa-book-open"></i> ${roomData.examName || "Đề thi đã chọn"}`;
@@ -515,7 +693,6 @@ async function initLobby() {
                 // CHỦ PHÒNG: ĐIỀU KHIỂN NÚT "TẠO LƯỢT MỚI" VÀ "XEM BXH"
                 // ==============================================================
                 if (currentRoomStatus === 'playing' || currentRoomStatus === 'closed') {
-                    // Đang thi hoặc Vừa thi xong
                     btnEndRoom.style.display = 'block';
                     btnEndRoom.innerHTML = '<i class="fa-solid fa-rotate-right"></i> TẠO LƯỢT THI MỚI';
                     btnEndRoom.style.background = '#dc3545';
@@ -526,21 +703,15 @@ async function initLobby() {
 
                     btnStart.style.display = 'block';
                     btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
-                    
-                    // Xóa inline style cũ để lớp CSS hoạt động
                     btnStart.style.background = '#0dcaf0'; 
                     btnStart.style.color = '#000';
-                    
                     btnStart.removeAttribute('disabled');
                 } else { 
-                    // CHỜ THI: Nút xanh lá (Bắt đầu thi), Mở khóa chọn đề
                     btnEndRoom.style.display = 'none';
                     selectExamInLobby.removeAttribute('disabled');
                     
                     btnStart.style.display = 'block';
                     btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
-                    
-                    // SỬA LỖI UI (CƠ BẢN): Reset CSS nội tuyến, để thẻ `:disabled` trong CSS HTML lo liệu màu xám
                     btnStart.style.background = '';
                     btnStart.style.color = '';
                     
@@ -564,7 +735,7 @@ async function initLobby() {
 
             } else {
                 // ==============================================================
-                // NGƯỜI CHƠI: CHỈ HIỆN BXH KHI ĐÃ NỘP BÀI XONG
+                // NGƯỜI CHƠI
                 // ==============================================================
                 hostPanel.style.display = 'none';
                 btnEndRoom.style.display = 'none'; 
@@ -619,7 +790,6 @@ async function initLobby() {
             const selectedExamId = selectExamInLobby.value;
             const selectedExamName = selectedExamId ? selectExamInLobby.options[selectExamInLobby.selectedIndex].text : null;
             
-            // UI Tối ưu: Cập nhật giao diện ngay lập tức để nút xám hóa xanh không bị lag
             if (selectedExamId) {
                 btnStart.removeAttribute('disabled');
                 displayExamName.innerHTML = `<i class="fa-solid fa-book-open"></i> ${selectedExamName}`;
@@ -629,7 +799,6 @@ async function initLobby() {
             }
 
             try {
-                // Update Firebase
                 await updateDoc(roomRef, { examId: selectedExamId || null, examName: selectedExamName, status: 'waiting' });
                 
                 try {
@@ -648,7 +817,6 @@ async function initLobby() {
                 console.error("Lỗi cập nhật phòng:", err); 
                 alert("Lỗi: Không thể kết nối tới máy chủ. Vui lòng kiểm tra quyền hoặc kết nối mạng!");
                 
-                // Khôi phục UI nếu lỗi mạng
                 if (!roomData.examId) {
                     btnStart.setAttribute('disabled', 'true');
                     displayExamName.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Chủ phòng đang cấu hình...`;
@@ -660,7 +828,7 @@ async function initLobby() {
             if (currentRoomStatus === 'playing' || currentRoomStatus === 'closed') {
                 forceLobbyView = false;
                 viewingHistoryMode = false;
-                switchUIState('playing'); // Chuyển sang xem BXH
+                switchUIState('playing'); 
                 renderUI();
             } else {
                 btnStart.setAttribute('disabled', 'true');
@@ -675,22 +843,19 @@ async function initLobby() {
         });
 
         // ==============================================================
-        // TÍNH NĂNG MỚI: TẠO LƯỢT THI (ĐÓNG PHÒNG, LƯU LỊCH SỬ, RESET)
+        // TẠO LƯỢT THI (ĐÓNG PHÒNG, LƯU LỊCH SỬ, RESET)
         // ==============================================================
         btnEndRoom.addEventListener('click', async () => {
             if (confirm("Xác nhận TẠO LƯỢT THI MỚI?\nHệ thống sẽ thu bài tất cả người đang thi, lưu kết quả hiện tại vào Lịch sử và thiết lập lại phòng.")) {
                 btnEndRoom.disabled = true;
                 btnEndRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang thu bài...';
                 try {
-                    // 1. Ép người chơi nộp bài ngầm
                     await updateDoc(roomRef, { status: 'closed' });
 
-                    // 2. Chờ 3 giây để máy trạm của các thí sinh tự động chấm điểm và đẩy lên Firebase
                     await new Promise(resolve => setTimeout(resolve, 3000));
                     
                     btnEndRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu lịch sử...';
 
-                    // 3. Đọc dữ liệu điểm số cuối cùng
                     const pSnapshot = await getDocs(participantsColl);
                     let finalParticipants = [];
                     pSnapshot.forEach(d => finalParticipants.push(d.data()));
@@ -707,7 +872,6 @@ async function initLobby() {
                         return timeSecA - timeSecB;
                     });
 
-                    // 4. Lưu toàn bộ vào Lịch sử
                     const currentRoomData = (await getDoc(roomRef)).data();
                     await setDoc(doc(collection(db, `rooms/${roomId}/history`)), {
                         examId: currentRoomData.examId || 'N/A',
@@ -716,14 +880,12 @@ async function initLobby() {
                         participants: finalParticipants
                     });
 
-                    // 5. Làm mới lại những người có trong phòng
                     const batch = writeBatch(db);
                     pSnapshot.forEach((docItem) => {
                         batch.update(docItem.ref, { status: 'waiting', score: 0, timeTaken: '00:00' });
                     });
                     await batch.commit();
 
-                    // 6. Kích hoạt vòng thi mới
                     await updateDoc(roomRef, { status: 'waiting' });
                     
                     forceLobbyView = false;
@@ -857,32 +1019,4 @@ async function initLobby() {
                 btnSendInvite.disabled = true;
                 const notiData = {
                     toEmail: toEmail, fromEmail: currentUser.email, type: 'room_invite',
-                    message: `<b>${currentUser.displayName || currentUser.email}</b> đã mời bạn vào phòng thi. Mã phòng: <b style="color:#0d6efd">${roomId}</b>`,
-                    roomId: roomId, isRead: false, createdAt: serverTimestamp()
-                };
-                await setDoc(doc(collection(db, "notifications")), {
-                    ...notiData,
-                    status: 'unread',
-                    timestamp: serverTimestamp()
-                });
-                alert(`Đã gửi lời mời tới ${toEmail}!`);
-                inviteFriendModal.classList.remove('active');
-            } catch (error) { alert("Lỗi khi gửi mời."); } 
-            finally { btnSendInvite.disabled = false; }
-        });
-
-        btnCopyLink.addEventListener('click', async () => {
-            try {
-                await navigator.clipboard.writeText(window.location.href);
-                const old = btnCopyLink.innerHTML;
-                btnCopyLink.innerHTML = '<i class="fa-solid fa-check"></i> Đã copy!';
-                setTimeout(() => btnCopyLink.innerHTML = old, 2000);
-            } catch (err) { alert("Hãy tự copy URL thanh địa chỉ nhé."); }
-        });
-
-    } catch (error) {
-        console.error("Lỗi Lobby:", error);
-        alert("Có lỗi xảy ra khi đồng bộ phòng chờ.");
-        window.location.href = "dashboard.html";
-    }
-}
+                    message: `<b>${currentUser.displayName || currentUser.email}</b> đã mời bạn vào phòng thi. Mã phòng: <b style="color:#0d6efd">${
