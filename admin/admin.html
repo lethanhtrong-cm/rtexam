@@ -192,6 +192,40 @@
                     </div>
                 </div>
             </section>
+
+            <!-- THÊM MỚI: TAB QUẢN LÝ ĐỀ AI -->
+            <section id="tab-admin" class="content-section">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h2 class="card-title">🤖 Quản Lý Ngân Hàng Đề AI</h2>
+                            <p class="card-description" style="margin-bottom: 0;">Danh sách toàn bộ các đề thi được tạo tự động bởi AI. Bạn có thể xuất ra Excel để lưu trữ.</p>
+                        </div>
+                        <button id="btnExportAiExams" class="btn" style="background-color: #10b981; color: white;">
+                            📥 Xuất Toàn Bộ Ra Excel
+                        </button>
+                    </div>
+
+                    <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" width="5%">STT</th>
+                                    <th width="20%">Mã Đề</th>
+                                    <th width="20%">Người Tạo</th>
+                                    <th class="text-center" width="15%">Số Câu</th>
+                                    <th class="text-center" width="20%">Ngày Tạo</th>
+                                    <th class="text-center" width="20%">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ai-exam-list-body">
+                                <tr><td colspan="6" class="empty-message">Bấm vào Menu bên trái để tải dữ liệu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
         </div>
     </main>
 
@@ -202,5 +236,8 @@
     <script type="module" src="./admin-core.js"></script>
     <script type="module" src="./admin-exams.js"></script>
     <script type="module" src="./admin-users.js"></script>
+    
+    <!-- NHÚNG FILE LOGIC MỚI -->
+    <script type="module" src="./dashboard-admin.js"></script>
 </body>
 </html>
