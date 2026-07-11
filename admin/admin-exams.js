@@ -398,7 +398,9 @@ async function publishExam() {
                 technique: techniqueValue,
                 timeLimit: timeLimitValue,
                 level: levelValue,
-                isVip: false
+                isVip: false,
+                isPublic: true,
+                createdAt: Date.now()
             }, { merge: true });
         }
 
