@@ -427,12 +427,12 @@ function renderExams() {
     groups.forEach(group => {
         if (group.data.length === 0) return; 
 
-        let rowHtml = `
+       let rowHtml = `
             <div class="exam-category-row mb-5">
                 <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
                 <div class="swimlane-wrapper">
                     <button class="slider-btn left" onclick="slideLeft(this)"><i class="fa-solid fa-chevron-left"></i></button>
-                    <div class="swimlane-scroll-container hide-scrollbar">
+                    <div class="swimlane-scroll-container hide-scrollbar" style="padding-top: 15px; padding-right: 15px; margin-top: -5px;">
         `;
 
         group.data.forEach(exam => {
