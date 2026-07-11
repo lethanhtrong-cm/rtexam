@@ -1,13 +1,70 @@
 import { auth, db } from "./dashboard-core.js";
-import { collection, query, orderBy, limit, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, query, orderBy, limit, getDocs, doc, getDoc, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Lắng nghe sự kiện authReady từ hệ thống cốt lõi
 document.addEventListener('authReady', async (e) => {
     const user = e.detail ? e.detail.user : auth.currentUser;
     if (user) {
         await initLeaderboard(user);
+        await updateUserDashboardRank(user); // Cập nhật thứ hạng vào Quick Stats
     }
 });
+
+// Lắng nghe sự kiện load component để tránh lỗi DOM chưa render kịp
+document.addEventListener('ComponentsLoaded', async () => {
+    const user = auth.currentUser;
+    if (user) {
+        await updateUserDashboardRank(user);
+    }
+});
+
+// Hàm mới: Tính toán và cập nhật thứ hạng của User vào Dashboard
+export async function updateUserDashboardRank(currentUser) {
+    const statElement = document.getElementById('statAccountStatus');
+    
+    // Nếu chưa load DOM thẻ statAccountStatus thì thoát, tránh báo lỗi
+    if (!statElement) return;
+
+    // Kiểm tra cache trong sessionStorage trước
+    const cachedRank = sessionStorage.getItem('dashboard_user_rank');
+    if (cachedRank) {
+        statElement.innerHTML = cachedRank;
+        return; // Dừng hàm, không gọi lên Firebase nữa
+    }
+
+    try {
+        const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        // Nếu user chưa từng có điểm trong system
+        if (!userDocSnap.exists()) {
+            statElement.innerHTML = 'Chưa xếp hạng';
+            return;
+        }
+
+        const currentXP = userDocSnap.data().totalXP || 0;
+
+        // Truy vấn đếm số lượng người có điểm cao hơn user hiện tại
+        const higherXpQuery = query(
+            collection(db, "users_leaderboard"),
+            where("totalXP", ">", currentXP)
+        );
+        
+        const snapshot = await getCountFromServer(higherXpQuery);
+        const countHigher = snapshot.data().count;
+
+        // Thứ hạng = Số người cao điểm hơn + 1
+        const actualRank = countHigher + 1;
+        
+        // Lưu kết quả vào sessionStorage để dùng lại cho các lần load sau
+        sessionStorage.setItem('dashboard_user_rank', `Hạng ${actualRank}`);
+        statElement.innerHTML = `Hạng ${actualRank}`;
+
+    } catch (error) {
+        console.error("Lỗi khi cập nhật thứ hạng Dashboard:", error);
+        statElement.innerHTML = 'Lỗi tính toán';
+    }
+}
 
 async function initLeaderboard(currentUser) {
     const podiumContainer = document.getElementById('leaderboardPodium');
