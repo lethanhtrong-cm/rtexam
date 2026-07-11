@@ -1,5 +1,6 @@
 import { auth, db } from "./dashboard-core.js";
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Bổ sung thêm các hàm query, collection, where, getCountFromServer để đếm số lượng đề
+import { doc, setDoc, collection, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // CHỜ GIAO DIỆN TẢI XONG MỚI GẮN SỰ KIỆN ĐỂ TRÁNH LỖI NULL
@@ -105,7 +106,13 @@ document.addEventListener('ComponentsLoaded', () => {
                     throw new Error("AI không tạo được câu hỏi nào hoặc dữ liệu trả về bị sai cấu trúc.");
                 }
 
-                currentGeneratedExamId = "AI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+                // ĐẾM SỐ LƯỢNG ĐỀ AI ĐÃ TẠO ĐỂ ĐÁNH SỐ THỨ TỰ THAY VÌ RANDOM
+                const qCount = query(collection(db, "exams"), where("technique", "==", "AI Tự Động"));
+                const snapshot = await getCountFromServer(qCount);
+                const aiCount = snapshot.data().count + 1;
+                // Định dạng số thành 3 chữ số, VD: AI-001, AI-015
+                const formattedNumber = aiCount.toString().padStart(3, '0');
+                currentGeneratedExamId = "AI-" + formattedNumber;
 
                 // LƯU CÂU HỎI VÀO FIRESTORE
                 const savePromises = questions.map((q, i) => {
