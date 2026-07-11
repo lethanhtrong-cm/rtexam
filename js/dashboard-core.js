@@ -234,6 +234,7 @@ function initDOMListeners() {
     const btnLogout = document.getElementById("btnLogout");
     if (btnLogout) {
         btnLogout.addEventListener("click", () => {
+            sessionStorage.removeItem('dashboard_user_rank'); // Xóa cache hạng khi đăng xuất
             signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
         });
     }
@@ -295,8 +296,9 @@ function setVipInactive() {
     const elVipEndDate = document.getElementById("vipEndDate");
     if (elVipEndDate) elVipEndDate.textContent = "Không xác định";
     
-    const statAccount = document.getElementById("statAccountStatus");
-    if (statAccount) statAccount.textContent = "Thường";
+    // Đã vô hiệu hóa logic gán trạng thái cũ để nhường chỗ cho Leaderboard
+    // const statAccount = document.getElementById("statAccountStatus");
+    // if (statAccount) statAccount.textContent = "Thường";
 
     const topbarVipContainer = document.getElementById('topbar-vip-container');
     if (topbarVipContainer) {
@@ -354,8 +356,9 @@ async function fetchUserData(user) {
                 const elVipEndDate = document.getElementById("vipEndDate");
                 if (elVipEndDate) elVipEndDate.textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
 
-                const statAccount = document.getElementById("statAccountStatus");
-                if (statAccount) statAccount.textContent = "PRO";
+                // Đã vô hiệu hóa logic gán trạng thái cũ để nhường chỗ cho Leaderboard
+                // const statAccount = document.getElementById("statAccountStatus");
+                // if (statAccount) statAccount.textContent = "PRO";
 
                 const topbarVipContainer = document.getElementById('topbar-vip-container');
                 if (topbarVipContainer) {
