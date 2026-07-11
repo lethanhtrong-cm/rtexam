@@ -318,7 +318,7 @@ async function loadAggregatedExamData() {
 
         allExamsData = Object.values(examMap);
 
-        // --- THÊM MỚI: GIỚI HẠN HIỂN THỊ TỐI ĐA 10 ĐỀ AI MỚI NHẤT ---
+        // --- GIỚI HẠN HIỂN THỊ TỐI ĐA 10 ĐỀ AI MỚI NHẤT ---
         const aiExams = allExamsData.filter(e => e.technique === "AI Tự Động").sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
         const otherExams = allExamsData.filter(e => e.technique !== "AI Tự Động");
         allExamsData = [...otherExams, ...aiExams];
@@ -443,14 +443,26 @@ function renderExams() {
             if (exam.level === 'Dễ') { levelColor = '#059669'; levelIcon = 'fa-arrow-trend-up'; } 
             else if (exam.level === 'Khó') { levelColor = '#dc2626'; levelIcon = 'fa-fire'; }
 
+            // Chuyển đổi timestamp thành định dạng chuỗi ngày tháng
+            let createdAtStr = "Không rõ";
+            if (exam.createdAt) {
+                const dateObj = new Date(exam.createdAt);
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const yyyy = dateObj.getFullYear();
+                createdAtStr = `${dd}/${mm}/${yyyy}`;
+            }
+
             const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
 
+            // Đổi flex-wrap từ nowrap sang wrap để đảm bảo pill lịch không bị che khuất
             const mergedTagsHtml = `
-                <div style="display: flex; flex-wrap: nowrap; gap: 6px; margin-bottom: 20px; overflow: hidden; width: 100%;">
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; overflow: hidden; width: 100%;">
                     <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
                     <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level} </span>
                     <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
                     <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
+                    <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-calendar-days" style="font-size: 0.7rem;"></i> ${createdAtStr} </span>
                 </div>
             `;
 
