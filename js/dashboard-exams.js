@@ -323,6 +323,17 @@ async function loadAggregatedExamData() {
         });
 
         allExamsData = Object.values(examMap);
+        // --- THÊM MỚI: GIỚI HẠN HIỂN THỊ TỐI ĐA 10 ĐỀ AI MỚI NHẤT ---
+        const aiExams = allExamsData.filter(e => e.technique === "AI Tự Động").sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
+        const otherExams = allExamsData.filter(e => e.technique !== "AI Tự Động");
+        allExamsData = [...otherExams, ...aiExams];
+        // -----------------------------------------------------------
+
+        const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
+        document.dispatchEvent(examsReadyEvent);
+
+        renderExams();
+        
         const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
         document.dispatchEvent(examsReadyEvent);
 
