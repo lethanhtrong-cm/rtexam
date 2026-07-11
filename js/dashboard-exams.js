@@ -251,47 +251,40 @@ async function loadAggregatedExamData() {
             }
         });
 
+        // BỎ QUA LỖI QUERY OR() BẰNG CÁCH TẢI TOÀN BỘ VÀ LỌC BÊN CLIENT
         const examsConfigRef = collection(db, "exams");
-        let examsQuery;
-
-        if (auth.currentUser) {
-            examsQuery = query(
-                examsConfigRef, 
-                or(
-                    where("isPublic", "==", true),
-                    where("creatorId", "==", auth.currentUser.uid)
-                )
-            );
-        } else {
-            examsQuery = query(examsConfigRef, where("isPublic", "==", true));
-        }
-
-        const eSnap = await getDocs(examsQuery);
+        const eSnap = await getDocs(examsConfigRef);
 
         eSnap.forEach((doc) => {
             const eId = doc.id;
-            if (examMap[eId]) {
-                examMap[eId].isValid = true; 
-                const conf = doc.data();
-                examMap[eId].isVip = conf.isVip || false;
-                examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
-                examMap[eId].attemptCount = conf.attemptCount || 0;
-                examMap[eId].technique = conf.technique || "Hỗn hợp";
-                examMap[eId].level = conf.level || "Trung bình";
-                
-                // --- XỬ LÝ LỖI PARSE THỜI GIAN CHO ĐỀ ADMIN ---
-                let parsedTime = 0;
-                const rawTime = conf.createdAt || conf.timestamp; // Hỗ trợ cả 2 tên trường cũ và mới
-                if (rawTime) {
-                    if (typeof rawTime.toMillis === 'function') {
-                        parsedTime = rawTime.toMillis();
-                    } else if (rawTime.seconds !== undefined) {
-                        parsedTime = rawTime.seconds * 1000;
-                    } else {
-                        parsedTime = new Date(rawTime).getTime();
+            const conf = doc.data();
+            
+            // LOGIC LỌC: Đề công khai HOẶC Đề do user tự tạo HOẶC Đề cũ của Admin (không có 2 trường kia)
+            const isPublicExam = conf.isPublic === true || (conf.isPublic === undefined && conf.creatorId === undefined);
+            const isMyExam = auth.currentUser && conf.creatorId === auth.currentUser.uid;
+
+            if (isPublicExam || isMyExam) {
+                if (examMap[eId]) {
+                    examMap[eId].isValid = true; 
+                    examMap[eId].isVip = conf.isVip || false;
+                    examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
+                    examMap[eId].attemptCount = conf.attemptCount || 0;
+                    examMap[eId].technique = conf.technique || "Hỗn hợp";
+                    examMap[eId].level = conf.level || "Trung bình";
+                    
+                    let parsedTime = 0;
+                    const rawTime = conf.createdAt || conf.timestamp; 
+                    if (rawTime) {
+                        if (typeof rawTime.toMillis === 'function') {
+                            parsedTime = rawTime.toMillis();
+                        } else if (rawTime.seconds !== undefined) {
+                            parsedTime = rawTime.seconds * 1000;
+                        } else {
+                            parsedTime = new Date(rawTime).getTime();
+                        }
                     }
+                    examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
                 }
-                examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
             }
         });
 
@@ -335,6 +328,7 @@ async function loadAggregatedExamData() {
         const aiExams = allExamsData.filter(e => e.technique === "AI Tự Động").sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
         const otherExams = allExamsData.filter(e => e.technique !== "AI Tự Động");
         allExamsData = [...otherExams, ...aiExams];
+        // -----------------------------------------------------------
 
         const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
         document.dispatchEvent(examsReadyEvent);
@@ -455,7 +449,7 @@ function renderExams() {
             if (exam.level === 'Dễ') { levelColor = '#059669'; levelIcon = 'fa-arrow-trend-up'; } 
             else if (exam.level === 'Khó') { levelColor = '#dc2626'; levelIcon = 'fa-fire'; }
 
-            // Chuyển đổi timestamp, ẩn thẻ lịch nếu đề cũ không có trường thời gian
+            // Chuyển đổi timestamp
             let datePillHtml = "";
             if (exam.createdAt > 0) {
                 const dateObj = new Date(exam.createdAt);
