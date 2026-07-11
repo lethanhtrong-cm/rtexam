@@ -1,5 +1,4 @@
 import { auth, db, safeRedirect } from "./dashboard-core.js";
-// THÊM setDoc vào danh sách import
 import { collection, getDocs, doc, setDoc, updateDoc, arrayUnion, arrayRemove, query, where, or, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export let allExamsData = []; 
@@ -101,20 +100,16 @@ function setupToolbarEvents() {
     const btnUploadExam = document.getElementById('btnUploadExam');
 
     if (btnOpenCreateRoom) {
-        // TÁI CẤU TRÚC: Xóa mở Modal, thay bằng logic lao thẳng vào Lobby
         btnOpenCreateRoom.addEventListener('click', async () => {
             if (!auth.currentUser) return alert("Vui lòng đăng nhập để tạo phòng!");
             
-            // Hiệu ứng tải
             const originalHtml = btnOpenCreateRoom.innerHTML;
             btnOpenCreateRoom.disabled = true;
             btnOpenCreateRoom.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang tạo...';
 
             try {
-                // Sinh mã phòng ngẫu nhiên 6 ký tự
                 const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
                 
-                // Khởi tạo phòng trống (chưa có đề thi) lên Firestore
                 await setDoc(doc(db, "rooms", newRoomId), {
                     hostEmail: auth.currentUser.email,
                     status: 'waiting',
@@ -124,7 +119,6 @@ function setupToolbarEvents() {
                     isLocked: false
                 });
                 
-                // Dịch chuyển thẳng vào phòng
                 window.location.href = `lobby.html?roomId=${newRoomId}`;
             } catch (error) {
                 console.error("Lỗi tạo phòng trực tiếp:", error);
@@ -323,17 +317,13 @@ async function loadAggregatedExamData() {
         });
 
         allExamsData = Object.values(examMap);
+
         // --- THÊM MỚI: GIỚI HẠN HIỂN THỊ TỐI ĐA 10 ĐỀ AI MỚI NHẤT ---
         const aiExams = allExamsData.filter(e => e.technique === "AI Tự Động").sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
         const otherExams = allExamsData.filter(e => e.technique !== "AI Tự Động");
         allExamsData = [...otherExams, ...aiExams];
         // -----------------------------------------------------------
 
-        const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
-        document.dispatchEvent(examsReadyEvent);
-
-        renderExams();
-        
         const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
         document.dispatchEvent(examsReadyEvent);
 
