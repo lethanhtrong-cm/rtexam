@@ -541,11 +541,11 @@ function renderExams() {
             
             // Xây dựng nút Xóa (chỉ hiển thị trên giao diện của đề AI)
             const hideBtnHtml = exam.technique === 'AI Tự Động' 
-                ? `<button class="btn-hide-exam" onclick="hideExam(event, '${exam.id}')" style="position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: none; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` 
+                ? `<button class="btn-hide-exam" onclick="hideExam(event, '${exam.id}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` 
                 : '';
 
             rowHtml += `
-                <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: hidden; position: relative;">
+                <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: visible; position: relative;">
                     ${hideBtnHtml}
                     <div class="card-body p-4 d-flex flex-column h-100">
                         ${headerHtml}
