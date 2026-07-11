@@ -14,8 +14,10 @@ let currentShareExamId = null;
 
 document.addEventListener("authReady", async (e) => {
     currentUserData = e.detail.currentUserData;
-    if (currentUserData && !currentUserData.bookmarks) {
-        currentUserData.bookmarks = [];
+    if (currentUserData) {
+        if (!currentUserData.bookmarks) currentUserData.bookmarks = [];
+        // Khởi tạo mảng lưu các đề đã bị ẩn/xóa bởi người dùng
+        if (!currentUserData.hiddenExams) currentUserData.hiddenExams = [];
     }
     
     try {
@@ -324,9 +326,17 @@ async function loadAggregatedExamData() {
 
         allExamsData = Object.values(examMap);
 
-        // --- GIỚI HẠN HIỂN THỊ TỐI ĐA 10 ĐỀ AI MỚI NHẤT ---
-        const aiExams = allExamsData.filter(e => e.technique === "AI Tự Động").sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
-        const otherExams = allExamsData.filter(e => e.technique !== "AI Tự Động");
+        // Lấy danh sách các đề người dùng đã chọn xóa/ẩn
+        const hiddenExamsList = (currentUserData && currentUserData.hiddenExams) ? currentUserData.hiddenExams : [];
+
+        // --- LỌC CÁC ĐỀ ĐÃ BỊ ẨN, VÀ GIỚI HẠN TỐI ĐA 10 ĐỀ AI ---
+        const aiExams = allExamsData
+            .filter(e => e.technique === "AI Tự Động" && !hiddenExamsList.includes(e.id))
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .slice(0, 10);
+            
+        const otherExams = allExamsData.filter(e => e.technique !== "AI Tự Động" && !hiddenExamsList.includes(e.id));
+        
         allExamsData = [...otherExams, ...aiExams];
         // -----------------------------------------------------------
 
@@ -344,6 +354,15 @@ function renderExams() {
     const examListContainer = document.getElementById('examListContainer');
     const sortFilter = document.getElementById('sortFilter');
     
+    // Bơm CSS động để hiển thị nút xóa (ẩn) khi Hover vào thẻ card
+    if (!document.getElementById('hide-exam-style')) {
+        document.head.insertAdjacentHTML('beforeend', `
+            <style id="hide-exam-style">
+                .exam-card-hover:hover .btn-hide-exam { display: flex !important; }
+            </style>
+        `);
+    }
+
     if (!examListContainer) return;
 
     if (allExamsData.length === 0) {
@@ -519,9 +538,15 @@ function renderExams() {
                     </div>
                 `;
             }
+            
+            // Xây dựng nút Xóa (chỉ hiển thị trên giao diện của đề AI)
+            const hideBtnHtml = exam.technique === 'AI Tự Động' 
+                ? `<button class="btn-hide-exam" onclick="hideExam(event, '${exam.id}')" style="position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: none; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` 
+                : '';
 
             rowHtml += `
                 <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: hidden; position: relative;">
+                    ${hideBtnHtml}
                     <div class="card-body p-4 d-flex flex-column h-100">
                         ${headerHtml}
                         ${mergedTagsHtml}
@@ -613,4 +638,30 @@ window.goToUpgrade = function() {
     if(tabVip) tabVip.classList.add('active');
     const title = document.getElementById("currentTabTitle");
     if(title) title.textContent = "Nâng Cấp Tài Khoản Pro";
+};
+
+// Hàm xử lý việc ẩn đề AI khỏi danh sách (Chỉ ẩn tại phía người dùng)
+window.hideExam = async function(event, examId) {
+    event.stopPropagation();
+    if (!auth.currentUser || !currentUserData) {
+        alert("Vui lòng đăng nhập để thực hiện chức năng này!");
+        return;
+    }
+    
+    if (!confirm('Bạn có chắc chắn muốn ẩn đề AI này khỏi trang của mình không? (Đề vẫn sẽ được lưu trữ trên hệ thống)')) return;
+
+    const userDocRef = doc(db, "users", auth.currentUser.uid);
+    try {
+        await updateDoc(userDocRef, { hiddenExams: arrayUnion(examId) });
+        
+        if (!currentUserData.hiddenExams) currentUserData.hiddenExams = [];
+        currentUserData.hiddenExams.push(examId);
+        
+        // Loại bỏ đề thi khỏi biến allExamsData và render lại lập tức
+        allExamsData = allExamsData.filter(e => e.id !== examId);
+        renderExams();
+    } catch (error) {
+        console.error("Lỗi khi ẩn đề thi:", error);
+        alert("Đã xảy ra lỗi khi cố gắng ẩn đề thi.");
+    }
 };
