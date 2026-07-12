@@ -1,6 +1,9 @@
 import { auth, db } from "./dashboard-core.js";
 import { collection, query, where, onSnapshot, doc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// Khai báo mảng lưu trữ các ID thông báo chưa đọc
+let unreadNotiIds = [];
+
 // =========================================================================
 // 1. GẮN SỰ KIỆN ĐÓNG MỞ CHUÔNG SAU KHI GIAO DIỆN SẴN SÀNG
 // =========================================================================
@@ -13,6 +16,18 @@ document.addEventListener('ComponentsLoaded', () => {
             e.stopPropagation();
             if (e.target.closest('.notification-dropdown')) return; 
             notiDropdown.classList.toggle('show');
+
+            // TỰ ĐỘNG ĐÁNH DẤU "ĐÃ ĐỌC" KHI MỞ CHUÔNG THÔNG BÁO
+            if (notiDropdown.classList.contains('show') && unreadNotiIds.length > 0) {
+                unreadNotiIds.forEach(id => {
+                    updateDoc(doc(db, 'notifications', id), { status: 'read' }).catch(err => console.error(err));
+                });
+                unreadNotiIds = []; // Làm rỗng mảng sau khi xử lý
+                
+                // Ẩn lập tức huy hiệu số màu đỏ trên UI
+                const notiBadgeCount = document.getElementById('notiBadgeCount');
+                if (notiBadgeCount) notiBadgeCount.style.display = 'none'; 
+            }
         });
 
         document.addEventListener('click', (e) => {
@@ -50,6 +65,7 @@ function initNotifications(userEmail) {
 
     onSnapshot(q, (snapshot) => {
         let unreadCount = 0;
+        unreadNotiIds = []; // Reset mảng mỗi khi có dữ liệu mới
         notiListContainer.innerHTML = '';
 
         if (snapshot.empty) {
@@ -62,7 +78,10 @@ function initNotifications(userEmail) {
             const data = docSnapshot.data();
             const id = docSnapshot.id;
             
-            if (data.status === 'unread') unreadCount++;
+            if (data.status === 'unread') {
+                unreadCount++;
+                unreadNotiIds.push(id); // Đưa ID chưa đọc vào mảng
+            }
 
             let timeString = 'Vừa xong';
             if (data.timestamp) {
