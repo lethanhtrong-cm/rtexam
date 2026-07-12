@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// Đã thêm updateDoc vào phần import
 import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, setDoc, increment, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -62,7 +61,18 @@ let currentExamId = urlParams.get('examId');
 const currentResultId = urlParams.get('resultId'); 
 const currentRoomId = urlParams.get('roomId'); 
 
-function returnToLobbyOrDashboard() {
+// ĐÃ CẬP NHẬT: Chuyển thành async function để xóa trạng thái "đang thi" khi thoát giữa chừng
+async function returnToLobbyOrDashboard() {
+    if (currentUser && !isSubmitted) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            // Cập nhật lại thành 'idle' để bộ đếm không ghi nhận đang thi nữa
+            await updateDoc(userRef, { examStatus: 'idle' });
+        } catch (err) {
+            console.error("Lỗi cập nhật trạng thái khi rời phòng thi:", err);
+        }
+    }
+
     if (currentRoomId) {
         redirect(`lobby.html?roomId=${currentRoomId}`);
     } else {
@@ -145,7 +155,6 @@ async function loadExamDataAndQuestions() {
     }
 }
 
-// Cập nhật thành async function để có thể sử dụng await
 async function initExamState() {
     currentIndex = 0;
     userAnswers = {};
@@ -165,7 +174,6 @@ async function initExamState() {
         setDoc(participantRef, { status: 'playing' }, { merge: true }).catch(err => console.error(err));
     }
 
-    // Cập nhật trạng thái examStatus thành 'testing' khi bắt đầu thi
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
@@ -214,7 +222,7 @@ async function fetchQuestionsFromFirestore() {
     const fetched = querySnapshot.docs.map(doc => { return { id: doc.id, ...doc.data() }; });
     
     if (fetched.length > 0) {
-        questions = fetched.sort((a,b) => a.order - b.order); // Sắp xếp thứ tự câu
+        questions = fetched.sort((a,b) => a.order - b.order);
     } else {
         throw new Error(`Không tìm thấy câu hỏi nào cho mã đề: ${currentExamId}`);
     }
@@ -291,7 +299,6 @@ async function executeSubmit() {
         } catch (roomErr) { console.error("Lỗi cập nhật điểm vào phòng chờ:", roomErr); }
     }
 
-    // Cập nhật trạng thái examStatus thành 'idle' sau khi nộp bài xong
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
@@ -396,7 +403,6 @@ function openReviewModal(score, correctCount, total) {
                           (userAns === correctAns) ? '<span style="background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Đúng</span>' : 
                           '<span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Sai</span>';
 
-        // LÀM ĐẸP FONT CHỮ VÀ BỔ SUNG NÚT BÁO LỖI
         let safeQuestionText = (q.text || "").replace(/"/g, '&quot;');
         
         html += `
@@ -421,7 +427,6 @@ function openReviewModal(score, correctCount, total) {
 
     contentArea.innerHTML = html;
 
-    // Gắn sự kiện cho các nút "Báo lỗi" vừa Render
     document.querySelectorAll('.btn-report-error').forEach(btn => {
         btn.addEventListener('mouseover', function() { this.style.background = '#fca5a5'; });
         btn.addEventListener('mouseout', function() { this.style.background = '#fee2e2'; });
@@ -433,28 +438,24 @@ function openReviewModal(score, correctCount, total) {
     });
 }
 
-// ================= LOGIC XỬ LÝ REPORT LỖI (MỚI) =================
+// ================= LOGIC XỬ LÝ REPORT LỖI =================
 function openReportModal(qId, qText) {
     reportingQuestionId = qId;
     reportingQuestionText = qText;
     
-    // Cập nhật text preview cho user biết đang báo lỗi câu nào
     let previewText = qText.length > 70 ? qText.substring(0, 70) + '...' : qText;
     document.getElementById('reportQuestionTextPreview').innerText = previewText;
     
-    // Reset form
     document.getElementById('reportErrorType').value = 'Sai đáp án';
     document.getElementById('reportDescription').value = '';
     
     document.getElementById('reportQuestionModal').classList.add('active');
 }
 
-// Nút hủy báo cáo
 document.getElementById('btnCancelReport').addEventListener('click', () => {
     document.getElementById('reportQuestionModal').classList.remove('active');
 });
 
-// Nút Gửi Báo Cáo
 document.getElementById('btnSubmitReport').addEventListener('click', async () => {
     if (!auth.currentUser) {
         showToast("Bạn cần đăng nhập để gửi báo cáo!");
@@ -482,7 +483,7 @@ document.getElementById('btnSubmitReport').addEventListener('click', async () =>
             errorType: errorType,
             description: description,
             status: "pending",
-            timestamp: serverTimestamp() // Sử dụng timestamp từ Firestore
+            timestamp: serverTimestamp()
         });
         
         showToast("Đã gửi báo cáo lỗi. Xin cảm ơn sự đóng góp của bạn!");
@@ -639,6 +640,7 @@ function renderQuestion() {
     });
 }
 
+// Bàn phím / Nút ấn chọn câu hỏi nhanh
 function renderPalette() {
     const container = document.getElementById('palette-container');
     container.innerHTML = '';
