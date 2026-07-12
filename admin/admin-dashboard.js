@@ -20,8 +20,9 @@ export function initDashboardRealtime() {
             const isUserOnline = data.isOnline === true || String(data.isOnline).toLowerCase() === "true";
             const isUserBanned = data.isBanned === true || String(data.isBanned).toLowerCase() === "true";
             
-            // Mở rộng bộ quét: Bắt nhiều trường hợp tên biến đánh dấu đang thi khác nhau
+            // Mở rộng bộ quét: Bổ sung examStatus === 'testing' theo gợi ý logic
             const isUserTesting = 
+                data.examStatus === 'testing' ||
                 data.isTesting === true || 
                 String(data.isTesting).toLowerCase() === "true" || 
                 data.status === 'testing' ||
