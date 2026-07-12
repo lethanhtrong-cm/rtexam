@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical Platform Presentation</title>
+    <title>Nền tảng Ôn thi Y Khoa</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden">
 
-    <main id="main-content" class="flex flex-col pt-4 pb-20">
+    <div data-component="components/navbar.html"></div>
+
+    <main id="main-content" class="flex flex-col pt-20 pb-0">
+        
         <div data-component="components/hero-slide-1.html"></div>
         
         <div class="max-w-6xl mx-auto w-full px-6 py-4">
@@ -17,7 +20,12 @@
         </div>
 
         <div data-component="components/hero-slide-2.html"></div>
+
+        <div data-component="components/features.html"></div>
+
     </main>
+
+    <div data-component="components/footer.html"></div>
 
     <script src="js/main.js"></script>
 </body>
