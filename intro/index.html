@@ -10,24 +10,8 @@
 <body class="bg-slate-50 text-slate-800 font-sans">
 
     <main id="main-content">
-        <div data-component="components/hero-slide-1.html"></div>
-    </main>
+        </main>
 
-    <script>
-        // Hàm tự động load các file html nhỏ vào khung chính
-        document.querySelectorAll('[data-component]').forEach(async (el) => {
-            const file = el.getAttribute('data-component');
-            try {
-                const response = await fetch(file);
-                if (response.ok) {
-                    el.innerHTML = await response.text();
-                } else {
-                    el.innerHTML = `<p class="p-4 text-red-500">Không tìm thấy file module: ${file}</p>`;
-                }
-            } catch (error) {
-                console.error('Lỗi load component:', error);
-            }
-        });
-    </script>
+    <script src="js/main.js"></script>
 </body>
 </html>
