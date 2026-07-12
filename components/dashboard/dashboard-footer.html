@@ -1,0 +1,60 @@
+<style>
+    .dashboard-footer {
+        background-color: transparent;
+        border-top: 1px dashed #cbd5e1;
+        padding: 20px 24px;
+        font-size: 0.85rem;
+        color: #64748b;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 40px;
+    }
+    
+    .dashboard-footer-links {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .dashboard-footer-links a {
+        color: #64748b;
+        text-decoration: none;
+        transition: color 0.2s ease, transform 0.2s ease;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .dashboard-footer-links a:hover {
+        color: #0284c7;
+        transform: translateY(-1px);
+    }
+
+    /* Tự động dàn dọc và căn giữa khi xem trên điện thoại */
+    @media (max-width: 640px) {
+        .dashboard-footer {
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+        .dashboard-footer-links {
+            justify-content: center;
+        }
+    }
+</style>
+
+<footer class="dashboard-footer">
+    <div class="footer-copyright">
+        © 2026 MedQuiz Pro. Hệ thống ôn thi Hình ảnh Y học.
+    </div>
+    
+    <div class="dashboard-footer-links">
+        <a href="#"><i class="fa-solid fa-bug"></i> Báo lỗi hệ thống</a>
+        <a href="#"><i class="fa-regular fa-circle-question"></i> Hỗ trợ & HDSD</a>
+        <a href="#"><i class="fa-solid fa-code-branch"></i> Phiên bản v1.0.0</a>
+    </div>
+</footer>
