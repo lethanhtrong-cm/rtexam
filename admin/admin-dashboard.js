@@ -1,55 +1,53 @@
 import { db } from './admin-core.js';
 import { 
-    collection, onSnapshot, getDocs 
+    collection, getDocs, query, where, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 let timeChartInstance = null;
 let levelChartInstance = null;
 let techChartInstance = null;
+let dashboardPollingInterval = null; // Biến lưu trữ vòng lặp thời gian
 
 export function initDashboardRealtime() {
-    // 1. Lắng nghe trạng thái User Online và Đang trong phòng thi (Real-time)
-    onSnapshot(collection(db, "users"), (snapshot) => {
-        let onlineCount = 1; // Mặc định +1 cho chính Admin đang truy cập hệ thống
-        let testingCount = 0;
-        
-        snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            
-            // Ép kiểu an toàn để nhận diện đúng boolean hoặc string "true"
-            const isUserOnline = data.isOnline === true || String(data.isOnline).toLowerCase() === "true";
-            const isUserBanned = data.isBanned === true || String(data.isBanned).toLowerCase() === "true";
-            
-            // Mở rộng bộ quét: Bổ sung examStatus === 'testing' theo gợi ý logic
-            const isUserTesting = 
-                data.examStatus === 'testing' ||
-                data.isTesting === true || 
-                String(data.isTesting).toLowerCase() === "true" || 
-                data.status === 'testing' ||
-                data.isTakingExam === true ||
-                String(data.isTakingExam).toLowerCase() === "true" ||
-                data.inExamRoom === true ||
-                (data.currentExamId !== undefined && data.currentExamId !== null && data.currentExamId !== "");
-            
-            // Chỉ đếm người dùng online và không bị khóa
-            if (isUserOnline && !isUserBanned) {
-                onlineCount++;
-            }
-            
-            // Nhận diện người dùng đang trong phòng thi (không đếm tài khoản bị khóa)
-            if (isUserTesting && !isUserBanned) {
-                testingCount++;
-            }
-        });
+    // 1. Dọn dẹp vòng lặp cũ nếu có (tránh rò rỉ bộ nhớ khi admin chuyển tab liên tục)
+    if (dashboardPollingInterval) {
+        clearInterval(dashboardPollingInterval);
+    }
 
-        const onlineEl = document.getElementById('dash-online-users');
-        const testingEl = document.getElementById('dash-testing-users');
-        
-        if (onlineEl) onlineEl.innerText = onlineCount;
-        if (testingEl) testingEl.innerText = testingCount;
-    }, (error) => {
-        console.error("Lỗi Realtime Dashboard Users:", error);
-    });
+    // 2. Hàm đếm số liệu trực tiếp trên Server Firebase (Tối ưu chi phí Read)
+    const fetchLiveCounts = async () => {
+        try {
+            const usersRef = collection(db, "users");
+            
+            // --- ĐẾM SỐ NGƯỜI ĐANG THI ---
+            // Yêu cầu Client khi vào thi phải cập nhật field: examStatus = 'testing'
+            const qTesting = query(usersRef, where("examStatus", "==", "testing"));
+            const snapTesting = await getCountFromServer(qTesting);
+            const testingCount = snapTesting.data().count;
+
+            // --- ĐẾM SỐ NGƯỜI ONLINE ---
+            // Yêu cầu Client khi đăng nhập phải cập nhật field: isOnline = true
+            const qOnline = query(usersRef, where("isOnline", "==", true));
+            const snapOnline = await getCountFromServer(qOnline);
+            const onlineCount = snapOnline.data().count + 1; // Mặc định cộng 1 cho chính Admin đang trực tuyến
+
+            // In dữ liệu ra giao diện
+            const onlineEl = document.getElementById('dash-online-users');
+            const testingEl = document.getElementById('dash-testing-users');
+            
+            if (onlineEl) onlineEl.innerText = onlineCount;
+            if (testingEl) testingEl.innerText = testingCount;
+
+        } catch (error) {
+            console.error("Lỗi khi đếm dữ liệu Realtime từ server:", error);
+        }
+    };
+
+    // 3. Thực thi ngay lập tức lần đầu tiên khi vừa mở trang
+    fetchLiveCounts();
+
+    // 4. Thiết lập Polling lặp lại mỗi 10 giây để mô phỏng Real-time an toàn
+    dashboardPollingInterval = setInterval(fetchLiveCounts, 10000);
 }
 
 export async function loadDashboardStats() {
@@ -192,18 +190,19 @@ function renderCharts(timeStats, levelStats, techStats) {
     }
 }
 
-// Lắng nghe tín hiệu khi các components HTML đã load xong (Từ admin-core.js bắn ra)
+// Lắng nghe tín hiệu khi các components HTML đã load xong
 document.addEventListener('componentsLoaded', () => {
     initDashboardRealtime();
     loadDashboardStats();
     
-    // Nếu Dashboard đang là tab active, đảm bảo nó render đúng kích thước Chart
+    // Refresh lại Dashboard khi Admin bấm qua lại giữa các tab
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             const target = item.getAttribute('data-target');
             if (target === 'tab-dashboard') {
-                loadDashboardStats(); // Refresh lại dữ liệu mềm khi ấn lại tab
+                loadDashboardStats(); 
+                initDashboardRealtime();
             }
         });
     });
