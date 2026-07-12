@@ -6,6 +6,8 @@
     <title>Admin Dashboard Ultra Pro - Hệ thống thi trắc nghiệm</title>
 
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- Thêm thư viện vẽ biểu đồ Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <link rel="stylesheet" href="./css/admin.css">
 </head>
@@ -15,13 +17,84 @@
 
     <main class="main-wrapper">
         <header class="topbar">
-            <h2 id="topbar-title">Danh Sách Đề Thi: Chuyên Khoa MRI</h2>
+            <!-- Đổi Title mặc định vì tab thống kê sẽ hiện đầu tiên -->
+            <h2 id="topbar-title">Thống Kê Tổng Quan Hệ Thống</h2>
             <div class="admin-profile">🟢 Đang hoạt động</div>
         </header>
 
         <div class="content-container">
             
-            <section id="tab-exam-list" class="content-section active">
+            <!-- TAB MỚI: DASHBOARD THỐNG KÊ (Được set active mặc định) -->
+            <section id="tab-dashboard" class="content-section active">
+                <!-- Nhóm 1: Thống kê Truy cập & Thi -->
+                <h2 style="font-size: 1.25rem; color: #1e293b; margin-bottom: 15px;">📈 Thống Kê Hoạt Động Realtime</h2>
+                <div class="stats-container" style="margin-bottom: 30px;">
+                    <div class="stat-card online-users">
+                        <div class="stat-info">
+                            <h3>Đang truy cập hệ thống</h3>
+                            <div class="number" style="color: #3b82f6;">
+                                <span id="dash-online-users">0</span>
+                                <span class="online-pulse-dot"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left: 5px solid #f59e0b;">
+                        <div class="stat-info">
+                            <h3>Đang trong phòng thi</h3>
+                            <div class="number" style="color: #f59e0b;" id="dash-testing-users">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 style="font-size: 1.25rem; color: #1e293b; margin-bottom: 15px;">📅 Số Lượt Đã Thi Tích Lũy</h2>
+                <div class="stats-container" style="margin-bottom: 30px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                    <div class="stat-card" style="border-left: 5px solid #10b981; padding: 15px;">
+                        <div class="stat-info">
+                            <h3>Hôm nay</h3>
+                            <div class="number" style="color: #10b981; font-size: 1.8rem;" id="dash-day-users">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left: 5px solid #06b6d4; padding: 15px;">
+                        <div class="stat-info">
+                            <h3>Tuần này</h3>
+                            <div class="number" style="color: #06b6d4; font-size: 1.8rem;" id="dash-week-users">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left: 5px solid #8b5cf6; padding: 15px;">
+                        <div class="stat-info">
+                            <h3>Tháng này</h3>
+                            <div class="number" style="color: #8b5cf6; font-size: 1.8rem;" id="dash-month-users">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-left: 5px solid #ec4899; padding: 15px;">
+                        <div class="stat-info">
+                            <h3>Năm nay</h3>
+                            <div class="number" style="color: #ec4899; font-size: 1.8rem;" id="dash-year-users">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nhóm 2: Thống kê Cấu hình (Biểu đồ) -->
+                <h2 style="font-size: 1.25rem; color: #1e293b; margin-bottom: 15px;">📊 Xu Hướng Chọn Đề Thi</h2>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch;">
+                    <div class="card" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <h3 style="font-size: 1rem; color: #475569; margin-bottom: 15px;">Tỉ lệ Mốc Thời Gian</h3>
+                        <canvas id="chart-time" style="max-width: 100%; max-height: 220px;"></canvas>
+                    </div>
+                    <div class="card" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <h3 style="font-size: 1rem; color: #475569; margin-bottom: 15px;">Lượt Chọn Mức Độ Khó</h3>
+                        <canvas id="chart-level" style="max-width: 100%; max-height: 220px;"></canvas>
+                    </div>
+                    <div class="card" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <h3 style="font-size: 1rem; color: #475569; margin-bottom: 15px;">Kỹ Thuật Chuyên Khoa</h3>
+                        <canvas id="chart-tech" style="max-width: 100%; max-height: 220px;"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CÁC TAB CŨ ĐƯỢC GIỮ NGUYÊN HOÀN TOÀN -->
+            <!-- Gỡ bỏ class active ở tab này vì Dashboard đang chiếm quyền ưu tiên hiển thị -->
+            <section id="tab-exam-list" class="content-section">
                 <div class="search-wrapper-modern">
                     <input type="text" id="examSearchInput" class="search-input-modern" placeholder="🔍 Nhập mã đề cần tìm (Gõ phím tới đâu tìm tới đó)...">
                 </div>
@@ -259,5 +332,7 @@
     <script type="module" src="./admin-exams.js"></script>
     <script type="module" src="./admin-users.js"></script>
     <script type="module" src="./admin-ai.js"></script>
+    <!-- Gắn file module thống kê mới tạo -->
+    <script type="module" src="./admin-dashboard.js"></script>
 </body>
 </html>
