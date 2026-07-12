@@ -486,9 +486,10 @@ function renderExams() {
             }
 
             // Dàn đều 4 nhãn còn lại trên cùng 1 hàng bằng justify-content: space-between
+            // Tự động rút gọn chữ "Trung bình" thành "T.Bình" để chống tràn layout
             const mergedTagsHtml = `
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px;">
-                    <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level} </span>
+                    <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level === 'Trung bình' ? 'T.Bình' : exam.level} </span>
                     <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
                     <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
                     ${datePillHtml}
