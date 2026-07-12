@@ -19,14 +19,15 @@ export function initDashboardRealtime() {
             // Ép kiểu an toàn để nhận diện đúng boolean hoặc string "true"
             const isUserOnline = data.isOnline === true || String(data.isOnline).toLowerCase() === "true";
             const isUserBanned = data.isBanned === true || String(data.isBanned).toLowerCase() === "true";
+            const isUserTesting = data.isTesting === true || String(data.isTesting).toLowerCase() === "true" || data.status === 'testing';
             
             // Chỉ đếm người dùng online và không bị khóa
             if (isUserOnline && !isUserBanned) {
                 onlineCount++;
             }
             
-            // Nhận diện người dùng đang trong phòng thi
-            if (data.isTesting === true || data.status === 'testing') {
+            // Nhận diện người dùng đang trong phòng thi (không đếm tài khoản bị khóa)
+            if (isUserTesting && !isUserBanned) {
                 testingCount++;
             }
         });
