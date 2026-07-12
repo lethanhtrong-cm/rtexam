@@ -39,6 +39,32 @@ function resizeImageToBase64(file) {
 }
 
 // =========================================================================
+// ĐỒNG BỘ DỮ LIỆU LÊN TAB PROFILE KHI LOAD TRANG
+// =========================================================================
+document.addEventListener('authReady', (e) => {
+    const user = e.detail ? e.detail.user : auth.currentUser;
+    const userData = e.detail ? e.detail.currentUserData : null;
+    
+    if (user) {
+        const profileTabName = document.getElementById("profileTabName");
+        const profileTabEmail = document.getElementById("profileTabEmail");
+        const profileTabAvatar = document.getElementById("profileTabAvatar");
+        
+        if (profileTabName) profileTabName.textContent = user.displayName || "Chưa cập nhật";
+        if (profileTabEmail) profileTabEmail.textContent = user.email || "Không có email";
+        
+        if (profileTabAvatar) {
+            if (userData && userData.avatarBase64) {
+                profileTabAvatar.src = userData.avatarBase64;
+            } else {
+                const name = user.displayName ? encodeURIComponent(user.displayName) : 'User';
+                profileTabAvatar.src = `https://ui-avatars.com/api/?name=${name}&background=0056b3&color=fff`;
+            }
+        }
+    }
+});
+
+// =========================================================================
 // KHỞI TẠO DOM & SỰ KIỆN KHI UI ĐÃ SẴN SÀNG
 // =========================================================================
 document.addEventListener('ComponentsLoaded', () => {
@@ -47,10 +73,16 @@ document.addEventListener('ComponentsLoaded', () => {
     const btnUpdateProfile = document.getElementById("btnUpdateProfile");
     const inputName = document.getElementById("inputName");
     const inputAvatarFile = document.getElementById("inputAvatarFile");
+    
+    // Các ID bên Topbar
     const displayName = document.getElementById("displayName");
     const topbarName = document.getElementById("topbarName");
     const userAvatar = document.getElementById("userAvatar");
     const topbarAvatar = document.getElementById("topbarAvatar");
+
+    // Các ID bên tab Hồ Sơ
+    const profileTabName = document.getElementById("profileTabName");
+    const profileTabAvatar = document.getElementById("profileTabAvatar");
 
     const changePasswordForm = document.getElementById("changePasswordForm");
     const inputNewPassword = document.getElementById("inputNewPassword");
@@ -78,11 +110,16 @@ document.addEventListener('ComponentsLoaded', () => {
 
                 alert("Cập nhật hồ sơ thành công!");
                 
+                // Đồng bộ cập nhật Tên mới ra UI
                 if (displayName) displayName.textContent = newName;
                 if (topbarName) topbarName.textContent = newName; 
+                if (profileTabName) profileTabName.textContent = newName;
+
+                // Đồng bộ cập nhật Ảnh mới ra UI
                 if (newBase64Avatar) {
                     if (userAvatar) userAvatar.src = newBase64Avatar;
                     if (topbarAvatar) topbarAvatar.src = newBase64Avatar; 
+                    if (profileTabAvatar) profileTabAvatar.src = newBase64Avatar;
                 }
                 
                 inputAvatarFile.value = ""; 
