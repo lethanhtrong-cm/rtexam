@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // 1. CẤU HÌNH & KHỞI TẠO FIREBASE
@@ -296,89 +296,89 @@ function setVipInactive() {
     const elVipEndDate = document.getElementById("vipEndDate");
     if (elVipEndDate) elVipEndDate.textContent = "Không xác định";
     
-    // Đã vô hiệu hóa logic gán trạng thái cũ để nhường chỗ cho Leaderboard
-    // const statAccount = document.getElementById("statAccountStatus");
-    // if (statAccount) statAccount.textContent = "Thường";
-
     const topbarVipContainer = document.getElementById('topbar-vip-container');
     if (topbarVipContainer) {
         topbarVipContainer.innerHTML = `
-            <button class="btn-premium-pro" id="btnUpgradeHeader">
-                <i class="fa-solid fa-gem"></i> Nâng cấp Pro
+            <button class="btn-premium-pro" id="btnUpgradeHeader" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);">
+                <i class="fa-solid fa-crown"></i> Nâng cấp Pro
             </button>
         `;
     }
 }
 
-async function fetchUserData(user) {
-    let currentUserData = { isVip: false, isBanned: false, bookmarks: [] };
-    try {
+// Chuyển đổi sang Real-time Listener (onSnapshot)
+function fetchUserData(user) {
+    return new Promise((resolve) => {
         const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (userDocSnap.exists()) {
-            currentUserData = userDocSnap.data();
+        
+        // Lắng nghe dữ liệu realtime
+        onSnapshot(userDocRef, async (userDocSnap) => {
+            let currentUserData = { isVip: false, isBanned: false, bookmarks: [] };
             
-            if (!currentUserData.bookmarks) {
-                currentUserData.bookmarks = [];
-            }
-
-            if (currentUserData.isBanned) {
-                alert("Tài khoản của bạn đã bị khóa hệ thống. Vui lòng liên hệ quản trị viên.");
-                await signOut(auth);
-                return null;
-            }
-
-            if (currentUserData.avatarBase64) {
-                const elUserAvatar = document.getElementById("userAvatar");
-                if (elUserAvatar) elUserAvatar.src = currentUserData.avatarBase64;
-
-                const elTopbarAvatar = document.getElementById("topbarAvatar");
-                if (elTopbarAvatar) elTopbarAvatar.src = currentUserData.avatarBase64; 
-            }
-
-            if (currentUserData.isVip) {
-                const elVipStatusBadge = document.getElementById("vipStatusBadge");
-                if (elVipStatusBadge) {
-                    elVipStatusBadge.textContent = "Đã kích hoạt Pro";
-                    elVipStatusBadge.className = "status-badge status-active";
+            if (userDocSnap.exists()) {
+                currentUserData = userDocSnap.data();
+                
+                if (!currentUserData.bookmarks) {
+                    currentUserData.bookmarks = [];
                 }
 
-                const elVipStatusTab3 = document.getElementById("vipStatusTab3");
-                if (elVipStatusTab3) {
-                    elVipStatusTab3.textContent = "Tài khoản PRO đang hoạt động";
-                    elVipStatusTab3.className = "status-badge status-active";
+                if (currentUserData.isBanned) {
+                    alert("Tài khoản của bạn đã bị khóa hệ thống. Vui lòng liên hệ quản trị viên.");
+                    await signOut(auth);
+                    return resolve(null); // Giải phóng promise nếu user bị ban
                 }
 
-                const elVipStartDate = document.getElementById("vipStartDate");
-                if (elVipStartDate) elVipStartDate.textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
+                if (currentUserData.avatarBase64) {
+                    const elUserAvatar = document.getElementById("userAvatar");
+                    if (elUserAvatar) elUserAvatar.src = currentUserData.avatarBase64;
 
-                const elVipEndDate = document.getElementById("vipEndDate");
-                if (elVipEndDate) elVipEndDate.textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
+                    const elTopbarAvatar = document.getElementById("topbarAvatar");
+                    if (elTopbarAvatar) elTopbarAvatar.src = currentUserData.avatarBase64; 
+                }
 
-                // Đã vô hiệu hóa logic gán trạng thái cũ để nhường chỗ cho Leaderboard
-                // const statAccount = document.getElementById("statAccountStatus");
-                // if (statAccount) statAccount.textContent = "PRO";
+                if (currentUserData.isVip) {
+                    const elVipStatusBadge = document.getElementById("vipStatusBadge");
+                    if (elVipStatusBadge) {
+                        elVipStatusBadge.textContent = "Đã kích hoạt Pro";
+                        elVipStatusBadge.className = "status-badge status-active";
+                    }
 
-                const topbarVipContainer = document.getElementById('topbar-vip-container');
-                if (topbarVipContainer) {
-                    topbarVipContainer.innerHTML = `
-                        <div class="topbar-vip-badge">
-                            <i class="fa-solid fa-gem"></i> TÀI KHOẢN PRO
-                        </div>
-                    `;
+                    const elVipStatusTab3 = document.getElementById("vipStatusTab3");
+                    if (elVipStatusTab3) {
+                        elVipStatusTab3.textContent = "Tài khoản PRO đang hoạt động";
+                        elVipStatusTab3.className = "status-badge status-active";
+                    }
+
+                    const elVipStartDate = document.getElementById("vipStartDate");
+                    if (elVipStartDate) elVipStartDate.textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
+
+                    const elVipEndDate = document.getElementById("vipEndDate");
+                    if (elVipEndDate) elVipEndDate.textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
+
+                    const topbarVipContainer = document.getElementById('topbar-vip-container');
+                    if (topbarVipContainer) {
+                        topbarVipContainer.innerHTML = `
+                            <div class="topbar-vip-badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
+                                <i class="fa-solid fa-gem"></i> PRO
+                            </div>
+                        `;
+                    }
+                } else {
+                    setVipInactive();
                 }
             } else {
-                setVipInactive();
+                setVipInactive(); 
             }
-        } else {
-            setVipInactive(); 
-        }
-    } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu user từ Firestore:", error);
-        setVipInactive();
-    }
-    return currentUserData;
+            
+            // Luôn Resolve ở lần chạy đầu tiên để nhả luồng cho hàm executeAuthUI tiếp tục
+            resolve(currentUserData);
+            
+        }, (error) => {
+            console.error("Lỗi khi lắng nghe dữ liệu user từ Firestore:", error);
+            setVipInactive();
+            resolve({ isVip: false, isBanned: false, bookmarks: [] });
+        });
+    });
 }
 
 async function executeAuthUI(user) {
