@@ -33,7 +33,8 @@ export async function loadExamList() {
                 timeLimit: data.timeLimit !== undefined ? data.timeLimit : 15,
                 attemptCount: data.attemptCount || 0,
                 technique: data.technique || "Hỗn hợp",
-                level: data.level || "Trung bình"
+                level: data.level || "Trung bình",
+                createdAt: data.createdAt // Bổ sung lấy dữ liệu ngày tạo
             };
         });
 
@@ -48,12 +49,13 @@ export async function loadExamList() {
         cachedExams = [];
         for (const examId in examGroups) {
             const count = examGroups[examId];
-            const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình" };
+            const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null };
 
             cachedExams.push({
                 examId: examId, count: count, isVip: config.isVip,
                 timeLimit: config.timeLimit, attemptCount: config.attemptCount,
-                technique: config.technique, level: config.level
+                technique: config.technique, level: config.level,
+                createdAt: config.createdAt // Lưu vào biến cache
             });
         }
 
@@ -88,6 +90,22 @@ export function renderExamList() {
         if (exam.level === 'Dễ') levelClass = 'level-easy';
         else if (exam.level === 'Khó') levelClass = 'level-hard';
 
+        // Xử lý hiển thị ngày tạo
+        let formattedDate = 'Không rõ';
+        if (exam.createdAt) {
+            if (typeof exam.createdAt.toDate === 'function') {
+                formattedDate = exam.createdAt.toDate().toLocaleDateString('vi-VN');
+            } else {
+                const numDate = Number(exam.createdAt);
+                if (!isNaN(numDate) && numDate > 100000000) {
+                    let finalMs = numDate > 1000000000000 ? numDate : numDate * 1000;
+                    formattedDate = new Date(finalMs).toLocaleDateString('vi-VN');
+                } else {
+                    formattedDate = new Date(exam.createdAt).toLocaleDateString('vi-VN');
+                }
+            }
+        }
+
         const cardDiv = document.createElement('div');
         cardDiv.className = 'exam-modern-card';
         
@@ -98,6 +116,7 @@ export function renderExamList() {
                     <span class="badge-meta">${exam.technique}</span>
                     <span class="badge-meta ${levelClass}">${exam.level}</span>
                     <span class="badge-count">⏱️ ${exam.timeLimit} phút</span>
+                    <span class="badge-count" style="background-color: #f8fafc; color: #475569; border: 1px solid #e2e8f0;">📅 ${formattedDate}</span>
                 </div>
                 <div class="card-status-right">
                     <span class="badge-count" style="background-color: #f1f5f9; color: #475569;">📊 ${exam.count} Câu hỏi</span>
