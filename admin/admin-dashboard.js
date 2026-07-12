@@ -10,14 +10,25 @@ let techChartInstance = null;
 export function initDashboardRealtime() {
     // 1. Lắng nghe trạng thái User Online và Đang trong phòng thi (Real-time)
     onSnapshot(collection(db, "users"), (snapshot) => {
-        let onlineCount = 0;
+        let onlineCount = 1; // Mặc định +1 cho chính Admin đang truy cập hệ thống
         let testingCount = 0;
         
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            if (data.isOnline && !data.isBanned) onlineCount++;
-            // Nếu schema có biến isTesting (hoặc tương tự) để nhận diện đang thi
-            if (data.isTesting || data.status === 'testing') testingCount++; 
+            
+            // Ép kiểu an toàn để nhận diện đúng boolean hoặc string "true"
+            const isUserOnline = data.isOnline === true || String(data.isOnline).toLowerCase() === "true";
+            const isUserBanned = data.isBanned === true || String(data.isBanned).toLowerCase() === "true";
+            
+            // Chỉ đếm người dùng online và không bị khóa
+            if (isUserOnline && !isUserBanned) {
+                onlineCount++;
+            }
+            
+            // Nhận diện người dùng đang trong phòng thi
+            if (data.isTesting === true || data.status === 'testing') {
+                testingCount++;
+            }
         });
 
         const onlineEl = document.getElementById('dash-online-users');
