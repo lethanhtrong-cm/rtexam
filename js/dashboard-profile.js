@@ -1,6 +1,6 @@
 import { auth, db } from "./dashboard-core.js";
 import { updateProfile, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // HÀM XỬ LÝ NÉN ẢNH VÀ CHUYỂN ĐỔI SANG BASE64
@@ -39,36 +39,50 @@ function resizeImageToBase64(file) {
 }
 
 // =========================================================================
-// ĐỒNG BỘ DỮ LIỆU LÊN TAB PROFILE KHI LOAD TRANG
+// HÀM ĐỒNG BỘ DỮ LIỆU LÊN TAB PROFILE (Khắc phục lỗi bất đồng bộ DOM)
 // =========================================================================
-document.addEventListener('authReady', (e) => {
-    const user = e.detail ? e.detail.user : auth.currentUser;
-    const userData = e.detail ? e.detail.currentUserData : null;
+async function syncProfileUI() {
+    const user = auth.currentUser;
+    if (!user) return;
     
-    if (user) {
-        const profileTabName = document.getElementById("profileTabName");
-        const profileTabEmail = document.getElementById("profileTabEmail");
-        const profileTabAvatar = document.getElementById("profileTabAvatar");
-        
-        if (profileTabName) profileTabName.textContent = user.displayName || "Chưa cập nhật";
-        if (profileTabEmail) profileTabEmail.textContent = user.email || "Không có email";
-        
-        if (profileTabAvatar) {
-            if (userData && userData.avatarBase64) {
-                profileTabAvatar.src = userData.avatarBase64;
+    const profileTabName = document.getElementById("profileTabName");
+    const profileTabEmail = document.getElementById("profileTabEmail");
+    const profileTabAvatar = document.getElementById("profileTabAvatar");
+    
+    if (profileTabName) profileTabName.textContent = user.displayName || "Chưa cập nhật";
+    if (profileTabEmail) profileTabEmail.textContent = user.email || "Không có email";
+    
+    if (profileTabAvatar) {
+        try {
+            // Fetch trực tiếp từ Firestore để đảm bảo lấy đúng ảnh mới nhất
+            const userDocRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(userDocRef);
+            
+            if (docSnap.exists() && docSnap.data().avatarBase64) {
+                profileTabAvatar.src = docSnap.data().avatarBase64;
             } else {
                 const name = user.displayName ? encodeURIComponent(user.displayName) : 'User';
                 profileTabAvatar.src = `https://ui-avatars.com/api/?name=${name}&background=0056b3&color=fff`;
             }
+        } catch (error) {
+            console.error("Lỗi khi tải ảnh đại diện từ Firestore:", error);
         }
     }
-});
+}
+
+// Lắng nghe khi Auth sẵn sàng
+document.addEventListener('authReady', syncProfileUI);
 
 // =========================================================================
 // KHỞI TẠO DOM & SỰ KIỆN KHI UI ĐÃ SẴN SÀNG
 // =========================================================================
 document.addEventListener('ComponentsLoaded', () => {
     
+    // Nếu Auth đã load xong trước cả Component, ta gọi đồng bộ ngay lập tức
+    if (auth.currentUser) {
+        syncProfileUI();
+    }
+
     const updateProfileForm = document.getElementById("updateProfileForm");
     const btnUpdateProfile = document.getElementById("btnUpdateProfile");
     const inputName = document.getElementById("inputName");
