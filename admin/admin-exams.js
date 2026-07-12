@@ -1,6 +1,6 @@
 import { db, showToast } from './admin-core.js';
 import { 
-    collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, where 
+    collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, where, getDoc 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Các biến trạng thái bộ lọc toàn cục
@@ -174,11 +174,24 @@ async function updateExamProperties() {
     saveBtn.innerHTML = "⏳ Đang lưu...";
 
     try {
-        await updateDoc(doc(db, "exams", currentEditingExamId), {
+        const docRef = doc(db, "exams", currentEditingExamId);
+        const docSnap = await getDoc(docRef);
+        
+        const payload = {
             technique: document.getElementById('edit-select-technique').value,
             timeLimit: parseInt(document.getElementById('edit-select-time').value, 10),
-            level: document.getElementById('edit-select-level').value
-        });
+            level: document.getElementById('edit-select-level').value,
+            isPublic: true // Vá lỗi đảm bảo luôn public
+        };
+
+        // Vá lỗi: Nếu đề chưa có ngày tạo, chèn thêm vào
+        if (!docSnap.exists() || !docSnap.data().createdAt) {
+            payload.createdAt = Date.now();
+        }
+
+        // Sử dụng setDoc với merge: true thay vì updateDoc để tạo doc nếu lỡ bị thiếu
+        await setDoc(docRef, payload, { merge: true });
+        
         showToast(`Cập nhật thuộc tính đề "${currentEditingExamId}" thành công!`, "success");
         if (modal) modal.style.display = "none";
         loadExamList(); 
@@ -192,7 +205,20 @@ async function updateExamProperties() {
 
 async function toggleExamVip(examId, currentVipState) {
     try {
-        await setDoc(doc(db, "exams", examId), { isVip: !currentVipState }, { merge: true });
+        const docRef = doc(db, "exams", examId);
+        const docSnap = await getDoc(docRef);
+        
+        const payload = { 
+            isVip: !currentVipState,
+            isPublic: true // Vá lỗi đảm bảo luôn public
+        };
+
+        // Vá lỗi: Nếu đề chưa có ngày tạo, chèn thêm vào
+        if (!docSnap.exists() || !docSnap.data().createdAt) {
+            payload.createdAt = Date.now();
+        }
+        
+        await setDoc(docRef, payload, { merge: true });
         showToast(`Cập nhật trạng thái VIP đề "${examId}" thành công!`, "success");
         loadExamList();
     } catch (error) { showToast("Lỗi thay đổi quyền VIP", "error"); }
@@ -393,6 +419,7 @@ async function publishExam() {
             await addDoc(collection(db, "questions"), questionItem);
         }
 
+        // --- CÓ BỌC LÓT LUÔN NGÀY TẠO VÀ TRẠNG THÁI PUBLIC TẠI ĐÂY ---
         for (const examId of uniqueExamIds) {
             await setDoc(doc(db, "exams", examId), {
                 technique: techniqueValue,
