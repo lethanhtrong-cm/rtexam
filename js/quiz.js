@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// THÊM serverTimestamp VÀO IMPORT
-import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, setDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Đã thêm updateDoc vào phần import
+import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, setDoc, increment, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
@@ -145,7 +145,8 @@ async function loadExamDataAndQuestions() {
     }
 }
 
-function initExamState() {
+// Cập nhật thành async function để có thể sử dụng await
+async function initExamState() {
     currentIndex = 0;
     userAnswers = {};
     isSubmitted = false;
@@ -162,6 +163,16 @@ function initExamState() {
     if (currentRoomId && currentUser) {
         const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
         setDoc(participantRef, { status: 'playing' }, { merge: true }).catch(err => console.error(err));
+    }
+
+    // Cập nhật trạng thái examStatus thành 'testing' khi bắt đầu thi
+    if (currentUser) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            await updateDoc(userRef, { examStatus: 'testing' });
+        } catch (err) {
+            console.error("Lỗi cập nhật trạng thái đang thi:", err);
+        }
     }
 
     renderAll();
@@ -278,6 +289,16 @@ async function executeSubmit() {
             const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
             await setDoc(participantRef, { status: 'finished', score: finalScore, timeTaken: timeSpent }, { merge: true });
         } catch (roomErr) { console.error("Lỗi cập nhật điểm vào phòng chờ:", roomErr); }
+    }
+
+    // Cập nhật trạng thái examStatus thành 'idle' sau khi nộp bài xong
+    if (currentUser) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            await updateDoc(userRef, { examStatus: 'idle' });
+        } catch (err) {
+            console.error("Lỗi cập nhật trạng thái idle:", err);
+        }
     }
 
     renderAll(); 
