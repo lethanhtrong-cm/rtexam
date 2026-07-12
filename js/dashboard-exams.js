@@ -427,7 +427,7 @@ function renderExams() {
     groups.forEach(group => {
         if (group.data.length === 0) return; 
 
-       let rowHtml = `
+        let rowHtml = `
             <div class="exam-category-row mb-5">
                 <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
                 <div class="swimlane-wrapper">
@@ -450,11 +450,18 @@ function renderExams() {
                 </button>
             `;
 
+            // Khai báo style dùng chung cho các nhãn pill
+            const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
+
+            // Đưa nhãn Kỹ Thuật lên phần Header (nằm giữa)
             const headerHtml = `
-                <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 15px;">
+                <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
                         <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
                         ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
+                    </div>
+                    <div style="display: flex; align-items: center; flex-shrink: 0;">
+                        <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
                         ${badgeHtml}
@@ -475,22 +482,16 @@ function renderExams() {
                 const dd = String(dateObj.getDate()).padStart(2, '0');
                 const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
                 const yyyy = dateObj.getFullYear();
-                datePillHtml = `<span style="padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0; color: #4b5563;"> <i class="fa-regular fa-calendar-days" style="font-size: 0.7rem;"></i> ${dd}/${mm}/${yyyy} </span>`;
+                datePillHtml = `<span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-calendar-days" style="font-size: 0.7rem;"></i> ${dd}/${mm}/${yyyy} </span>`;
             }
 
-            const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
-
+            // Dàn đều 4 nhãn còn lại trên cùng 1 hàng bằng justify-content: space-between
             const mergedTagsHtml = `
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; width: 100%;">
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                        <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
-                        <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level} </span>
-                        <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
-                    </div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                        <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
-                        ${datePillHtml}
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px;">
+                    <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level} </span>
+                    <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
+                    <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
+                    ${datePillHtml}
                 </div>
             `;
 
