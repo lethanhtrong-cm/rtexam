@@ -22,7 +22,8 @@ async function initDashboard() {
         loadComponent('leaderboard', './components/dashboard/tab-leaderboard.html'),
         loadComponent('tab-vip', './components/dashboard/tab-vip.html'),
         
-        loadComponent('modals-container', './components/dashboard/modals.html')
+        loadComponent('modals-container', './components/dashboard/modals.html'),
+        loadComponent('footer-container', './components/dashboard/dashboard-footer.html')
     ]);
     
     // Phát ra một sự kiện báo hiệu UI đã sẵn sàng
