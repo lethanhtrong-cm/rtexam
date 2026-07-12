@@ -481,12 +481,16 @@ function renderExams() {
             const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
 
             const mergedTagsHtml = `
-                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; overflow: hidden; width: 100%;">
-                    <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
-                    <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level} </span>
-                    <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
-                    <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
-                    ${datePillHtml}
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; width: 100%;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
+                        <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level} </span>
+                        <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
+                        ${datePillHtml}
+                    </div>
                 </div>
             `;
 
