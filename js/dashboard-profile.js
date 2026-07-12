@@ -39,7 +39,7 @@ function resizeImageToBase64(file) {
 }
 
 // =========================================================================
-// HÀM ĐỒNG BỘ DỮ LIỆU LÊN TAB PROFILE (Khắc phục lỗi bất đồng bộ DOM)
+// HÀM ĐỒNG BỘ DỮ LIỆU LÊN TAB PROFILE (Quét toàn bộ cấu trúc dữ liệu)
 // =========================================================================
 async function syncProfileUI() {
     const user = auth.currentUser;
@@ -54,18 +54,31 @@ async function syncProfileUI() {
     
     if (profileTabAvatar) {
         try {
-            // Fetch trực tiếp từ Firestore để đảm bảo lấy đúng ảnh mới nhất
             const userDocRef = doc(db, "users", user.uid);
             const docSnap = await getDoc(userDocRef);
             
-            if (docSnap.exists() && docSnap.data().avatarBase64) {
-                profileTabAvatar.src = docSnap.data().avatarBase64;
+            let finalAvatarUrl = null;
+
+            // 1. Quét tìm ảnh trong Firestore (Hỗ trợ nhiều tên biến dự phòng)
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                finalAvatarUrl = data.avatarBase64 || data.avatar || data.photoURL;
+            }
+
+            // 2. Nếu Firestore không có, quét tiếp trong Firebase Auth gốc
+            if (!finalAvatarUrl && user.photoURL) {
+                finalAvatarUrl = user.photoURL;
+            }
+
+            // 3. Render ảnh ra giao diện
+            if (finalAvatarUrl) {
+                profileTabAvatar.src = finalAvatarUrl;
             } else {
                 const name = user.displayName ? encodeURIComponent(user.displayName) : 'User';
                 profileTabAvatar.src = `https://ui-avatars.com/api/?name=${name}&background=0056b3&color=fff`;
             }
         } catch (error) {
-            console.error("Lỗi khi tải ảnh đại diện từ Firestore:", error);
+            console.error("Lỗi khi tải ảnh đại diện từ hệ thống:", error);
         }
     }
 }
@@ -78,7 +91,6 @@ document.addEventListener('authReady', syncProfileUI);
 // =========================================================================
 document.addEventListener('ComponentsLoaded', () => {
     
-    // Nếu Auth đã load xong trước cả Component, ta gọi đồng bộ ngay lập tức
     if (auth.currentUser) {
         syncProfileUI();
     }
@@ -112,24 +124,30 @@ document.addEventListener('ComponentsLoaded', () => {
             let newBase64Avatar = null;
 
             try {
+                // Cập nhật tên vào Firebase Auth gốc
                 await updateProfile(auth.currentUser, { displayName: newName });
                 
+                // Nếu có upload file ảnh
                 if (inputAvatarFile.files.length > 0) {
                     const file = inputAvatarFile.files[0];
                     newBase64Avatar = await resizeImageToBase64(file);
                     
                     const userDocRef = doc(db, "users", auth.currentUser.uid);
-                    await setDoc(userDocRef, { avatarBase64: newBase64Avatar }, { merge: true });
+                    // Cập nhật vào Firestore (Lưu cả 2 trường để dự phòng đồng bộ cho topbar)
+                    await setDoc(userDocRef, { 
+                        avatarBase64: newBase64Avatar,
+                        avatar: newBase64Avatar 
+                    }, { merge: true });
                 }
 
                 alert("Cập nhật hồ sơ thành công!");
                 
-                // Đồng bộ cập nhật Tên mới ra UI
+                // Đồng bộ tên ra UI lập tức
                 if (displayName) displayName.textContent = newName;
                 if (topbarName) topbarName.textContent = newName; 
                 if (profileTabName) profileTabName.textContent = newName;
 
-                // Đồng bộ cập nhật Ảnh mới ra UI
+                // Đồng bộ ảnh ra UI lập tức
                 if (newBase64Avatar) {
                     if (userAvatar) userAvatar.src = newBase64Avatar;
                     if (topbarAvatar) topbarAvatar.src = newBase64Avatar; 
