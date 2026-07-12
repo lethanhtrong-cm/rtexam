@@ -1,28 +1,66 @@
-<div class="vip-layout">
-    <div class="card vip-card-box">
-        <h3><i class="fa-solid fa-star"></i> Gói cước của bạn</h3>
-        <p style="font-size: 1.1rem;">Tình trạng hiện tại:<br><br>
-            <span id="vipStatusTab3" class="status-badge status-unactive" style="font-size: 1rem; padding: 10px 15px;">Chưa kích hoạt VIP</span>
-        </p>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-        <ul style="line-height: 1.8; padding-left: 20px;">
-            <li>Truy cập toàn bộ kho đề thi Pro độc quyền.</li>
-            <li>Xem giải thích chi tiết đáp án.</li>
-            <li>Lưu lại lịch sử làm bài không giới hạn.</li>
-            <li>Hỗ trợ học tập 24/7.</li>
+<div class="vip-layout" style="display: flex; flex-wrap: wrap; gap: 24px; max-width: 1100px; margin: 0 auto; padding: 10px 0;">
+    <!-- CỘT TRÁI: THÔNG TIN GÓI CƯỚC & QUYỀN LỢI -->
+    <div class="card vip-card-box" style="flex: 1; min-width: 350px; background: #fff; border-radius: 16px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9;">
+        <h3 style="color: #1e293b; font-size: 1.4rem; margin-top: 0; margin-bottom: 25px; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-star" style="color: #fbbf24;"></i> Thông tin gói cước
+        </h3>
+        
+        <div style="background: #f8fafc; padding: 20px 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
+            <p style="font-size: 0.95rem; color: #64748b; margin-bottom: 12px; margin-top: 0;">Trạng thái tài khoản của bạn:</p>
+            <span id="vipStatusTab3" class="status-badge status-unactive" style="display: inline-block; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 600;">Chưa kích hoạt VIP</span>
+        </div>
+        
+        <h4 style="font-size: 1.1rem; color: #334155; margin-bottom: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">Đặc quyền khi nâng cấp PRO:</h4>
+        <ul style="list-style: none; padding: 0; margin: 0; color: #475569; font-size: 1rem; line-height: 1.6;">
+            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
+                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.2rem; margin-top: 3px;"></i> 
+                <span>Truy cập <strong>toàn bộ</strong> kho đề thi Pro độc quyền trên hệ thống.</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
+                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.2rem; margin-top: 3px;"></i> 
+                <span>Mở khóa tính năng xem <strong>giải thích chi tiết</strong> từng đáp án.</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
+                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.2rem; margin-top: 3px;"></i> 
+                <span>Lưu trữ <strong>lịch sử làm bài</strong> và bảng điểm không giới hạn thời gian.</span>
+            </li>
+            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
+                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.2rem; margin-top: 3px;"></i> 
+                <span>Hỗ trợ học tập, giải đáp thắc mắc chuyên môn ưu tiên 24/7.</span>
+            </li>
         </ul>
     </div>
 
-    <div class="card vip-card-box" style="text-align: center;">
-        <h3><i class="fa-solid fa-qrcode"></i> Thanh toán qua QR Code</h3>
-        <div class="qr-placeholder">
-            <img src="https://via.placeholder.com/200?text=QR+Code+Demo" alt="Mã QR Chuyển khoản">
+    <!-- CỘT PHẢI: HƯỚNG DẪN THANH TOÁN QR -->
+    <div class="card vip-card-box" style="flex: 1.2; min-width: 350px; background: #fff; border-radius: 16px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+        <h3 style="color: #1e293b; font-size: 1.4rem; margin-top: 0; margin-bottom: 25px; width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-qrcode" style="color: #2563eb;"></i> Thanh toán mã QR
+        </h3>
+        
+        <!-- Khu vực Mã QR -->
+        <div style="background: #ffffff; padding: 15px; border-radius: 16px; border: 2px dashed #cbd5e1; display: inline-block; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+            <!-- BẠN HÃY THAY ĐỔI LINK ẢNH QR CỦA BẠN VÀO THUỘC TÍNH SRC DƯỚI ĐÂY -->
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=Thay-link-anh-cua-ban-vao-day" alt="Mã QR Chuyển khoản" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
         </div>
-        <div class="instruction">
-            Vui lòng chuyển khoản <strong>100.000đ</strong> với nội dung:<br><br>
-            <span style="font-weight: bold; color: var(--primary-blue); font-size: 1.2rem;">NAP <span id="paymentEmail">[Email của bạn]</span></span><br><br>
-            để được hệ thống mở khóa tự động.
+        
+        <!-- Khung Hướng dẫn chuyển khoản -->
+        <div style="background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 12px; padding: 25px 20px; width: 100%; text-align: center; margin-bottom: 25px;">
+            <p style="color: #047857; margin: 0 0 5px 0; font-size: 0.95rem; font-weight: 600;">Mức phí nâng cấp:</p>
+            <div style="font-size: 2.2rem; font-weight: 800; color: #059669; margin-bottom: 20px; letter-spacing: -0.5px;">100.000 ₫</div>
+            
+            <p style="color: #475569; font-size: 0.95rem; margin: 0 0 10px 0;">Nội dung chuyển khoản (bắt buộc chính xác):</p>
+            <div style="background: #ffffff; border: 1.5px dashed #3b82f6; padding: 15px; border-radius: 8px; user-select: all; cursor: pointer; display: inline-block; width: 90%;" title="Bôi đen để copy">
+                <span style="font-weight: 800; color: #1d4ed8; font-size: 1.15rem; letter-spacing: 0.5px;">NAP <span id="paymentEmail">[Email của bạn]</span></span>
+            </div>
+            
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px;">
+                <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i>
+                <span style="color: #64748b; font-size: 0.85rem; font-style: italic;">Hệ thống sẽ tự động đối soát và mở khóa sau 1-3 phút.</span>
+            </div>
         </div>
-        <button id="btnConfirmPayment" class="btn-primary" style="width: 100%;">Tôi đã chuyển khoản</button>
+        
+        <button id="btnConfirmPayment" class="btn-primary" style="width: 100%; padding: 16px; font-size: 1.1rem; border-radius: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+            <i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản
+        </button>
     </div>
 </div>
