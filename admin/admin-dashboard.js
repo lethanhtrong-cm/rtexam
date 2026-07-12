@@ -19,7 +19,16 @@ export function initDashboardRealtime() {
             // Ép kiểu an toàn để nhận diện đúng boolean hoặc string "true"
             const isUserOnline = data.isOnline === true || String(data.isOnline).toLowerCase() === "true";
             const isUserBanned = data.isBanned === true || String(data.isBanned).toLowerCase() === "true";
-            const isUserTesting = data.isTesting === true || String(data.isTesting).toLowerCase() === "true" || data.status === 'testing';
+            
+            // Mở rộng bộ quét: Bắt nhiều trường hợp tên biến đánh dấu đang thi khác nhau
+            const isUserTesting = 
+                data.isTesting === true || 
+                String(data.isTesting).toLowerCase() === "true" || 
+                data.status === 'testing' ||
+                data.isTakingExam === true ||
+                String(data.isTakingExam).toLowerCase() === "true" ||
+                data.inExamRoom === true ||
+                (data.currentExamId !== undefined && data.currentExamId !== null && data.currentExamId !== "");
             
             // Chỉ đếm người dùng online và không bị khóa
             if (isUserOnline && !isUserBanned) {
