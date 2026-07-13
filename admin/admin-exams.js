@@ -247,8 +247,36 @@ function initFilterChangeListeners() {
         });
     }
 
-    // Đăng ký sự kiện lắng nghe Dropdown Sắp xếp
-    const sortSelect = document.getElementById('examSortSelect');
+    // TỰ ĐỘNG CHÈN UI SẮP XẾP VÀO CÙNG HÀNG FLEX-ROW VỚI MỨC ĐỘ & THỜI GIAN
+    const filterRow = document.querySelector('.filter-flex-row');
+    let sortSelect = document.getElementById('examSortSelect');
+
+    if (filterRow) {
+        if (!sortSelect) {
+            // Tự động tạo và nhúng nếu chưa tồn tại
+            const sortCol = document.createElement('div');
+            sortCol.className = 'filter-col-50';
+            sortCol.innerHTML = `
+                <span class="filter-label-text">Sắp xếp theo:</span>
+                <div style="display: flex; height: 100%; align-items: center;">
+                    <select id="examSortSelect" style="padding: 8px 15px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 13.5px; font-weight: 600; color: #475569; background-color: #f1f5f9; outline: none; cursor: pointer; width: 100%; transition: 0.2s;">
+                        <option value="newest">Mới nhất đến cũ nhất</option>
+                        <option value="most_attempts">Số người thi nhiều nhất</option>
+                        <option value="most_feedbacks">Đánh giá nhiều nhất</option>
+                        <option value="highest_rating">Rating cao nhất</option>
+                    </select>
+                </div>
+            `;
+            filterRow.appendChild(sortCol);
+            sortSelect = document.getElementById('examSortSelect');
+        } else if (sortSelect.closest('.filter-col-50') && sortSelect.closest('.filter-col-50').parentNode !== filterRow) {
+            // Nếu bạn đã tự dán HTML bằng tay nhưng sai vị trí, đoạn code này sẽ bốc nó vào đúng hàng
+            const sortCol = sortSelect.closest('.filter-col-50');
+            filterRow.appendChild(sortCol);
+        }
+    }
+
+    // Lắng nghe sự kiện thay đổi Dropdown Sắp xếp
     if (sortSelect) {
         sortSelect.addEventListener('change', () => {
             renderExamList();
