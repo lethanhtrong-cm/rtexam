@@ -34,7 +34,8 @@ export async function loadExamList() {
                 attemptCount: data.attemptCount || 0,
                 technique: data.technique || "Hỗn hợp",
                 level: data.level || "Trung bình",
-                createdAt: data.createdAt // Bổ sung lấy dữ liệu ngày tạo
+                createdAt: data.createdAt,
+                examName: data.examName || "" // Bổ sung trường Tên đề thi
             };
         });
 
@@ -49,13 +50,18 @@ export async function loadExamList() {
         cachedExams = [];
         for (const examId in examGroups) {
             const count = examGroups[examId];
-            const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null };
+            const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "" };
 
             cachedExams.push({
-                examId: examId, count: count, isVip: config.isVip,
-                timeLimit: config.timeLimit, attemptCount: config.attemptCount,
-                technique: config.technique, level: config.level,
-                createdAt: config.createdAt // Lưu vào biến cache
+                examId: examId, 
+                examName: config.examName,
+                count: count, 
+                isVip: config.isVip,
+                timeLimit: config.timeLimit, 
+                attemptCount: config.attemptCount,
+                technique: config.technique, 
+                level: config.level,
+                createdAt: config.createdAt 
             });
         }
 
@@ -74,7 +80,9 @@ export function renderExamList() {
         const matchTech = exam.technique === currentTechnique;
         const matchLevel = currentLevel === "all" || exam.level === currentLevel;
         const matchTime = currentTime === "all" || String(exam.timeLimit) === String(currentTime);
-        const matchSearch = !currentSearchQuery || exam.examId.toLowerCase().includes(currentSearchQuery);
+        // Hỗ trợ tìm kiếm theo cả Mã đề và Tên đề thi
+        const searchTarget = (exam.examId + " " + exam.examName).toLowerCase();
+        const matchSearch = !currentSearchQuery || searchTarget.includes(currentSearchQuery);
         return matchTech && matchLevel && matchTime && matchSearch;
     });
 
@@ -106,30 +114,56 @@ export function renderExamList() {
             }
         }
 
+        // Logic Ưu tiên hiển thị Tên đề thi (Nếu có)
+        const displayTitle = exam.examName ? exam.examName : `Đề: ${exam.examId}`;
+        const displaySubId = exam.examName ? `<span class="exam-subtitle-id">Mã: ${exam.examId}</span>` : '';
+
         const cardDiv = document.createElement('div');
-        cardDiv.className = 'exam-modern-card';
+        cardDiv.className = 'exam-premium-card';
         
         cardDiv.innerHTML = `
-            <div class="card-top-half">
-                <div class="card-info-left">
-                    <span class="card-exam-title">📄 Đề: ${exam.examId}</span>
-                    <span class="badge-meta">${exam.technique}</span>
-                    <span class="badge-meta ${levelClass}">${exam.level}</span>
-                    <span class="badge-count">⏱️ ${exam.timeLimit} phút</span>
-                    <span class="badge-count" style="background-color: #f8fafc; color: #475569; border: 1px solid #e2e8f0;">📅 ${formattedDate}</span>
+            <div class="card-premium-header">
+                <div class="header-left">
+                    <h3 class="exam-premium-title">${displayTitle}</h3>
+                    ${displaySubId}
                 </div>
-                <div class="card-status-right">
-                    <span class="badge-count" style="background-color: #f1f5f9; color: #475569;">📊 ${exam.count} Câu hỏi</span>
-                    ${exam.isVip ? '<span class="badge-vip-exam">VIP 👑</span>' : '<span class="badge-free">Miễn Phí</span>'}
-                    <span class="config-text" style="margin-left: 10px; font-size: 13px;">🔄 Lượt thi: <strong>${exam.attemptCount}</strong></span>
+                <div class="header-right">
+                    ${exam.isVip ? '<span class="badge-premium-vip"><i class="fa-solid fa-crown"></i> PRO</span>' : '<span class="badge-premium-free">Miễn Phí</span>'}
                 </div>
             </div>
-            <hr class="card-divider">
-            <div class="card-bottom-half">
-                <button class="btn-outline-sm btn-properties-modern btn-edit-properties" data-examid="${exam.examId}" data-technique="${exam.technique}" data-time="${exam.timeLimit}" data-level="${exam.level}">⚙️ Sửa Thuộc Tính</button>
-                <button class="btn-outline-sm btn-feedback-modern btn-view-feedback" data-examid="${exam.examId}">⭐ Xem Đánh Giá</button>
-                ${exam.isVip ? `<button class="btn-outline-sm btn-vip-off-modern btn-toggle-exam-vip" data-examid="${exam.examId}" data-vip="true">Tắt VIP</button>` : `<button class="btn-outline-sm btn-vip-on-modern btn-toggle-exam-vip" data-examid="${exam.examId}" data-vip="false">Bật VIP</button>`}
-                <button class="btn-outline-sm btn-delete-modern btn-delete" data-examid="${exam.examId}">🗑️ Xóa Đề Thi</button>
+            
+            <div class="card-premium-meta">
+                <div class="meta-tags-container">
+                    <span class="premium-tag tech-tag"><i class="fa-solid fa-microchip"></i> ${exam.technique}</span>
+                    <span class="premium-tag ${levelClass}"><i class="fa-solid fa-chart-simple"></i> ${exam.level}</span>
+                    <span class="premium-tag time-tag"><i class="fa-regular fa-clock"></i> ${exam.timeLimit} phút</span>
+                    <span class="premium-tag count-tag"><i class="fa-solid fa-list-check"></i> ${exam.count} Câu</span>
+                </div>
+                <div class="meta-stats-container">
+                    <span class="stat-item"><i class="fa-solid fa-calendar-day"></i> Tạo: ${formattedDate}</span>
+                    <span class="stat-item"><i class="fa-solid fa-users"></i> Lượt thi: <strong>${exam.attemptCount}</strong></span>
+                </div>
+            </div>
+
+            <hr class="premium-divider">
+
+            <div class="card-premium-footer">
+                <button class="btn-modern-action btn-edit-properties" data-examid="${exam.examId}" data-examname="${exam.examName}" data-technique="${exam.technique}" data-time="${exam.timeLimit}" data-level="${exam.level}">
+                    <i class="fa-solid fa-gear"></i> Sửa Thuộc Tính
+                </button>
+                
+                <div class="footer-actions-right">
+                    <button class="btn-modern-action btn-view-feedback" data-examid="${exam.examId}">
+                        <i class="fa-solid fa-star"></i> Đánh Giá
+                    </button>
+                    ${exam.isVip 
+                        ? `<button class="btn-modern-action toggle-vip off" data-examid="${exam.examId}" data-vip="true"><i class="fa-solid fa-unlock"></i> Hủy VIP</button>` 
+                        : `<button class="btn-modern-action toggle-vip on" data-examid="${exam.examId}" data-vip="false"><i class="fa-solid fa-lock"></i> Kích VIP</button>`
+                    }
+                    <button class="btn-modern-action btn-delete-danger btn-delete" data-examid="${exam.examId}">
+                        <i class="fa-solid fa-trash-can"></i> Xóa Đề
+                    </button>
+                </div>
             </div>
         `;
         container.appendChild(cardDiv);
@@ -173,14 +207,17 @@ function initFilterChangeListeners() {
     }
 }
 
-function openEditPropertiesModal(examId, technique, time, level) {
+function openEditPropertiesModal(examId, examName, technique, time, level) {
     currentEditingExamId = examId;
     const modal = document.getElementById('edit-properties-modal');
     if (!modal) return;
+    
     document.getElementById('edit-modal-exam-id').innerText = examId;
+    document.getElementById('edit-exam-name').value = examName || ""; // Load tên đề vào input
     document.getElementById('edit-select-technique').value = technique || "Hỗn hợp";
     document.getElementById('edit-select-time').value = time || "15";
     document.getElementById('edit-select-level').value = level || "Trung bình";
+    
     modal.style.display = "block";
 }
 
@@ -197,6 +234,7 @@ async function updateExamProperties() {
         const docSnap = await getDoc(docRef);
         
         const payload = {
+            examName: document.getElementById('edit-exam-name').value.trim(), // Lưu thêm trường tên đề thi
             technique: document.getElementById('edit-select-technique').value,
             timeLimit: parseInt(document.getElementById('edit-select-time').value, 10),
             level: document.getElementById('edit-select-level').value,
@@ -232,7 +270,6 @@ async function toggleExamVip(examId, currentVipState) {
             isPublic: true // Vá lỗi đảm bảo luôn public
         };
 
-        // Vá lỗi: Nếu đề chưa có ngày tạo, chèn thêm vào
         if (!docSnap.exists() || !docSnap.data().createdAt) {
             payload.createdAt = Date.now();
         }
@@ -438,9 +475,9 @@ async function publishExam() {
             await addDoc(collection(db, "questions"), questionItem);
         }
 
-        // --- CÓ BỌC LÓT LUÔN NGÀY TẠO VÀ TRẠNG THÁI PUBLIC TẠI ĐÂY ---
         for (const examId of uniqueExamIds) {
             await setDoc(doc(db, "exams", examId), {
+                examName: "", // Mặc định rỗng khi mới import
                 technique: techniqueValue,
                 timeLimit: timeLimitValue,
                 level: levelValue,
@@ -468,9 +505,6 @@ async function publishExam() {
     }
 }
 
-// =========================================================================
-// 6. KHỞI TẠO VÀ ĐĂNG KÝ SỰ KIỆN BAN ĐẦU
-// =========================================================================
 document.addEventListener('componentsLoaded', () => {
     loadExamList();
     handleExcelRead();
@@ -506,9 +540,9 @@ document.addEventListener('componentsLoaded', () => {
             const editPropsBtn = e.target.closest('.btn-edit-properties');
             if (editPropsBtn) {
                 const dataset = editPropsBtn.dataset;
-                return openEditPropertiesModal(dataset.examid, dataset.technique, dataset.time, dataset.level);
+                return openEditPropertiesModal(dataset.examid, dataset.examname, dataset.technique, dataset.time, dataset.level);
             }
-            const vipBtn = e.target.closest('.btn-toggle-exam-vip');
+            const vipBtn = e.target.closest('.toggle-vip');
             if (vipBtn) return toggleExamVip(vipBtn.dataset.examid, vipBtn.dataset.vip === "true");
             const feedbackBtn = e.target.closest('.btn-view-feedback');
             if (feedbackBtn) return viewFeedback(feedbackBtn.dataset.examid);
