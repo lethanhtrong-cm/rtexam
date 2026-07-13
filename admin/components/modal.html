@@ -7,34 +7,40 @@
         </div>
         <div class="modal-body">
             <div class="form-group-vertical">
-                <div class="form-item-vertical">
-                    <label for="edit-select-technique">🩻 Chuyên khoa / Kỹ thuật:</label>
-                    <select id="edit-select-technique">
+                <!-- THÊM MỚI: Ô nhập Tên đề thi -->
+                <div class="form-item-vertical" style="margin-bottom: 15px;">
+                    <label for="edit-exam-name" style="display: block; margin-bottom: 8px; font-weight: 600; color: #475569;">🏷️ Tên đề thi (Hiển thị cho học viên):</label>
+                    <input type="text" id="edit-exam-name" placeholder="VD: Đề thi thử MRI Sọ não tổng hợp..." style="width: 100%; padding: 10px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59,130,246,0.1)';" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';">
+                </div>
+
+                <div class="form-item-vertical" style="margin-bottom: 15px;">
+                    <label for="edit-select-technique" style="display: block; margin-bottom: 8px; font-weight: 600; color: #475569;">🩻 Chuyên khoa / Kỹ thuật:</label>
+                    <select id="edit-select-technique" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none;">
                         <option value="MRI">MRI</option>
                         <option value="CT">CT</option>
                         <option value="X quang">X quang</option>
                         <option value="Hỗn hợp">Hỗn hợp</option>
                     </select>
                 </div>
-                <div class="form-item-vertical">
-                    <label for="edit-select-time">⏱️ Thời gian làm bài (Phút):</label>
-                    <select id="edit-select-time">
+                <div class="form-item-vertical" style="margin-bottom: 15px;">
+                    <label for="edit-select-time" style="display: block; margin-bottom: 8px; font-weight: 600; color: #475569;">⏱️ Thời gian làm bài (Phút):</label>
+                    <select id="edit-select-time" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none;">
                         <option value="15">15 phút</option>
                         <option value="30">30 phút</option>
                         <option value="45">45 phút</option>
                     </select>
                 </div>
-                <div class="form-item-vertical">
-                    <label for="edit-select-level">📈 Cấp độ đề thi:</label>
-                    <select id="edit-select-level">
+                <div class="form-item-vertical" style="margin-bottom: 15px;">
+                    <label for="edit-select-level" style="display: block; margin-bottom: 8px; font-weight: 600; color: #475569;">📈 Cấp độ đề thi:</label>
+                    <select id="edit-select-level" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none;">
                         <option value="Dễ">Dễ</option>
                         <option value="Trung bình">Trung bình</option>
                         <option value="Khó">Khó</option>
                     </select>
                 </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-                <button id="btn-save-properties" class="btn btn-publish" style="padding: 10px 25px; font-size: 14px;">💾 Lưu Thay Đổi</button>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                <button id="btn-save-properties" class="btn btn-publish" style="padding: 10px 25px; font-size: 14px; background-color: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">💾 Lưu Thay Đổi</button>
             </div>
         </div>
     </div>
