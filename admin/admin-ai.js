@@ -31,6 +31,15 @@ async function loadAiExams() {
     if (thElements && thElements[2]) {
         thElements[2].innerText = "TÀI KHOẢN TẠO ĐỀ";
     }
+
+    // Tự động nâng cấp UI nút "Xuất Toàn Bộ Ra Excel" bằng JS để không phải sửa file HTML
+    const btnExportAll = document.getElementById('btnExportAiExams');
+    if (btnExportAll) {
+        btnExportAll.innerHTML = '<i class="fa-solid fa-file-export"></i> Xuất Toàn Bộ Ra Excel';
+        btnExportAll.style.cssText = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;';
+        btnExportAll.onmouseover = () => btnExportAll.style.transform = 'translateY(-2px)';
+        btnExportAll.onmouseout = () => btnExportAll.style.transform = 'translateY(0)';
+    }
     
     tbody.innerHTML = '<tr><td colspan="6" class="loading-text">⏳ Đang truy xuất dữ liệu đề AI từ hệ thống...</td></tr>';
     
@@ -54,36 +63,33 @@ async function loadAiExams() {
             const examData = docSnap.data();
             const examQuestions = allQuestions.filter(q => q.examId === docSnap.id);
             
-            // 1. FIX LỖI NGÀY THÁNG (Nhận diện chuỗi số mili-giây)
+            // FIX LỖI NGÀY THÁNG
             let formattedDate = 'Không rõ';
             let rawTimeSort = 0;
             const rawDate = examData.createdAt || examData.timestamp; 
 
             if (rawDate) {
                 if (typeof rawDate.toDate === 'function') {
-                    // Chuẩn Firebase Timestamp
                     formattedDate = rawDate.toDate().toLocaleString('vi-VN');
                     rawTimeSort = rawDate.toDate().getTime();
                 } else {
                     const numDate = Number(rawDate);
-                    // Nếu là chuỗi dãy số Timestamp (như trong ảnh của bạn: 1783618433169)
                     if (!isNaN(numDate) && numDate > 100000000) { 
                         let finalMs = numDate > 1000000000000 ? numDate : numDate * 1000;
                         formattedDate = new Date(finalMs).toLocaleString('vi-VN');
                         rawTimeSort = finalMs;
                     } else {
-                        // Chuỗi String thông thường
                         formattedDate = new Date(rawDate).toLocaleString('vi-VN');
                         rawTimeSort = new Date(rawDate).getTime();
                     }
                 }
             }
 
-            // 2. Lấy TÀI KHOẢN người tạo (Quét nhiều trường để tránh rỗng)
+            // Lấy TÀI KHOẢN người tạo
             const creatorAccount = examData.creatorEmail || examData.userEmail || examData.email || examData.userId || examData.creator || 'Hệ thống AI';
 
             aiExamsData.push({
-                ...examData, // Đưa dữ liệu gốc lên trước để không bị ghi đè các trường bên dưới
+                ...examData,
                 id: docSnap.id,
                 displayCreator: creatorAccount, 
                 displayDate: formattedDate,
@@ -93,10 +99,10 @@ async function loadAiExams() {
             });
         });
         
-        // Sắp xếp đề thi mới nhất lên đầu (Dựa vào thời gian gốc rawTime)
+        // Sắp xếp đề thi mới nhất lên đầu
         aiExamsData.sort((a, b) => b.rawTime - a.rawTime);
 
-        // Reset về trang 1 mỗi khi load lại dữ liệu
+        // Reset về trang 1
         currentPage = 1;
         renderAiExamsTable();
 
@@ -113,7 +119,7 @@ function renderAiExamsTable() {
     const tbody = document.getElementById('ai-exam-list-body');
     if (!tbody) return;
 
-    // Đảm bảo triệt tiêu thanh cuộn một lần nữa
+    // Đảm bảo triệt tiêu thanh cuộn
     const tableContainer = document.querySelector('#tab-admin .table-container');
     if (tableContainer) {
         tableContainer.style.maxHeight = 'none';
@@ -137,26 +143,48 @@ function renderAiExamsTable() {
     
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const pagedData = aiExamsData.slice(startIndex, endIndex); // Cắt chuẩn 10 phần tử
+    const pagedData = aiExamsData.slice(startIndex, endIndex); 
     
     let stt = startIndex + 1;
 
-    // --- VẼ DỮ LIỆU ĐỀ THI LÊN TRANG HIỆN TẠI ---
+    // --- VẼ DỮ LIỆU ĐỀ THI VỚI UI HIỆN ĐẠI ---
     pagedData.forEach(exam => {
         const tr = document.createElement('tr');
+        tr.style.transition = "all 0.2s ease";
+
+        // Giao diện Badge Tài khoản Tạo đề
+        const isAI = exam.displayCreator === 'Hệ thống AI';
+        const creatorBadge = isAI 
+            ? `<span style="background: #f3e8ff; color: #7e22ce; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #e9d5ff; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-robot"></i> Hệ thống AI</span>`
+            : `<span style="background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-regular fa-user"></i> ${exam.displayCreator}</span>`;
+
         tr.innerHTML = `
-            <td class="text-center">${stt++}</td>
-            <td><strong>${exam.id}</strong></td>
-            <td><div style="font-size: 13.5px; color: #0f172a; font-weight: 600;">${exam.displayCreator}</div></td>
-            <td class="text-center"><span class="badge-count" style="background:#eff6ff; color:#3b82f6;">${exam.questionCount} câu</span></td>
-            <td class="text-center" style="font-size: 13px; color: #64748b;">${exam.displayDate}</td>
+            <td class="text-center"><span style="font-weight: 700; color: #64748b;">${stt++}</span></td>
+            <td>
+                <div style="display: flex; align-items: center;">
+                    <span style="background: #f8fafc; color: #0f172a; padding: 6px 12px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-weight: 700; font-size: 0.9rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                        <i class="fa-solid fa-barcode" style="color: #94a3b8; margin-right: 6px;"></i>${exam.id}
+                    </span>
+                </div>
+            </td>
+            <td>${creatorBadge}</td>
             <td class="text-center">
-                <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap;">
-                    <button class="btn-outline-sm btn-export-ai-single" data-id="${exam.id}" style="color: #10b981; border-color: #a7f3d0;">
-                        📥 Xuất Excel
+                <span style="background: #f0fdf4; color: #15803d; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="fa-solid fa-layer-group"></i> ${exam.questionCount} câu
+                </span>
+            </td>
+            <td class="text-center">
+                <div style="color: #475569; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <i class="fa-regular fa-calendar-days"></i> ${exam.displayDate}
+                </div>
+            </td>
+            <td class="text-center">
+                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
+                    <button class="btn-modern-action btn-export-ai-single" data-id="${exam.id}" style="padding: 6px 12px; font-size: 0.8rem; background-color: #f0fdfa; color: #059669; border-color: #a7f3d0;" title="Xuất Excel">
+                        <i class="fa-solid fa-file-excel"></i> Xuất
                     </button>
-                    <button class="btn-outline-sm btn-delete-modern btn-delete-ai" data-id="${exam.id}">
-                        🗑️ Xóa Đề
+                    <button class="btn-modern-action btn-delete-danger btn-delete-ai" data-id="${exam.id}" style="padding: 6px 12px; font-size: 0.8rem;" title="Xóa Đề">
+                        <i class="fa-solid fa-trash-can"></i> Xóa
                     </button>
                 </div>
             </td>
@@ -164,17 +192,15 @@ function renderAiExamsTable() {
         tbody.appendChild(tr);
     });
 
-    // Vẽ thanh điều hướng trang (Prev/Next)
     renderPagination(totalPages);
 }
 
 // ==========================================
-// 3. VẼ THANH ĐIỀU HƯỚNG PHÂN TRANG
+// 3. VẼ THANH ĐIỀU HƯỚNG PHÂN TRANG (MỚI)
 // ==========================================
 function renderPagination(totalPages) {
     let paginationContainer = document.getElementById('ai-pagination-container');
     
-    // Tạo vùng chứa phân trang nếu chưa có
     if (!paginationContainer) {
         const tableContainer = document.querySelector('#tab-admin .table-container');
         paginationContainer = document.createElement('div');
@@ -183,16 +209,17 @@ function renderPagination(totalPages) {
         tableContainer.parentNode.insertBefore(paginationContainer, tableContainer.nextSibling);
     }
 
-    paginationContainer.innerHTML = ''; // Xóa sạch để vẽ lại
+    paginationContainer.innerHTML = ''; 
 
-    if (totalPages <= 1) return; // Nếu chỉ có 1 trang thì ẩn luôn
+    if (totalPages <= 1) return; 
 
     // Nút "Trang Trước"
     const prevBtn = document.createElement('button');
-    prevBtn.innerHTML = '◀ Trước';
-    prevBtn.className = 'btn-outline-sm';
+    prevBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Trước';
+    prevBtn.className = 'btn-modern-action';
+    prevBtn.style.padding = '8px 16px';
     prevBtn.disabled = currentPage === 1;
-    if (currentPage === 1) prevBtn.style.opacity = '0.5';
+    if (currentPage === 1) prevBtn.style.opacity = '0.4';
     prevBtn.onclick = () => {
         if (currentPage > 1) {
             currentPage--;
@@ -202,17 +229,18 @@ function renderPagination(totalPages) {
     paginationContainer.appendChild(prevBtn);
 
     // Thông tin "Trang X / Y"
-    const pageInfo = document.createElement('span');
-    pageInfo.innerText = `Trang ${currentPage} / ${totalPages}`;
-    pageInfo.style.cssText = 'font-size: 14px; font-weight: 600; color: #475569; margin: 0 10px;';
+    const pageInfo = document.createElement('div');
+    pageInfo.innerHTML = `Trang <strong style="color:#3b82f6;">${currentPage}</strong> / ${totalPages}`;
+    pageInfo.style.cssText = 'font-size: 14px; font-weight: 600; color: #475569; background: #f8fafc; padding: 8px 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin: 0 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);';
     paginationContainer.appendChild(pageInfo);
 
     // Nút "Trang Tiếp"
     const nextBtn = document.createElement('button');
-    nextBtn.innerHTML = 'Tiếp ▶';
-    nextBtn.className = 'btn-outline-sm';
+    nextBtn.innerHTML = 'Tiếp <i class="fa-solid fa-arrow-right"></i>';
+    nextBtn.className = 'btn-modern-action';
+    nextBtn.style.padding = '8px 16px';
     nextBtn.disabled = currentPage === totalPages;
-    if (currentPage === totalPages) nextBtn.style.opacity = '0.5';
+    if (currentPage === totalPages) nextBtn.style.opacity = '0.4';
     nextBtn.onclick = () => {
         if (currentPage < totalPages) {
             currentPage++;
@@ -229,7 +257,7 @@ async function deleteAiExam(examId, btnElement) {
     if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn đề AI "${examId}" và toàn bộ câu hỏi bên trong không?`)) return;
 
     const originalText = btnElement.innerHTML;
-    btnElement.innerHTML = "⏳...";
+    btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     btnElement.disabled = true;
 
     try {
@@ -242,7 +270,7 @@ async function deleteAiExam(examId, btnElement) {
         await Promise.all(deletePromises);
 
         showToast(`Đã xóa thành công đề "${examId}"!`, "success");
-        loadAiExams(); // Tải lại bảng sau khi xóa
+        loadAiExams(); 
     } catch (error) {
         console.error("Lỗi khi xóa đề AI:", error);
         showToast("Lỗi hệ thống khi xóa dữ liệu", "error");
