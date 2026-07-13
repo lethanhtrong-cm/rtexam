@@ -89,7 +89,7 @@ document.addEventListener('ComponentsLoaded', () => {
     // =========================================================
     // THỦ THUẬT CLONE NODE: XÓA MỌI SỰ KIỆN CHUYỂN TRANG ẨN
     // =========================================================
-    const oldBtnCreateRoom = document.getElementById('btnOpenCreateRoom');
+    const oldBtnCreateRoom = document.getElementById('topbarNavCreateRoom'); // Đã cập nhật ID mới trên Topbar
     
     if (oldBtnCreateRoom) {
         // Tẩy sạch sự kiện cũ
@@ -108,7 +108,7 @@ document.addEventListener('ComponentsLoaded', () => {
             }
 
             const originalText = btnCreateRoom.innerHTML;
-            btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo...';
+            btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
             btnCreateRoom.style.pointerEvents = 'none'; 
 
             const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -143,6 +143,24 @@ document.addEventListener('ComponentsLoaded', () => {
                 btnCreateRoom.innerHTML = originalText;
                 btnCreateRoom.style.pointerEvents = 'auto';
             }
+        });
+    }
+
+    // Gắn sự kiện chống Null cho nút Tạo Đề AI
+    const btnCreateAI = document.getElementById('topbarNavCreateAI');
+    if (btnCreateAI) {
+        btnCreateAI.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert("Trợ lý AI đang được nâng cấp. Tính năng này sẽ sớm ra mắt!");
+        });
+    }
+
+    // Gắn sự kiện chống Null cho nút Upload Đề Thi
+    const btnUpload = document.getElementById('topbarNavUpload');
+    if (btnUpload) {
+        btnUpload.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert("Tính năng Upload đề thi hàng loạt đang được phát triển!");
         });
     }
 });
