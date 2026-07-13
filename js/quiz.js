@@ -721,6 +721,11 @@ function renderPalette() {
         btn.onclick = () => { currentIndex = idx; saveDraft(); renderAll(); };
         container.appendChild(btn);
     });
+    // ĐOẠN CODE THÊM MỚI: Cập nhật Progress Bar
+    const answeredCount = Object.keys(userAnswers).length;
+    const progressPercent = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
+    const progressBar = document.getElementById('progress-bar');
+    if (progressBar) progressBar.style.width = `${progressPercent}%`;
 }
 
 document.getElementById('btn-flag').onclick = () => {
