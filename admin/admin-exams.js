@@ -41,13 +41,15 @@ export async function loadExamList() {
             };
         });
 
-        // Map số lượng feedback (đánh giá) cho mỗi đề
+        // Map số lượng feedback (đánh giá) và Tính tổng số sao cho mỗi đề
         const feedbackCounts = {};
+        const feedbackStars = {};
         if (feedbacksSnapshot) {
             feedbacksSnapshot.forEach(docSnap => {
                 const fb = docSnap.data();
                 if (fb.examId) {
                     feedbackCounts[fb.examId] = (feedbackCounts[fb.examId] || 0) + 1;
+                    feedbackStars[fb.examId] = (feedbackStars[fb.examId] || 0) + (fb.rating || 5);
                 }
             });
         }
@@ -65,6 +67,10 @@ export async function loadExamList() {
             const count = examGroups[examId];
             const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "" };
 
+            const fCount = feedbackCounts[examId] || 0;
+            const fStars = feedbackStars[examId] || 0;
+            const avgRating = fCount > 0 ? (fStars / fCount) : 0; // Tính Rating trung bình
+
             cachedExams.push({
                 examId: examId, 
                 examName: config.examName,
@@ -74,8 +80,9 @@ export async function loadExamList() {
                 attemptCount: config.attemptCount,
                 technique: config.technique, 
                 level: config.level,
-                createdAt: config.createdAt,
-                feedbackCount: feedbackCounts[examId] || 0 // Lưu trữ số lượt đánh giá
+                createdAt: config.createdAt || 0,
+                feedbackCount: fCount,
+                rating: avgRating 
             });
         }
 
@@ -98,6 +105,18 @@ export function renderExamList() {
         const searchTarget = (exam.examId + " " + exam.examName).toLowerCase();
         const matchSearch = !currentSearchQuery || searchTarget.includes(currentSearchQuery);
         return matchTech && matchLevel && matchTime && matchSearch;
+    });
+
+    // --- LOGIC SORT DỮ LIỆU ---
+    const sortSelect = document.getElementById('examSortSelect');
+    const sortMode = sortSelect ? sortSelect.value : 'newest';
+
+    filteredExams.sort((a, b) => {
+        if (sortMode === 'most_attempts') return b.attemptCount - a.attemptCount;
+        if (sortMode === 'most_feedbacks') return b.feedbackCount - a.feedbackCount;
+        if (sortMode === 'highest_rating') return b.rating - a.rating;
+        // Mặc định: newest (Mới nhất đến cũ nhất)
+        return b.createdAt - a.createdAt;
     });
 
     container.innerHTML = '';
@@ -132,10 +151,12 @@ export function renderExamList() {
         const displayTitle = exam.examName ? exam.examName : `Đề: ${exam.examId}`;
         const displaySubId = exam.examName ? `<span class="exam-subtitle-id">Mã: ${exam.examId}</span>` : '';
 
-        // Hiển thị Nhãn Feedback
-        const feedbackBadge = exam.feedbackCount > 0 
-            ? `<span style="background: #f59e0b; color: white; border-radius: 10px; padding: 2px 6px; font-size: 0.75rem; margin-left: 4px; line-height: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">${exam.feedbackCount}</span>` 
-            : '';
+        // Hiển thị Nhãn Feedback và Số sao
+        let feedbackBadgeHtml = '';
+        if (exam.feedbackCount > 0) {
+            const formattedRating = Number.isInteger(exam.rating) ? exam.rating : exam.rating.toFixed(1);
+            feedbackBadgeHtml = `<span style="background: #f59e0b; color: white; border-radius: 10px; padding: 2px 6px; font-size: 0.75rem; margin-left: 4px; line-height: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">${formattedRating}★ (${exam.feedbackCount})</span>`;
+        }
         const feedbackBtnClass = exam.feedbackCount > 0 ? "btn-modern-action btn-view-feedback has-feedback" : "btn-modern-action btn-view-feedback";
 
         const cardDiv = document.createElement('div');
@@ -174,7 +195,7 @@ export function renderExamList() {
                 
                 <div class="footer-actions-right">
                     <button class="${feedbackBtnClass}" data-examid="${exam.examId}">
-                        <i class="fa-solid fa-star"></i> Đánh Giá ${feedbackBadge}
+                        <i class="fa-solid fa-star"></i> Đánh Giá ${feedbackBadgeHtml}
                     </button>
                     ${exam.isVip 
                         ? `<button class="btn-modern-action toggle-vip off" data-examid="${exam.examId}" data-vip="true"><i class="fa-solid fa-unlock"></i> Hủy VIP</button>` 
@@ -223,6 +244,14 @@ function initFilterChangeListeners() {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.trim().toLowerCase();
             renderExamList(); 
+        });
+    }
+
+    // Đăng ký sự kiện lắng nghe Dropdown Sắp xếp
+    const sortSelect = document.getElementById('examSortSelect');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+            renderExamList();
         });
     }
 }
@@ -343,6 +372,8 @@ async function viewFeedback(examId) {
             const data = docSnap.data();
             let starsHtml = '';
             for (let i = 0; i < (data.rating || 0); i++) starsHtml += '<span class="rating-star">★</span>';
+            
+            // Đã fix lỗi N/A thời gian hiển thị đánh giá
             let timeStr = 'N/A';
             const rawTime = data.timestamp || data.createdAt;
             if (rawTime) {
@@ -352,6 +383,7 @@ async function viewFeedback(examId) {
                     timeStr = new Date(rawTime).toLocaleString('vi-VN');
                 }
             }
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><strong>${data.email || "Khách vô danh"}</strong></td>
