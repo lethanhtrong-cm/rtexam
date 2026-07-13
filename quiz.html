@@ -7,74 +7,123 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        /* HỆ THỐNG BIẾN MÀU SẮC DÀNH CHO LIGHT/DARK MODE */
+        :root {
+            --bg-body: #f3f4f6;
+            --bg-panel: #ffffff;
+            --bg-header: #ffffff;
+            --bg-footer: #f9fafb;
+            --bg-hover: #f8fafc;
+            
+            --text-main: #111827;
+            --text-muted: #4b5563;
+            --text-fade: #6b7280;
+            
+            --border-color: #e5e7eb;
+            --border-heavy: #d1d5db;
+            
+            --timer-bg: #e5e7eb;
+            --timer-text: #374151;
+            
+            --option-bg: #ffffff;
+            --option-label-bg: #f3f4f6;
+            
+            --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.03);
+        }
+
+        body.dark-mode {
+            --bg-body: #111827;
+            --bg-panel: #1f2937;
+            --bg-header: #1f2937;
+            --bg-footer: #111827;
+            --bg-hover: #374151;
+            
+            --text-main: #f9fafb;
+            --text-muted: #d1d5db;
+            --text-fade: #9ca3af;
+            
+            --border-color: #374151;
+            --border-heavy: #4b5563;
+            
+            --timer-bg: #374151;
+            --timer-text: #f9fafb;
+            
+            --option-bg: #1f2937;
+            --option-label-bg: #374151;
+            
+            --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.5);
+            --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f3f4f6; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; transition: background-color 0.3s, color 0.3s; }
         
         /* LỚP CSS CHỐNG BÔI ĐEN */
-        body.no-select {
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
+        body.no-select { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
         
-        .quiz-header { background-color: #ffffff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 100; }
-        .quiz-title { font-size: 20px; font-weight: bold; color: #1f2937; }
+        .quiz-header { background-color: var(--bg-header); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 100; transition: background-color 0.3s; }
+        .quiz-title { font-size: 20px; font-weight: bold; color: var(--text-main); }
         
-        /* CẢNH BÁO THỜI GIAN */
-        .timer-container { display: flex; align-items: center; gap: 10px; background-color: #fee2e2; color: #ef4444; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 18px; transition: all 0.3s; }
-        @keyframes pulse-red { 0% { background-color: #fee2e2; } 50% { background-color: #fca5a5; box-shadow: 0 0 15px rgba(239,68,68,0.5); } 100% { background-color: #fee2e2; } }
+        /* CẢNH BÁO THỜI GIAN ĐÃ SỬA MÀU TRUNG TÍNH */
+        .timer-container { display: flex; align-items: center; gap: 10px; background-color: var(--timer-bg); color: var(--timer-text); padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 18px; transition: all 0.3s; }
+        @keyframes pulse-red { 0% { background-color: #fee2e2; box-shadow: 0 0 0 rgba(239,68,68,0); } 50% { background-color: #fca5a5; box-shadow: 0 0 15px rgba(239,68,68,0.5); } 100% { background-color: #fee2e2; box-shadow: 0 0 0 rgba(239,68,68,0); } }
         .timer-container.timer-warning { animation: pulse-red 1s infinite; color: #991b1b; }
+        body.dark-mode .timer-container.timer-warning { animation: none; background-color: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
         
         .header-actions { display: flex; gap: 12px; }
-        .btn-logout { padding: 8px 16px; background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-        .btn-logout:hover { background-color: #e5e7eb; color: #1f2937; }
+        .btn-header { padding: 8px 16px; background-color: var(--bg-body); color: var(--text-muted); border: 1px solid var(--border-heavy); border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-header:hover { background-color: var(--border-color); color: var(--text-main); }
+        .btn-theme { padding: 8px 12px; font-size: 16px;}
         
         .quiz-body { display: flex; flex: 1; max-width: 1200px; margin: 30px auto; width: 100%; gap: 25px; padding: 0 20px; position: relative;}
         
-        .left-panel { flex: 3; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); display: flex; flex-direction: column; overflow: hidden; }
+        .left-panel { flex: 3; background-color: var(--bg-panel); border-radius: 12px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.3s; }
         .question-content { padding: 40px; flex: 1; position: relative;}
         
         .question-number-badge { display: inline-block; background-color: #e0e7ff; color: #4f46e5; padding: 5px 12px; border-radius: 6px; font-weight: bold; margin-bottom: 15px; font-size: 14px; }
-        .question-text { font-size: 20px; line-height: 1.6; margin-bottom: 30px; color: #111827; }
-        .options-list { display: flex; flex-direction: column; gap: 15px; }
+        body.dark-mode .question-number-badge { background-color: #3730a3; color: #e0e7ff; }
+
+        /* ĐÃ TINH CHỈNH MARGIN VÀ GAP */
+        .question-text { font-size: 20px; line-height: 1.6; margin-bottom: 40px; color: var(--text-main); }
+        .options-list { display: flex; flex-direction: column; gap: 10px; }
         
-        .option-item { display: flex; align-items: center; padding: 15px 20px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s; background-color: #ffffff; font-size: 16px; }
-        .option-item:hover:not(.disabled) { border-color: #c7d2fe; background-color: #f8fafc; }
-        .option-item.selected:not(.correct):not(.wrong) { border-color: #3b82f6; background-color: #eff6ff; }
+        .option-item { display: flex; align-items: center; padding: 15px 20px; border: 2px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: all 0.2s; background-color: var(--option-bg); font-size: 16px; color: var(--text-main); }
+        .option-item:hover:not(.disabled) { border-color: #c7d2fe; background-color: var(--bg-hover); }
+        .option-item.selected:not(.correct):not(.wrong) { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
         .option-item.disabled { cursor: not-allowed; }
         
-        .option-label { font-weight: bold; margin-right: 15px; background-color: #f3f4f6; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; border-radius: 50%; color: #4b5563; }
+        .option-label { font-weight: bold; margin-right: 15px; background-color: var(--option-label-bg); width: 30px; height: 30px; display: flex; justify-content: center; align-items: center; border-radius: 50%; color: var(--text-muted); }
         .option-item.selected:not(.correct):not(.wrong) .option-label { background-color: #3b82f6; color: white; }
 
-        .quiz-footer { padding: 20px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
+        .quiz-footer { padding: 20px 40px; background-color: var(--bg-footer); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; transition: background-color 0.3s; }
         .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap;}
-        .btn-nav { padding: 10px 20px; border: 1px solid #d1d5db; background-color: white; border-radius: 6px; cursor: pointer; font-weight: 600; color: #374151; transition: all 0.2s; }
-        .btn-nav:hover { background-color: #f3f4f6; }
         
-        /* NÚT ĐÁNH DẤU (FLAG) */
-        .btn-flag { padding: 10px 20px; border: 1px solid #fde047; background-color: #fef9c3; border-radius: 6px; cursor: pointer; font-weight: 600; color: #854d0e; transition: all 0.2s; display: flex; align-items: center; gap: 5px;}
-        .btn-flag:hover { background-color: #fef08a; }
+        .btn-nav { padding: 10px 20px; border: 1px solid var(--border-heavy); background-color: var(--bg-panel); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text-muted); transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn-nav:hover { background-color: var(--bg-hover); color: var(--text-main); }
+        
+        .btn-flag { padding: 10px 20px; border: 1px solid #fde047; background-color: #fef9c3; border-radius: 6px; cursor: pointer; font-weight: 600; color: #854d0e; transition: all 0.2s; display: flex; align-items: center; gap: 8px;}
+        body.dark-mode .btn-flag { background-color: #713f12; border-color: #a16207; color: #fef08a;}
+        .btn-flag:hover { filter: brightness(0.95); }
         .btn-flag.active { background-color: #eab308; color: white; border-color: #ca8a04; }
 
         .btn-submit { padding: 12px 30px; background-color: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; transition: all 0.2s; }
         .btn-submit:hover:not(:disabled) { background-color: #059669; }
-        .btn-submit:disabled { background-color: #9ca3af; cursor: not-allowed; opacity: 0.8; }
+        .btn-submit:disabled { background-color: var(--border-heavy); color: var(--text-fade); cursor: not-allowed; opacity: 0.8; }
         
-        .right-panel { flex: 1; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); padding: 25px; height: fit-content; position: sticky; top: 90px; }
-        .panel-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: #1f2937; text-align: center; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px; }
+        .right-panel { flex: 1; background-color: var(--bg-panel); border-radius: 12px; box-shadow: var(--shadow-md); padding: 25px; height: fit-content; position: sticky; top: 90px; transition: background-color 0.3s; }
+        .panel-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: var(--text-main); text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
         .palette-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-        .palette-btn { aspect-ratio: 1; border: 1px solid #d1d5db; background-color: white; border-radius: 6px; font-weight: bold; color: #4b5563; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; position: relative;}
+        .palette-btn { aspect-ratio: 1; border: 1px solid var(--border-heavy); background-color: var(--bg-panel); border-radius: 6px; font-weight: bold; color: var(--text-muted); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; position: relative;}
         
-        .palette-btn.current { border: 2px solid #111827; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+        .palette-btn.current { border: 2px solid var(--text-main); box-shadow: 0 0 5px rgba(0,0,0,0.2); color: var(--text-main); }
         .palette-btn.answered { background-color: #3b82f6; color: white; border-color: #3b82f6; }
         
-        /* INDICATOR FLAG TRÊN PALETTE */
-        .palette-btn.flagged::after { content: '\f024'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; top: -5px; right: -5px; color: #eab308; font-size: 12px; background: white; border-radius: 50%; width: 16px; height: 16px; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.2);}
+        .palette-btn.flagged::after { content: '\f024'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; top: -5px; right: -5px; color: #eab308; font-size: 12px; background: var(--bg-panel); border-radius: 50%; width: 16px; height: 16px; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.2);}
         .palette-btn.flagged.answered::after { background: #3b82f6;}
 
-        /* SKELETON LOADING */
-        .skeleton { background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%); border-radius: 5px; background-size: 200% 100%; animation: 1.5s shine linear infinite; }
+        /* SKELETON LOADING DÀNH CHO DARK MODE */
+        .skeleton { background: linear-gradient(110deg, var(--border-color) 8%, var(--border-heavy) 18%, var(--border-color) 33%); border-radius: 5px; background-size: 200% 100%; animation: 1.5s shine linear infinite; }
         @keyframes shine { to { background-position-x: -200%; } }
         .skel-badge { width: 60px; height: 25px; margin-bottom: 15px; }
         .skel-text { height: 24px; margin-bottom: 10px; width: 100%; }
@@ -86,10 +135,9 @@
         #real-content { display: block; }
         #real-content.hidden { display: none; }
 
-        /* RESPONSIVE MOBILE & FLOATING ACTION BUTTON */
         .fab-palette { display: none; position: fixed; bottom: 25px; right: 25px; width: 55px; height: 55px; border-radius: 50%; background: #3b82f6; color: white; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-size: 22px; z-index: 99; cursor: pointer; transition: 0.2s; }
         .fab-palette:active { transform: scale(0.95); }
-        .btn-close-palette { display: none; position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: #4b5563; cursor: pointer; }
+        .btn-close-palette { display: none; position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; color: var(--text-muted); cursor: pointer; }
 
         @media (max-width: 900px) {
             .quiz-body { flex-direction: column; padding: 0 10px; margin-top: 15px;}
@@ -102,28 +150,28 @@
             .btn-submit { width: 100%;}
         }
 
-        /* MODALS & TOAST (Giữ nguyên) */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
+        /* MODALS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
         .modal-overlay.active { display: flex; }
-        .modal-content { background-color: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto; }
+        .modal-content { background-color: var(--bg-panel); padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 450px; text-align: center; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto; color: var(--text-main); border: 1px solid var(--border-color);}
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
-        .modal-title { font-size: 24px; font-weight: bold; color: #1f2937; margin-bottom: 20px; }
+        .modal-title { font-size: 24px; font-weight: bold; color: var(--text-main); margin-bottom: 20px; }
         .score-circle { width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(#10b981 0%, #d1fae5 0%); margin: 0 auto 20px; display: flex; justify-content: center; align-items: center; position: relative; }
-        .score-circle-inner { width: 100px; height: 100px; border-radius: 50%; background-color: white; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .score-circle-inner { width: 100px; height: 100px; border-radius: 50%; background-color: var(--bg-panel); display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .score-number { font-size: 32px; font-weight: bold; color: #10b981; line-height: 1; }
-        .score-label { font-size: 14px; color: #6b7280; margin-top: 5px; }
-        .modal-stats { font-size: 16px; color: #4b5563; margin-bottom: 25px; }
-        .modal-stats strong { color: #111827; font-size: 18px; }
+        .score-label { font-size: 14px; color: var(--text-fade); margin-top: 5px; }
+        .modal-stats { font-size: 16px; color: var(--text-muted); margin-bottom: 25px; }
+        .modal-stats strong { color: var(--text-main); font-size: 18px; }
 
-        .feedback-section { margin-bottom: 25px; text-align: left; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; }
-        .feedback-section h4 { margin-bottom: 10px; color: #374151; font-size: 15px; text-align: center; font-weight: bold;}
-        .stars { display: flex; justify-content: center; gap: 8px; margin-bottom: 12px; cursor: pointer; font-size: 28px; color: #d1d5db; }
+        .feedback-section { margin-bottom: 25px; text-align: left; background: var(--bg-body); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .feedback-section h4 { margin-bottom: 10px; color: var(--text-main); font-size: 15px; text-align: center; font-weight: bold;}
+        .stars { display: flex; justify-content: center; gap: 8px; margin-bottom: 12px; cursor: pointer; font-size: 28px; color: var(--border-heavy); }
         .stars span { transition: color 0.2s; }
         .stars span:hover, .stars span.active { color: #fbbf24; } 
-        .feedback-section textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; resize: none; height: 70px; font-family: inherit; font-size: 14px; outline: none;}
+        .feedback-section textarea { width: 100%; padding: 10px; border: 1px solid var(--border-heavy); background: var(--bg-panel); color: var(--text-main); border-radius: 6px; resize: none; height: 70px; font-family: inherit; font-size: 14px; outline: none;}
         .feedback-section textarea:focus { border-color: #3b82f6; }
-        .feedback-thankyou { display: none; color: #10b981; font-weight: bold; font-size: 16px; margin-bottom: 25px; text-align: center; background: #d1fae5; padding: 10px; border-radius: 8px; }
+        .feedback-thankyou { display: none; color: #10b981; font-weight: bold; font-size: 16px; margin-bottom: 25px; text-align: center; background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px; }
 
         .modal-actions { display: flex; flex-direction: column; gap: 10px; }
         .btn-modal { padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.2s; border: none; }
@@ -131,10 +179,13 @@
         .btn-modal.primary:hover { background-color: #2563eb; }
         .btn-modal.success { background-color: #10b981; color: white; }
         .btn-modal.success:hover { background-color: #059669; }
-        .btn-modal.outline { background-color: transparent; border: 2px solid #d1d5db; color: #4b5563; }
-        .btn-modal.outline:hover { background-color: #f3f4f6; border-color: #9ca3af; }
+        .btn-modal.outline { background-color: transparent; border: 2px solid var(--border-heavy); color: var(--text-main); }
+        .btn-modal.outline:hover { background-color: var(--bg-hover); border-color: var(--text-muted); }
 
-        #toast-message { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background-color: #1f2937; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); opacity: 0; transition: all 0.3s ease; z-index: 9999; font-weight: 500; white-space: nowrap;}
+        #toast-message { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background-color: var(--text-main); color: var(--bg-panel); padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); opacity: 0; transition: all 0.3s ease; z-index: 9999; font-weight: 500; white-space: nowrap;}
+        
+        /* Tối ưu riêng màu chữ trong Review Modal */
+        #reviewContentArea { color: var(--text-main); }
     </style>
 </head>
 <body>
@@ -144,8 +195,10 @@
         <div class="timer-container" id="timer-container-box"><i class="fa-regular fa-clock"></i> <span id="countdown">15:00</span></div>
         
         <div class="header-actions">
-            <button id="btn-back-dashboard" class="btn-logout" title="Quay về">Về phòng chờ</button>
-            <button id="btn-logout" class="btn-logout">Đăng xuất</button>
+            <button id="btn-theme-toggle" class="btn-header btn-theme" title="Chuyển chế độ Giao diện"><i class="fa-solid fa-moon"></i></button>
+            
+            <button id="btn-back-dashboard" class="btn-header" title="Quay về">Về phòng chờ</button>
+            <button id="btn-logout" class="btn-header">Đăng xuất</button>
         </div>
     </header>
 
@@ -173,9 +226,9 @@
             
             <footer class="quiz-footer">
                 <div class="nav-buttons">
-                    <button id="btn-prev" class="btn-nav" title="Phím tắt: Mũi tên Trái">Câu trước</button>
-                    <button id="btn-next" class="btn-nav" title="Phím tắt: Mũi tên Phải">Câu sau</button>
-                    <button id="btn-flag" class="btn-flag" title="Đánh dấu câu này để xem lại sau"><i class="fa-solid fa-flag"></i> Đánh dấu</button>
+                    <button id="btn-prev" class="btn-nav" title="Phím tắt: Mũi tên Trái"><i class="fa-solid fa-chevron-left"></i> Câu trước</button>
+                    <button id="btn-next" class="btn-nav" title="Phím tắt: Mũi tên Phải">Câu sau <i class="fa-solid fa-chevron-right"></i></button>
+                    <button id="btn-flag" class="btn-flag" title="Đánh dấu câu này để xem lại sau"><i class="fa-regular fa-flag"></i> Đánh dấu</button>
                 </div>
                 <button id="btn-submit-exam" class="btn-submit">Nộp bài ngay</button>
             </footer>
@@ -194,8 +247,8 @@
 
     <div id="confirm-submit-modal" class="modal-overlay" style="z-index: 10000;">
         <div class="modal-content" style="max-width: 400px; padding: 30px;">
-            <div class="modal-title" style="color: #1f2937; margin-bottom: 15px; font-size: 20px;">Xác nhận nộp bài</div>
-            <p id="confirm-submit-text" style="font-size: 16px; margin-bottom: 25px; color: #4b5563;"></p>
+            <div class="modal-title" style="margin-bottom: 15px; font-size: 20px;">Xác nhận nộp bài</div>
+            <p id="confirm-submit-text" style="font-size: 16px; margin-bottom: 25px; color: var(--text-muted);"></p>
             <div style="display: flex; gap: 10px;">
                 <button class="btn-modal outline" id="btn-cancel-submit" style="flex: 1;">Hủy</button>
                 <button class="btn-modal success" id="btn-confirm-submit" style="flex: 1;">Nộp bài</button>
@@ -207,7 +260,7 @@
         <div class="modal-content" style="border: 2px solid #ef4444; max-width: 400px;">
             <div style="color: #ef4444; font-size: 48px; margin-bottom: 10px;">⚠️</div>
             <div class="modal-title" style="color: #dc2626; font-size: 22px;">Cảnh Báo Gian Lận!</div>
-            <p id="cheat-warning-text" style="font-size: 16px; margin-bottom: 25px; line-height: 1.5; color: #374151;"></p>
+            <p id="cheat-warning-text" style="font-size: 16px; margin-bottom: 25px; line-height: 1.5; color: var(--text-main);"></p>
             <button class="btn-modal success" id="btn-close-warning" style="width: 100%; background-color: #ef4444; color: white;">Tôi đã hiểu</button>
         </div>
     </div>
@@ -247,11 +300,11 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="reviewExamModal" style="z-index: 10000; padding-top: 2vh; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
-        <div class="modal-content" style="max-width: 800px; width: 95%; height: 92vh; display: flex; flex-direction: column; padding: 0; background: #f4f6f8; overflow: hidden; border-radius: 12px;">
-            <div style="padding: 15px 20px; background: #ffffff; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10;">
-                <h3 style="margin: 0; color: #084298; font-weight: 900; font-size: 1.3rem;"><i class="fa-solid fa-file-signature"></i> CHI TIẾT BÀI LÀM</h3>
-                <button id="closeReviewModalBtn" style="background: #f3f4f6; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #4b5563; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-overlay" id="reviewExamModal" style="z-index: 10000; padding-top: 2vh;">
+        <div class="modal-content" style="max-width: 800px; width: 95%; height: 92vh; display: flex; flex-direction: column; padding: 0; background: var(--bg-body); overflow: hidden; border-radius: 12px; border: none;">
+            <div style="padding: 15px 20px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm); z-index: 10;">
+                <h3 style="margin: 0; color: #3b82f6; font-weight: 900; font-size: 1.3rem;"><i class="fa-solid fa-file-signature"></i> CHI TIẾT BÀI LÀM</h3>
+                <button id="closeReviewModalBtn" style="background: var(--bg-body); border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="reviewContentArea" style="padding: 20px; overflow-y: auto; text-align: left; flex: 1; scroll-behavior: smooth;">
                 </div>
@@ -263,20 +316,20 @@
             <h3 style="margin-bottom: 15px; color: #dc2626; font-weight: bold; font-size: 1.3rem;">
                 <i class="fa-solid fa-flag"></i> Báo cáo lỗi câu hỏi
             </h3>
-            <p style="font-size: 0.95rem; color: #4b5563; margin-bottom: 20px; background: #f3f4f6; padding: 10px; border-radius: 6px;">
-                Đang báo cáo: <strong id="reportQuestionTextPreview" style="color: #1f2937;">...</strong>
+            <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px; background: var(--bg-body); padding: 10px; border-radius: 6px;">
+                Đang báo cáo: <strong id="reportQuestionTextPreview" style="color: var(--text-main);">...</strong>
             </p>
             
-            <label style="font-weight: 700; margin-bottom: 5px; display: block; color: #374151;">Loại lỗi:</label>
-            <select id="reportErrorType" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 1rem; outline: none; background: #fff;">
+            <label style="font-weight: 700; margin-bottom: 5px; display: block; color: var(--text-main);">Loại lỗi:</label>
+            <select id="reportErrorType" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid var(--border-heavy); font-size: 1rem; outline: none; background: var(--bg-panel); color: var(--text-main);">
                 <option value="Sai đáp án">Sai đáp án</option>
                 <option value="Lỗi chính tả">Lỗi chính tả / Hiển thị</option>
                 <option value="Lỗi chuyên môn">Lỗi kiến thức chuyên môn</option>
                 <option value="Khác">Lỗi khác</option>
             </select>
 
-            <label style="font-weight: 700; margin-bottom: 5px; display: block; color: #374151;">Mô tả chi tiết:</label>
-            <textarea id="reportDescription" placeholder="Vui lòng mô tả rõ lỗi bạn gặp phải (Ví dụ: Câu này đáp án đúng phải là C...)" style="width: 100%; height: 110px; padding: 12px; margin-bottom: 25px; border-radius: 8px; border: 1px solid #d1d5db; resize: none; font-size: 0.95rem; outline: none; font-family: inherit;"></textarea>
+            <label style="font-weight: 700; margin-bottom: 5px; display: block; color: var(--text-main);">Mô tả chi tiết:</label>
+            <textarea id="reportDescription" placeholder="Vui lòng mô tả rõ lỗi bạn gặp phải (Ví dụ: Câu này đáp án đúng phải là C...)" style="width: 100%; height: 110px; padding: 12px; margin-bottom: 25px; border-radius: 8px; border: 1px solid var(--border-heavy); resize: none; font-size: 0.95rem; outline: none; font-family: inherit; background: var(--bg-panel); color: var(--text-main);"></textarea>
 
             <div style="display: flex; gap: 15px;">
                 <button class="btn-modal outline" id="btnCancelReport" style="flex: 1;">Hủy</button>
