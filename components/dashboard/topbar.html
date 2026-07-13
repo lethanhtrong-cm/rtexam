@@ -90,6 +90,27 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
+    /* Hiệu ứng nhấp nháy phát sáng nhẹ nhàng (Glow) dành riêng cho nút AI */
+    @keyframes elegantGlow {
+        0%, 100% { 
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); 
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        50% { 
+            box-shadow: 0 0 14px 0 rgba(255, 255, 255, 0.45); 
+            border-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+    }
+    
+    #btnAutoGenerate {
+        animation: elegantGlow 2.5s infinite ease-in-out;
+    }
+    
+    #btnAutoGenerate:hover {
+        animation: none; /* Dừng chớp nháy khi người dùng trỏ chuột vào để tương tác */
+    }
+
     /* Hỗ trợ UI/UX Dropdown và hover state cũ */
     #notiDropdown.show, #userDropdown.show { display: block !important; }
     
