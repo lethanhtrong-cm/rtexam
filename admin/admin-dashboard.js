@@ -99,7 +99,9 @@ export async function loadDashboardStats() {
             }
 
             // Phân tích Nhóm 2 (Xu hướng cấu hình dựa vào Exam Code)
-            const eCode = data.examCode || data.quizId;
+            // SỬA LỖI Ở ĐÂY: Thêm data.examId để lấy đúng trường mã đề từ bảng results
+            const eCode = data.examId || data.examCode || data.quizId;
+            
             if (eCode && examsMap[eCode]) {
                 const config = examsMap[eCode];
                 
