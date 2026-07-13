@@ -87,30 +87,6 @@ body { background-color: #f4f6f9; color: #1f2937; display: flex; height: 100vh; 
 .user-email-cell { display: flex; align-items: center; gap: 12px; }
 .user-avatar-placeholder { width: 34px; height: 34px; border-radius: 50%; background-color: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #475569; border: 2px solid #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-transform: uppercase; user-select: none; }
 
-/* ================= EXAM CARD LIST VIEW ================= */
-.exam-card-list { display: flex; flex-direction: column; gap: 16px; width: 100%; }
-.exam-modern-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.015); transition: all 0.2s ease-in-out; }
-.exam-modern-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04); border-color: #cbd5e1; }
-.card-top-half { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 14px; }
-.card-info-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.card-exam-title { font-size: 18px; font-weight: 700; color: #0f172a; }
-.card-status-right { display: flex; align-items: center; gap: 10px; }
-.card-divider { border: none; border-top: 1px solid #f1f5f9; margin: 0 0 14px 0; }
-.card-bottom-half { display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
-
-.btn-outline-sm { padding: 7px 14px; border: 1px solid #cbd5e1; background-color: transparent; color: #475569; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.15s ease-in-out; display: inline-flex; align-items: center; gap: 6px; }
-.btn-outline-sm:hover { background-color: #f8fafc; color: #0f172a; border-color: #94a3b8; }
-.btn-outline-sm.btn-properties-modern { color: #0f172a; border-color: #cbd5e1; }
-.btn-outline-sm.btn-properties-modern:hover { background-color: #f1f5f9; border-color: #64748b; }
-.btn-outline-sm.btn-feedback-modern { color: #d97706; border-color: #fde68a; }
-.btn-outline-sm.btn-feedback-modern:hover { background-color: #fffbeb; border-color: #f59e0b; }
-.btn-outline-sm.btn-vip-on-modern { color: #3b82f6; border-color: #bfdbfe; }
-.btn-outline-sm.btn-vip-on-modern:hover { background-color: #eff6ff; border-color: #3b82f6; }
-.btn-outline-sm.btn-vip-off-modern { color: #f97316; border-color: #fed7aa; }
-.btn-outline-sm.btn-vip-off-modern:hover { background-color: #fff7ed; border-color: #f97316; }
-.btn-outline-sm.btn-delete-modern { color: #ef4444; border-color: #fca5a5; }
-.btn-outline-sm.btn-delete-modern:hover { background-color: #fee2e2; border-color: #ef4444; }
-
 /* STEP BADGES & DRAG/DROP UI */
 .step-badge { background-color: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px; font-weight: 700; }
 .step-badge.green { background-color: #10b981; }
@@ -152,3 +128,43 @@ body { background-color: #f4f6f9; color: #1f2937; display: flex; height: 100vh; 
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.success { background-color: #10b981; }
 .toast.error { background-color: #ef4444; }
+
+/* ==========================================================
+   THIẾT KẾ CARD ĐỀ THI MỚI (PHONG CÁCH EDTECH CHUYÊN NGHIỆP) 
+   ========================================================== */
+.exam-card-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(100%, 1fr)); gap: 20px; width: 100%; }
+.exam-premium-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: all 0.3s ease; display: flex; flex-direction: column; position: relative; border-left: 4px solid #3b82f6; }
+.exam-premium-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.06); border-color: #cbd5e1; border-left-color: #2563eb; }
+.card-premium-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.exam-premium-title { font-size: 1.15rem; font-weight: 800; color: #1e293b; margin: 0 0 4px 0; line-height: 1.4; }
+.exam-subtitle-id { font-size: 0.85rem; color: #64748b; font-family: monospace; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; }
+.badge-premium-vip { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); }
+.badge-premium-free { background-color: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; border: 1px solid #e2e8f0; }
+
+.card-premium-meta { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.meta-tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
+.premium-tag { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; border: 1px solid transparent; }
+.premium-tag.tech-tag { background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.premium-tag.time-tag { background-color: #f8fafc; color: #475569; border-color: #e2e8f0; }
+.premium-tag.count-tag { background-color: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+.premium-tag.level-easy { background-color: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+.premium-tag.level-medium { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
+.premium-tag.level-hard { background-color: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+.meta-stats-container { display: flex; gap: 16px; font-size: 0.85rem; color: #64748b; font-weight: 500; }
+.stat-item { display: flex; align-items: center; gap: 6px; }
+
+.premium-divider { border: none; border-top: 1px dashed #e2e8f0; margin: 0 0 16px 0; }
+.card-premium-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.footer-actions-right { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn-modern-action { padding: 8px 14px; border: 1px solid #e2e8f0; background-color: #ffffff; color: #475569; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-modern-action:hover { background-color: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
+.btn-modern-action.btn-edit-properties:hover { background-color: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+.btn-modern-action.btn-view-feedback:hover { background-color: #fffbeb; border-color: #fde68a; color: #d97706; }
+.btn-modern-action.toggle-vip.on { color: #3b82f6; border-color: #bfdbfe; background-color: #eff6ff; }
+.btn-modern-action.toggle-vip.on:hover { background-color: #dbeafe; }
+.btn-modern-action.toggle-vip.off { color: #f59e0b; border-color: #fde68a; background-color: #fffbeb; }
+.btn-modern-action.toggle-vip.off:hover { background-color: #fef3c7; }
+.btn-modern-action.btn-delete-danger { color: #ef4444; }
+.btn-modern-action.btn-delete-danger:hover { background-color: #fef2f2; border-color: #fca5a5; }
