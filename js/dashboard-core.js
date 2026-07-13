@@ -88,15 +88,14 @@ document.addEventListener('ComponentsLoaded', () => {
 
     // =========================================================
     // THỦ THUẬT CLONE NODE: XÓA MỌI SỰ KIỆN CHUYỂN TRANG ẨN
+    // (Logic tạo phòng thi vẫn giữ nguyên cho Topbar)
     // =========================================================
-    const oldBtnCreateRoom = document.getElementById('topbarNavCreateRoom'); // Đã cập nhật ID mới trên Topbar
+    const oldBtnCreateRoom = document.getElementById('topbarNavCreateRoom'); 
     
     if (oldBtnCreateRoom) {
-        // Tẩy sạch sự kiện cũ
         const btnCreateRoom = oldBtnCreateRoom.cloneNode(true);
         oldBtnCreateRoom.parentNode.replaceChild(btnCreateRoom, oldBtnCreateRoom);
 
-        // Gắn sự kiện mới tạo tab an toàn
         btnCreateRoom.addEventListener('click', async (e) => {
             e.preventDefault(); 
             e.stopPropagation(); 
@@ -114,7 +113,6 @@ document.addEventListener('ComponentsLoaded', () => {
             const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
             const targetUrl = `lobby.html?roomId=${roomId}`;
 
-            // Mở tab trắng ngay lập tức
             const newTab = window.open('about:blank', '_blank');
 
             try {
@@ -145,24 +143,8 @@ document.addEventListener('ComponentsLoaded', () => {
             }
         });
     }
-
-    // Gắn sự kiện chống Null cho nút Tạo Đề AI
-    const btnCreateAI = document.getElementById('topbarNavCreateAI');
-    if (btnCreateAI) {
-        btnCreateAI.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert("Trợ lý AI đang được nâng cấp. Tính năng này sẽ sớm ra mắt!");
-        });
-    }
-
-    // Gắn sự kiện chống Null cho nút Upload Đề Thi
-    const btnUpload = document.getElementById('topbarNavUpload');
-    if (btnUpload) {
-        btnUpload.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert("Tính năng Upload đề thi hàng loạt đang được phát triển!");
-        });
-    }
+    
+    // Đã gỡ bỏ 2 sự kiện dummy alert của nút AI và Upload ở đây để nhường chỗ cho logic của bạn.
 });
 
 function initDOMListeners() {
@@ -329,7 +311,6 @@ function fetchUserData(user) {
     return new Promise((resolve) => {
         const userDocRef = doc(db, "users", user.uid);
         
-        // Lắng nghe dữ liệu realtime
         onSnapshot(userDocRef, async (userDocSnap) => {
             let currentUserData = { isVip: false, isBanned: false, bookmarks: [] };
             
@@ -356,14 +337,11 @@ function fetchUserData(user) {
 
                 if (currentUserData.isVip) {
                     
-                    // KIỂM TRA VÀ TỰ ĐỘNG GÁN NGÀY PRO (Self-healing mechanism)
                     let needsDateUpdate = false;
                     
-                    // Nếu Admin bật isVip nhưng thiếu dữ liệu ngày
                     if (!currentUserData.vipStart || !currentUserData.vipEnd) {
                         needsDateUpdate = true;
                     } else {
-                        // Nếu đã có ngày nhưng ngày cũ đã hết hạn (Admin tái kích hoạt)
                         const endDate = currentUserData.vipEnd.toDate ? currentUserData.vipEnd.toDate() : new Date(currentUserData.vipEnd);
                         if (endDate.getTime() < Date.now()) {
                             needsDateUpdate = true;
@@ -372,17 +350,14 @@ function fetchUserData(user) {
 
                     if (needsDateUpdate) {
                         const now = new Date();
-                        const expire = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // Tự động +30 ngày
+                        const expire = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); 
                         
                         currentUserData.vipStart = now;
                         currentUserData.vipEnd = expire;
                         
-                        // Lưu ngầm xuống Database để đồng bộ vĩnh viễn
                         setDoc(userDocRef, { vipStart: now, vipEnd: expire }, { merge: true }).catch(err => console.error(err));
                     }
                     
-                    // ============================================
-
                     const elVipStatusBadge = document.getElementById("vipStatusBadge");
                     if (elVipStatusBadge) {
                         elVipStatusBadge.textContent = "Đã kích hoạt Pro";
@@ -416,7 +391,6 @@ function fetchUserData(user) {
                 setVipInactive(); 
             }
             
-            // Luôn Resolve ở lần chạy đầu tiên để nhả luồng cho hàm executeAuthUI tiếp tục
             resolve(currentUserData);
             
         }, (error) => {
