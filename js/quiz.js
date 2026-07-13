@@ -16,7 +16,7 @@ let questions = [];
 let auth, db;
 let currentIndex = 0;
 let userAnswers = {};
-let flaggedQuestions = {}; // TÍNH NĂNG MỚI: Đánh dấu câu hỏi
+let flaggedQuestions = {}; 
 
 let isSubmitted = false;
 let currentUser = null; 
@@ -30,7 +30,6 @@ let finalScore = 0;
 let finalCorrectCount = 0;
 let finalTotal = 0;
 
-// CÁC BIẾN LƯU THÔNG TIN ĐỂ BÁO CÁO LỖI
 let reportingQuestionId = null;
 let reportingQuestionText = "";
 
@@ -39,11 +38,8 @@ auth = getAuth(app);
 db = getFirestore(app); 
 
 function redirect(url) {
-    try {
-        window.location.href = url;
-    } catch (error) {
-        console.warn("Môi trường Preview chặn chuyển hướng:", error);
-    }
+    try { window.location.href = url; } 
+    catch (error) { console.warn("Môi trường Preview chặn chuyển hướng:", error); }
 }
 
 function showToast(msg) {
@@ -62,7 +58,30 @@ let currentExamId = urlParams.get('examId');
 const currentResultId = urlParams.get('resultId'); 
 const currentRoomId = urlParams.get('roomId'); 
 
-// ================= RESPONSIVE MOBILE PALETTE =================
+// ================= DARK MODE LOGIC =================
+const btnThemeToggle = document.getElementById('btn-theme-toggle');
+
+function applyTheme(isDark) {
+    if (isDark) {
+        document.body.classList.add('dark-mode');
+        btnThemeToggle.innerHTML = '<i class="fa-solid fa-sun"></i>';
+    } else {
+        document.body.classList.remove('dark-mode');
+        btnThemeToggle.innerHTML = '<i class="fa-solid fa-moon"></i>';
+    }
+}
+
+// Khôi phục giao diện lưu trữ
+const savedTheme = localStorage.getItem('quiz_theme');
+if (savedTheme === 'dark') applyTheme(true);
+
+btnThemeToggle.addEventListener('click', () => {
+    const isNowDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('quiz_theme', isNowDark ? 'dark' : 'light');
+    applyTheme(isNowDark);
+});
+// ===================================================
+
 const fabPalette = document.getElementById('fab-palette');
 const rightPanelMobile = document.getElementById('right-panel-mobile');
 const btnClosePalette = document.getElementById('btn-close-palette');
@@ -70,29 +89,24 @@ const btnClosePalette = document.getElementById('btn-close-palette');
 if (fabPalette && rightPanelMobile && btnClosePalette) {
     fabPalette.addEventListener('click', () => rightPanelMobile.classList.add('active'));
     btnClosePalette.addEventListener('click', () => rightPanelMobile.classList.remove('active'));
-    // Đóng panel khi bấm ngoài vùng
     document.addEventListener('click', (e) => {
         if (rightPanelMobile.classList.contains('active') && !rightPanelMobile.contains(e.target) && !fabPalette.contains(e.target)) {
             rightPanelMobile.classList.remove('active');
         }
     });
 }
-// ==============================================================
 
 async function returnToLobbyOrDashboard() {
     if (currentUser && !isSubmitted) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
             await updateDoc(userRef, { examStatus: 'idle' });
-        } catch (err) {
-            console.error("Lỗi cập nhật trạng thái khi rời phòng thi:", err);
-        }
+        } catch (err) { console.error(err); }
     }
     if (currentRoomId) redirect(`lobby.html?roomId=${currentRoomId}`);
     else redirect('dashboard.html');
 }
 
-// ================= ANTI CHEATING LOGIC =================
 let warningCount = 0;
 
 function updateAntiCheatState() {
@@ -129,9 +143,7 @@ document.addEventListener('visibilitychange', () => {
         }
     }
 });
-// ========================================================
 
-// ================= AUTO-SAVE LOGIC (TÍNH NĂNG MỚI) =================
 function getDraftKey() { return `quiz_draft_${currentExamId}_${currentUser.uid}`; }
 
 function saveDraft() {
@@ -151,15 +163,12 @@ function loadDraft() {
             if (draft.timeRemaining) timeRemaining = draft.timeRemaining;
             if (draft.currentIndex !== undefined) currentIndex = draft.currentIndex;
             return true;
-        } catch(e) { console.error("Lỗi đọc draft:", e); }
+        } catch(e) {}
     }
     return false;
 }
 
-function clearDraft() {
-    if (currentUser && currentExamId) localStorage.removeItem(getDraftKey());
-}
-// ===================================================================
+function clearDraft() { if (currentUser && currentExamId) localStorage.removeItem(getDraftKey()); }
 
 onAuthStateChanged(auth, (user) => {
     if (!user || user.isAnonymous) {
@@ -167,9 +176,8 @@ onAuthStateChanged(auth, (user) => {
         redirect('index.html');
     } else {
         currentUser = user;
-        if (currentResultId) {
-            loadReviewMode(currentResultId);
-        } else if (currentExamId) {
+        if (currentResultId) loadReviewMode(currentResultId);
+        else if (currentExamId) {
             document.getElementById('quiz-title-display').innerText = `Bài thi: ${currentExamId}`;
             loadExamDataAndQuestions();
         }
@@ -177,7 +185,6 @@ onAuthStateChanged(auth, (user) => {
 });
 
 async function loadExamDataAndQuestions() {
-    // Kích hoạt Skeleton Loading thay cho text "Đang tải"
     document.getElementById('skeleton-container').classList.add('active');
     document.getElementById('real-content').classList.add('hidden');
     
@@ -191,7 +198,6 @@ async function loadExamDataAndQuestions() {
         await fetchQuestionsFromFirestore();
         initExamState(); 
     } catch (error) {
-        console.error("Lỗi khi tải dữ liệu đề thi:", error);
         document.getElementById('skeleton-container').classList.remove('active');
         document.getElementById('real-content').classList.remove('hidden');
         document.getElementById('question-text').innerText = `Lỗi tải đề thi: ${error.message}`;
@@ -203,7 +209,6 @@ async function initExamState() {
     isShowExplanation = false;
     warningCount = 0;
     
-    // Tải bản lưu tạm (Auto-save) nếu có
     const hasDraft = loadDraft();
     if (!hasDraft) {
         currentIndex = 0;
@@ -223,17 +228,16 @@ async function initExamState() {
 
     if (currentRoomId && currentUser) {
         const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
-        setDoc(participantRef, { status: 'playing' }, { merge: true }).catch(err => console.error(err));
+        setDoc(participantRef, { status: 'playing' }, { merge: true }).catch(e => console.error(e));
     }
 
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
             await updateDoc(userRef, { examStatus: 'testing' });
-        } catch (err) { console.error("Lỗi cập nhật trạng thái đang thi:", err); }
+        } catch (err) {}
     }
 
-    // Tắt Skeleton Loading và hiển thị nội dung thật
     document.getElementById('skeleton-container').classList.remove('active');
     document.getElementById('real-content').classList.remove('hidden');
 
@@ -268,7 +272,6 @@ async function loadReviewMode(resultId) {
 
         openReviewModal(resultData.score, resultData.correctCount, resultData.totalQuestions);
     } catch (error) {
-        console.error("Lỗi tải Review Mode:", error);
         document.getElementById('skeleton-container').classList.remove('active');
         document.getElementById('real-content').classList.remove('hidden');
         document.getElementById('question-text').innerText = `Lỗi hệ thống: ${error.message}`;
@@ -290,7 +293,6 @@ async function fetchQuestionsFromFirestore() {
     }
 }
 
-// Bổ sung tiếng bíp khi sắp hết giờ (Sử dụng Web Audio API để không phụ thuộc file ngoài)
 function playBeepWarning() {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -311,7 +313,6 @@ function startTimer() {
         timeRemaining--;
         updateTimerDisplay();
         
-        // Auto-save định kỳ mỗi 10 giây
         if (timeRemaining % 10 === 0) saveDraft();
 
         if (timeRemaining <= 0) {
@@ -328,11 +329,9 @@ function updateTimerDisplay() {
     const seconds = (timeRemaining % 60).toString().padStart(2, '0');
     document.getElementById('countdown').innerText = `${minutes}:${seconds}`;
     
-    // Bật cảnh báo nếu dưới 1 phút
     const timerBox = document.getElementById('timer-container-box');
     if (timeRemaining <= 60 && timeRemaining > 0) {
         timerBox.classList.add('timer-warning');
-        // Phát tiếng bíp mỗi 2 giây nếu dưới 30s
         if (timeRemaining <= 30 && timeRemaining % 2 === 0) playBeepWarning();
     } else {
         timerBox.classList.remove('timer-warning');
@@ -342,7 +341,7 @@ function updateTimerDisplay() {
 async function executeSubmit() {
     stopTimer(); 
     isSubmitted = true; 
-    clearDraft(); // Nộp bài xong thì xóa bản lưu nháp
+    clearDraft(); 
     updateAntiCheatState(); 
     
     finalTotal = questions.length;
@@ -378,20 +377,20 @@ async function executeSubmit() {
                 showToast(`🎉 Bạn đã nhận được +${gainedXP} XP cho lần đầu hoàn thành!`);
             }
         }
-    } catch (xpError) { console.error("Lỗi khi tính XP:", xpError); }
+    } catch (xpError) {}
 
     if (currentRoomId && currentUser) {
         try {
             const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
             await setDoc(participantRef, { status: 'finished', score: finalScore, timeTaken: timeSpent }, { merge: true });
-        } catch (roomErr) { console.error("Lỗi cập nhật điểm:", roomErr); }
+        } catch (roomErr) {}
     }
 
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
             await updateDoc(userRef, { examStatus: 'idle' });
-        } catch (err) { console.error("Lỗi cập nhật trạng thái idle:", err); }
+        } catch (err) {}
     }
 
     renderAll(); 
@@ -409,7 +408,6 @@ async function executeSubmit() {
         
         showResultModal(finalCorrectCount, finalTotal, finalScore);
     } catch (error) {
-        console.error("Lỗi lưu kết quả:", error);
         showResultModal(finalCorrectCount, finalTotal, finalScore);
     }
 }
@@ -435,7 +433,6 @@ function submitExam(isAutoSubmit = false) {
     }
 }
 
-// ================= LOGIC XEM LẠI BÀI LÀM (REVIEW MODAL) =================
 function openReviewModal(score, correctCount, total) {
     const modal = document.getElementById('reviewExamModal');
     const contentArea = document.getElementById('reviewContentArea');
@@ -458,13 +455,13 @@ function openReviewModal(score, correctCount, total) {
         const labels = ['A','B','C','D', 'E', 'F'];
 
         opts.forEach((optText, oIdx) => {
-            let bg = '#fff'; let border = '2px solid #e5e7eb'; let color = '#374151'; let fw = 'normal'; let icon = '';
+            let bg = 'var(--bg-panel)'; let border = '2px solid var(--border-color)'; let color = 'var(--text-main)'; let fw = 'normal'; let icon = '';
 
             if (oIdx === correctAns) {
-                bg = '#d1fae5'; border = '2px solid #10b981'; color = '#065f46'; fw = 'bold';
+                bg = 'rgba(16, 185, 129, 0.1)'; border = '2px solid #10b981'; color = '#10b981'; fw = 'bold';
                 icon = '<i class="fa-solid fa-check-circle" style="color: #10b981; font-size: 1.2rem; float: right;"></i>';
             } else if (oIdx === userAns && userAns !== correctAns) {
-                bg = '#fee2e2'; border = '2px solid #ef4444'; color = '#991b1b'; fw = 'bold';
+                bg = 'rgba(239, 68, 68, 0.1)'; border = '2px solid #ef4444'; color = '#ef4444'; fw = 'bold';
                 icon = '<i class="fa-solid fa-circle-xmark" style="color: #ef4444; font-size: 1.2rem; float: right;"></i>';
             }
 
@@ -479,28 +476,28 @@ function openReviewModal(score, correctCount, total) {
         let explanationHtml = '';
         if (q.explanation && q.explanation.trim() !== '' && q.explanation.toLowerCase() !== 'không có giải thích chi tiết') {
             explanationHtml = `
-                <div style="margin-top: 15px; padding: 15px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 0.95rem; color: #92400e;">
+                <div style="margin-top: 15px; padding: 15px; background: rgba(245, 158, 11, 0.1); border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 0.95rem; color: #d97706;">
                     <b style="color: #b45309;"><i class="fa-solid fa-lightbulb"></i> Giải thích:</b><br>${q.explanation}
                 </div>
             `;
         }
 
-        let statusBadge = isUnanswered ? '<span style="background: #f3f4f6; color: #4b5563; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Chưa chọn</span>' : 
-                          (userAns === correctAns) ? '<span style="background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Đúng</span>' : 
-                          '<span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Sai</span>';
+        let statusBadge = isUnanswered ? '<span style="background: var(--bg-hover); color: var(--text-muted); padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Chưa chọn</span>' : 
+                          (userAns === correctAns) ? '<span style="background: rgba(16, 185, 129, 0.2); color: #059669; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Đúng</span>' : 
+                          '<span style="background: rgba(239, 68, 68, 0.2); color: #dc2626; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Sai</span>';
 
         let safeQuestionText = (q.text || "").replace(/"/g, '&quot;');
         
         html += `
-            <div style="background: #fff; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #f3f4f6;">
+            <div style="background: var(--bg-panel); padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);">
                 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; gap: 15px;">
-                    <div style="color: #2d3748; font-weight: 600; font-size: 1.05rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 12px; flex: 1;">
+                    <div style="color: var(--text-main); font-weight: 600; font-size: 1.05rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 12px; flex: 1;">
                         <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; margin-top: 2px;">Câu ${idx+1}</span>
                         <div style="flex: 1;">${q.text} ${statusBadge}</div>
                     </div>
                     
-                    <button class="btn-report-error" data-qid="${q.id}" data-qtext="${safeQuestionText}" style="background: #fee2e2; border: 1px solid #f87171; color: #dc2626; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: 0.2s;">
+                    <button class="btn-report-error" data-qid="${q.id}" data-qtext="${safeQuestionText}" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #f87171; color: #dc2626; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: 0.2s;">
                         <i class="fa-solid fa-flag"></i> Báo lỗi
                     </button>
                 </div>
@@ -514,8 +511,8 @@ function openReviewModal(score, correctCount, total) {
     contentArea.innerHTML = html;
 
     document.querySelectorAll('.btn-report-error').forEach(btn => {
-        btn.addEventListener('mouseover', function() { this.style.background = '#fca5a5'; });
-        btn.addEventListener('mouseout', function() { this.style.background = '#fee2e2'; });
+        btn.addEventListener('mouseover', function() { this.style.background = 'rgba(239, 68, 68, 0.2)'; });
+        btn.addEventListener('mouseout', function() { this.style.background = 'rgba(239, 68, 68, 0.1)'; });
         btn.addEventListener('click', function() {
             const qId = this.getAttribute('data-qid');
             const qText = this.getAttribute('data-qtext');
@@ -524,37 +521,27 @@ function openReviewModal(score, correctCount, total) {
     });
 }
 
-// ================= LOGIC XỬ LÝ REPORT LỖI =================
 function openReportModal(qId, qText) {
     reportingQuestionId = qId;
     reportingQuestionText = qText;
     
     let previewText = qText.length > 70 ? qText.substring(0, 70) + '...' : qText;
     document.getElementById('reportQuestionTextPreview').innerText = previewText;
-    
     document.getElementById('reportErrorType').value = 'Sai đáp án';
     document.getElementById('reportDescription').value = '';
     
     document.getElementById('reportQuestionModal').classList.add('active');
 }
 
-document.getElementById('btnCancelReport').addEventListener('click', () => {
-    document.getElementById('reportQuestionModal').classList.remove('active');
-});
+document.getElementById('btnCancelReport').addEventListener('click', () => { document.getElementById('reportQuestionModal').classList.remove('active'); });
 
 document.getElementById('btnSubmitReport').addEventListener('click', async () => {
-    if (!auth.currentUser) {
-        showToast("Bạn cần đăng nhập để gửi báo cáo!");
-        return;
-    }
+    if (!auth.currentUser) { showToast("Bạn cần đăng nhập để gửi báo cáo!"); return; }
     
     const errorType = document.getElementById('reportErrorType').value;
     const description = document.getElementById('reportDescription').value.trim();
     
-    if (!description) {
-        showToast("Vui lòng nhập mô tả chi tiết lỗi!");
-        return;
-    }
+    if (!description) { showToast("Vui lòng nhập mô tả chi tiết lỗi!"); return; }
     
     const btnSubmit = document.getElementById('btnSubmitReport');
     btnSubmit.disabled = true;
@@ -562,28 +549,20 @@ document.getElementById('btnSubmitReport').addEventListener('click', async () =>
     
     try {
         await addDoc(collection(db, "reported_questions"), {
-            examId: currentExamId,
-            questionId: reportingQuestionId,
-            questionText: reportingQuestionText,
-            reportedBy: currentUser.email,
-            errorType: errorType,
-            description: description,
-            status: "pending",
-            timestamp: serverTimestamp()
+            examId: currentExamId, questionId: reportingQuestionId, questionText: reportingQuestionText,
+            reportedBy: currentUser.email, errorType: errorType, description: description,
+            status: "pending", timestamp: serverTimestamp()
         });
         
         showToast("Đã gửi báo cáo lỗi. Xin cảm ơn sự đóng góp của bạn!");
         document.getElementById('reportQuestionModal').classList.remove('active');
-        
     } catch (error) {
-        console.error("Lỗi khi gửi báo cáo:", error);
         showToast("Đã xảy ra lỗi khi gửi dữ liệu. Vui lòng thử lại sau!");
     } finally {
         btnSubmit.disabled = false;
         btnSubmit.innerText = "Gửi Báo Cáo";
     }
 });
-// ================================================================
 
 document.getElementById('closeReviewModalBtn').addEventListener('click', () => {
     document.getElementById('reviewExamModal').classList.remove('active');
@@ -599,7 +578,6 @@ document.getElementById('reviewExamModal').addEventListener('click', (e) => {
     }
 });
 
-// ================= LOGIC FEEDBACK RATING =================
 let selectedStars = 0;
 const stars = document.querySelectorAll('#star-rating span');
 
@@ -657,22 +635,14 @@ function closeModal() { document.getElementById('result-modal').classList.remove
 
 document.getElementById('btn-modal-dashboard-modal').onclick = () => returnToLobbyOrDashboard();
 document.getElementById('btn-back-dashboard').onclick = () => returnToLobbyOrDashboard();
-
-document.getElementById('btn-modal-retry').onclick = () => {
-    closeModal();
-    initExamState();
-};
-
-document.getElementById('btn-modal-explain').onclick = () => {
-    closeModal();
-    openReviewModal(finalScore, finalCorrectCount, finalTotal);
-};
+document.getElementById('btn-modal-retry').onclick = () => { closeModal(); initExamState(); };
+document.getElementById('btn-modal-explain').onclick = () => { closeModal(); openReviewModal(finalScore, finalCorrectCount, finalTotal); };
 
 function handleOptionSelect(idx) {
     if (isSubmitted) return; 
     
     userAnswers[currentIndex] = idx; 
-    saveDraft(); // Tự động lưu sau mỗi lần chọn đáp án
+    saveDraft(); 
     renderQuestion(); 
     renderPalette();  
     
@@ -725,7 +695,6 @@ function renderQuestion() {
         container.appendChild(div);
     });
 
-    // Cập nhật trạng thái hiển thị Nút Đánh dấu (Flag)
     const btnFlag = document.getElementById('btn-flag');
     if (flaggedQuestions[currentIndex]) {
         btnFlag.classList.add('active');
@@ -736,7 +705,6 @@ function renderQuestion() {
     }
 }
 
-// Bàn phím / Nút ấn chọn câu hỏi nhanh
 function renderPalette() {
     const container = document.getElementById('palette-container');
     container.innerHTML = '';
@@ -746,7 +714,7 @@ function renderPalette() {
         let btnClasses = 'palette-btn';
         if (idx === currentIndex) btnClasses += ' current';
         if (userAnswers[idx] !== undefined) btnClasses += ' answered';
-        if (flaggedQuestions[idx]) btnClasses += ' flagged'; // Thêm class flagged
+        if (flaggedQuestions[idx]) btnClasses += ' flagged'; 
 
         btn.className = btnClasses;
         btn.innerText = idx + 1;
@@ -755,11 +723,10 @@ function renderPalette() {
     });
 }
 
-// Tương tác nút Cờ đánh dấu
 document.getElementById('btn-flag').onclick = () => {
     if (isSubmitted) return;
     flaggedQuestions[currentIndex] = !flaggedQuestions[currentIndex];
-    saveDraft(); // Lưu bản draft khi bật/tắt cờ
+    saveDraft(); 
     renderQuestion();
     renderPalette();
 };
