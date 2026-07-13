@@ -7,7 +7,7 @@
     </div>
 
     <!-- KHU VỰC MENU ĐIỀU HƯỚNG TRUNG TÂM (Tính năng mới thêm vào) -->
-    <nav class="topbar-center-menu" style="display: flex; gap: 10px; justify-content: center; align-items: center;">
+    <nav class="topbar-center-menu" style="display: flex; gap: 12px; justify-content: center; align-items: center;">
         <a href="#" id="topbarNavCreateAI"><i class="fa-solid fa-robot"></i> Tạo đề thi AI</a>
         <a href="#" id="topbarNavCreateRoom"><i class="fa-solid fa-users-viewfinder"></i> Tạo phòng thi</a>
         <a href="#" id="topbarNavUpload"><i class="fa-solid fa-cloud-arrow-up"></i> Upload đề thi</a>
@@ -67,24 +67,27 @@
 </header>
 
 <style>
-    /* UI/UX cho thanh Navigation trung tâm mới */
+    /* UI/UX cho thanh Navigation trung tâm nổi bật & tinh tế */
     .topbar-center-menu a {
-        color: rgba(255, 255, 255, 0.8);
+        color: #ffffff; 
+        background-color: rgba(255, 255, 255, 0.1); 
+        border: 1px solid rgba(255, 255, 255, 0.15); 
         text-decoration: none;
         font-weight: 600;
         font-size: 0.95rem;
-        transition: all 0.2s ease;
+        transition: all 0.25s ease;
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 8px 14px;
-        border-radius: 8px;
+        padding: 8px 16px;
+        border-radius: 20px; 
     }
     
     .topbar-center-menu a:hover {
-        color: #ffffff;
-        background-color: rgba(255, 255, 255, 0.15);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        background-color: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.35);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
     /* Hỗ trợ UI/UX Dropdown và hover state cũ (Giữ nguyên) */
