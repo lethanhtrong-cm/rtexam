@@ -22,31 +22,16 @@
     </div>
 </div>
 
-<!-- KHỐI 1: CÁC NÚT TẠO PHÒNG VÀ THANH TÌM KIẾM -->
-<div class="action-bar" style="margin-bottom: 12px; padding: 12px 20px;">
-    <div style="display: flex; gap: 15px; width: 100%; align-items: center; justify-content: space-between;">
-        <div style="display: flex; gap: 10px; flex-shrink: 0;">
-            <button id="btnOpenCreateRoom" class="btn-action-primary">
-                <i class="fa-solid fa-people-roof"></i> Tạo phòng thi
-            </button>
-            <button id="btnAutoGenerate" class="btn-action-secondary">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Tạo đề tự động
-            </button>
-            <button id="btnUploadExam" class="btn-action-tertiary">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Upload đề thi
-            </button>
-        </div>
-
-        <div class="action-search" style="flex: 1;">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm...">
-        </div>
-    </div>
-</div>
-
-<!-- KHỐI 2: CÁC BỘ LỌC VÀ TÙY CHỌN HIỂN THỊ -->
-<div class="action-bar" style="padding: 12px 20px;">
+<!-- KHỐI TÌM KIẾM VÀ BỘ LỌC ĐÃ ĐƯỢC GỘP CHUNG -->
+<div class="action-bar" style="padding: 12px 20px; margin-bottom: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%;">
+        
+        <!-- Thanh tìm kiếm được làm rộng ra (flex: 1) -->
+        <div class="action-search" style="flex: 1; min-width: 280px;">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm..." style="width: 100%;">
+        </div>
+
         <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
             <div class="filter-group">
                 <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
