@@ -20,9 +20,11 @@ export async function loadExamList() {
     container.innerHTML = '<div class="loading-text">⏳ Đang kết nối dữ liệu và đồng bộ từ Firestore...</div>';
 
     try {
-        const [questionsSnapshot, examsSnapshot] = await Promise.all([
+        // Tải thêm feedbacksSnapshot song song với questions và exams
+        const [questionsSnapshot, examsSnapshot, feedbacksSnapshot] = await Promise.all([
             getDocs(collection(db, "questions")),
-            getDocs(collection(db, "exams"))
+            getDocs(collection(db, "exams")),
+            getDocs(collection(db, "feedbacks"))
         ]);
         
         const examDataMap = {};
@@ -35,9 +37,20 @@ export async function loadExamList() {
                 technique: data.technique || "Hỗn hợp",
                 level: data.level || "Trung bình",
                 createdAt: data.createdAt,
-                examName: data.examName || "" // Bổ sung trường Tên đề thi
+                examName: data.examName || ""
             };
         });
+
+        // Map số lượng feedback (đánh giá) cho mỗi đề
+        const feedbackCounts = {};
+        if (feedbacksSnapshot) {
+            feedbacksSnapshot.forEach(docSnap => {
+                const fb = docSnap.data();
+                if (fb.examId) {
+                    feedbackCounts[fb.examId] = (feedbackCounts[fb.examId] || 0) + 1;
+                }
+            });
+        }
 
         const examGroups = {}; 
         questionsSnapshot.forEach((docSnap) => {
@@ -61,7 +74,8 @@ export async function loadExamList() {
                 attemptCount: config.attemptCount,
                 technique: config.technique, 
                 level: config.level,
-                createdAt: config.createdAt 
+                createdAt: config.createdAt,
+                feedbackCount: feedbackCounts[examId] || 0 // Lưu trữ số lượt đánh giá
             });
         }
 
@@ -118,6 +132,12 @@ export function renderExamList() {
         const displayTitle = exam.examName ? exam.examName : `Đề: ${exam.examId}`;
         const displaySubId = exam.examName ? `<span class="exam-subtitle-id">Mã: ${exam.examId}</span>` : '';
 
+        // Hiển thị Nhãn Feedback
+        const feedbackBadge = exam.feedbackCount > 0 
+            ? `<span style="background: #f59e0b; color: white; border-radius: 10px; padding: 2px 6px; font-size: 0.75rem; margin-left: 4px; line-height: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">${exam.feedbackCount}</span>` 
+            : '';
+        const feedbackBtnClass = exam.feedbackCount > 0 ? "btn-modern-action btn-view-feedback has-feedback" : "btn-modern-action btn-view-feedback";
+
         const cardDiv = document.createElement('div');
         cardDiv.className = 'exam-premium-card';
         
@@ -153,8 +173,8 @@ export function renderExamList() {
                 </button>
                 
                 <div class="footer-actions-right">
-                    <button class="btn-modern-action btn-view-feedback" data-examid="${exam.examId}">
-                        <i class="fa-solid fa-star"></i> Đánh Giá
+                    <button class="${feedbackBtnClass}" data-examid="${exam.examId}">
+                        <i class="fa-solid fa-star"></i> Đánh Giá ${feedbackBadge}
                     </button>
                     ${exam.isVip 
                         ? `<button class="btn-modern-action toggle-vip off" data-examid="${exam.examId}" data-vip="true"><i class="fa-solid fa-unlock"></i> Hủy VIP</button>` 
