@@ -1,19 +1,19 @@
 <header style="position: sticky; top: 0; z-index: 9999; background-color: #084298; color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); display: flex; justify-content: space-between; align-items: center; padding: 12px 24px;">
     
-    <!-- KHU VỰC LOGO (Thêm flex: 1 để cân bằng không gian) -->
+    <!-- KHU VỰC LOGO -->
     <div class="logo-area" style="display: flex; align-items: center; gap: 12px; flex: 1;">
         <i class="fa-solid fa-hospital" style="font-size: 1.6rem;"></i>
         <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px;">Hệ Thống Thi Trắc Nghiệm Trực Tuyến</h2>
     </div>
 
-    <!-- KHU VỰC MENU ĐIỀU HƯỚNG TRUNG TÂM (Tính năng mới thêm vào) -->
+    <!-- KHU VỰC MENU ĐIỀU HƯỚNG TRUNG TÂM -->
     <nav class="topbar-center-menu" style="display: flex; gap: 12px; justify-content: center; align-items: center;">
-        <a href="#" id="topbarNavCreateAI"><i class="fa-solid fa-robot"></i> Tạo đề thi AI</a>
+        <a href="#" id="btnAutoGenerate"><i class="fa-solid fa-robot"></i> Tạo đề thi AI</a>
         <a href="#" id="topbarNavCreateRoom"><i class="fa-solid fa-users-viewfinder"></i> Tạo phòng thi</a>
-        <a href="#" id="topbarNavUpload"><i class="fa-solid fa-cloud-arrow-up"></i> Upload đề thi</a>
+        <a href="#" id="btnUploadExam"><i class="fa-solid fa-cloud-arrow-up"></i> Upload đề thi</a>
     </nav>
     
-    <!-- KHU VỰC CHỨC NĂNG BÊN PHẢI (Thêm flex: 1 và justify-content: flex-end để đẩy về góc) -->
+    <!-- KHU VỰC CHỨC NĂNG BÊN PHẢI -->
     <div class="topbar-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 24px; flex: 1;">
         
         <!-- Nút Nâng cấp VIP -->
@@ -71,7 +71,7 @@
     .topbar-center-menu a {
         color: #ffffff; 
         background-color: rgba(255, 255, 255, 0.1); 
-        border: 1px solid rgba(255, 255, 255, 0.5); /* <-- Đã tăng viền trắng sáng hơn ở dòng này */
+        border: 1px solid rgba(255, 255, 255, 0.5); 
         text-decoration: none;
         font-weight: 600;
         font-size: 0.95rem;
@@ -85,12 +85,12 @@
     
     .topbar-center-menu a:hover {
         background-color: rgba(255, 255, 255, 0.25);
-        border-color: rgba(255, 255, 255, 0.35);
+        border-color: rgba(255, 255, 255, 0.6);
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
-    /* Hỗ trợ UI/UX Dropdown và hover state cũ (Giữ nguyên) */
+    /* Hỗ trợ UI/UX Dropdown và hover state cũ */
     #notiDropdown.show, #userDropdown.show { display: block !important; }
     
     #notiListContainer .noti-item { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; display: flex; gap: 12px; transition: background 0.2s; }
