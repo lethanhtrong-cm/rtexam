@@ -343,7 +343,15 @@ async function viewFeedback(examId) {
             const data = docSnap.data();
             let starsHtml = '';
             for (let i = 0; i < (data.rating || 0); i++) starsHtml += '<span class="rating-star">★</span>';
-            const timeStr = (data.createdAt && data.createdAt.toDate) ? data.createdAt.toDate().toLocaleString('vi-VN') : "N/A";
+            let timeStr = 'N/A';
+            const rawTime = data.timestamp || data.createdAt;
+            if (rawTime) {
+                if (typeof rawTime.toDate === 'function') {
+                    timeStr = rawTime.toDate().toLocaleString('vi-VN');
+                } else {
+                    timeStr = new Date(rawTime).toLocaleString('vi-VN');
+                }
+            }
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><strong>${data.email || "Khách vô danh"}</strong></td>
