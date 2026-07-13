@@ -162,6 +162,11 @@ body { background-color: #f4f6f9; color: #1f2937; display: flex; height: 100vh; 
 .btn-modern-action:hover { background-color: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
 .btn-modern-action.btn-edit-properties:hover { background-color: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
 .btn-modern-action.btn-view-feedback:hover { background-color: #fffbeb; border-color: #fde68a; color: #d97706; }
+
+/* CSS Mới: Highlight nút Đánh giá nếu có feedback */
+.btn-modern-action.btn-view-feedback.has-feedback { background-color: #fffbeb; border-color: #fde68a; color: #d97706; }
+.btn-modern-action.btn-view-feedback.has-feedback:hover { background-color: #fef3c7; border-color: #f59e0b; }
+
 .btn-modern-action.toggle-vip.on { color: #3b82f6; border-color: #bfdbfe; background-color: #eff6ff; }
 .btn-modern-action.toggle-vip.on:hover { background-color: #dbeafe; }
 .btn-modern-action.toggle-vip.off { color: #f59e0b; border-color: #fde68a; background-color: #fffbeb; }
