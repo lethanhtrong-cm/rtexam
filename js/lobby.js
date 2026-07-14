@@ -351,7 +351,7 @@ async function openReviewModal() {
             const correctAns = q.correctAnswer;
             let isUnanswered = userAns === undefined;
 
-            / Bỏ qua không hiển thị (render) nếu người thi không chọn đáp án
+            // BỎ QUA KHÔNG HIỂN THỊ NẾU NGƯỜI THI KHÔNG CHỌN ĐÁP ÁN (BỎ TRỐNG CÂU HỎI)
             if (isUnanswered) return;
 
             let optionsHtml = '';
