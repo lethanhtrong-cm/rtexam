@@ -1,6 +1,6 @@
 import { db, showToast } from './admin-core.js';
 import { 
-    collection, onSnapshot, doc, updateDoc, query, where, getDocs 
+    collection, onSnapshot, doc, updateDoc, query, where, getDocs, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 let cachedUsers = [];
@@ -106,6 +106,7 @@ export function renderUserList() {
         const tr = document.createElement('tr');
         tr.className = 'user-row';
         
+        // CẬP NHẬT: Thêm nút 🔔 Gửi (Gửi Thông Báo Cá Nhân)
         tr.innerHTML = `
             <td class="text-center" style="font-weight: 600; color: #64748b;">${stt++}</td>
             <td>
@@ -119,6 +120,10 @@ export function renderUserList() {
             <td class="text-center"><span class="badge ${badgeClass}">${badgeText}</span></td>
             <td class="text-center">
                 <div class="user-action-group" style="display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap;">
+                    <button class="btn-user-action btn-notify-user" data-email="${user.email}" 
+                            style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white; background-color: #8b5cf6;" title="Gửi thông báo riêng">
+                        🔔 Gửi
+                    </button>
                     <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" 
                             style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white;">
                         ${vipBtnText}
@@ -224,6 +229,81 @@ async function handleViewHistory(userEmail) {
     }
 }
 
+// MỞ MODAL THÔNG BÁO
+function openNotificationModal(targetEmail) {
+    const modal = document.getElementById('notification-modal');
+    if (!modal) {
+        showToast("Lỗi: Giao diện Modal thông báo chưa tải xong!", "error");
+        return;
+    }
+    
+    document.getElementById('notify-target-display').innerText = targetEmail === 'ALL' ? 'TẤT CẢ HỌC VIÊN (HỆ THỐNG)' : targetEmail;
+    document.getElementById('notify-target-value').value = targetEmail;
+    document.getElementById('notifyTitle').value = '';
+    document.getElementById('notifyMessage').value = '';
+    
+    modal.style.display = 'block';
+}
+
+// XỬ LÝ GỬI THÔNG BÁO
+async function sendNotification() {
+    const target = document.getElementById('notify-target-value').value;
+    const title = document.getElementById('notifyTitle').value.trim();
+    const message = document.getElementById('notifyMessage').value.trim();
+    const btnSend = document.getElementById('btnSendNotification');
+
+    if (!title || !message) {
+        showToast("Vui lòng nhập đầy đủ tiêu đề và nội dung thông báo!", "error");
+        return;
+    }
+
+    btnSend.disabled = true;
+    btnSend.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+
+    try {
+        const notificationsRef = collection(db, "notifications");
+        
+        // NẾU LÀ GỬI BROADCAST (TOÀN HỆ THỐNG)
+        if (target === 'ALL') {
+            const activeUsers = cachedUsers.filter(u => !u.isBanned);
+            
+            // Loop tạo document cho từng user đang Active
+            const promises = activeUsers.map(user => {
+                return addDoc(notificationsRef, {
+                    toEmail: user.email,
+                    title: title,
+                    message: message,
+                    status: 'unread',
+                    type: 'system_broadcast',
+                    timestamp: serverTimestamp()
+                });
+            });
+            await Promise.all(promises);
+            showToast(`Đã gửi thông báo hàng loạt đến ${activeUsers.length} tài khoản thành công!`, "success");
+        } 
+        // NẾU LÀ GỬI CÁ NHÂN
+        else {
+            await addDoc(notificationsRef, {
+                toEmail: target,
+                title: title,
+                message: message,
+                status: 'unread',
+                type: 'admin_direct',
+                timestamp: serverTimestamp()
+            });
+            showToast(`Đã gửi thông báo riêng tư cho ${target} thành công!`, "success");
+        }
+
+        document.getElementById('notification-modal').style.display = 'none';
+    } catch (error) {
+        console.error("Lỗi khi gửi thông báo:", error);
+        showToast("Có lỗi xảy ra khi ghi dữ liệu lên Firebase", "error");
+    } finally {
+        btnSend.disabled = false;
+        btnSend.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi Ngay';
+    }
+}
+
 document.addEventListener('componentsLoaded', () => {
     initRealtimeUserListener();
 
@@ -243,9 +323,27 @@ document.addEventListener('componentsLoaded', () => {
         });
     }
 
+    // TỰ ĐỘNG CHÈN NÚT "GỬI TOÀN HỆ THỐNG" VÀO THANH TOOLBAR TÌM KIẾM
+    const toolbar = document.querySelector('.toolbar-user-modern');
+    if (toolbar && !document.getElementById('btnNotifyAll')) {
+        const notifyAllBtn = document.createElement('button');
+        notifyAllBtn.id = 'btnNotifyAll';
+        notifyAllBtn.className = 'btn-modern-action';
+        notifyAllBtn.style.cssText = 'background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);';
+        notifyAllBtn.innerHTML = '<i class="fa-solid fa-bell-ring"></i> Gửi TB Toàn Hệ Thống';
+        notifyAllBtn.onmouseover = () => notifyAllBtn.style.transform = 'translateY(-2px)';
+        notifyAllBtn.onmouseout = () => notifyAllBtn.style.transform = 'translateY(0)';
+        notifyAllBtn.onclick = () => openNotificationModal('ALL');
+        toolbar.appendChild(notifyAllBtn);
+    }
+
     const usersBody = document.getElementById('usersTableBody');
     if (usersBody) {
         usersBody.addEventListener('click', (e) => {
+            // Sự kiện Click Gửi Thông Báo Cá Nhân
+            const notifyBtn = e.target.closest('.btn-notify-user');
+            if (notifyBtn) return openNotificationModal(notifyBtn.dataset.email);
+
             const vipBtn = e.target.closest('.btn-toggle-vip');
             if (vipBtn) return handleToggleVip(vipBtn.dataset.id, vipBtn.dataset.vip === 'true');
 
@@ -262,5 +360,18 @@ document.addEventListener('componentsLoaded', () => {
         closeHistoryBtn.onclick = () => {
             document.getElementById('historyModal').style.display = "none";
         };
+    }
+
+    // Sự kiện Đóng Modal và Lưu Gửi Thông Báo
+    const closeNotifyBtn = document.getElementById('close-notification-modal');
+    if (closeNotifyBtn) {
+        closeNotifyBtn.onclick = () => {
+            document.getElementById('notification-modal').style.display = 'none';
+        };
+    }
+    
+    const sendNotifyBtn = document.getElementById('btnSendNotification');
+    if (sendNotifyBtn) {
+        sendNotifyBtn.onclick = sendNotification;
     }
 });
