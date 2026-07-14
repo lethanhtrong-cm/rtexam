@@ -142,7 +142,6 @@ document.addEventListener('ComponentsLoaded', () => {
 });
 
 function initDOMListeners() {
-    // 1. Xử lý Sidebar Menu (Render sẵn)
     const mainMenuItems = document.querySelectorAll('.sidebar-menu > .menu-item[data-target]');
     const accordionHeaders = document.querySelectorAll('.accordion-header');
     const subMenuItems = document.querySelectorAll('.sub-menu-item');
@@ -196,15 +195,12 @@ function initDOMListeners() {
         });
     }
 
-    // 2. Kỹ thuật Event Delegation (Xử lý toàn bộ Dropdown & Click nút trên Topbar)
-    // Cách này sẽ loại bỏ hoàn toàn lỗi Null khi Component tải chậm
     document.addEventListener('click', (e) => {
         const bellToggle = e.target.closest('#bellToggle');
         const userMenuToggle = e.target.closest('#userMenuToggle');
         const notiDropdown = document.getElementById('notiDropdown');
         const userDropdown = document.getElementById('userDropdown');
 
-        // Bật/tắt Chuông thông báo
         if (bellToggle) {
             e.stopPropagation();
             if (notiDropdown) notiDropdown.classList.toggle('show');
@@ -212,7 +208,6 @@ function initDOMListeners() {
             return;
         }
 
-        // Bật/tắt User Menu
         if (userMenuToggle) {
             e.stopPropagation();
             if (userDropdown) userDropdown.classList.toggle('show');
@@ -220,7 +215,6 @@ function initDOMListeners() {
             return;
         }
 
-        // Đóng dropdown khi click ra khoảng không bên ngoài
         if (notiDropdown && notiDropdown.classList.contains('show') && !e.target.closest('#notiDropdown')) {
             notiDropdown.classList.remove('show');
         }
@@ -228,7 +222,6 @@ function initDOMListeners() {
             userDropdown.classList.remove('show');
         }
 
-        // Lắng nghe các nút chức năng khác
         if (e.target.closest('#btnManageProfile')) {
             e.preventDefault();
             switchTab('tab-profile');
@@ -248,7 +241,7 @@ function initDOMListeners() {
 }
 
 // =========================================================================
-// 5. XỬ LÝ THÔNG BÁO TỪ ADMIN (REAL-TIME)
+// 5. XỬ LÝ THÔNG BÁO TỪ ADMIN VÀ HIỂN THỊ POPUP (REAL-TIME)
 // =========================================================================
 export function initNotificationListener(user) {
     if (!user) return;
@@ -263,14 +256,16 @@ export function initNotificationListener(user) {
         
         let unreadCount = 0;
         let notifications = [];
+        window.userNotificationsData = {}; // Khởi tạo kho lưu trữ tạm thời
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            notifications.push({ id: docSnap.id, ...data });
+            const notif = { id: docSnap.id, ...data };
+            notifications.push(notif);
+            window.userNotificationsData[notif.id] = notif; // Lưu data để dùng cho Popup
             if (data.status === 'unread') unreadCount++;
         });
 
-        // Sắp xếp mới nhất lên đầu
         notifications.sort((a, b) => {
             const timeA = a.timestamp ? (a.timestamp.toMillis ? a.timestamp.toMillis() : new Date(a.timestamp).getTime()) : 0;
             const timeB = b.timestamp ? (b.timestamp.toMillis ? b.timestamp.toMillis() : new Date(b.timestamp).getTime()) : 0;
@@ -292,14 +287,18 @@ export function initNotificationListener(user) {
             notifications.forEach(notif => {
                 const isUnread = notif.status === 'unread';
                 const fw = isUnread ? 'bold' : 'normal';
-                const icon = notif.type === 'system_broadcast' ? '📢' : '💬';
+                
+                // Cập nhật icon dựa trên loại thông báo
+                let icon = '💬';
+                if (notif.type === 'system_broadcast') icon = '📢';
+                if (notif.type === 'room_share' || notif.type === 'exam_share') icon = '🎯';
                 
                 notifList.innerHTML += `
-                    <div class="noti-item ${isUnread ? 'unread' : ''}" style="cursor: pointer;" onclick="markNotificationAsRead('${notif.id}', '${notif.status}')">
+                    <div class="noti-item ${isUnread ? 'unread' : ''}" style="cursor: pointer;" onclick="handleNotificationClick('${notif.id}')">
                         <div class="noti-icon">${icon}</div>
                         <div class="noti-content">
                             <div class="noti-text" style="font-weight: ${fw}">${notif.title}</div>
-                            <div class="noti-time" style="color: #64748b; font-size: 0.85rem;">${notif.message}</div>
+                            <div class="noti-time" style="color: #64748b; font-size: 0.85rem;">Nhấp để xem chi tiết</div>
                         </div>
                     </div>
                 `;
@@ -310,16 +309,76 @@ export function initNotificationListener(user) {
     });
 }
 
-// Cấp quyền truy cập cho event inline onclick trên HTML
-window.markNotificationAsRead = async function(notifId, currentStatus) {
-    if (currentStatus === 'read') return; 
-    
-    try {
-        const notifDocRef = doc(db, "notifications", notifId);
-        await updateDoc(notifDocRef, { status: 'read' });
-    } catch (error) {
-        console.error("Lỗi khi update status thông báo:", error);
+// Hàm Xử lý khi click vào 1 thông báo
+window.handleNotificationClick = async function(notifId) {
+    const notif = window.userNotificationsData[notifId];
+    if (!notif) return;
+
+    // 1. Cập nhật trạng thái "Đã đọc" trên Firestore
+    if (notif.status === 'unread') {
+        try {
+            const notifDocRef = doc(db, "notifications", notifId);
+            await updateDoc(notifDocRef, { status: 'read' });
+        } catch (error) {
+            console.error("Lỗi khi update status thông báo:", error);
+        }
     }
+
+    // 2. Ẩn dropdown thông báo
+    const notiDropdown = document.getElementById('notiDropdown');
+    if (notiDropdown) notiDropdown.classList.remove('show');
+
+    // 3. Render Popup Modal
+    showNotificationModal(notif);
+}
+
+// Hàm tạo và hiển thị Popup Modal
+function showNotificationModal(notif) {
+    const existingModal = document.getElementById('notifModalDynamic');
+    if (existingModal) existingModal.remove();
+
+    let actionButtonsHTML = `<button onclick="document.getElementById('notifModalDynamic').remove()" style="padding: 8px 20px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">Đóng</button>`;
+    
+    // Nếu là thông báo mời thi (có type đặc biệt hoặc có link actionUrl)
+    if (notif.type === 'room_share' || notif.type === 'exam_share' || notif.actionUrl) {
+        const targetLink = notif.actionUrl || '#'; 
+        actionButtonsHTML = `
+            <button onclick="document.getElementById('notifModalDynamic').remove()" style="padding: 8px 20px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">Hủy</button>
+            <button onclick="window.location.href='${targetLink}'" style="padding: 8px 20px; background: #084298; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; box-shadow: 0 4px 6px rgba(8, 66, 152, 0.2);">Vào thi</button>
+        `;
+    }
+
+    const modalHtml = `
+        <div id="notifModalDynamic" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+            <div style="background: white; width: 90%; max-width: 480px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; animation: modalNotifFade 0.25s ease-out;">
+                
+                <div style="padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; font-weight: 700; font-size: 1.15rem; color: #0f172a; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-bell" style="color: #084298;"></i> Chi tiết thông báo
+                    </div>
+                    <i class="fa-solid fa-xmark" style="cursor: pointer; color: #64748b; font-size: 1.2rem;" onclick="document.getElementById('notifModalDynamic').remove()"></i>
+                </div>
+                
+                <div style="padding: 24px;">
+                    <h3 style="margin: 0 0 12px 0; font-size: 1.15rem; color: #1e293b; font-weight: 600;">${notif.title}</h3>
+                    <p style="margin: 0; color: #475569; line-height: 1.6; font-size: 0.95rem; white-space: pre-wrap;">${notif.message}</p>
+                </div>
+                
+                <div style="padding: 16px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px;">
+                    ${actionButtonsHTML}
+                </div>
+
+            </div>
+        </div>
+        <style>
+            @keyframes modalNotifFade {
+                from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+        </style>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
 // =========================================================================
@@ -479,7 +538,6 @@ async function executeAuthUI(user) {
     renderAuthInfo(user);
     const currentUserData = await fetchUserData(user);
     
-    // Gọi hàm khởi tạo lắng nghe thông báo
     initNotificationListener(user);
     
     if (currentUserData) {
