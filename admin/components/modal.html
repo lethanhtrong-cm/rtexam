@@ -7,7 +7,6 @@
         </div>
         <div class="modal-body">
             <div class="form-group-vertical">
-                <!-- THÊM MỚI: Ô nhập Tên đề thi -->
                 <div class="form-item-vertical" style="margin-bottom: 15px;">
                     <label for="edit-exam-name" style="display: block; margin-bottom: 8px; font-weight: 600; color: #475569;">🏷️ Tên đề thi (Hiển thị cho học viên):</label>
                     <input type="text" id="edit-exam-name" placeholder="VD: Đề thi thử MRI Sọ não tổng hợp..." style="width: 100%; padding: 10px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59,130,246,0.1)';" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';">
@@ -146,6 +145,32 @@
             
             <div style="text-align: right;">
                 <button id="btnSendAdminReply" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;"><i class="fa-solid fa-paper-plane"></i> Gửi Phản Hồi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODAL GỬI THÔNG BÁO MỚI TÍCH HỢP ================= -->
+<div id="notification-modal" class="modal" style="display: none; position: fixed; z-index: 1070; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-content" style="background-color: #fff; margin: 10% auto; padding: 25px; border-radius: 12px; width: 40%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #111827; font-size: 1.2rem;">🔔 Soạn Thông Báo Hệ Thống</h3>
+            <span id="close-notification-modal" style="color: #9ca3af; font-size: 24px; font-weight: bold; cursor: pointer; line-height: 1;">&times;</span>
+        </div>
+
+        <div>
+            <p style="font-size: 0.9rem; color: #4b5563; margin-bottom: 15px;">Gửi đến: <strong id="notify-target-display" style="color: #2563eb; background: #eff6ff; padding: 4px 10px; border-radius: 4px;"></strong></p>
+            <input type="hidden" id="notify-target-value">
+            
+            <label style="display: block; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem;">Tiêu đề thông báo:</label>
+            <input type="text" id="notifyTitle" placeholder="VD: Khởi động sự kiện thi thử..." style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; margin-bottom: 15px;">
+
+            <label style="display: block; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem;">Nội dung chi tiết:</label>
+            <textarea id="notifyMessage" rows="4" placeholder="Nhập nội dung bạn muốn truyền tải tới học viên..." style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; resize: vertical; font-family: inherit; margin-bottom: 15px;"></textarea>
+            
+            <div style="text-align: right;">
+                <button id="btnSendNotification" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;"><i class="fa-solid fa-paper-plane"></i> Gửi Ngay</button>
             </div>
         </div>
     </div>
