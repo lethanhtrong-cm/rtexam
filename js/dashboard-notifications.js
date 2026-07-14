@@ -168,10 +168,12 @@ function initNotifications(userEmail) {
                         window.openAdminReplyModal(displayMsg);
                     }
                     else if (notiData.type === 'room_invite' || notiData.roomId) {
-                        window.location.href = `lobby.html?roomId=${notiData.roomId}`;
+                        // HIỂN THỊ POPUP THAY VÌ CHUYỂN TRANG TRỰC TIẾP
+                        window.openShareInviteModal(notiData, 'room');
                     } 
                     else if (notiData.examId) {
-                        window.location.href = `quiz.html?examId=${notiData.examId}`;
+                        // HIỂN THỊ POPUP THAY VÌ CHUYỂN TRANG TRỰC TIẾP
+                        window.openShareInviteModal(notiData, 'exam');
                     }
                 }
             });
@@ -197,4 +199,53 @@ window.openAdminReplyModal = function(message) {
         // Fallback dùng Alert nếu dev quên chèn HTML Modal
         alert("Thông báo hệ thống:\n\n" + message);
     }
+}
+
+// =========================================================================
+// 4. HÀM TOÀN CỤC: MỞ MODAL XÁC NHẬN LỜI MỜI VÀO PHÒNG / CHIA SẺ ĐỀ THI
+// =========================================================================
+window.openShareInviteModal = function(notiData, type) {
+    // Xóa modal cũ nếu đang tồn tại để tránh trùng lặp
+    const existingModal = document.getElementById('dynamic-invite-modal');
+    if (existingModal) existingModal.remove();
+
+    // Xác định tiêu đề, nội dung và link đích dựa vào loại thông báo
+    const title = type === 'room' ? 'Lời mời tham gia phòng thi' : 'Chia sẻ đề thi';
+    const detailText = notiData.message || (type === 'room' ? `Bạn nhận được lời mời tham gia phòng thi: <b>${notiData.roomId}</b>` : `Bạn được chia sẻ đề thi mã: <b>${notiData.examId}</b>`);
+    const targetUrl = type === 'room' ? `lobby.html?roomId=${notiData.roomId}` : `quiz.html?examId=${notiData.examId}`;
+    const iconClass = type === 'room' ? 'fa-people-roof' : 'fa-file-lines';
+
+    // Tạo HTML Modal động
+    const modalHtml = `
+        <div id="dynamic-invite-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+            <div style="background: white; width: 90%; max-width: 420px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden; animation: inviteFadeIn 0.2s ease-out;">
+                
+                <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 700; font-size: 1.1rem; color: #0f172a; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid ${iconClass}" style="color: #084298;"></i> ${title}
+                    </span>
+                    <i class="fa-solid fa-xmark" style="cursor: pointer; color: #64748b; font-size: 1.2rem;" onclick="document.getElementById('dynamic-invite-modal').remove()"></i>
+                </div>
+                
+                <div style="padding: 24px; color: #475569; font-size: 1rem; line-height: 1.5; text-align: center;">
+                    ${detailText}
+                </div>
+                
+                <div style="padding: 16px 20px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button onclick="document.getElementById('dynamic-invite-modal').remove()" style="padding: 8px 20px; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: #334155; transition: 0.2s;">Hủy</button>
+                    <button onclick="window.location.href='${targetUrl}'" style="padding: 8px 20px; background: #084298; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; box-shadow: 0 4px 6px rgba(8,66,152,0.2);">Vào thi ngay</button>
+                </div>
+                
+            </div>
+        </div>
+        <style>
+            @keyframes inviteFadeIn { 
+                from { opacity: 0; transform: scale(0.95) translateY(10px); } 
+                to { opacity: 1; transform: scale(1) translateY(0); } 
+            }
+        </style>
+    `;
+    
+    // Gắn Modal vào Body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
