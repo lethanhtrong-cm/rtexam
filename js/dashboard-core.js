@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // 1. CẤU HÌNH & KHỞI TẠO FIREBASE
@@ -86,10 +86,6 @@ document.addEventListener('ComponentsLoaded', () => {
         executeAuthUI(currentUserInstance);
     }
 
-    // =========================================================
-    // THỦ THUẬT CLONE NODE: XÓA MỌI SỰ KIỆN CHUYỂN TRANG ẨN
-    // (Logic tạo phòng thi vẫn giữ nguyên cho Topbar)
-    // =========================================================
     const oldBtnCreateRoom = document.getElementById('topbarNavCreateRoom'); 
     
     if (oldBtnCreateRoom) {
@@ -143,8 +139,6 @@ document.addEventListener('ComponentsLoaded', () => {
             }
         });
     }
-    
-    // Đã gỡ bỏ 2 sự kiện dummy alert của nút AI và Upload ở đây để nhường chỗ cho logic của bạn.
 });
 
 function initDOMListeners() {
@@ -204,17 +198,34 @@ function initDOMListeners() {
     const userMenuToggle = document.getElementById('userMenuToggle');
     const userDropdown = document.getElementById('userDropdown');
     const btnManageProfile = document.getElementById('btnManageProfile');
+    
+    // Gắn sự kiện cho nút Chuông thông báo
+    const bellToggle = document.getElementById('bellToggle');
+    const notiDropdown = document.getElementById('notiDropdown');
 
     if (userMenuToggle) {
         userMenuToggle.addEventListener('click', (e) => {
             e.stopPropagation();
             if (userDropdown) userDropdown.classList.toggle('show');
+            if (notiDropdown) notiDropdown.classList.remove('show');
         });
     }
 
+    if (bellToggle) {
+        bellToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (notiDropdown) notiDropdown.classList.toggle('show');
+            if (userDropdown) userDropdown.classList.remove('show');
+        });
+    }
+
+    // Đóng dropdown khi click ra ngoài
     document.addEventListener('click', (e) => {
         if (userMenuToggle && !userMenuToggle.contains(e.target)) {
             if (userDropdown) userDropdown.classList.remove('show');
+        }
+        if (bellToggle && !bellToggle.contains(e.target)) {
+            if (notiDropdown) notiDropdown.classList.remove('show');
         }
     });
 
@@ -248,7 +259,87 @@ function initDOMListeners() {
 }
 
 // =========================================================================
-// 5. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI THÔNG TIN USER
+// 5. XỬ LÝ THÔNG BÁO TỪ ADMIN (REAL-TIME)
+// =========================================================================
+export function initNotificationListener(user) {
+    if (!user) return;
+    const userEmail = user.email;
+
+    const notifRef = collection(db, "notifications");
+    
+    // Chỉ lấy thông báo của user hiện tại
+    const q = query(notifRef, where("toEmail", "==", userEmail));
+
+    onSnapshot(q, (snapshot) => {
+        const notifList = document.getElementById('notiListContainer');
+        const badgeCount = document.getElementById('notiBadgeCount');
+        
+        let unreadCount = 0;
+        let notifications = [];
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            notifications.push({ id: docSnap.id, ...data });
+            if (data.status === 'unread') unreadCount++;
+        });
+
+        // Sắp xếp mới nhất lên đầu
+        notifications.sort((a, b) => {
+            const timeA = a.timestamp ? (a.timestamp.toMillis ? a.timestamp.toMillis() : new Date(a.timestamp).getTime()) : 0;
+            const timeB = b.timestamp ? (b.timestamp.toMillis ? b.timestamp.toMillis() : new Date(b.timestamp).getTime()) : 0;
+            return timeB - timeA;
+        });
+
+        if (badgeCount) {
+            badgeCount.innerText = unreadCount;
+            // Thay đổi display sang flex để căn giữa số đếm hoàn hảo theo CSS của topbar.html
+            badgeCount.style.display = unreadCount > 0 ? 'flex' : 'none'; 
+        }
+
+        if (notifList) {
+            notifList.innerHTML = '';
+            if (notifications.length === 0) {
+                notifList.innerHTML = '<div class="noti-empty">Bạn chưa có thông báo nào.</div>';
+                return;
+            }
+
+            notifications.forEach(notif => {
+                const isUnread = notif.status === 'unread';
+                const fw = isUnread ? 'bold' : 'normal';
+                const icon = notif.type === 'system_broadcast' ? '📢' : '💬';
+                
+                // Sử dụng CSS class đã định nghĩa sẵn trong topbar.html
+                notifList.innerHTML += `
+                    <div class="noti-item ${isUnread ? 'unread' : ''}" style="cursor: pointer;" onclick="markNotificationAsRead('${notif.id}', '${notif.status}')">
+                        <div class="noti-icon">${icon}</div>
+                        <div class="noti-content">
+                            <div class="noti-text" style="font-weight: ${fw}">${notif.title}</div>
+                            <div class="noti-time" style="color: #64748b; font-size: 0.85rem;">${notif.message}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }, (error) => {
+        console.error("Lỗi khi tải thông báo Realtime:", error);
+    });
+}
+
+// Cấp quyền truy cập cho event inline onclick trên HTML
+window.markNotificationAsRead = async function(notifId, currentStatus) {
+    if (currentStatus === 'read') return; 
+    
+    try {
+        const notifDocRef = doc(db, "notifications", notifId);
+        await updateDoc(notifDocRef, { status: 'read' });
+    } catch (error) {
+        console.error("Lỗi khi update status thông báo:", error);
+    }
+}
+
+
+// =========================================================================
+// 6. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI THÔNG TIN USER
 // =========================================================================
 function renderAuthInfo(user) {
     const email = user.email;
@@ -306,7 +397,6 @@ function setVipInactive() {
     }
 }
 
-// Chuyển đổi sang Real-time Listener (onSnapshot)
 function fetchUserData(user) {
     return new Promise((resolve) => {
         const userDocRef = doc(db, "users", user.uid);
@@ -404,6 +494,9 @@ function fetchUserData(user) {
 async function executeAuthUI(user) {
     renderAuthInfo(user);
     const currentUserData = await fetchUserData(user);
+    
+    // Gọi hàm khởi tạo lắng nghe thông báo ngay sau khi đăng nhập thành công
+    initNotificationListener(user);
     
     if (currentUserData) {
         const authReadyEvent = new CustomEvent("authReady", { detail: { user, currentUserData } });
