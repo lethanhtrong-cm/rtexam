@@ -98,6 +98,12 @@ function initNotifications(userEmail) {
             if (data.type === 'admin_reply') {
                 iconHtml = '<i class="fa-solid fa-comment-dots" style="color: #3b82f6;"></i>';
                 textHtml = `<b>Admin</b> đã phản hồi báo cáo lỗi câu hỏi của bạn.`;
+            } else if (data.type === 'system_broadcast' || data.type === 'admin_direct') {
+                // XỬ LÝ THÔNG BÁO MỚI TỪ TRANG ADMIN (HỆ THỐNG / CÁ NHÂN)
+                const iconColor = data.type === 'system_broadcast' ? '#8b5cf6' : '#f59e0b';
+                const iconClass = data.type === 'system_broadcast' ? 'fa-bullhorn' : 'fa-bell';
+                iconHtml = `<i class="fa-solid ${iconClass}" style="color: ${iconColor};"></i>`;
+                textHtml = `<b>${data.title || 'Thông báo từ Hệ thống'}</b><br><span style="font-size: 0.9em; opacity: 0.8;">${data.message || ''}</span>`;
             } else if (data.type === 'room_invite') {
                 iconHtml = '<i class="fa-solid fa-envelope-open-text" style="color: #10b981;"></i>';
                 textHtml = data.message || `<b>${data.fromEmail}</b> đã mời bạn vào phòng.`;
@@ -112,7 +118,7 @@ function initNotifications(userEmail) {
                         ${iconHtml}
                     </div>
                     <div class="noti-content">
-                        <div class="noti-text">
+                        <div class="noti-text" style="line-height: 1.4;">
                             ${textHtml}
                         </div>
                         <div class="noti-time">${timeString}</div>
@@ -156,6 +162,11 @@ function initNotifications(userEmail) {
                         // Gọi hàm hiển thị Modal phản hồi từ Admin
                         window.openAdminReplyModal(notiData.adminMessage);
                     } 
+                    else if (notiData.type === 'system_broadcast' || notiData.type === 'admin_direct') {
+                        // Gọi hàm hiển thị Modal nội dung thông báo chung
+                        const displayMsg = `[${notiData.title}]\n\n${notiData.message}`;
+                        window.openAdminReplyModal(displayMsg);
+                    }
                     else if (notiData.type === 'room_invite' || notiData.roomId) {
                         window.location.href = `lobby.html?roomId=${notiData.roomId}`;
                     } 
@@ -171,7 +182,7 @@ function initNotifications(userEmail) {
 }
 
 // =========================================================================
-// 3. HÀM TOÀN CỤC: MỞ MODAL ĐỌC PHẢN HỒI CỦA ADMIN
+// 3. HÀM TOÀN CỤC: MỞ MODAL ĐỌC PHẢN HỒI / THÔNG BÁO CỦA ADMIN
 // =========================================================================
 window.openAdminReplyModal = function(message) {
     const modal = document.getElementById('user-admin-reply-modal');
@@ -179,11 +190,11 @@ window.openAdminReplyModal = function(message) {
     
     if (modal && msgContainer) {
         // Gán message an toàn (innerText chống XSS và giữ nguyên form, xuống dòng)
-        msgContainer.innerText = message || "Không có nội dung phản hồi.";
+        msgContainer.innerText = message || "Không có nội dung.";
         modal.style.display = 'block';
     } else {
-        console.error("Không tìm thấy HTML của Modal hiển thị phản hồi.");
+        console.error("Không tìm thấy HTML của Modal hiển thị thông báo.");
         // Fallback dùng Alert nếu dev quên chèn HTML Modal
-        alert("Phản hồi từ Admin:\n\n" + message);
+        alert("Thông báo hệ thống:\n\n" + message);
     }
 }
