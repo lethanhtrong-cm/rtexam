@@ -197,14 +197,49 @@ function initDOMListeners() {
 
     // EVENT DELEGATION: Nắm bắt tất cả cú click chuột trên toàn trang
     document.addEventListener('click', (e) => {
-        // --- 1. Xử lý Dropdown Chuông & Menu User ---
-        const bellToggle = e.target.closest('#bellToggle');
-        const userMenuToggle = e.target.closest('#userMenuToggle');
         const notiDropdown = document.getElementById('notiDropdown');
         const userDropdown = document.getElementById('userDropdown');
 
+        // --- 1. Xử lý các nút chức năng ĐẦU TIÊN (Tránh bị chặn bởi thẻ cha Toggle) ---
+        if (e.target.closest('#btnManageProfile')) {
+            e.preventDefault();
+            e.stopPropagation(); // Ngăn sự kiện kích hoạt nhầm thẻ cha
+            if (userDropdown) userDropdown.classList.remove('show');
+            switchTab('tab-profile');
+            return;
+        }
+        if (e.target.closest('#btnUpgradeHeader') || e.target.closest('#btnUpgradeVipTopbar')) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (userDropdown) userDropdown.classList.remove('show');
+            switchTab('tab-vip');
+            return;
+        }
+        if (e.target.closest('#btnLogout')) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (userDropdown) userDropdown.classList.remove('show');
+            sessionStorage.removeItem('dashboard_user_rank'); 
+            signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
+            return;
+        }
+        if (e.target.closest('#btnConfirmPayment')) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (userDropdown) userDropdown.classList.remove('show');
+            alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
+            return;
+        }
+
+        // --- 2. Xử lý Dropdown Chuông & Menu User ---
+        const bellToggle = e.target.closest('#bellToggle');
+        const userMenuToggle = e.target.closest('#userMenuToggle');
+
         if (bellToggle) {
             e.stopPropagation();
+            // Nếu user click vào bên trong khung thông báo (nhưng không phải item) thì giữ nguyên menu
+            if (e.target.closest('#notiDropdown')) return; 
+            
             if (notiDropdown) notiDropdown.classList.toggle('show');
             if (userDropdown) userDropdown.classList.remove('show');
             return;
@@ -212,11 +247,15 @@ function initDOMListeners() {
 
         if (userMenuToggle) {
             e.stopPropagation();
+            // Nếu user click vào khoảng trống của user dropdown thì không tự đóng
+            if (e.target.closest('#userDropdown')) return;
+
             if (userDropdown) userDropdown.classList.toggle('show');
             if (notiDropdown) notiDropdown.classList.remove('show');
             return;
         }
 
+        // Bấm ra ngoài vùng trống thì đóng tất cả dropdown
         if (notiDropdown && notiDropdown.classList.contains('show') && !e.target.closest('#notiDropdown')) {
             notiDropdown.classList.remove('show');
         }
@@ -224,7 +263,7 @@ function initDOMListeners() {
             userDropdown.classList.remove('show');
         }
 
-        // --- 2. Xử lý Click vào Item Thông báo (Hiển thị Popup) ---
+        // --- 3. Xử lý Click vào Item Thông báo (Hiển thị Popup) ---
         const notiItem = e.target.closest('.noti-item');
         if (notiItem) {
             e.preventDefault();
@@ -245,7 +284,7 @@ function initDOMListeners() {
             return;
         }
 
-        // --- 3. Xử lý Nút Đóng & Hành động trong Popup Modal ---
+        // --- 4. Xử lý Nút Đóng & Hành động trong Popup Modal ---
         if (e.target.closest('[data-action="close-notif-modal"]')) {
             const modal = document.getElementById('notifModalDynamic');
             if (modal) modal.remove();
@@ -260,31 +299,6 @@ function initDOMListeners() {
             } else {
                 alert("Đường dẫn phòng thi/đề thi không hợp lệ!");
             }
-            return;
-        }
-
-        // --- 4. Các nút chức năng khác (Đã xử lý ẩn dropdown triệt để) ---
-        if (e.target.closest('#btnManageProfile')) {
-            e.preventDefault();
-            if (userDropdown) userDropdown.classList.remove('show');
-            switchTab('tab-profile');
-            return;
-        }
-        if (e.target.closest('#btnUpgradeHeader') || e.target.closest('#btnUpgradeVipTopbar')) {
-            if (userDropdown) userDropdown.classList.remove('show');
-            switchTab('tab-vip');
-            return;
-        }
-        if (e.target.closest('#btnLogout')) {
-            e.preventDefault();
-            if (userDropdown) userDropdown.classList.remove('show');
-            sessionStorage.removeItem('dashboard_user_rank'); 
-            signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
-            return;
-        }
-        if (e.target.closest('#btnConfirmPayment')) {
-            if (userDropdown) userDropdown.classList.remove('show');
-            alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
             return;
         }
     });
