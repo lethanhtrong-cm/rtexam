@@ -186,7 +186,8 @@ async function fetchQuestionsFromFirestore() {
     });
     
     if (fetched.length > 0) {
-        questions = fetched;
+        // Fix Bug: Sắp xếp lại mảng theo thứ tự order trước khi nạp vào bài thi
+        questions = fetched.sort((a, b) => (a.order || 0) - (b.order || 0));
     } else {
         throw new Error(`Không tìm thấy câu hỏi nào cho mã đề: ${currentExamId}`);
     }
