@@ -142,6 +142,7 @@ document.addEventListener('ComponentsLoaded', () => {
 });
 
 function initDOMListeners() {
+    // 1. Xử lý Sidebar Menu (Render sẵn)
     const mainMenuItems = document.querySelectorAll('.sidebar-menu > .menu-item[data-target]');
     const accordionHeaders = document.querySelectorAll('.accordion-header');
     const subMenuItems = document.querySelectorAll('.sub-menu-item');
@@ -195,67 +196,55 @@ function initDOMListeners() {
         });
     }
 
-    const userMenuToggle = document.getElementById('userMenuToggle');
-    const userDropdown = document.getElementById('userDropdown');
-    const btnManageProfile = document.getElementById('btnManageProfile');
-    
-    // Gắn sự kiện cho nút Chuông thông báo
-    const bellToggle = document.getElementById('bellToggle');
-    const notiDropdown = document.getElementById('notiDropdown');
+    // 2. Kỹ thuật Event Delegation (Xử lý toàn bộ Dropdown & Click nút trên Topbar)
+    // Cách này sẽ loại bỏ hoàn toàn lỗi Null khi Component tải chậm
+    document.addEventListener('click', (e) => {
+        const bellToggle = e.target.closest('#bellToggle');
+        const userMenuToggle = e.target.closest('#userMenuToggle');
+        const notiDropdown = document.getElementById('notiDropdown');
+        const userDropdown = document.getElementById('userDropdown');
 
-    if (userMenuToggle) {
-        userMenuToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (userDropdown) userDropdown.classList.toggle('show');
-            if (notiDropdown) notiDropdown.classList.remove('show');
-        });
-    }
-
-    if (bellToggle) {
-        bellToggle.addEventListener('click', (e) => {
+        // Bật/tắt Chuông thông báo
+        if (bellToggle) {
             e.stopPropagation();
             if (notiDropdown) notiDropdown.classList.toggle('show');
             if (userDropdown) userDropdown.classList.remove('show');
-        });
-    }
-
-    // Đóng dropdown khi click ra ngoài
-    document.addEventListener('click', (e) => {
-        if (userMenuToggle && !userMenuToggle.contains(e.target)) {
-            if (userDropdown) userDropdown.classList.remove('show');
+            return;
         }
-        if (bellToggle && !bellToggle.contains(e.target)) {
+
+        // Bật/tắt User Menu
+        if (userMenuToggle) {
+            e.stopPropagation();
+            if (userDropdown) userDropdown.classList.toggle('show');
             if (notiDropdown) notiDropdown.classList.remove('show');
+            return;
         }
-    });
 
-    if (btnManageProfile) {
-        btnManageProfile.addEventListener('click', () => switchTab('tab-profile'));
-    }
+        // Đóng dropdown khi click ra khoảng không bên ngoài
+        if (notiDropdown && notiDropdown.classList.contains('show') && !e.target.closest('#notiDropdown')) {
+            notiDropdown.classList.remove('show');
+        }
+        if (userDropdown && userDropdown.classList.contains('show') && !e.target.closest('#userDropdown')) {
+            userDropdown.classList.remove('show');
+        }
 
-    const topbarVipContainer = document.getElementById('topbar-vip-container');
-    if (topbarVipContainer) {
-        topbarVipContainer.addEventListener('click', (e) => {
-            if (e.target.closest('#btnUpgradeHeader') || e.target.closest('#btnUpgradeVipTopbar')) {
-                switchTab('tab-vip');
-            }
-        });
-    }
-
-    const btnLogout = document.getElementById("btnLogout");
-    if (btnLogout) {
-        btnLogout.addEventListener("click", () => {
+        // Lắng nghe các nút chức năng khác
+        if (e.target.closest('#btnManageProfile')) {
+            e.preventDefault();
+            switchTab('tab-profile');
+        }
+        if (e.target.closest('#btnUpgradeHeader') || e.target.closest('#btnUpgradeVipTopbar')) {
+            switchTab('tab-vip');
+        }
+        if (e.target.closest('#btnLogout')) {
+            e.preventDefault();
             sessionStorage.removeItem('dashboard_user_rank'); 
             signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
-        });
-    }
-
-    const btnConfirmPayment = document.getElementById("btnConfirmPayment");
-    if (btnConfirmPayment) {
-        btnConfirmPayment.addEventListener("click", () => {
+        }
+        if (e.target.closest('#btnConfirmPayment')) {
             alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
-        });
-    }
+        }
+    });
 }
 
 // =========================================================================
@@ -266,8 +255,6 @@ export function initNotificationListener(user) {
     const userEmail = user.email;
 
     const notifRef = collection(db, "notifications");
-    
-    // Chỉ lấy thông báo của user hiện tại
     const q = query(notifRef, where("toEmail", "==", userEmail));
 
     onSnapshot(q, (snapshot) => {
@@ -292,7 +279,6 @@ export function initNotificationListener(user) {
 
         if (badgeCount) {
             badgeCount.innerText = unreadCount;
-            // Thay đổi display sang flex để căn giữa số đếm hoàn hảo theo CSS của topbar.html
             badgeCount.style.display = unreadCount > 0 ? 'flex' : 'none'; 
         }
 
@@ -308,7 +294,6 @@ export function initNotificationListener(user) {
                 const fw = isUnread ? 'bold' : 'normal';
                 const icon = notif.type === 'system_broadcast' ? '📢' : '💬';
                 
-                // Sử dụng CSS class đã định nghĩa sẵn trong topbar.html
                 notifList.innerHTML += `
                     <div class="noti-item ${isUnread ? 'unread' : ''}" style="cursor: pointer;" onclick="markNotificationAsRead('${notif.id}', '${notif.status}')">
                         <div class="noti-icon">${icon}</div>
@@ -336,7 +321,6 @@ window.markNotificationAsRead = async function(notifId, currentStatus) {
         console.error("Lỗi khi update status thông báo:", error);
     }
 }
-
 
 // =========================================================================
 // 6. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI THÔNG TIN USER
@@ -495,7 +479,7 @@ async function executeAuthUI(user) {
     renderAuthInfo(user);
     const currentUserData = await fetchUserData(user);
     
-    // Gọi hàm khởi tạo lắng nghe thông báo ngay sau khi đăng nhập thành công
+    // Gọi hàm khởi tạo lắng nghe thông báo
     initNotificationListener(user);
     
     if (currentUserData) {
