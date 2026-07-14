@@ -232,7 +232,6 @@ function initDOMListeners() {
             if (notifId && window.userNotificationsData && window.userNotificationsData[notifId]) {
                 const notif = window.userNotificationsData[notifId];
                 
-                // Đánh dấu đã đọc ngầm
                 if (notif.status === 'unread') {
                     try {
                         const notifDocRef = doc(db, "notifications", notifId);
@@ -240,7 +239,6 @@ function initDOMListeners() {
                     } catch (error) {}
                 }
 
-                // Ẩn dropdown và hiển thị Popup
                 if (notiDropdown) notiDropdown.classList.remove('show');
                 showNotificationModal(notif);
             }
@@ -265,21 +263,29 @@ function initDOMListeners() {
             return;
         }
 
-        // --- 4. Các nút chức năng khác ---
+        // --- 4. Các nút chức năng khác (Đã xử lý ẩn dropdown triệt để) ---
         if (e.target.closest('#btnManageProfile')) {
             e.preventDefault();
+            if (userDropdown) userDropdown.classList.remove('show');
             switchTab('tab-profile');
+            return;
         }
         if (e.target.closest('#btnUpgradeHeader') || e.target.closest('#btnUpgradeVipTopbar')) {
+            if (userDropdown) userDropdown.classList.remove('show');
             switchTab('tab-vip');
+            return;
         }
         if (e.target.closest('#btnLogout')) {
             e.preventDefault();
+            if (userDropdown) userDropdown.classList.remove('show');
             sessionStorage.removeItem('dashboard_user_rank'); 
             signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
+            return;
         }
         if (e.target.closest('#btnConfirmPayment')) {
+            if (userDropdown) userDropdown.classList.remove('show');
             alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
+            return;
         }
     });
 }
@@ -300,7 +306,7 @@ export function initNotificationListener(user) {
         
         let unreadCount = 0;
         let notifications = [];
-        window.userNotificationsData = {}; // Reset và lưu cache data thông báo
+        window.userNotificationsData = {}; 
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
@@ -336,7 +342,6 @@ export function initNotificationListener(user) {
                 if (notif.type === 'system_broadcast') icon = '📢';
                 if (notif.type === 'room_share' || notif.type === 'exam_share') icon = '🎯';
                 
-                // Đã chuyển onclick thành thuộc tính data-notif-id an toàn
                 notifList.innerHTML += `
                     <div class="noti-item ${isUnread ? 'unread' : ''}" style="cursor: pointer;" data-notif-id="${notif.id}">
                         <div class="noti-icon">${icon}</div>
@@ -353,15 +358,12 @@ export function initNotificationListener(user) {
     });
 }
 
-// Hàm render Popup an toàn không dùng inline Javascript
 function showNotificationModal(notif) {
     const existingModal = document.getElementById('notifModalDynamic');
     if (existingModal) existingModal.remove();
 
-    // Nút mặc định cho thông báo thường
     let actionButtonsHTML = `<button data-action="close-notif-modal" style="padding: 8px 20px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">Đóng</button>`;
     
-    // Nút phân nhánh cho thông báo chia sẻ (share)
     if (notif.type === 'room_share' || notif.type === 'exam_share' || notif.actionUrl) {
         const targetLink = notif.actionUrl || '#'; 
         actionButtonsHTML = `
@@ -370,7 +372,6 @@ function showNotificationModal(notif) {
         `;
     }
 
-    // Render HTML
     const modalHtml = `
         <div id="notifModalDynamic" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
             <div style="background: white; width: 90%; max-width: 480px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; animation: modalNotifFade 0.25s ease-out;">
@@ -403,7 +404,6 @@ function showNotificationModal(notif) {
     
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
-
 
 // =========================================================================
 // 6. XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI THÔNG TIN USER
