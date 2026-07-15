@@ -71,7 +71,6 @@ function applyTheme(isDark) {
     }
 }
 
-// Khôi phục giao diện lưu trữ
 const savedTheme = localStorage.getItem('quiz_theme');
 if (savedTheme === 'dark') applyTheme(true);
 
@@ -638,6 +637,120 @@ document.getElementById('btn-back-dashboard').onclick = () => returnToLobbyOrDas
 document.getElementById('btn-modal-retry').onclick = () => { closeModal(); initExamState(); };
 document.getElementById('btn-modal-explain').onclick = () => { closeModal(); openReviewModal(finalScore, finalCorrectCount, finalTotal); };
 
+// =========================================================================
+// LOGIC CHỨC NĂNG AI FLASHCARD TÍCH HỢP
+// =========================================================================
+let aiFlashcardsData = [];
+let currentFlashcardIndex = 0;
+
+const fcModal = document.getElementById('flashcard-modal');
+const fcLoading = document.getElementById('flashcard-loading');
+const fcWorkspace = document.getElementById('flashcard-workspace');
+const fcScene = document.getElementById('fc-scene');
+const fcFrontText = document.getElementById('fc-front-text');
+const fcBackText = document.getElementById('fc-back-text');
+const fcProgressText = document.getElementById('fc-progress-text');
+const btnFcPrev = document.getElementById('btn-fc-prev');
+const btnFcNext = document.getElementById('btn-fc-next');
+
+// Mở Modal và Gọi API AI
+document.getElementById('btn-create-flashcard').addEventListener('click', async () => {
+    document.getElementById('result-modal').classList.remove('active'); // Đóng bảng điểm
+    fcModal.classList.add('active');
+    
+    // Nếu đã tạo sẵn rồi thì không gọi API lại để tiết kiệm chi phí
+    if (aiFlashcardsData.length > 0) {
+        renderCurrentFlashcard();
+        fcLoading.style.display = 'none';
+        fcWorkspace.style.display = 'block';
+        return;
+    }
+
+    fcLoading.style.display = 'block';
+    fcWorkspace.style.display = 'none';
+
+    // Tạo nội dung gửi cho AI (Câu hỏi + Đáp án đúng + Giải thích)
+    let promptString = questions.map((q, idx) => {
+        const correctOpt = q.options ? q.options[q.correctAnswer] : '';
+        return `[Câu ${idx + 1}] Hỏi: ${q.text} | Đáp án đúng: ${correctOpt} | Giải thích: ${q.explanation || 'Không có'}`;
+    }).join('\n\n');
+
+    try {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                promptText: promptString,
+                action: 'flashcard' // Tham số kích hoạt Prompt Flashcard
+            })
+        });
+
+        if (!response.ok) throw new Error("Lỗi khi kết nối với AI Backend.");
+        
+        aiFlashcardsData = await response.json();
+        if (!Array.isArray(aiFlashcardsData) || aiFlashcardsData.length === 0) {
+            throw new Error("AI không thể tạo Flashcard từ đề thi này.");
+        }
+
+        currentFlashcardIndex = 0;
+        renderCurrentFlashcard();
+        
+        fcLoading.style.display = 'none';
+        fcWorkspace.style.display = 'block';
+
+    } catch (error) {
+        console.error("Flashcard Error:", error);
+        fcModal.classList.remove('active');
+        document.getElementById('result-modal').classList.add('active'); // Bật lại modal điểm
+        showToast("Lỗi khi tạo Flashcard: " + error.message);
+    }
+});
+
+// Điều khiển Giao diện Flashcard
+function renderCurrentFlashcard() {
+    if (aiFlashcardsData.length === 0) return;
+    
+    // Xóa class lật để đảm bảo luôn ở Mặt trước khi chuyển câu
+    fcScene.classList.remove('is-flipped');
+    
+    setTimeout(() => {
+        const card = aiFlashcardsData[currentFlashcardIndex];
+        fcFrontText.innerText = card.front || "Nội dung mặt trước trống";
+        fcBackText.innerText = card.back || "Nội dung mặt sau trống";
+        fcProgressText.innerText = `${currentFlashcardIndex + 1} / ${aiFlashcardsData.length}`;
+        
+        btnFcPrev.disabled = currentFlashcardIndex === 0;
+        btnFcNext.disabled = currentFlashcardIndex === aiFlashcardsData.length - 1;
+        btnFcPrev.style.opacity = btnFcPrev.disabled ? "0.3" : "1";
+        btnFcNext.style.opacity = btnFcNext.disabled ? "0.3" : "1";
+    }, 150); // Delay nhẹ để khớp hiệu ứng lật (nếu có)
+}
+
+fcScene.addEventListener('click', () => {
+    fcScene.classList.toggle('is-flipped');
+});
+
+btnFcNext.addEventListener('click', () => {
+    if (currentFlashcardIndex < aiFlashcardsData.length - 1) {
+        currentFlashcardIndex++;
+        renderCurrentFlashcard();
+    }
+});
+
+btnFcPrev.addEventListener('click', () => {
+    if (currentFlashcardIndex > 0) {
+        currentFlashcardIndex--;
+        renderCurrentFlashcard();
+    }
+});
+
+document.getElementById('close-flashcard-btn').addEventListener('click', () => {
+    fcModal.classList.remove('active');
+    document.getElementById('result-modal').classList.add('active'); // Bật lại bảng điểm khi đóng
+});
+
+// =========================================================================
+
 function handleOptionSelect(idx) {
     if (isSubmitted) return; 
     
@@ -721,7 +834,7 @@ function renderPalette() {
         btn.onclick = () => { currentIndex = idx; saveDraft(); renderAll(); };
         container.appendChild(btn);
     });
-    // ĐOẠN CODE THÊM MỚI: Cập nhật Progress Bar
+    
     const answeredCount = Object.keys(userAnswers).length;
     const progressPercent = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
     const progressBar = document.getElementById('progress-bar');
