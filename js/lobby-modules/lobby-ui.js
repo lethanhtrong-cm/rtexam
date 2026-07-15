@@ -356,18 +356,18 @@ export function renderUI() {
         card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 6px 15px rgba(0,0,0,0.2)'; };
         card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = '0 4px 10px rgba(0,0,0,0.15)'; };
 
-        // Tạo nhãn Chủ phòng nếu UID trùng khớp
-        let hostBadgeHTML = '';
+       let hostBadgeHTML = '';
         if (pData.uid === state.currentHostUid) {
-            hostBadgeHTML = `<div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.65rem; font-weight: 900; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(234, 88, 12, 0.4); z-index: 10; white-space: nowrap;"><i class="fa-solid fa-crown"></i> CHỦ PHÒNG</div>`;
+            // FIX: Bỏ position absolute, dùng margin-top để xếp ngay ngắn dưới cùng thẻ
+            hostBadgeHTML = `<div style="margin-top: 10px; background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.65rem; font-weight: 900; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3); white-space: nowrap;"><i class="fa-solid fa-crown"></i> CHỦ PHÒNG</div>`;
         }
 
         card.innerHTML = `
             ${kickBtnHTML}
-            ${hostBadgeHTML}
             <img src="${pData.photoURL}" alt="avatar" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid #3b82f6; padding: 2px; object-fit: cover; margin-bottom: 4px;">
             <div style="font-weight: 600; color: #1f2937; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.9rem;" title="${pData.displayName}">${pData.displayName}</div>
             ${miniBadge}
+            ${hostBadgeHTML}
         `;
         UI.participantsGrid.appendChild(card);
     });
