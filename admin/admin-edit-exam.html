@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Sửa Nội Dung Đề Thi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; margin: 0; padding: 0; color: #334155; }
+        .header { background: #1e293b; color: white; padding: 20px 40px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        
+        .question-card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; }
+        .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+        .question-header h3 { margin: 0; color: #2563eb; font-size: 16px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; color: #475569; }
+        .form-group textarea, .form-group input[type="text"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .form-group textarea:focus, .form-group input[type="text"]:focus { border-color: #3b82f6; }
+        
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .option-item { display: flex; align-items: center; gap: 10px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .option-item input[type="radio"] { cursor: pointer; transform: scale(1.2); }
+        .option-item input[type="text"] { flex: 1; border: none; background: transparent; padding: 5px; outline: none; font-size: 14px; }
+        
+        .btn-save-all { background: #10b981; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3); transition: background 0.2s; }
+        .btn-save-all:hover { background: #059669; }
+        .btn-save-all:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+        
+        .loading-screen { text-align: center; padding: 50px; color: #64748b; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fa-solid fa-pen-to-square"></i> Trình Sửa Nội Dung Đề: <span id="header-exam-id" style="color: #60a5fa;">Đang tải...</span></h1>
+        <button id="btn-save-all" class="btn-save-all"><i class="fa-solid fa-floppy-disk"></i> Lưu Tất Cả Thay Đổi</button>
+    </div>
+
+    <div class="container" id="editor-container">
+        <div class="loading-screen" id="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải dữ liệu câu hỏi từ hệ thống...</div>
+    </div>
+
+    <!-- Thông báo góc màn hình -->
+    <div id="toast" style="position: fixed; bottom: 20px; right: 20px; background: #333; color: #fff; padding: 12px 20px; border-radius: 8px; display: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>
+
+    <!-- Nạp cấu hình Firebase và Logic Editor -->
+    <script type="module" src="./admin-edit-exam.js"></script>
+</body>
+</html>
