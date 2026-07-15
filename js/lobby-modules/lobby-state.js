@@ -11,6 +11,7 @@ export const state = {
     roomId: urlParams.get('roomId'),
     currentRoomStatus: 'waiting',
     currentHostEmail: null,
+    currentHostUid: null, // Thêm dòng này để lưu UID của chủ phòng
     isKicked: false,
 
     // Thông tin người dùng hiện tại
