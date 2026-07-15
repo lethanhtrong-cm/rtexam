@@ -226,7 +226,7 @@ document.getElementById('btn-save-all').addEventListener('click', async () => {
                 diffs.push({ field: "Thay đổi lựa chọn (A,B,C,D)", old: oldOptStr, new: newOptStr });
             }
             if ((oldQ.order || 0) !== newQ.order) {
-                diffs.push({ field: "Vị trí câu hỏi", old: `Vị trí thứ ${oldQ.order + 1}`, new: `Vị trí thứ ${newQ.order + 1}` });
+                diffs.push({ field: "Vị trí câu hỏi", old: `Vị trí thứ ${(oldQ.order || 0) + 1}`, new: `Vị trí thứ ${newQ.order + 1}` });
             }
 
             if (diffs.length > 0) {
@@ -247,7 +247,7 @@ document.getElementById('btn-save-all').addEventListener('click', async () => {
     try {
         await Promise.all(updatePromises);
         
-        // NẾU CÓ THAY ĐỔI, GHI LẠI TOÀN BỘ SNAPSHOT (Bản chụp cấu trúc gốc để Rollback) VÀ LỊCH SỬ DIFF
+        // NẾU CÓ THAY ĐỔI, GHI LẠI TOÀN BỘ SNAPSHOT VÀ LỊCH SỬ DIFF
         if (changesLog.length > 0) {
             await addDoc(collection(db, "exam_history"), {
                 examId: currentExamId,
@@ -295,31 +295,42 @@ document.getElementById('btn-view-history').addEventListener('click', async () =
         }
 
         let html = '';
-        historyData.forEach((item, index) => {
+        historyData.forEach((item) => {
             const timeStr = new Date(item.timestamp).toLocaleString('vi-VN');
             
-            // Xây dựng giao diện Diff Before/After
+            // Xây dựng giao diện Diff Before/After CÓ TÍNH TƯƠNG THÍCH NGƯỢC
             let diffHtml = '';
-            item.changes.forEach(changeObj => {
-                diffHtml += `<div class="diff-block">
-                                <div class="diff-title">Câu ${changeObj.questionIndex}: Đã thay đổi</div>`;
-                changeObj.diffs.forEach(diff => {
-                    diffHtml += `<div style="padding: 5px 15px; font-size: 13px; color: #64748b; border-bottom: 1px dashed #e2e8f0;">Trường: <strong>${diff.field}</strong></div>
-                                 <div class="diff-content">
-                                     <div class="diff-old">${diff.old}</div>
-                                     <div class="diff-new">${diff.new}</div>
-                                 </div>`;
-                });
-                diffHtml += `</div>`;
+            (item.changes || []).forEach(changeObj => {
+                if (typeof changeObj === 'string') {
+                    // Cấu trúc dữ liệu cũ (chỉ lưu text)
+                    diffHtml += `<div class="diff-block" style="padding: 10px 15px; font-size: 13.5px; color: #475569; background: white;">${changeObj}</div>`;
+                } else if (changeObj && changeObj.diffs) {
+                    // Cấu trúc dữ liệu mới (Diff chuyên sâu)
+                    diffHtml += `<div class="diff-block">
+                                    <div class="diff-title">Câu ${changeObj.questionIndex}: Đã thay đổi</div>`;
+                    changeObj.diffs.forEach(diff => {
+                        diffHtml += `<div style="padding: 5px 15px; font-size: 13px; color: #64748b; border-bottom: 1px dashed #e2e8f0;">Trường: <strong>${diff.field}</strong></div>
+                                     <div class="diff-content">
+                                         <div class="diff-old">${diff.old}</div>
+                                         <div class="diff-new">${diff.new}</div>
+                                     </div>`;
+                    });
+                    diffHtml += `</div>`;
+                }
             });
             
+            // Chỉ hiển thị nút Rollback nếu bản ghi có chứa thuộc tính snapshot (dữ liệu mới)
+            const rollbackBtnHtml = item.snapshot ? `
+                <button class="btn-rollback" data-hid="${item.docId}">
+                    <i class="fa-solid fa-rotate-left"></i> Khôi phục phiên bản này
+                </button>
+            ` : `<span style="font-size:12px; color:#94a3b8; font-style:italic;">(Bản lưu cũ không hỗ trợ khôi phục)</span>`;
+
             html += `
                 <div class="history-item">
                     <div class="history-header">
                         <div class="history-time"><i class="fa-solid fa-code-commit" style="color: #3b82f6;"></i> Bản sửa đổi ngày: ${timeStr}</div>
-                        <button class="btn-rollback" data-hid="${item.docId}">
-                            <i class="fa-solid fa-rotate-left"></i> Khôi phục phiên bản này
-                        </button>
+                        ${rollbackBtnHtml}
                     </div>
                     <div class="diff-container">
                         ${diffHtml}
