@@ -59,7 +59,7 @@ export function resetAiForm() {
 export function enhanceLeaderboardUI() {
     if (document.getElementById('historySidebar')) return;
 
-    // CSS INJECTION: NÂNG CẤP GIAO DIỆN THANH THOÁT, HIỆN ĐẠI
+    // CSS INJECTION: NÂNG CẤP GIAO DIỆN BẢNG XẾP HẠNG MỞ RỘNG VÀ THANH THOÁT
     if (!document.getElementById('sleek-lb-styles')) {
         const customStyle = document.createElement('style');
         customStyle.id = 'sleek-lb-styles';
@@ -76,6 +76,8 @@ export function enhanceLeaderboardUI() {
                 box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03) !important;
                 border-radius: 16px !important;
             }
+            
+            /* Lịch sử thi Sidebar */
             .history-item { 
                 padding: 14px 16px !important; margin-bottom: 8px !important; background: #f8fafc !important; 
                 border: 1px solid transparent !important; border-radius: 10px !important; cursor: pointer !important; 
@@ -87,7 +89,7 @@ export function enhanceLeaderboardUI() {
                 box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1) !important;
             }
             
-            /* Dàn lại khu vực nút bấm cho hài hòa */
+            /* Dàn khu vực nút bấm hài hòa */
             .lb-actions {
                 display: flex !important;
                 flex-direction: row !important;
@@ -117,32 +119,92 @@ export function enhanceLeaderboardUI() {
                 box-shadow: 0 6px 15px rgba(0,0,0,0.08) !important;
             }
 
-            /* Định dạng lại từng nút cụ thể với tone màu Pastel chuyên nghiệp */
+            /* Tone màu Pastel chuyên nghiệp cho Buttons */
             #btnEndRoom { background: #fff1f2 !important; color: #e11d48 !important; border: 1px solid #fecdd3 !important; }
             #btnEndRoom:hover { background: #ffe4e6 !important; }
-            
             #btnReviewExam { background: #eff6ff !important; color: #2563eb !important; border: 1px solid #bfdbfe !important; }
             #btnReviewExam:hover { background: #dbeafe !important; }
-
             #btnBackToLobby { background: #f8fafc !important; color: #475569 !important; border: 1px solid #e2e8f0 !important; }
             #btnBackToLobby:hover { background: #f1f5f9 !important; color: #0f172a !important;}
 
-            /* Table thanh thoát */
-            .leaderboard-table th { background: #f8fafc !important; color: #64748b !important; font-weight: 700 !important; text-transform: uppercase !important; font-size: 0.8rem !important; letter-spacing: 0.5px !important; border-bottom: 2px solid #e2e8f0 !important; padding: 14px 10px !important;}
-            .leaderboard-table td { vertical-align: middle !important; padding: 14px 10px !important; border-bottom: 1px solid #f1f5f9 !important; color: #334155 !important; font-weight: 500 !important;}
-            .leaderboard-table tbody tr:hover { background-color: #f8fafc !important; }
-            .col-rank { width: 80px !important; text-align: center !important; }
+            /* ==============================================================
+               TỐI ƯU TABLE BẢNG XẾP HẠNG (THANH THOÁT, KHÔNG RỚT DÒNG)
+               ============================================================== */
+            .leaderboard-table { 
+                width: 100% !important; 
+                border-collapse: collapse !important; 
+                margin-top: 10px !important; 
+            }
+            
+            /* Header Table */
+            .leaderboard-table th { 
+                background: transparent !important; 
+                color: #64748b !important; 
+                font-weight: 700 !important; 
+                text-transform: uppercase !important; 
+                font-size: 0.85rem !important; 
+                letter-spacing: 0.5px !important; 
+                border-bottom: 2px solid #e2e8f0 !important; 
+                padding: 16px 12px !important; 
+                text-align: center !important; 
+            }
+            .leaderboard-table th:nth-child(2) { text-align: left !important; padding-left: 20px !important; } 
+
+            /* Body Table */
+            .leaderboard-table td { 
+                vertical-align: middle !important; 
+                padding: 16px 12px !important; 
+                border-bottom: 1px solid #f1f5f9 !important; 
+                color: #475569 !important; 
+                font-weight: 600 !important; 
+                text-align: center !important; 
+                transition: background 0.2s ease !important;
+            }
+            .leaderboard-table tbody tr:hover td { background-color: #f8fafc !important; }
+
+            /* Định dạng Cột User (Tránh rớt dòng tên) */
+            .leaderboard-table .td-user { 
+                text-align: left !important; 
+                white-space: nowrap !important; /* Quan trọng: Chống rớt dòng */
+                display: flex !important; 
+                align-items: center !important; 
+                gap: 14px !important; 
+                border-bottom: none !important; /* Flex đè border, gỡ bỏ border riêng của td này */
+            }
+            .leaderboard-table tbody tr { border-bottom: 1px solid #f1f5f9 !important; } /* Gắn border vào tr */
+            .leaderboard-table tbody tr:last-child { border-bottom: none !important; }
+            
+            .leaderboard-table .td-user span { 
+                font-weight: 700 !important; 
+                color: #0f172a !important; 
+                font-size: 1.05rem !important; 
+            }
+            .leaderboard-table .td-user img { 
+                width: 42px !important; 
+                height: 42px !important; 
+                border-radius: 50% !important; 
+                object-fit: cover !important; 
+                border: 2px solid #ffffff !important; 
+                box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important; 
+            }
+
+            /* Định dạng Hạng, Điểm số, Thời gian */
+            .col-rank { width: 70px !important; text-align: center !important; }
+            .rank-badge { width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-weight: 900; margin: 0 auto; font-size: 0.95rem; }
+            .score-text { color: #2563eb !important; font-weight: 900 !important; font-size: 1.1rem !important; }
         `;
         document.head.appendChild(customStyle);
     }
 
     const tableContainer = UI.state2Leaderboard.querySelector('.table-container');
     const wrapper = document.createElement('div');
+    // FIX: Tăng khoảng cách gap và điều chỉnh width
     wrapper.style.cssText = "display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 20px;";
     
     const sidebar = document.createElement('div');
     sidebar.id = 'historySidebar';
-    sidebar.style.cssText = "flex: 1; min-width: 260px; padding: 24px;";
+    // FIX: Thu nhỏ nhẹ sidebar để nhường không gian cho table
+    sidebar.style.cssText = "flex: 1; min-width: 240px; max-width: 300px; padding: 24px;";
     sidebar.innerHTML = `
         <h4 style="margin-top: 0; margin-bottom: 18px; font-weight: 800; color: #1e293b; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-clock-rotate-left" style="color: #64748b;"></i> Lịch sử lượt thi</h4>
         <div id="historyListContainer" style="display: flex; flex-direction: column; max-height: 500px; overflow-y: auto; padding-right: 5px;">
@@ -152,9 +214,10 @@ export function enhanceLeaderboardUI() {
     
     const rightCol = document.createElement('div');
     rightCol.id = 'lbCaptureArea';
-    rightCol.style.cssText = "flex: 3; min-width: 320px; padding: 24px; position: relative;";
+    // FIX: Ép RightCol to ra bằng flex: 4 và min-width lớn
+    rightCol.style.cssText = "flex: 4; min-width: 550px; padding: 30px;";
     rightCol.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <div>
                 <h4 style="font-weight: 800; color: #0f172a; font-size: 1.3rem; margin: 0; text-transform: uppercase;" id="currentViewTitle">Lượt thi hiện tại</h4>
                 <div id="lbExamInfo" style="color: #64748b; font-weight: 500; margin-top: 6px; font-size: 0.95rem;">Đang cập nhật...</div>
@@ -383,12 +446,13 @@ export function renderHistoryLB(historyData) {
         let displayTime = typeof pData.timeTaken === 'string' ? pData.timeTaken : '00:00';
 
         const tr = document.createElement('tr');
+        // FIX: Rút gọn Code HTML ở đây, để thẻ CSS #sleek-lb-styles làm việc định dạng
         tr.innerHTML = `
-            <td class="col-rank"><div style="background: ${rank<=3 ? '#fef08a' : '#f1f5f9'}; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-weight: 800; color: ${rank<=3 ? '#a16207' : '#64748b'}; margin: 0 auto; font-size: 0.9rem;">#${rank}</div></td>
-            <td class="td-user" style="display: flex; align-items: center; gap: 12px;"><img src="${pData.photoURL}" alt="avatar" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0;"><span style="font-weight: 600;">${pData.displayName}</span></td>
-            <td><span style="background: #d1fae5; color: #059669; border-radius: 6px; padding: 4px 10px; font-weight: 600; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-check"></i> Đã nộp bài</span></td>
-            <td style="color: #2563eb; font-weight: 800; font-size: 1.05rem;">${displayScore}</td>
-            <td style="color: #475569; font-weight: 500;">${displayTime}</td>
+            <td class="col-rank"><div class="rank-badge" style="background: ${rank<=3 ? '#fef08a' : '#f1f5f9'}; color: ${rank<=3 ? '#a16207' : '#64748b'};">#${rank}</div></td>
+            <td class="td-user"><img src="${pData.photoURL}" alt="avatar"><span>${pData.displayName}</span></td>
+            <td><span style="background: #ecfdf5; color: #059669; border-radius: 6px; padding: 6px 12px; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-check"></i> Đã nộp bài</span></td>
+            <td class="score-text">${displayScore}</td>
+            <td>${displayTime}</td>
         `;
         UI.leaderboardBody.appendChild(tr);
         rank++;
@@ -476,18 +540,19 @@ export function renderUI() {
             displayScore = `${pData.score || 0} đ`;
             displayTime = typeof pData.timeTaken === 'string' ? pData.timeTaken : '00:00';
         } else {
-            badgeBg = '#f1f5f9'; badgeColor = '#64748b'; badgeText = 'Đang chờ'; badgeIcon = '<i class="fa-solid fa-clock"></i>';
+            badgeBg = '#f8fafc'; badgeColor = '#64748b'; badgeText = 'Đang chờ'; badgeIcon = '<i class="fa-solid fa-clock"></i>';
         }
         
-        let badgeHTML = `<span style="background: ${badgeBg}; color: ${badgeColor}; border-radius: 6px; padding: 4px 10px; font-weight: 600; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">${badgeIcon} ${badgeText}</span>`;
+        let badgeHTML = `<span style="background: ${badgeBg}; color: ${badgeColor}; border-radius: 6px; padding: 6px 12px; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">${badgeIcon} ${badgeText}</span>`;
 
         const tr = document.createElement('tr');
+        // FIX: Rút gọn HTML, css lo phần còn lại
         tr.innerHTML = `
-            <td class="col-rank"><div style="background: ${rank<=3 ? '#fef08a' : '#f1f5f9'}; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-weight: 800; color: ${rank<=3 ? '#a16207' : '#64748b'}; margin: 0 auto; font-size: 0.9rem;">#${rank}</div></td>
-            <td class="td-user" style="display: flex; align-items: center; gap: 12px;"><img src="${pData.photoURL}" alt="avatar" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid #e2e8f0;"><span style="font-weight: 600;">${pData.displayName}</span></td>
+            <td class="col-rank"><div class="rank-badge" style="background: ${rank<=3 ? '#fef08a' : '#f1f5f9'}; color: ${rank<=3 ? '#a16207' : '#64748b'};">#${rank}</div></td>
+            <td class="td-user"><img src="${pData.photoURL}" alt="avatar"><span>${pData.displayName}</span></td>
             <td>${badgeHTML}</td>
-            <td style="color: #2563eb; font-weight: 800; font-size: 1.05rem;">${displayScore}</td>
-            <td style="color: #475569; font-weight: 500;">${displayTime}</td>
+            <td class="score-text">${displayScore}</td>
+            <td>${displayTime}</td>
         `;
         UI.leaderboardBody.appendChild(tr);
         rank++;
