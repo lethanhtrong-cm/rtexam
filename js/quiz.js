@@ -57,6 +57,7 @@ const urlParams = new URLSearchParams(window.location.search);
 let currentExamId = urlParams.get('examId'); 
 const currentResultId = urlParams.get('resultId'); 
 const currentRoomId = urlParams.get('roomId'); 
+const currentMode = urlParams.get('mode'); // Kích hoạt mode flashcard từ Dashboard
 
 // ================= DARK MODE LOGIC =================
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
@@ -109,13 +110,13 @@ async function returnToLobbyOrDashboard() {
 let warningCount = 0;
 
 function updateAntiCheatState() {
-    if (!isSubmitted && !isShowExplanation) document.body.classList.add('no-select');
+    if (!isSubmitted && !isShowExplanation && currentMode !== 'flashcard') document.body.classList.add('no-select');
     else document.body.classList.remove('no-select');
 }
 
 ['contextmenu', 'copy', 'cut', 'paste'].forEach(evt => {
     document.addEventListener(evt, (e) => {
-        if (!isSubmitted && !isShowExplanation) {
+        if (!isSubmitted && !isShowExplanation && currentMode !== 'flashcard') {
             e.preventDefault();
             showToast("⚠️ Hành động này bị vô hiệu hóa trong phòng thi!");
         }
@@ -123,7 +124,7 @@ function updateAntiCheatState() {
 });
 
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !isSubmitted && !isShowExplanation && !document.getElementById('reviewExamModal').classList.contains('active')) {
+    if (document.hidden && !isSubmitted && !isShowExplanation && currentMode !== 'flashcard' && !document.getElementById('reviewExamModal').classList.contains('active')) {
         warningCount++;
         const warningModal = document.getElementById('cheat-warning-modal');
         const warningText = document.getElementById('cheat-warning-text');
@@ -146,13 +147,13 @@ document.addEventListener('visibilitychange', () => {
 function getDraftKey() { return `quiz_draft_${currentExamId}_${currentUser.uid}`; }
 
 function saveDraft() {
-    if (isSubmitted || !currentUser || !currentExamId) return;
+    if (isSubmitted || !currentUser || !currentExamId || currentMode === 'flashcard') return;
     const draft = { userAnswers, flaggedQuestions, timeRemaining, currentIndex };
     localStorage.setItem(getDraftKey(), JSON.stringify(draft));
 }
 
 function loadDraft() {
-    if (!currentUser || !currentExamId) return false;
+    if (!currentUser || !currentExamId || currentMode === 'flashcard') return false;
     const draftStr = localStorage.getItem(getDraftKey());
     if (draftStr) {
         try {
@@ -175,13 +176,39 @@ onAuthStateChanged(auth, (user) => {
         redirect('index.html');
     } else {
         currentUser = user;
-        if (currentResultId) loadReviewMode(currentResultId);
-        else if (currentExamId) {
+        if (currentResultId) {
+            loadReviewMode(currentResultId);
+        } else if (currentExamId) {
             document.getElementById('quiz-title-display').innerText = `Bài thi: ${currentExamId}`;
-            loadExamDataAndQuestions();
+            // Điều hướng luồng tuỳ thuộc vào tham số Mode
+            if (currentMode === 'flashcard') {
+                loadFlashcardMode();
+            } else {
+                loadExamDataAndQuestions();
+            }
         }
     }
 });
+
+// LUỒNG MỚI: TẢI TRỰC TIẾP CHẾ ĐỘ FLASHCARD (KHÔNG QUA PHÒNG THI)
+async function loadFlashcardMode() {
+    document.getElementById('skeleton-container').classList.add('active');
+    document.getElementById('real-content').classList.add('hidden');
+    document.getElementById('timer-container-box').style.display = 'none';
+
+    try {
+        await fetchQuestionsFromFirestore();
+        document.getElementById('skeleton-container').classList.remove('active');
+        
+        // Kích hoạt ngay luồng tạo Flashcard từ nút bấm ngầm
+        document.getElementById('btn-create-flashcard').click();
+        
+    } catch (error) {
+        document.getElementById('skeleton-container').classList.remove('active');
+        document.getElementById('real-content').classList.remove('hidden');
+        document.getElementById('question-text').innerText = `Lỗi hệ thống: ${error.message}`;
+    }
+}
 
 async function loadExamDataAndQuestions() {
     document.getElementById('skeleton-container').classList.add('active');
@@ -701,7 +728,9 @@ document.getElementById('btn-create-flashcard').addEventListener('click', async 
     } catch (error) {
         console.error("Flashcard Error:", error);
         fcModal.classList.remove('active');
-        document.getElementById('result-modal').classList.add('active'); // Bật lại modal điểm
+        if (currentMode !== 'flashcard') {
+            document.getElementById('result-modal').classList.add('active'); // Bật lại modal điểm nếu không ở chế độ ôn tập
+        }
         showToast("Lỗi khi tạo Flashcard: " + error.message);
     }
 });
@@ -746,7 +775,11 @@ btnFcPrev.addEventListener('click', () => {
 
 document.getElementById('close-flashcard-btn').addEventListener('click', () => {
     fcModal.classList.remove('active');
-    document.getElementById('result-modal').classList.add('active'); // Bật lại bảng điểm khi đóng
+    if (currentMode === 'flashcard') {
+        returnToLobbyOrDashboard(); // Bấm thoát là quay về Dashboard luôn
+    } else {
+        document.getElementById('result-modal').classList.add('active'); // Bật lại bảng điểm khi đóng nếu ở mode thi
+    }
 });
 
 // =========================================================================
@@ -861,7 +894,7 @@ document.addEventListener('keydown', (e) => {
     const key = e.key;
     if (key === 'ArrowLeft') { if(currentIndex > 0) { currentIndex--; saveDraft(); renderAll(); } } 
     else if (key === 'ArrowRight') { if(currentIndex < questions.length - 1) { currentIndex++; saveDraft(); renderAll(); } } 
-    else if (!isSubmitted) {
+    else if (!isSubmitted && currentMode !== 'flashcard') {
         const keyMap = { 'a': 0, 'A': 0, 'b': 1, 'B': 1, 'c': 2, 'C': 2, 'd': 3, 'D': 3 };
         const optionIndex = keyMap[key];
         if (optionIndex !== undefined && questions[currentIndex].options && optionIndex < questions[currentIndex].options.length) {
