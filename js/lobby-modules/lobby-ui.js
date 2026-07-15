@@ -59,6 +59,13 @@ export function resetAiForm() {
 export function enhanceLeaderboardUI() {
     if (document.getElementById('historySidebar')) return;
 
+    // FIX MỚI NHẤT: BẺ KHÓA GIỚI HẠN CHIỀU RỘNG CỦA KHUNG CARD BÊN NGOÀI CÙNG
+    if (UI.state2Leaderboard) {
+        UI.state2Leaderboard.style.maxWidth = '1150px'; 
+        UI.state2Leaderboard.style.width = '100%';
+        UI.state2Leaderboard.style.margin = '0 auto';
+    }
+
     // CSS INJECTION: NÂNG CẤP GIAO DIỆN BẢNG XẾP HẠNG MỞ RỘNG VÀ THANH THOÁT
     if (!document.getElementById('sleek-lb-styles')) {
         const customStyle = document.createElement('style');
@@ -162,16 +169,17 @@ export function enhanceLeaderboardUI() {
             }
             .leaderboard-table tbody tr:hover td { background-color: #f8fafc !important; }
 
-            /* Định dạng Cột User (Tránh rớt dòng tên) */
+            /* Định dạng Cột User (Ép Không rớt dòng tên) */
             .leaderboard-table .td-user { 
                 text-align: left !important; 
                 white-space: nowrap !important; /* Quan trọng: Chống rớt dòng */
+                min-width: 220px !important; /* Ép độ rộng tối thiểu để đẩy table ngang ra */
                 display: flex !important; 
                 align-items: center !important; 
                 gap: 14px !important; 
-                border-bottom: none !important; /* Flex đè border, gỡ bỏ border riêng của td này */
+                border-bottom: none !important; 
             }
-            .leaderboard-table tbody tr { border-bottom: 1px solid #f1f5f9 !important; } /* Gắn border vào tr */
+            .leaderboard-table tbody tr { border-bottom: 1px solid #f1f5f9 !important; } 
             .leaderboard-table tbody tr:last-child { border-bottom: none !important; }
             
             .leaderboard-table .td-user span { 
@@ -198,13 +206,13 @@ export function enhanceLeaderboardUI() {
 
     const tableContainer = UI.state2Leaderboard.querySelector('.table-container');
     const wrapper = document.createElement('div');
-    // FIX: Tăng khoảng cách gap và điều chỉnh width
+    // Tăng gap giữa 2 cột
     wrapper.style.cssText = "display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 20px;";
     
     const sidebar = document.createElement('div');
     sidebar.id = 'historySidebar';
-    // FIX: Thu nhỏ nhẹ sidebar để nhường không gian cho table
-    sidebar.style.cssText = "flex: 1; min-width: 240px; max-width: 300px; padding: 24px;";
+    // Đặt width cố định cho sidebar để chừa chỗ cho Table
+    sidebar.style.cssText = "flex: 1; min-width: 250px; max-width: 280px; padding: 24px;";
     sidebar.innerHTML = `
         <h4 style="margin-top: 0; margin-bottom: 18px; font-weight: 800; color: #1e293b; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-clock-rotate-left" style="color: #64748b;"></i> Lịch sử lượt thi</h4>
         <div id="historyListContainer" style="display: flex; flex-direction: column; max-height: 500px; overflow-y: auto; padding-right: 5px;">
@@ -214,8 +222,8 @@ export function enhanceLeaderboardUI() {
     
     const rightCol = document.createElement('div');
     rightCol.id = 'lbCaptureArea';
-    // FIX: Ép RightCol to ra bằng flex: 4 và min-width lớn
-    rightCol.style.cssText = "flex: 4; min-width: 550px; padding: 30px;";
+    // Ép cột phải bung rộng ra
+    rightCol.style.cssText = "flex: 3; min-width: 600px; padding: 30px;";
     rightCol.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <div>
@@ -446,7 +454,6 @@ export function renderHistoryLB(historyData) {
         let displayTime = typeof pData.timeTaken === 'string' ? pData.timeTaken : '00:00';
 
         const tr = document.createElement('tr');
-        // FIX: Rút gọn Code HTML ở đây, để thẻ CSS #sleek-lb-styles làm việc định dạng
         tr.innerHTML = `
             <td class="col-rank"><div class="rank-badge" style="background: ${rank<=3 ? '#fef08a' : '#f1f5f9'}; color: ${rank<=3 ? '#a16207' : '#64748b'};">#${rank}</div></td>
             <td class="td-user"><img src="${pData.photoURL}" alt="avatar"><span>${pData.displayName}</span></td>
@@ -546,7 +553,6 @@ export function renderUI() {
         let badgeHTML = `<span style="background: ${badgeBg}; color: ${badgeColor}; border-radius: 6px; padding: 6px 12px; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">${badgeIcon} ${badgeText}</span>`;
 
         const tr = document.createElement('tr');
-        // FIX: Rút gọn HTML, css lo phần còn lại
         tr.innerHTML = `
             <td class="col-rank"><div class="rank-badge" style="background: ${rank<=3 ? '#fef08a' : '#f1f5f9'}; color: ${rank<=3 ? '#a16207' : '#64748b'};">#${rank}</div></td>
             <td class="td-user"><img src="${pData.photoURL}" alt="avatar"><span>${pData.displayName}</span></td>
