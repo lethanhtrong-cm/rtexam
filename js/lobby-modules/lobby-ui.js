@@ -349,18 +349,18 @@ export function renderUI() {
             kickBtnHTML = `<button class="btn-kick" data-uid="${pData.uid}" title="Đuổi khỏi phòng"><i class="fa-solid fa-xmark"></i></button>`;
         }
 
+        let hostBadgeHTML = '';
+        if (pData.uid === state.currentHostUid) {
+            // FIX: Dùng absolute và bottom âm để kéo nhãn đè lên viền dưới cùng của thẻ
+            hostBadgeHTML = `<div style="position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.7rem; font-weight: 900; padding: 4px 14px; border-radius: 12px; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.4); z-index: 10; white-space: nowrap;"><i class="fa-solid fa-crown"></i> CHỦ PHÒNG</div>`;
+        }
+
         const card = document.createElement('div');
         card.className = 'participant-card';
         card.style.cssText = "background: #ffffff; border: 2px solid #0d6efd; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); text-align: center; padding: 12px 8px; position: relative; display: flex; flex-direction: column; align-items: center; transition: transform 0.2s ease, box-shadow 0.2s ease;";
         
         card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 6px 15px rgba(0,0,0,0.2)'; };
         card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = '0 4px 10px rgba(0,0,0,0.15)'; };
-
-      let hostBadgeHTML = '';
-        if (pData.uid === state.currentHostUid) {
-            // FIX: Dùng absolute và bottom âm để kéo nhãn đè lên viền dưới cùng của thẻ
-            hostBadgeHTML = `<div style="position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.7rem; font-weight: 900; padding: 4px 14px; border-radius: 12px; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.4); z-index: 10; white-space: nowrap;"><i class="fa-solid fa-crown"></i> CHỦ PHÒNG</div>`;
-        }
 
         card.innerHTML = `
             ${kickBtnHTML}
@@ -369,6 +369,8 @@ export function renderUI() {
             ${miniBadge}
             ${hostBadgeHTML}
         `;
+        UI.participantsGrid.appendChild(card);
+    });
 
     document.querySelectorAll('.btn-kick').forEach(btn => {
         btn.addEventListener('click', async (e) => {
