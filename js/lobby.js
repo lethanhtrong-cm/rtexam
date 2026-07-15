@@ -359,16 +359,19 @@ async function initLobby() {
                 UI.btnEndRoom.style.display = 'none'; 
                 
                 if (state.currentRoomStatus === 'playing' || state.currentRoomStatus === 'closed') {
-                    if (state.myParticipantStatus === 'finished') {
-                        UI.waitingText.style.display = 'none';
-                        UI.btnStart.style.display = 'block';
-                        UI.btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
-                        UI.btnStart.removeAttribute('disabled');
-                    } else {
-                        UI.btnStart.style.display = 'none';
-                        UI.waitingText.style.display = 'block';
-                        UI.waitingText.textContent = "Bạn đang ở ngoài phòng thi...";
-                    }
+                    UI.btnEndRoom.style.display = 'block';
+                    UI.selectExamInLobby.setAttribute('disabled', 'true');
+                    UI.btnStart.style.display = 'block'; // FIX: Hiện nút Xem BXH
+                    UI.btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
+                    UI.btnStart.removeAttribute('disabled');
+                } else { 
+                    UI.btnEndRoom.style.display = 'none';
+                    UI.selectExamInLobby.removeAttribute('disabled');
+                    UI.btnStart.style.display = 'block'; // FIX: Hiện lại nút Bắt đầu thi
+                    UI.btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
+                    if (roomData.examId) UI.btnStart.removeAttribute('disabled');
+                    else UI.btnStart.setAttribute('disabled', 'true');
+                }
                 } else {
                     UI.btnStart.style.display = 'none';
                     UI.waitingText.style.display = 'block';
