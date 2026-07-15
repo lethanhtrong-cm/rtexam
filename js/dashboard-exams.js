@@ -450,10 +450,8 @@ function renderExams() {
                 </button>
             `;
 
-            // Khai báo style dùng chung cho các nhãn pill
             const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
 
-            // Đưa nhãn Kỹ Thuật lên phần Header (nằm giữa)
             const headerHtml = `
                 <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
@@ -475,7 +473,6 @@ function renderExams() {
             if (exam.level === 'Dễ') { levelColor = '#059669'; levelIcon = 'fa-arrow-trend-up'; } 
             else if (exam.level === 'Khó') { levelColor = '#dc2626'; levelIcon = 'fa-fire'; }
 
-            // Chuyển đổi timestamp
             let datePillHtml = "";
             if (exam.createdAt > 0) {
                 const dateObj = new Date(exam.createdAt);
@@ -639,9 +636,9 @@ window.goToReview = function(resultId) {
     safeRedirect(`quiz.html?resultId=${resultId}`); 
 };
 
-// Hàm chuyển hướng sang trang thi với mode flashcard
+// Hàm chuyển hướng sang trang thi mở tab mới với mode flashcard
 window.goToFlashcard = function(examId) {
-    safeRedirect(`quiz.html?examId=${examId}&mode=flashcard`);
+    window.open(`quiz.html?examId=${examId}&mode=flashcard`, '_blank');
 };
 
 window.goToUpgrade = function() {
