@@ -485,8 +485,6 @@ function renderExams() {
                 datePillHtml = `<span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-calendar-days" style="font-size: 0.7rem;"></i> ${dd}/${mm}/${yyyy} </span>`;
             }
 
-            // Dàn đều 4 nhãn còn lại trên cùng 1 hàng bằng justify-content: space-between
-            // Tự động rút gọn chữ "Trung bình" thành "T.Bình" để chống tràn layout
             const mergedTagsHtml = `
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px;">
                     <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level === 'Trung bình' ? 'T.Bình' : exam.level} </span>
@@ -520,16 +518,21 @@ function renderExams() {
                         </div>
                     </div>
                     
-                    <div style="display: flex; gap: 8px; width: 100%;">
-                        <button onclick="goToReview('${resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                            <i class="fa-solid fa-eye"></i> Xem lại
+                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+                        <button onclick="goToFlashcard('${exam.id}')" style="flex: 1; min-width: 100%; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 5px;">
+                            <i class="fa-solid fa-bolt"></i> Ôn Flashcard AI
                         </button>
-                        <button onclick="goToQuiz('${exam.id}')" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                            <i class="fas fa-redo"></i> Thi lại
-                        </button>
-                        <button onclick="openShareModal('${exam.id}')" style="width: 44px; flex-shrink: 0; background: #e0e7ff; color: #3730a3; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s;" title="Chia sẻ">
-                            <i class="fa-solid fa-share-nodes"></i>
-                        </button>
+                        <div style="display: flex; gap: 8px; width: 100%;">
+                            <button onclick="goToReview('${resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                <i class="fa-solid fa-eye"></i> Xem lại
+                            </button>
+                            <button onclick="goToQuiz('${exam.id}')" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                <i class="fas fa-redo"></i> Thi lại
+                            </button>
+                            <button onclick="openShareModal('${exam.id}')" style="width: 44px; flex-shrink: 0; background: #e0e7ff; color: #3730a3; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s;" title="Chia sẻ">
+                                <i class="fa-solid fa-share-nodes"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
             } else {
@@ -545,7 +548,6 @@ function renderExams() {
                 `;
             }
             
-            // Xây dựng nút Xóa (chỉ hiển thị trên giao diện của đề AI)
             const hideBtnHtml = exam.technique === 'AI Tự Động' 
                 ? `<button class="btn-hide-exam" onclick="hideExam(event, '${exam.id}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` 
                 : '';
@@ -637,6 +639,11 @@ window.goToReview = function(resultId) {
     safeRedirect(`quiz.html?resultId=${resultId}`); 
 };
 
+// Hàm chuyển hướng sang trang thi với mode flashcard
+window.goToFlashcard = function(examId) {
+    safeRedirect(`quiz.html?examId=${examId}&mode=flashcard`);
+};
+
 window.goToUpgrade = function() {
     document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -646,7 +653,6 @@ window.goToUpgrade = function() {
     if(title) title.textContent = "Nâng Cấp Tài Khoản Pro";
 };
 
-// Hàm xử lý việc ẩn đề AI khỏi danh sách (Chỉ ẩn tại phía người dùng)
 window.hideExam = async function(event, examId) {
     event.stopPropagation();
     if (!auth.currentUser || !currentUserData) {
@@ -663,7 +669,6 @@ window.hideExam = async function(event, examId) {
         if (!currentUserData.hiddenExams) currentUserData.hiddenExams = [];
         currentUserData.hiddenExams.push(examId);
         
-        // Loại bỏ đề thi khỏi biến allExamsData và render lại lập tức
         allExamsData = allExamsData.filter(e => e.id !== examId);
         renderExams();
     } catch (error) {
