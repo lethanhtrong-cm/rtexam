@@ -1,5 +1,5 @@
 import { db } from './admin-core.js';
-import { collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, query, where, getDocs, doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentExamId = urlParams.get('examId');
@@ -92,6 +92,7 @@ function renderEditor() {
     });
 }
 
+// XỬ LÝ LƯU VÀ GHI LOG LỊCH SỬ
 document.getElementById('btn-save-all').addEventListener('click', async () => {
     const btn = document.getElementById('btn-save-all');
     btn.disabled = true;
@@ -99,8 +100,10 @@ document.getElementById('btn-save-all').addEventListener('click', async () => {
 
     const cards = document.querySelectorAll('.question-card');
     const updatePromises = [];
+    const changesLog = []; // Lưu trữ những gì đã thay đổi
+    const newLoadedState = []; // Lưu trạng thái mới để cập nhật bộ nhớ tạm
 
-    cards.forEach(card => {
+    cards.forEach((card, index) => {
         const docId = card.dataset.docId;
         const text = card.querySelector('.q-text').value.trim();
         const explanation = card.querySelector('.q-explain').value.trim();
@@ -112,6 +115,30 @@ document.getElementById('btn-save-all').addEventListener('click', async () => {
         const radios = card.querySelectorAll(`input[name="correct_${docId}"]`);
         radios.forEach(r => { if(r.checked) correctAnswer = parseInt(r.value); });
 
+        // SO SÁNH (DIFFING) ĐỂ TẠO LỊCH SỬ
+        const oldQ = loadedQuestions.find(q => q.id === docId);
+        if (oldQ) {
+            let qChanges = [];
+            if (oldQ.text !== text) qChanges.push("Nội dung câu hỏi");
+            if (oldQ.explanation !== explanation) qChanges.push("Giải thích đáp án");
+            
+            if (oldQ.correctAnswer !== correctAnswer) {
+                const mapAns = ['A', 'B', 'C', 'D'];
+                qChanges.push(`Đáp án đúng (Từ ${mapAns[oldQ.correctAnswer]} thành ${mapAns[correctAnswer]})`);
+            }
+            
+            let optChanged = false;
+            for(let i = 0; i < 4; i++) {
+                if ((oldQ.options?.[i] || "") !== options[i]) optChanged = true;
+            }
+            if (optChanged) qChanges.push("Chỉnh sửa lựa chọn (A, B, C, D)");
+
+            if (qChanges.length > 0) {
+                changesLog.push(`<strong>Câu ${index + 1}:</strong> Sửa ${qChanges.join(", ")}`);
+            }
+        }
+
+        // Cập nhật lên Firestore
         const docRef = doc(db, "questions", docId);
         updatePromises.push(updateDoc(docRef, {
             text: text,
@@ -119,10 +146,26 @@ document.getElementById('btn-save-all').addEventListener('click', async () => {
             correctAnswer: correctAnswer,
             explanation: explanation
         }));
+
+        // Ghi nhận state mới vào bộ nhớ tạm
+        newLoadedState.push({ id: docId, text, explanation, options, correctAnswer });
     });
 
     try {
         await Promise.all(updatePromises);
+        
+        // GHI LỊCH SỬ NẾU CÓ THAY ĐỔI
+        if (changesLog.length > 0) {
+            await addDoc(collection(db, "exam_history"), {
+                examId: currentExamId,
+                timestamp: Date.now(),
+                changes: changesLog
+            });
+        }
+
+        // Cập nhật lại bộ nhớ gốc bằng data mới để lần so sánh sau chính xác
+        loadedQuestions = newLoadedState;
+        
         showToast(`Đã lưu thành công ${updatePromises.length} câu hỏi!`);
     } catch (error) {
         console.error("Lỗi lưu:", error);
@@ -131,6 +174,56 @@ document.getElementById('btn-save-all').addEventListener('click', async () => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu Tất Cả Thay Đổi';
     }
+});
+
+// LOGIC XEM LỊCH SỬ
+document.getElementById('btn-view-history').addEventListener('click', async () => {
+    const modal = document.getElementById('history-modal');
+    const container = document.getElementById('history-list-container');
+    modal.style.display = 'block';
+    container.innerHTML = '<div style="padding: 30px; text-align: center; color: #64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải lịch sử...</div>';
+
+    try {
+        const historyRef = collection(db, "exam_history");
+        const q = query(historyRef, where("examId", "==", currentExamId));
+        const snap = await getDocs(q);
+        
+        let historyData = [];
+        snap.forEach(doc => { historyData.push(doc.data()); });
+
+        // Sort tại Client để tránh lỗi missing Index trên Firebase
+        historyData.sort((a, b) => b.timestamp - a.timestamp);
+
+        if (historyData.length === 0) {
+            container.innerHTML = '<div style="padding: 40px; text-align: center; color: #94a3b8; font-style: italic;">Đề thi này chưa có lịch sử chỉnh sửa nào.</div>';
+            return;
+        }
+
+        let html = '';
+        historyData.forEach((item, index) => {
+            const timeStr = new Date(item.timestamp).toLocaleString('vi-VN');
+            const changesListHtml = item.changes.map(c => `<li>${c}</li>`).join('');
+            
+            html += `
+                <div class="history-item">
+                    <div class="history-time"><i class="fa-regular fa-clock"></i> Lần sửa thứ ${historyData.length - index} - ${timeStr}</div>
+                    <div class="history-changes">
+                        <ul>${changesListHtml}</ul>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+
+    } catch (error) {
+        console.error("Lỗi lấy lịch sử:", error);
+        container.innerHTML = '<div style="padding: 30px; text-align: center; color: #ef4444;">❌ Lỗi khi tải dữ liệu lịch sử.</div>';
+    }
+});
+
+document.getElementById('close-history-modal').addEventListener('click', () => {
+    document.getElementById('history-modal').style.display = 'none';
 });
 
 // Khởi chạy
