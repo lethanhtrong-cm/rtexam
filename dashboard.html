@@ -35,6 +35,37 @@
 
     <div id="modals-container"></div>
 
+    <div id="room-options-modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+        <div style="background-color: #ffffff; width: 90%; max-width: 420px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden; transform: scale(0.95); transition: transform 0.2s;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #0f172a;"><i class="fa-solid fa-users-viewfinder" style="color: #084298;"></i> Vào phòng thi</h3>
+                <i class="fa-solid fa-xmark" id="btnCloseRoomModal" style="cursor: pointer; color: #64748b; font-size: 1.4rem; transition: 0.2s;"></i>
+            </div>
+            
+            <div style="padding: 24px;">
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; font-size: 0.95rem; font-weight: 600; color: #334155; margin-bottom: 8px;">Tham gia phòng đã có</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="inputJoinRoomCode" placeholder="Nhập mã phòng (VD: X8K9)" style="flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; text-transform: uppercase; outline: none;">
+                        <button id="btnSubmitJoinRoom" style="background-color: #10b981; color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-right-to-bracket"></i> Vào</button>
+                    </div>
+                    <small style="color: #ef4444; font-size: 0.8rem; display: none; margin-top: 6px;" id="errorJoinRoom">Không tìm thấy mã phòng!</small>
+                </div>
+
+                <div style="text-align: center; margin: 16px 0; position: relative;">
+                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0;">
+                    <span style="background: white; padding: 0 10px; color: #94a3b8; font-size: 0.85rem; position: relative; top: -10px; font-weight: 600;">HOẶC</span>
+                </div>
+
+                <div>
+                    <button id="btnSubmitCreateNewRoom" style="width: 100%; background-color: #084298; color: white; border: none; padding: 14px 20px; border-radius: 8px; font-weight: 600; font-size: 1.05rem; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px; box-shadow: 0 4px 6px rgba(8, 66, 152, 0.2);">
+                        <i class="fa-solid fa-plus"></i> Tạo phòng thi mới (Chủ phòng)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="user-admin-reply-modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px);">
         <div style="background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
             <h3 style="margin-top: 0; color: #10b981; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
