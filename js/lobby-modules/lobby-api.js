@@ -9,29 +9,23 @@ export async function loadExamsToDropdown() {
         const snapshot = await getDocs(query(examsRef));
         
         let standardExams = '';
-        let aiExams = '';
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
             const examId = docSnap.id;
+            
+            // FIX: Bỏ qua (ẩn) toàn bộ các đề thi do AI tạo
+            if (data.technique === "AI Tự Động") return;
+
             const tech = data.technique || 'Tổng hợp';
             const title = data.title || examId;
-            const optionHtml = `<option value="${examId}">[${tech}] ${title}</option>`;
-
-            if (data.technique === "AI Tự Động") {
-                aiExams += optionHtml;
-            } else {
-                standardExams += optionHtml;
-            }
+            standardExams += `<option value="${examId}">[${tech}] ${title}</option>`;
         });
 
         UI.selectExamInLobby.innerHTML = `
             <option value="">-- Chọn bộ đề để thi --</option>
-            <optgroup label="📋 ĐỀ THI CÓ SẴN TRÊN HỆ THỐNG">
+            <optgroup label="📋 ĐỀ THI THỦ CÔNG TRÊN HỆ THỐNG">
                 ${standardExams || '<option disabled>Không có đề sẵn trong hệ thống</option>'}
-            </optgroup>
-            <optgroup label="✨ ĐỀ THI DO AI TỰ ĐỘNG SOẠN">
-                ${aiExams || '<option disabled>Chưa có đề AI nào được tạo</option'}
             </optgroup>
         `;
         state.isExamsLoaded = true;
