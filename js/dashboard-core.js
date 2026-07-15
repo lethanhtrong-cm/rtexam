@@ -92,23 +92,50 @@ document.addEventListener('ComponentsLoaded', () => {
         const btnCreateRoom = oldBtnCreateRoom.cloneNode(true);
         oldBtnCreateRoom.parentNode.replaceChild(btnCreateRoom, oldBtnCreateRoom);
 
-        btnCreateRoom.addEventListener('click', async (e) => {
+        // Các biến DOM của Modal
+        const roomModal = document.getElementById('room-options-modal');
+        const btnCloseModal = document.getElementById('btnCloseRoomModal');
+        const btnCreateNew = document.getElementById('btnSubmitCreateNewRoom');
+        const btnJoin = document.getElementById('btnSubmitJoinRoom');
+        const inputJoin = document.getElementById('inputJoinRoomCode');
+        const errorMsg = document.getElementById('errorJoinRoom');
+
+        // Mở Modal thay vì tạo phòng ngay
+        btnCreateRoom.addEventListener('click', (e) => {
             e.preventDefault(); 
             e.stopPropagation(); 
-            e.stopImmediatePropagation(); 
-
+            
             if (!auth.currentUser) {
-                alert("Vui lòng đăng nhập để tạo phòng thi.");
+                alert("Vui lòng đăng nhập để sử dụng tính năng phòng thi.");
                 return;
             }
+            
+            inputJoin.value = '';
+            errorMsg.style.display = 'none';
+            roomModal.style.display = 'flex';
+            
+            // Hiệu ứng Pop-in
+            roomModal.querySelector('div').style.transform = 'scale(1)';
+        });
 
-            const originalText = btnCreateRoom.innerHTML;
-            btnCreateRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
-            btnCreateRoom.style.pointerEvents = 'none'; 
+        // Đóng Modal
+        const closeModal = () => {
+            roomModal.querySelector('div').style.transform = 'scale(0.95)';
+            setTimeout(() => roomModal.style.display = 'none', 150);
+        };
+        btnCloseModal.addEventListener('click', closeModal);
+        roomModal.addEventListener('click', (e) => {
+            if (e.target === roomModal) closeModal();
+        });
+
+        // Xử lý nút: TẠO PHÒNG MỚI
+        btnCreateNew.addEventListener('click', async () => {
+            const originalText = btnCreateNew.innerHTML;
+            btnCreateNew.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
+            btnCreateNew.disabled = true;
 
             const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
             const targetUrl = `lobby.html?roomId=${roomId}`;
-
             const newTab = window.open('about:blank', '_blank');
 
             try {
@@ -123,20 +150,56 @@ document.addEventListener('ComponentsLoaded', () => {
                     createdAt: serverTimestamp()
                 });
 
-                if (newTab) {
-                    newTab.location.href = targetUrl;
-                }
-                
-                btnCreateRoom.innerHTML = originalText;
-                btnCreateRoom.style.pointerEvents = 'auto';
+                if (newTab) newTab.location.href = targetUrl;
+                closeModal();
                 
             } catch (error) {
                 console.error("Lỗi Firestore:", error);
                 if (newTab) newTab.close();
-                alert("Không thể tạo phòng! Vui lòng kiểm tra lại quyền ghi Database hoặc mạng.");
-                btnCreateRoom.innerHTML = originalText;
-                btnCreateRoom.style.pointerEvents = 'auto';
+                alert("Không thể tạo phòng! Vui lòng kiểm tra mạng.");
+            } finally {
+                btnCreateNew.innerHTML = originalText;
+                btnCreateNew.disabled = false;
             }
+        });
+
+        // Xử lý nút: THAM GIA PHÒNG
+        btnJoin.addEventListener('click', async () => {
+            const rawCode = inputJoin.value.trim().toUpperCase();
+            if (!rawCode) {
+                errorMsg.textContent = "Vui lòng nhập mã phòng!";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            const originalText = btnJoin.innerHTML;
+            btnJoin.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+            btnJoin.disabled = true;
+            errorMsg.style.display = 'none';
+
+            try {
+                const roomRef = doc(db, 'rooms', rawCode);
+                const roomSnap = await getDoc(roomRef);
+
+                if (roomSnap.exists()) {
+                    window.open(`lobby.html?roomId=${rawCode}`, '_blank');
+                    closeModal();
+                } else {
+                    errorMsg.textContent = "Mã phòng không tồn tại hoặc đã bị đóng!";
+                    errorMsg.style.display = 'block';
+                }
+            } catch (error) {
+                errorMsg.textContent = "Lỗi kết nối máy chủ!";
+                errorMsg.style.display = 'block';
+            } finally {
+                btnJoin.innerHTML = originalText;
+                btnJoin.disabled = false;
+            }
+        });
+
+        // Hỗ trợ Enter khi nhập mã phòng
+        inputJoin.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') btnJoin.click();
         });
     }
 });
