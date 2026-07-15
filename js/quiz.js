@@ -665,7 +665,7 @@ document.getElementById('btn-modal-retry').onclick = () => { closeModal(); initE
 document.getElementById('btn-modal-explain').onclick = () => { closeModal(); openReviewModal(finalScore, finalCorrectCount, finalTotal); };
 
 // =========================================================================
-// LOGIC CHỨC NĂNG AI FLASHCARD TÍCH HỢP
+// LOGIC CHỨC NĂNG AI FLASHCARD TÍCH HỢP (CÓ CACHING FIRESTORE)
 // =========================================================================
 let aiFlashcardsData = [];
 let currentFlashcardIndex = 0;
@@ -680,12 +680,14 @@ const fcProgressText = document.getElementById('fc-progress-text');
 const btnFcPrev = document.getElementById('btn-fc-prev');
 const btnFcNext = document.getElementById('btn-fc-next');
 
-// Mở Modal và Gọi API AI
+// Mở Modal và Gọi API AI (có kiểm tra Caching)
 document.getElementById('btn-create-flashcard').addEventListener('click', async () => {
-    document.getElementById('result-modal').classList.remove('active'); // Đóng bảng điểm
+    document.getElementById('result-modal').classList.remove('active'); 
     fcModal.classList.add('active');
     
-    // Nếu đã tạo sẵn rồi thì không gọi API lại để tiết kiệm chi phí
+    const examCodeDisplay = document.getElementById('fc-exam-code-display');
+    if (examCodeDisplay) examCodeDisplay.innerText = "Mã đề: " + currentExamId;
+    
     if (aiFlashcardsData.length > 0) {
         renderCurrentFlashcard();
         fcLoading.style.display = 'none';
@@ -696,19 +698,37 @@ document.getElementById('btn-create-flashcard').addEventListener('click', async 
     fcLoading.style.display = 'block';
     fcWorkspace.style.display = 'none';
 
-    // Tạo nội dung gửi cho AI (Câu hỏi + Đáp án đúng + Giải thích)
-    let promptString = questions.map((q, idx) => {
-        const correctOpt = q.options ? q.options[q.correctAnswer] : '';
-        return `[Câu ${idx + 1}] Hỏi: ${q.text} | Đáp án đúng: ${correctOpt} | Giải thích: ${q.explanation || 'Không có'}`;
-    }).join('\n\n');
-
     try {
+        // 1. KIỂM TRA BỘ NHỚ ĐỆM (CACHE) TỪ FIRESTORE
+        const flashcardRef = doc(db, "flashcards", currentExamId);
+        const flashcardSnap = await getDoc(flashcardRef);
+
+        if (flashcardSnap.exists()) {
+            console.log("Tìm thấy Flashcard trong Cache!");
+            aiFlashcardsData = flashcardSnap.data().cards;
+            
+            if (aiFlashcardsData && aiFlashcardsData.length > 0) {
+                currentFlashcardIndex = 0;
+                renderCurrentFlashcard();
+                fcLoading.style.display = 'none';
+                fcWorkspace.style.display = 'block';
+                return;
+            }
+        }
+
+        // 2. NẾU CHƯA CÓ TRONG CACHE -> GỌI API GEMINI
+        console.log("Đang tổng hợp Flashcard mới...");
+        let promptString = questions.map((q, idx) => {
+            const correctOpt = q.options ? q.options[q.correctAnswer] : '';
+            return `[Câu ${idx + 1}] Hỏi: ${q.text} | Đáp án đúng: ${correctOpt} | Giải thích: ${q.explanation || 'Không có'}`;
+        }).join('\n\n');
+
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 promptText: promptString,
-                action: 'flashcard' // Tham số kích hoạt Prompt Flashcard
+                action: 'flashcard' 
             })
         });
 
@@ -718,6 +738,14 @@ document.getElementById('btn-create-flashcard').addEventListener('click', async 
         if (!Array.isArray(aiFlashcardsData) || aiFlashcardsData.length === 0) {
             throw new Error("AI không thể tạo Flashcard từ đề thi này.");
         }
+
+        // 3. LƯU KẾT QUẢ VÀO FIRESTORE ĐỂ NHỮNG NGƯỜI SAU DÙNG LẠI
+        await setDoc(flashcardRef, {
+            examId: currentExamId,
+            cards: aiFlashcardsData,
+            createdBy: currentUser ? currentUser.email : "system",
+            createdAt: serverTimestamp()
+        });
 
         currentFlashcardIndex = 0;
         renderCurrentFlashcard();
@@ -729,7 +757,7 @@ document.getElementById('btn-create-flashcard').addEventListener('click', async 
         console.error("Flashcard Error:", error);
         fcModal.classList.remove('active');
         if (currentMode !== 'flashcard') {
-            document.getElementById('result-modal').classList.add('active'); // Bật lại modal điểm nếu không ở chế độ ôn tập
+            document.getElementById('result-modal').classList.add('active'); 
         }
         showToast("Lỗi khi tạo Flashcard: " + error.message);
     }
@@ -752,7 +780,7 @@ function renderCurrentFlashcard() {
         btnFcNext.disabled = currentFlashcardIndex === aiFlashcardsData.length - 1;
         btnFcPrev.style.opacity = btnFcPrev.disabled ? "0.3" : "1";
         btnFcNext.style.opacity = btnFcNext.disabled ? "0.3" : "1";
-    }, 150); // Delay nhẹ để khớp hiệu ứng lật (nếu có)
+    }, 150); // Delay nhẹ để khớp hiệu ứng lật
 }
 
 fcScene.addEventListener('click', () => {
@@ -776,9 +804,10 @@ btnFcPrev.addEventListener('click', () => {
 document.getElementById('close-flashcard-btn').addEventListener('click', () => {
     fcModal.classList.remove('active');
     if (currentMode === 'flashcard') {
-        returnToLobbyOrDashboard(); // Bấm thoát là quay về Dashboard luôn
+        window.close(); 
+        returnToLobbyOrDashboard(); 
     } else {
-        document.getElementById('result-modal').classList.add('active'); // Bật lại bảng điểm khi đóng nếu ở mode thi
+        document.getElementById('result-modal').classList.add('active'); 
     }
 });
 
