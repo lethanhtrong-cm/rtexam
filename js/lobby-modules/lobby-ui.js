@@ -358,18 +358,17 @@ export function renderUI() {
 
       let hostBadgeHTML = '';
         if (pData.uid === state.currentHostUid) {
-            hostBadgeHTML = `<div style="margin-top: 10px; background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.65rem; font-weight: 900; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3); white-space: nowrap;"><i class="fa-solid fa-crown"></i> CHỦ PHÒNG</div>`;
+            // FIX: Dùng absolute và bottom âm để kéo nhãn đè lên viền dưới cùng của thẻ
+            hostBadgeHTML = `<div style="position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.7rem; font-weight: 900; padding: 4px 14px; border-radius: 12px; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.4); z-index: 10; white-space: nowrap;"><i class="fa-solid fa-crown"></i> CHỦ PHÒNG</div>`;
         }
 
         card.innerHTML = `
             ${kickBtnHTML}
-            <img src="${pData.photoURL}" alt="avatar" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid #3b82f6; padding: 2px; object-fit: cover; margin-bottom: 4px;">
-            <div style="font-weight: 600; color: #1f2937; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.9rem;" title="${pData.displayName}">${pData.displayName}</div>
+            <img src="${pData.photoURL}" alt="avatar" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid #3b82f6; padding: 2px; object-fit: cover; margin-bottom: 12px;">
+            <div style="font-weight: 600; color: #1f2937; margin-top: 4px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.9rem;" title="${pData.displayName}">${pData.displayName}</div>
             ${miniBadge}
             ${hostBadgeHTML}
         `;
-        UI.participantsGrid.appendChild(card);
-    });
 
     document.querySelectorAll('.btn-kick').forEach(btn => {
         btn.addEventListener('click', async (e) => {
