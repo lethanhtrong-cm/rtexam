@@ -105,15 +105,58 @@ export function enhanceLeaderboardUI() {
     const lbHeader = UI.state2Leaderboard.querySelector('.leaderboard-header');
     lbHeader.parentNode.insertBefore(wrapper, lbHeader.nextSibling);
 
+    // BƠM NÚT XEM LẠI BÀI VÀ SẮP XẾP LẠI GIAO DIỆN ACTION CHO ĐẸP MẮT
     const lbActions = document.querySelector('.lb-actions');
     if (lbActions && !document.getElementById('btnReviewExam')) {
+        
+        // Bơm CSS ép cụm nút thành hàng ngang, căn giữa, thêm gradient và hiệu ứng hover
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .lb-actions {
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                flex-wrap: wrap !important;
+                gap: 20px !important;
+                margin-top: 30px !important;
+                padding-top: 25px !important;
+                border-top: 2px dashed #e2e8f0 !important;
+            }
+            .lb-actions button {
+                margin: 0 !important;
+                width: auto !important;
+                min-width: 220px !important;
+                padding: 14px 24px !important;
+                border-radius: 12px !important;
+                font-weight: 800 !important;
+                font-size: 0.95rem !important;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+                transition: all 0.2s ease !important;
+                border: none !important;
+                cursor: pointer !important;
+                text-align: center !important;
+                text-transform: uppercase !important;
+            }
+            .lb-actions button i {
+                margin-right: 8px !important;
+                font-size: 1.1rem !important;
+            }
+            .lb-actions button:hover {
+                transform: translateY(-4px) !important;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+            }
+            #btnEndRoom { background: linear-gradient(135deg, #ef4444, #dc2626) !important; color: white !important; }
+            #btnReviewExam { background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important; color: white !important; }
+            #btnBackToLobby { background: linear-gradient(135deg, #64748b, #475569) !important; color: white !important; }
+        `;
+        document.head.appendChild(style);
+
         const btnReview = document.createElement('button');
         btnReview.id = 'btnReviewExam';
         btnReview.className = 'btn-secondary';
-        btnReview.style.background = '#6f42c1';
-        btnReview.style.marginBottom = '5px'; 
         btnReview.innerHTML = '<i class="fa-solid fa-eye"></i> XEM LẠI BÀI LÀM';
-        lbActions.insertBefore(btnReview, UI.btnBackToLobby);
+        lbActions.insertBefore(btnReview, document.getElementById('btnBackToLobby'));
+        
         btnReview.addEventListener('click', openReviewModal);
     }
 
