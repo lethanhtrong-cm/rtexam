@@ -59,13 +59,11 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; transition: background-color 0.3s, color 0.3s; }
         
-        /* LỚP CSS CHỐNG BÔI ĐEN */
         body.no-select { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }
         
         .quiz-header { background-color: var(--bg-header); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 100; transition: background-color 0.3s; }
         .quiz-title { font-size: 20px; font-weight: bold; color: var(--text-main); }
         
-        /* CẢNH BÁO THỜI GIAN ĐÃ SỬA MÀU TRUNG TÍNH */
         .timer-container { display: flex; align-items: center; gap: 10px; background-color: var(--timer-bg); color: var(--timer-text); padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 18px; transition: all 0.3s; }
         @keyframes pulse-red { 0% { background-color: #fee2e2; box-shadow: 0 0 0 rgba(239,68,68,0); } 50% { background-color: #fca5a5; box-shadow: 0 0 15px rgba(239,68,68,0.5); } 100% { background-color: #fee2e2; box-shadow: 0 0 0 rgba(239,68,68,0); } }
         .timer-container.timer-warning { animation: pulse-red 1s infinite; color: #991b1b; }
@@ -84,7 +82,6 @@
         .question-number-badge { display: inline-block; background-color: #e0e7ff; color: #4f46e5; padding: 5px 12px; border-radius: 6px; font-weight: bold; margin-bottom: 15px; font-size: 14px; }
         body.dark-mode .question-number-badge { background-color: #3730a3; color: #e0e7ff; }
 
-        /* ĐÃ TINH CHỈNH MARGIN VÀ GAP */
         .question-text { font-size: 20px; line-height: 1.6; margin-bottom: 40px; color: var(--text-main); }
         .options-list { display: flex; flex-direction: column; gap: 10px; }
         
@@ -122,7 +119,6 @@
         .palette-btn.flagged::after { content: '\f024'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; top: -5px; right: -5px; color: #eab308; font-size: 12px; background: var(--bg-panel); border-radius: 50%; width: 16px; height: 16px; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.2);}
         .palette-btn.flagged.answered::after { background: #3b82f6;}
 
-        /* SKELETON LOADING DÀNH CHO DARK MODE */
         .skeleton { background: linear-gradient(110deg, var(--border-color) 8%, var(--border-heavy) 18%, var(--border-color) 33%); border-radius: 5px; background-size: 200% 100%; animation: 1.5s shine linear infinite; }
         @keyframes shine { to { background-position-x: -200%; } }
         .skel-badge { width: 60px; height: 25px; margin-bottom: 15px; }
@@ -150,7 +146,6 @@
             .btn-submit { width: 100%;}
         }
 
-        /* MODALS */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(3px); }
         .modal-overlay.active { display: flex; }
         .modal-content { background-color: var(--bg-panel); padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 450px; text-align: center; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto; color: var(--text-main); border: 1px solid var(--border-color);}
@@ -184,8 +179,21 @@
 
         #toast-message { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background-color: var(--text-main); color: var(--bg-panel); padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); opacity: 0; transition: all 0.3s ease; z-index: 9999; font-weight: 500; white-space: nowrap;}
         
-        /* Tối ưu riêng màu chữ trong Review Modal */
         #reviewContentArea { color: var(--text-main); }
+
+        /* ================= CSS CHO FLASHCARD 3D ================= */
+        .flashcard-scene { width: 100%; height: 350px; perspective: 1000px; margin: 20px 0; cursor: pointer; }
+        .flashcard-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flashcard-scene.is-flipped .flashcard-inner { transform: rotateY(180deg); }
+        .flashcard-face { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 2px solid var(--border-color); }
+        .flashcard-front { background: var(--bg-panel); color: var(--text-main); }
+        .flashcard-back { background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%); color: white; transform: rotateY(180deg); border: none;}
+        .flashcard-text { font-size: 1.2rem; font-weight: 600; line-height: 1.5; }
+        .flashcard-hint { font-size: 0.85rem; opacity: 0.7; margin-top: auto; padding-top: 15px;}
+        .fc-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        .btn-fc-nav { background: var(--bg-body); border: 1px solid var(--border-heavy); color: var(--text-main); width: 45px; height: 45px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+        .btn-fc-nav:hover { background: var(--border-color); }
+        .fc-progress { font-weight: bold; color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -196,15 +204,15 @@
         
         <div class="header-actions">
             <button id="btn-theme-toggle" class="btn-header btn-theme" title="Chuyển chế độ Giao diện"><i class="fa-solid fa-moon"></i></button>
-            
             <button id="btn-back-dashboard" class="btn-header" title="Quay về">Về phòng chờ</button>
             <button id="btn-logout" class="btn-header">Đăng xuất</button>
         </div>
     </header>
-<!-- CHÈN VÀO GIỮA </header> VÀ <main> -->
+
     <div style="height: 4px; background: var(--border-color); width: 100%; position: sticky; top: 72px; z-index: 99;">
         <div id="progress-bar" style="height: 100%; width: 0%; background: #10b981; transition: width 0.3s ease-out;"></div>
     </div>
+    
     <main class="quiz-body">
         <section class="left-panel">
             <div class="question-content">
@@ -296,9 +304,47 @@
             </div>
 
             <div class="modal-actions">
+                <!-- BỔ SUNG NÚT FLASHCARD -->
+                <button class="btn-modal" id="btn-create-flashcard" style="background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border: none; font-size: 1.05rem;"><i class="fa-solid fa-bolt"></i> Ôn tập bằng AI Flashcard</button>
                 <button class="btn-modal success" id="btn-modal-explain">Xem lại bài làm</button>
                 <button class="btn-modal primary" id="btn-modal-retry">Làm lại đề này</button>
                 <button class="btn-modal outline" id="btn-modal-dashboard-modal">Về phòng chờ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GIAO DIỆN FLASHCARD -->
+    <div id="flashcard-modal" class="modal-overlay" style="z-index: 10010;">
+        <div class="modal-content" style="max-width: 600px; padding: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="color: #7c3aed; font-weight: 800; margin: 0;"><i class="fa-solid fa-layer-group"></i> AI FLASHCARD</h3>
+                <button id="close-flashcard-btn" style="background: transparent; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="flashcard-loading" style="display: none; padding: 50px 0;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 3rem; color: #8b5cf6; margin-bottom: 20px;"></i>
+                <p style="color: var(--text-muted);">AI đang chắt lọc kiến thức quan trọng... Vui lòng chờ!</p>
+            </div>
+
+            <div id="flashcard-workspace" style="display: none;">
+                <div class="flashcard-scene" id="fc-scene">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-face flashcard-front">
+                            <div class="flashcard-text" id="fc-front-text">Mặt trước</div>
+                            <div class="flashcard-hint"><i class="fa-solid fa-hand-pointer"></i> Nhấp để lật thẻ</div>
+                        </div>
+                        <div class="flashcard-face flashcard-back">
+                            <div class="flashcard-text" id="fc-back-text">Mặt sau</div>
+                            <div class="flashcard-hint"><i class="fa-solid fa-hand-pointer"></i> Nhấp để quay lại</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="fc-controls">
+                    <button class="btn-fc-nav" id="btn-fc-prev"><i class="fa-solid fa-arrow-left"></i></button>
+                    <span class="fc-progress" id="fc-progress-text">1 / 10</span>
+                    <button class="btn-fc-nav" id="btn-fc-next"><i class="fa-solid fa-arrow-right"></i></button>
+                </div>
             </div>
         </div>
     </div>
@@ -310,7 +356,7 @@
                 <button id="closeReviewModalBtn" style="background: var(--bg-body); border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="reviewContentArea" style="padding: 20px; overflow-y: auto; text-align: left; flex: 1; scroll-behavior: smooth;">
-                </div>
+            </div>
         </div>
     </div>
 
