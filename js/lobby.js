@@ -325,6 +325,7 @@ async function initLobby() {
             const roomData = docSnap.data();
             state.currentRoomStatus = roomData.status;
             state.currentHostEmail = roomData.hostEmail;
+            state.currentHostUid = roomData.hostUid; // Lấy UID chủ phòng từ Firebase
             state.currentActiveExamId = roomData.examId;
             if (!state.viewingHistoryMode) state.currentViewedExamId = state.currentActiveExamId;
 
