@@ -5,10 +5,21 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentExamId = urlParams.get('examId');
 
 let loadedQuestions = [];
+let quillInstances = {}; // Lưu trữ instance của Quill Editor
+let autoSaveInterval = null;
+
+// Cấu hình thanh công cụ Quill (Hỗ trợ hình ảnh & công thức)
+const quillToolbarOptions = [
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    [{ 'script': 'sub'}, { 'script': 'super' }],
+    ['image', 'formula'],
+    ['clean']
+];
 
 function showToast(msg, isError = false) {
     const toast = document.getElementById('toast');
-    toast.innerText = msg;
+    toast.innerHTML = isError ? `<i class="fa-solid fa-triangle-exclamation"></i> ${msg}` : `<i class="fa-solid fa-check-circle"></i> ${msg}`;
     toast.style.background = isError ? '#ef4444' : '#10b981';
     toast.style.display = 'block';
     setTimeout(() => { toast.style.display = 'none'; }, 3000);
@@ -30,21 +41,48 @@ async function fetchQuestions() {
             loadedQuestions.push({ id: docSnap.id, ...docSnap.data() });
         });
 
+        // Hỗ trợ Order (Sắp xếp)
+        loadedQuestions.sort((a, b) => (a.order || 0) - (b.order || 0));
+
         if (loadedQuestions.length === 0) {
             document.getElementById('loading-spinner').innerHTML = 'Đề thi này chưa có câu hỏi nào.';
             return;
         }
 
-        renderEditor();
+        // Kiểm tra Draft trong LocalStorage
+        checkAndLoadDraft();
+
     } catch (error) {
         console.error("Lỗi:", error);
-        document.getElementById('loading-spinner').innerHTML = '❌ Lỗi kết nối CSDL.';
+        document.getElementById('loading-spinner').innerHTML = '❌ Lỗi kết nối Cơ sở dữ liệu.';
     }
+}
+
+function checkAndLoadDraft() {
+    const draftStr = localStorage.getItem(`draft_${currentExamId}`);
+    if (draftStr) {
+        try {
+            const draftObj = JSON.parse(draftStr);
+            // Nếu draft tồn tại, hỏi Admin có muốn khôi phục không
+            if (confirm(`Phát hiện bản nháp chưa lưu lúc ${new Date(draftObj.time).toLocaleTimeString('vi-VN')}. Bạn có muốn khôi phục tiếp tục chỉnh sửa không?`)) {
+                loadedQuestions = draftObj.data;
+                showToast("Đã khôi phục dữ liệu từ bản nháp nội bộ.");
+            } else {
+                localStorage.removeItem(`draft_${currentExamId}`);
+            }
+        } catch (e) {
+            console.error("Lỗi parse Draft", e);
+        }
+    }
+    
+    renderEditor();
+    initAutoSave();
 }
 
 function renderEditor() {
     const container = document.getElementById('editor-container');
     container.innerHTML = '';
+    quillInstances = {};
 
     loadedQuestions.forEach((q, index) => {
         const card = document.createElement('div');
@@ -56,132 +94,190 @@ function renderEditor() {
 
         card.innerHTML = `
             <div class="question-header">
-                <h3>Câu hỏi ${index + 1}</h3>
+                <h3><i class="fa-solid fa-grip-vertical drag-handle" title="Kéo để di chuyển"></i> Câu hỏi ${index + 1}</h3>
             </div>
             
             <div class="form-group">
-                <label>Nội dung câu hỏi:</label>
-                <textarea class="q-text" rows="3">${q.text || ""}</textarea>
+                <label>Nội dung câu hỏi (Hỗ trợ chèn ảnh, công thức):</label>
+                <div id="q-text-${q.id}">${q.text || ""}</div>
             </div>
 
             <div class="options-grid">
                 <div class="option-item ${correctAns === 0 ? 'correct' : ''}">
-                    <input type="radio" name="correct_${q.id}" value="0" ${correctAns === 0 ? 'checked' : ''}>
+                    <input type="radio" name="correct_${q.id}" value="0" ${correctAns === 0 ? 'checked' : ''} onclick="updateOptionHighlight(this)">
                     <strong>A.</strong> <input type="text" class="opt-text" data-index="0" value="${options[0] || ''}">
                 </div>
                 <div class="option-item ${correctAns === 1 ? 'correct' : ''}">
-                    <input type="radio" name="correct_${q.id}" value="1" ${correctAns === 1 ? 'checked' : ''}>
+                    <input type="radio" name="correct_${q.id}" value="1" ${correctAns === 1 ? 'checked' : ''} onclick="updateOptionHighlight(this)">
                     <strong>B.</strong> <input type="text" class="opt-text" data-index="1" value="${options[1] || ''}">
                 </div>
                 <div class="option-item ${correctAns === 2 ? 'correct' : ''}">
-                    <input type="radio" name="correct_${q.id}" value="2" ${correctAns === 2 ? 'checked' : ''}>
+                    <input type="radio" name="correct_${q.id}" value="2" ${correctAns === 2 ? 'checked' : ''} onclick="updateOptionHighlight(this)">
                     <strong>C.</strong> <input type="text" class="opt-text" data-index="2" value="${options[2] || ''}">
                 </div>
                 <div class="option-item ${correctAns === 3 ? 'correct' : ''}">
-                    <input type="radio" name="correct_${q.id}" value="3" ${correctAns === 3 ? 'checked' : ''}>
+                    <input type="radio" name="correct_${q.id}" value="3" ${correctAns === 3 ? 'checked' : ''} onclick="updateOptionHighlight(this)">
                     <strong>D.</strong> <input type="text" class="opt-text" data-index="3" value="${options[3] || ''}">
                 </div>
             </div>
 
             <div class="form-group">
-                <label>Giải thích đáp án (Không bắt buộc):</label>
-                <textarea class="q-explain" rows="2">${q.explanation || ""}</textarea>
+                <label>Giải thích đáp án (Tùy chọn):</label>
+                <div id="q-explain-${q.id}">${q.explanation || ""}</div>
             </div>
         `;
         container.appendChild(card);
+
+        // Khởi tạo Quill Editor cho Text và Explanation
+        const quillText = new Quill(`#q-text-${q.id}`, { theme: 'snow', modules: { toolbar: quillToolbarOptions } });
+        const quillExplain = new Quill(`#q-explain-${q.id}`, { theme: 'snow', modules: { toolbar: quillToolbarOptions } });
+        
+        quillInstances[q.id] = { text: quillText, explain: quillExplain };
+    });
+
+    // Kích hoạt tính năng Kéo Thả (Sortable.js)
+    Sortable.create(container, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onEnd: function () {
+            // Cập nhật lại số thứ tự câu hỏi hiển thị
+            const cards = document.querySelectorAll('.question-card');
+            cards.forEach((card, idx) => {
+                const header = card.querySelector('h3');
+                header.innerHTML = `<i class="fa-solid fa-grip-vertical drag-handle" title="Kéo để di chuyển"></i> Câu hỏi ${idx + 1}`;
+            });
+            showToast("Đã thay đổi vị trí câu hỏi. Đang tự động lưu nháp...", false);
+            triggerAutoSave();
+        }
     });
 }
 
-// XỬ LÝ LƯU VÀ GHI LOG LỊCH SỬ
-document.getElementById('btn-save-all').addEventListener('click', async () => {
-    const btn = document.getElementById('btn-save-all');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...';
+// Cập nhật CSS xanh viền (Highlight) khi click chọn đáp án đúng
+window.updateOptionHighlight = function(radioElem) {
+    const parentGrid = radioElem.closest('.options-grid');
+    parentGrid.querySelectorAll('.option-item').forEach(item => item.classList.remove('correct'));
+    radioElem.closest('.option-item').classList.add('correct');
+};
 
-    const cards = document.querySelectorAll('.question-card');
-    const updatePromises = [];
-    const changesLog = []; // Lưu trữ những gì đã thay đổi
-    const newLoadedState = []; // Lưu trạng thái mới để cập nhật bộ nhớ tạm
-
-    cards.forEach((card, index) => {
+// =================== AUTO SAVE LOGIC ===================
+function getCurrentEditorState() {
+    const currentState = [];
+    document.querySelectorAll('.question-card').forEach((card, index) => {
         const docId = card.dataset.docId;
-        const text = card.querySelector('.q-text').value.trim();
-        const explanation = card.querySelector('.q-explain').value.trim();
+        const text = quillInstances[docId].text.root.innerHTML;
+        const explanation = quillInstances[docId].explain.root.innerHTML;
         
         const options = [];
         card.querySelectorAll('.opt-text').forEach(input => options.push(input.value.trim()));
         
         let correctAnswer = 0;
-        const radios = card.querySelectorAll(`input[name="correct_${docId}"]`);
-        radios.forEach(r => { if(r.checked) correctAnswer = parseInt(r.value); });
+        card.querySelectorAll(`input[name="correct_${docId}"]`).forEach(r => { if(r.checked) correctAnswer = parseInt(r.value); });
 
-        // SO SÁNH (DIFFING) ĐỂ TẠO LỊCH SỬ
-        const oldQ = loadedQuestions.find(q => q.id === docId);
+        // Bảo lưu các ID và thêm thuộc tính Order
+        currentState.push({ id: docId, examId: currentExamId, text, explanation, options, correctAnswer, order: index });
+    });
+    return currentState;
+}
+
+function triggerAutoSave() {
+    const state = getCurrentEditorState();
+    localStorage.setItem(`draft_${currentExamId}`, JSON.stringify({ time: Date.now(), data: state }));
+    const draftUI = document.getElementById('draft-status');
+    draftUI.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> Đã lưu nháp: ${new Date().toLocaleTimeString('vi-VN')}`;
+    draftUI.style.display = 'block';
+}
+
+function initAutoSave() {
+    if (autoSaveInterval) clearInterval(autoSaveInterval);
+    autoSaveInterval = setInterval(triggerAutoSave, 30000); // 30s lưu 1 lần
+}
+
+// =================== XỬ LÝ LƯU GỐC & DIFFING ===================
+document.getElementById('btn-save-all').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-save-all');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải lên...';
+
+    const newState = getCurrentEditorState();
+    const updatePromises = [];
+    const changesLog = []; 
+    const mapAns = ['A', 'B', 'C', 'D'];
+
+    newState.forEach((newQ) => {
+        const oldQ = loadedQuestions.find(q => q.id === newQ.id);
         if (oldQ) {
-            let qChanges = [];
-            if (oldQ.text !== text) qChanges.push("Nội dung câu hỏi");
-            if (oldQ.explanation !== explanation) qChanges.push("Giải thích đáp án");
-            
-            if (oldQ.correctAnswer !== correctAnswer) {
-                const mapAns = ['A', 'B', 'C', 'D'];
-                qChanges.push(`Đáp án đúng (Từ ${mapAns[oldQ.correctAnswer]} thành ${mapAns[correctAnswer]})`);
+            let diffs = [];
+            // Bắt DIFF Text
+            if (oldQ.text !== newQ.text) {
+                diffs.push({ field: "Nội dung câu hỏi", old: oldQ.text, new: newQ.text });
             }
-            
+            if (oldQ.explanation !== newQ.explanation) {
+                diffs.push({ field: "Giải thích đáp án", old: oldQ.explanation, new: newQ.explanation });
+            }
+            if (oldQ.correctAnswer !== newQ.correctAnswer) {
+                diffs.push({ field: "Đáp án đúng", old: `Đáp án ${mapAns[oldQ.correctAnswer || 0]}`, new: `Đáp án ${mapAns[newQ.correctAnswer]}` });
+            }
             let optChanged = false;
-            for(let i = 0; i < 4; i++) {
-                if ((oldQ.options?.[i] || "") !== options[i]) optChanged = true;
+            let oldOptStr = (oldQ.options || []).join(' | ');
+            let newOptStr = newQ.options.join(' | ');
+            if (oldOptStr !== newOptStr) {
+                diffs.push({ field: "Thay đổi lựa chọn (A,B,C,D)", old: oldOptStr, new: newOptStr });
             }
-            if (optChanged) qChanges.push("Chỉnh sửa lựa chọn (A, B, C, D)");
+            if ((oldQ.order || 0) !== newQ.order) {
+                diffs.push({ field: "Vị trí câu hỏi", old: `Vị trí thứ ${oldQ.order + 1}`, new: `Vị trí thứ ${newQ.order + 1}` });
+            }
 
-            if (qChanges.length > 0) {
-                changesLog.push(`<strong>Câu ${index + 1}:</strong> Sửa ${qChanges.join(", ")}`);
+            if (diffs.length > 0) {
+                changesLog.push({ questionIndex: newQ.order + 1, diffs: diffs });
             }
         }
 
-        // Cập nhật lên Firestore
-        const docRef = doc(db, "questions", docId);
+        const docRef = doc(db, "questions", newQ.id);
         updatePromises.push(updateDoc(docRef, {
-            text: text,
-            options: options,
-            correctAnswer: correctAnswer,
-            explanation: explanation
+            text: newQ.text,
+            options: newQ.options,
+            correctAnswer: newQ.correctAnswer,
+            explanation: newQ.explanation,
+            order: newQ.order
         }));
-
-        // Ghi nhận state mới vào bộ nhớ tạm
-        newLoadedState.push({ id: docId, text, explanation, options, correctAnswer });
     });
 
     try {
         await Promise.all(updatePromises);
         
-        // GHI LỊCH SỬ NẾU CÓ THAY ĐỔI
+        // NẾU CÓ THAY ĐỔI, GHI LẠI TOÀN BỘ SNAPSHOT (Bản chụp cấu trúc gốc để Rollback) VÀ LỊCH SỬ DIFF
         if (changesLog.length > 0) {
             await addDoc(collection(db, "exam_history"), {
                 examId: currentExamId,
                 timestamp: Date.now(),
-                changes: changesLog
+                changes: changesLog,
+                snapshot: loadedQuestions // Chìa khóa để tính năng Rollback hoạt động
             });
         }
 
-        // Cập nhật lại bộ nhớ gốc bằng data mới để lần so sánh sau chính xác
-        loadedQuestions = newLoadedState;
+        // Cập nhật lại state tĩnh và Xóa Draft
+        loadedQuestions = newState;
+        localStorage.removeItem(`draft_${currentExamId}`);
+        document.getElementById('draft-status').style.display = 'none';
         
-        showToast(`Đã lưu thành công ${updatePromises.length} câu hỏi!`);
+        showToast(`Tuyệt vời! Đã phát hành bản cập nhật cho ${updatePromises.length} câu hỏi.`);
     } catch (error) {
         console.error("Lỗi lưu:", error);
         showToast("Lỗi khi lưu dữ liệu. Hãy kiểm tra kết nối mạng.", true);
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu Tất Cả Thay Đổi';
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Phát Hành Lên Hệ Thống';
     }
 });
 
-// LOGIC XEM LỊCH SỬ
+// =================== LOGIC XEM LỊCH SỬ DIFF & KHÔI PHỤC ===================
 document.getElementById('btn-view-history').addEventListener('click', async () => {
     const modal = document.getElementById('history-modal');
     const container = document.getElementById('history-list-container');
     modal.style.display = 'block';
-    container.innerHTML = '<div style="padding: 30px; text-align: center; color: #64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải lịch sử...</div>';
+    container.innerHTML = '<div class="loading-screen"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải và phân tích dữ liệu lịch sử...</div>';
 
     try {
         const historyRef = collection(db, "exam_history");
@@ -189,32 +285,90 @@ document.getElementById('btn-view-history').addEventListener('click', async () =
         const snap = await getDocs(q);
         
         let historyData = [];
-        snap.forEach(doc => { historyData.push(doc.data()); });
+        snap.forEach(doc => { historyData.push({ docId: doc.id, ...doc.data() }); });
 
-        // Sort tại Client để tránh lỗi missing Index trên Firebase
         historyData.sort((a, b) => b.timestamp - a.timestamp);
 
         if (historyData.length === 0) {
-            container.innerHTML = '<div style="padding: 40px; text-align: center; color: #94a3b8; font-style: italic;">Đề thi này chưa có lịch sử chỉnh sửa nào.</div>';
+            container.innerHTML = '<div style="padding: 50px; text-align: center; color: #94a3b8; font-style: italic;"><i class="fa-solid fa-clock-rotate-left fa-3x" style="opacity:0.2; margin-bottom:15px;"></i><br>Chưa có ghi nhận chỉnh sửa nào đối với đề thi này.</div>';
             return;
         }
 
         let html = '';
         historyData.forEach((item, index) => {
             const timeStr = new Date(item.timestamp).toLocaleString('vi-VN');
-            const changesListHtml = item.changes.map(c => `<li>${c}</li>`).join('');
+            
+            // Xây dựng giao diện Diff Before/After
+            let diffHtml = '';
+            item.changes.forEach(changeObj => {
+                diffHtml += `<div class="diff-block">
+                                <div class="diff-title">Câu ${changeObj.questionIndex}: Đã thay đổi</div>`;
+                changeObj.diffs.forEach(diff => {
+                    diffHtml += `<div style="padding: 5px 15px; font-size: 13px; color: #64748b; border-bottom: 1px dashed #e2e8f0;">Trường: <strong>${diff.field}</strong></div>
+                                 <div class="diff-content">
+                                     <div class="diff-old">${diff.old}</div>
+                                     <div class="diff-new">${diff.new}</div>
+                                 </div>`;
+                });
+                diffHtml += `</div>`;
+            });
             
             html += `
                 <div class="history-item">
-                    <div class="history-time"><i class="fa-regular fa-clock"></i> Lần sửa thứ ${historyData.length - index} - ${timeStr}</div>
-                    <div class="history-changes">
-                        <ul>${changesListHtml}</ul>
+                    <div class="history-header">
+                        <div class="history-time"><i class="fa-solid fa-code-commit" style="color: #3b82f6;"></i> Bản sửa đổi ngày: ${timeStr}</div>
+                        <button class="btn-rollback" data-hid="${item.docId}">
+                            <i class="fa-solid fa-rotate-left"></i> Khôi phục phiên bản này
+                        </button>
+                    </div>
+                    <div class="diff-container">
+                        ${diffHtml}
                     </div>
                 </div>
             `;
         });
         
         container.innerHTML = html;
+
+        // Bắt sự kiện Rollback
+        document.querySelectorAll('.btn-rollback').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const hid = this.getAttribute('data-hid');
+                const targetHistory = historyData.find(h => h.docId === hid);
+                
+                if (!confirm(`CẢNH BÁO: Hành động này sẽ GHI ĐÈ dữ liệu hiện tại bằng phiên bản lúc [${new Date(targetHistory.timestamp).toLocaleString('vi-VN')}].\n\nBạn có chắc chắn muốn KHÔI PHỤC không?`)) return;
+
+                const origText = this.innerHTML;
+                this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang khôi phục...';
+                this.disabled = true;
+
+                try {
+                    const rollbackPromises = [];
+                    // Trích xuất mảng snapshot từ bản ghi lịch sử
+                    const snapshotData = targetHistory.snapshot;
+                    
+                    snapshotData.forEach(sq => {
+                        const docRef = doc(db, "questions", sq.id);
+                        rollbackPromises.push(updateDoc(docRef, {
+                            text: sq.text,
+                            options: sq.options,
+                            correctAnswer: sq.correctAnswer,
+                            explanation: sq.explanation,
+                            order: sq.order || 0
+                        }));
+                    });
+
+                    await Promise.all(rollbackPromises);
+                    showToast("Khôi phục dữ liệu thành công! Đang tải lại trang...");
+                    setTimeout(() => location.reload(), 1500); // F5 lại để editor ăn data mới
+                } catch (err) {
+                    console.error("Lỗi rollback:", err);
+                    showToast("Lỗi khôi phục dữ liệu. Vui lòng thử lại.", true);
+                    this.innerHTML = origText;
+                    this.disabled = false;
+                }
+            });
+        });
 
     } catch (error) {
         console.error("Lỗi lấy lịch sử:", error);
