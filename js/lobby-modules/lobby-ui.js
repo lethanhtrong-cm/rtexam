@@ -356,9 +356,8 @@ export function renderUI() {
         card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 6px 15px rgba(0,0,0,0.2)'; };
         card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = '0 4px 10px rgba(0,0,0,0.15)'; };
 
-       let hostBadgeHTML = '';
+      let hostBadgeHTML = '';
         if (pData.uid === state.currentHostUid) {
-            // FIX: Bỏ position absolute, dùng margin-top để xếp ngay ngắn dưới cùng thẻ
             hostBadgeHTML = `<div style="margin-top: 10px; background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.65rem; font-weight: 900; padding: 4px 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(234, 88, 12, 0.3); white-space: nowrap;"><i class="fa-solid fa-crown"></i> CHỦ PHÒNG</div>`;
         }
 
