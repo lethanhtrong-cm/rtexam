@@ -134,7 +134,8 @@ document.addEventListener('ComponentsLoaded', () => {
             btnCreateNew.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
             btnCreateNew.disabled = true;
 
-            const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            // Tạo mã PIN 5 chữ số ngẫu nhiên (từ 10000 đến 99999) cho dễ nhớ
+            const roomId = Math.floor(10000 + Math.random() * 90000).toString();
             const targetUrl = `lobby.html?roomId=${roomId}`;
             const newTab = window.open('about:blank', '_blank');
 
