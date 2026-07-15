@@ -1,5 +1,5 @@
 import { auth, db } from "./dashboard-core.js";
-import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // Import từ các module đã tách
@@ -170,7 +170,11 @@ UI.btnSubmitAiGenerate.addEventListener('click', async () => {
 
         if (!response.ok) throw new Error("Lỗi gọi API AI.");
         const questions = await response.json();
-        const examId = "AI-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        // FIX: TẠO ID MỚI ĐÁNH SỐ THỨ TỰ CHO ĐỀ AI
+        const aiExamsSnap = await getDocs(query(collection(db, "exams"), where("technique", "==", "AI Tự Động")));
+        const nextNumber = aiExamsSnap.size + 1;
+        const examId = "AI-" + String(nextNumber).padStart(3, '0');
 
         const savePromises = questions.map((q, i) => {
             const safeOptions = q.options.length > 4 ? q.options.slice(0, 4) : q.options;
@@ -184,18 +188,23 @@ UI.btnSubmitAiGenerate.addEventListener('click', async () => {
         });
         await Promise.all(savePromises);
 
+        const examTitle = `Đề AI tạo lúc ${new Date().toLocaleTimeString('vi-VN')}`;
+
         await setDoc(doc(db, "exams", examId), {
-            id: examId, technique: "AI Tự Động", title: `Đề AI tạo lúc ${new Date().toLocaleTimeString('vi-VN')}`,
+            id: examId, technique: "AI Tự Động", title: examTitle,
             level: 'Trí tuệ nhân tạo', timeLimit: parseInt(UI.aiQuestionCount.value), createdAt: Date.now(),
             isVip: false, attemptCount: 0, creatorId: state.currentUser.uid, isPublic: false
         });
 
         await updateDoc(doc(db, 'rooms', state.roomId), { 
-            examId: examId, examName: `[AI Tự Động] Đề tạo lúc ${new Date().toLocaleTimeString('vi-VN')}`, status: 'waiting' 
+            examId: examId, examName: `[AI Tự Động] ${examId} - ${examTitle}`, status: 'waiting' 
         });
         
         state.isExamsLoaded = false;
         await loadExamsToDropdown();
+        
+        // FIX: ÉP BƠM TRỰC TIẾP ĐỀ VỪA TẠO VÀO DROPDOWN THÔNG QUA OBJECT UI
+        UI.selectExamInLobby.insertAdjacentHTML('beforeend', `<optgroup label="✨ ĐỀ THI AI VỪA TẠO"><option value="${examId}">[AI Tự Động] ${examId} - ${examTitle}</option></optgroup>`);
         UI.selectExamInLobby.value = examId;
 
         alert("Tạo đề AI thành công!");
