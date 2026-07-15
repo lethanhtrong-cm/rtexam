@@ -350,12 +350,15 @@
         </div>
     </div>
 
-    <!-- MODAL GIAO DIỆN FLASHCARD -->
+    <!-- MODAL GIAO DIỆN FLASHCARD (ĐÃ ĐƯỢC LÀM MỚI VÀ HIỂN THỊ MÃ ĐỀ) -->
     <div id="flashcard-modal" class="modal-overlay" style="z-index: 10010;">
         <div class="modal-content" style="max-width: 700px; padding: 35px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="color: #7c3aed; font-weight: 800; margin: 0; font-size: 1.5rem;"><i class="fa-solid fa-layer-group"></i> AI FLASHCARD</h3>
-                <button id="close-flashcard-btn" style="background: transparent; border: none; font-size: 1.8rem; color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                <div style="text-align: left;">
+                    <h3 style="color: #7c3aed; font-weight: 800; margin: 0; font-size: 1.5rem;"><i class="fa-solid fa-layer-group"></i> AI FLASHCARD</h3>
+                    <div id="fc-exam-code-display" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); background: var(--bg-body); padding: 4px 10px; border-radius: 6px; display: inline-block; margin-top: 8px; border: 1px solid var(--border-color);">Đang tải...</div>
+                </div>
+                <button id="close-flashcard-btn" style="background: transparent; border: none; font-size: 1.8rem; color: var(--text-muted); cursor: pointer; line-height: 1;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
             <div id="flashcard-loading" style="display: none; padding: 60px 0;">
