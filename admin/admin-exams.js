@@ -20,7 +20,6 @@ export async function loadExamList() {
     container.innerHTML = '<div class="loading-text">⏳ Đang kết nối dữ liệu và đồng bộ từ Firestore...</div>';
 
     try {
-        // Tải thêm feedbacksSnapshot song song với questions và exams
         const [questionsSnapshot, examsSnapshot, feedbacksSnapshot] = await Promise.all([
             getDocs(collection(db, "questions")),
             getDocs(collection(db, "exams")),
@@ -41,7 +40,6 @@ export async function loadExamList() {
             };
         });
 
-        // Map số lượng feedback (đánh giá) và Tính tổng số sao cho mỗi đề
         const feedbackCounts = {};
         const feedbackStars = {};
         if (feedbacksSnapshot) {
@@ -69,7 +67,7 @@ export async function loadExamList() {
 
             const fCount = feedbackCounts[examId] || 0;
             const fStars = feedbackStars[examId] || 0;
-            const avgRating = fCount > 0 ? (fStars / fCount) : 0; // Tính Rating trung bình
+            const avgRating = fCount > 0 ? (fStars / fCount) : 0; 
 
             cachedExams.push({
                 examId: examId, 
@@ -101,13 +99,11 @@ export function renderExamList() {
         const matchTech = exam.technique === currentTechnique;
         const matchLevel = currentLevel === "all" || exam.level === currentLevel;
         const matchTime = currentTime === "all" || String(exam.timeLimit) === String(currentTime);
-        // Hỗ trợ tìm kiếm theo cả Mã đề và Tên đề thi
         const searchTarget = (exam.examId + " " + exam.examName).toLowerCase();
         const matchSearch = !currentSearchQuery || searchTarget.includes(currentSearchQuery);
         return matchTech && matchLevel && matchTime && matchSearch;
     });
 
-    // --- LOGIC SORT DỮ LIỆU ---
     const sortSelect = document.getElementById('examSortSelect');
     const sortMode = sortSelect ? sortSelect.value : 'newest';
 
@@ -115,7 +111,6 @@ export function renderExamList() {
         if (sortMode === 'most_attempts') return b.attemptCount - a.attemptCount;
         if (sortMode === 'most_feedbacks') return b.feedbackCount - a.feedbackCount;
         if (sortMode === 'highest_rating') return b.rating - a.rating;
-        // Mặc định: newest (Mới nhất đến cũ nhất)
         return b.createdAt - a.createdAt;
     });
 
@@ -131,7 +126,6 @@ export function renderExamList() {
         if (exam.level === 'Dễ') levelClass = 'level-easy';
         else if (exam.level === 'Khó') levelClass = 'level-hard';
 
-        // Xử lý hiển thị ngày tạo
         let formattedDate = 'Không rõ';
         if (exam.createdAt) {
             if (typeof exam.createdAt.toDate === 'function') {
@@ -147,11 +141,9 @@ export function renderExamList() {
             }
         }
 
-        // Logic Ưu tiên hiển thị Tên đề thi (Nếu có)
         const displayTitle = exam.examName ? exam.examName : `Đề: ${exam.examId}`;
         const displaySubId = exam.examName ? `<span class="exam-subtitle-id">Mã: ${exam.examId}</span>` : '';
 
-        // Hiển thị Nhãn Feedback và Số sao
         let feedbackBadgeHtml = '';
         if (exam.feedbackCount > 0) {
             const formattedRating = Number.isInteger(exam.rating) ? exam.rating : exam.rating.toFixed(1);
@@ -189,9 +181,14 @@ export function renderExamList() {
             <hr class="premium-divider">
 
             <div class="card-premium-footer">
-                <button class="btn-modern-action btn-edit-properties" data-examid="${exam.examId}" data-examname="${exam.examName}" data-technique="${exam.technique}" data-time="${exam.timeLimit}" data-level="${exam.level}">
-                    <i class="fa-solid fa-gear"></i> Sửa Thuộc Tính
-                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-modern-action btn-edit-properties" data-examid="${exam.examId}" data-examname="${exam.examName}" data-technique="${exam.technique}" data-time="${exam.timeLimit}" data-level="${exam.level}">
+                        <i class="fa-solid fa-gear"></i> Sửa Thuộc Tính
+                    </button>
+                    <button class="btn-modern-action btn-edit-content" data-examid="${exam.examId}" style="color: #0284c7; border-color: #bae6fd;">
+                        <i class="fa-solid fa-pen-to-square"></i> Sửa Nội Dung
+                    </button>
+                </div>
                 
                 <div class="footer-actions-right">
                     <button class="${feedbackBtnClass}" data-examid="${exam.examId}">
@@ -247,13 +244,11 @@ function initFilterChangeListeners() {
         });
     }
 
-    // TỰ ĐỘNG CHÈN UI SẮP XẾP VÀO CÙNG HÀNG FLEX-ROW VỚI MỨC ĐỘ & THỜI GIAN
     const filterRow = document.querySelector('.filter-flex-row');
     let sortSelect = document.getElementById('examSortSelect');
 
     if (filterRow) {
         if (!sortSelect) {
-            // Tự động tạo và nhúng nếu chưa tồn tại
             const sortCol = document.createElement('div');
             sortCol.className = 'filter-col-50';
             sortCol.innerHTML = `
@@ -270,13 +265,11 @@ function initFilterChangeListeners() {
             filterRow.appendChild(sortCol);
             sortSelect = document.getElementById('examSortSelect');
         } else if (sortSelect.closest('.filter-col-50') && sortSelect.closest('.filter-col-50').parentNode !== filterRow) {
-            // Nếu bạn đã tự dán HTML bằng tay nhưng sai vị trí, đoạn code này sẽ bốc nó vào đúng hàng
             const sortCol = sortSelect.closest('.filter-col-50');
             filterRow.appendChild(sortCol);
         }
     }
 
-    // Lắng nghe sự kiện thay đổi Dropdown Sắp xếp
     if (sortSelect) {
         sortSelect.addEventListener('change', () => {
             renderExamList();
@@ -290,7 +283,7 @@ function openEditPropertiesModal(examId, examName, technique, time, level) {
     if (!modal) return;
     
     document.getElementById('edit-modal-exam-id').innerText = examId;
-    document.getElementById('edit-exam-name').value = examName || ""; // Load tên đề vào input
+    document.getElementById('edit-exam-name').value = examName || ""; 
     document.getElementById('edit-select-technique').value = technique || "Hỗn hợp";
     document.getElementById('edit-select-time').value = time || "15";
     document.getElementById('edit-select-level').value = level || "Trung bình";
@@ -311,19 +304,17 @@ async function updateExamProperties() {
         const docSnap = await getDoc(docRef);
         
         const payload = {
-            examName: document.getElementById('edit-exam-name').value.trim(), // Lưu thêm trường tên đề thi
+            examName: document.getElementById('edit-exam-name').value.trim(), 
             technique: document.getElementById('edit-select-technique').value,
             timeLimit: parseInt(document.getElementById('edit-select-time').value, 10),
             level: document.getElementById('edit-select-level').value,
-            isPublic: true // Vá lỗi đảm bảo luôn public
+            isPublic: true 
         };
 
-        // Vá lỗi: Nếu đề chưa có ngày tạo, chèn thêm vào
         if (!docSnap.exists() || !docSnap.data().createdAt) {
             payload.createdAt = Date.now();
         }
 
-        // Sử dụng setDoc với merge: true thay vì updateDoc để tạo doc nếu lỡ bị thiếu
         await setDoc(docRef, payload, { merge: true });
         
         showToast(`Cập nhật thuộc tính đề "${currentEditingExamId}" thành công!`, "success");
@@ -344,7 +335,7 @@ async function toggleExamVip(examId, currentVipState) {
         
         const payload = { 
             isVip: !currentVipState,
-            isPublic: true // Vá lỗi đảm bảo luôn public
+            isPublic: true 
         };
 
         if (!docSnap.exists() || !docSnap.data().createdAt) {
@@ -401,7 +392,6 @@ async function viewFeedback(examId) {
             let starsHtml = '';
             for (let i = 0; i < (data.rating || 0); i++) starsHtml += '<span class="rating-star">★</span>';
             
-            // Đã fix lỗi N/A thời gian hiển thị đánh giá
             let timeStr = 'N/A';
             const rawTime = data.timestamp || data.createdAt;
             if (rawTime) {
@@ -426,9 +416,6 @@ async function viewFeedback(examId) {
     }
 }
 
-// =========================================================================
-// 5. QUY TRÌNH IMPORT & PREVIEW EXCEL 
-// =========================================================================
 function renderPreview() {
     const previewBody = document.getElementById('preview-list-body');
     const publishBtn = document.getElementById('btn-publish');
@@ -565,7 +552,7 @@ async function publishExam() {
 
         for (const examId of uniqueExamIds) {
             await setDoc(doc(db, "exams", examId), {
-                examName: "", // Mặc định rỗng khi mới import
+                examName: "", 
                 technique: techniqueValue,
                 timeLimit: timeLimitValue,
                 level: levelValue,
@@ -630,6 +617,15 @@ document.addEventListener('componentsLoaded', () => {
                 const dataset = editPropsBtn.dataset;
                 return openEditPropertiesModal(dataset.examid, dataset.examname, dataset.technique, dataset.time, dataset.level);
             }
+            
+            // Lắng nghe sự kiện click mở tab Trình Sửa Nội Dung Đề
+            const editContentBtn = e.target.closest('.btn-edit-content');
+            if (editContentBtn) {
+                const examId = editContentBtn.dataset.examid;
+                window.open(`admin-edit-exam.html?examId=${examId}`, '_blank');
+                return;
+            }
+
             const vipBtn = e.target.closest('.toggle-vip');
             if (vipBtn) return toggleExamVip(vipBtn.dataset.examid, vipBtn.dataset.vip === "true");
             const feedbackBtn = e.target.closest('.btn-view-feedback');
