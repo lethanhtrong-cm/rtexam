@@ -171,7 +171,7 @@ UI.btnSubmitAiGenerate.addEventListener('click', async () => {
         if (!response.ok) throw new Error("Lỗi gọi API AI.");
         const questions = await response.json();
         
-        // FIX: TẠO ID MỚI ĐÁNH SỐ THỨ TỰ CHO ĐỀ AI
+        // TẠO ID MỚI ĐÁNH SỐ THỨ TỰ CHO ĐỀ AI
         const aiExamsSnap = await getDocs(query(collection(db, "exams"), where("technique", "==", "AI Tự Động")));
         const nextNumber = aiExamsSnap.size + 1;
         const examId = "AI-" + String(nextNumber).padStart(3, '0');
@@ -203,7 +203,7 @@ UI.btnSubmitAiGenerate.addEventListener('click', async () => {
         state.isExamsLoaded = false;
         await loadExamsToDropdown();
         
-        // FIX: ÉP BƠM TRỰC TIẾP ĐỀ VỪA TẠO VÀO DROPDOWN THÔNG QUA OBJECT UI
+        // ÉP BƠM TRỰC TIẾP ĐỀ VỪA TẠO VÀO DROPDOWN THÔNG QUA OBJECT UI
         UI.selectExamInLobby.insertAdjacentHTML('beforeend', `<optgroup label="✨ ĐỀ THI AI VỪA TẠO"><option value="${examId}">[AI Tự Động] ${examId} - ${examTitle}</option></optgroup>`);
         UI.selectExamInLobby.value = examId;
 
@@ -325,7 +325,7 @@ async function initLobby() {
             const roomData = docSnap.data();
             state.currentRoomStatus = roomData.status;
             state.currentHostEmail = roomData.hostEmail;
-            state.currentHostUid = roomData.hostUid; // Lấy UID chủ phòng từ Firebase
+            state.currentHostUid = roomData.hostUid; // FIX: Lấy thông tin HostUid để đẩy sang renderUI hiển thị nhãn Chủ phòng
             state.currentActiveExamId = roomData.examId;
             if (!state.viewingHistoryMode) state.currentViewedExamId = state.currentActiveExamId;
 
@@ -341,11 +341,13 @@ async function initLobby() {
                 if (state.currentRoomStatus === 'playing' || state.currentRoomStatus === 'closed') {
                     UI.btnEndRoom.style.display = 'block';
                     UI.selectExamInLobby.setAttribute('disabled', 'true');
+                    UI.btnStart.style.display = 'block'; // FIX: Hiện nút Xem BXH
                     UI.btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
                     UI.btnStart.removeAttribute('disabled');
                 } else { 
                     UI.btnEndRoom.style.display = 'none';
                     UI.selectExamInLobby.removeAttribute('disabled');
+                    UI.btnStart.style.display = 'block'; // FIX: Hiện nút Bắt đầu
                     UI.btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
                     if (roomData.examId) UI.btnStart.removeAttribute('disabled');
                     else UI.btnStart.setAttribute('disabled', 'true');
@@ -359,19 +361,16 @@ async function initLobby() {
                 UI.btnEndRoom.style.display = 'none'; 
                 
                 if (state.currentRoomStatus === 'playing' || state.currentRoomStatus === 'closed') {
-                    UI.btnEndRoom.style.display = 'block';
-                    UI.selectExamInLobby.setAttribute('disabled', 'true');
-                    UI.btnStart.style.display = 'block'; // FIX: Hiện nút Xem BXH
-                    UI.btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
-                    UI.btnStart.removeAttribute('disabled');
-                } else { 
-                    UI.btnEndRoom.style.display = 'none';
-                    UI.selectExamInLobby.removeAttribute('disabled');
-                    UI.btnStart.style.display = 'block'; // FIX: Hiện lại nút Bắt đầu thi
-                    UI.btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
-                    if (roomData.examId) UI.btnStart.removeAttribute('disabled');
-                    else UI.btnStart.setAttribute('disabled', 'true');
-                }
+                    if (state.myParticipantStatus === 'finished') {
+                        UI.waitingText.style.display = 'none';
+                        UI.btnStart.style.display = 'block';
+                        UI.btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
+                        UI.btnStart.removeAttribute('disabled');
+                    } else {
+                        UI.btnStart.style.display = 'none';
+                        UI.waitingText.style.display = 'block';
+                        UI.waitingText.textContent = "Bạn đang ở ngoài phòng thi...";
+                    }
                 } else {
                     UI.btnStart.style.display = 'none';
                     UI.waitingText.style.display = 'block';
