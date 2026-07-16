@@ -1,5 +1,6 @@
 import { auth, db, safeRedirect } from "./dashboard-core.js";
-import { collection, getDocs, doc, setDoc, updateDoc, arrayUnion, arrayRemove, query, where, or, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Đã bổ sung hàm getDoc vào import
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, query, where, or, addDoc, onSnapshot, serverTimestamp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
 
 export let allExamsData = []; 
 let currentUserData = null;
@@ -16,7 +17,6 @@ document.addEventListener("authReady", async (e) => {
     currentUserData = e.detail.currentUserData;
     if (currentUserData) {
         if (!currentUserData.bookmarks) currentUserData.bookmarks = [];
-        // Khởi tạo mảng lưu các đề đã bị ẩn/xóa bởi người dùng
         if (!currentUserData.hiddenExams) currentUserData.hiddenExams = [];
     }
     
@@ -49,6 +49,102 @@ document.addEventListener("authReady", async (e) => {
     setupFilterEvents(); 
     await loadAggregatedExamData(); 
 });
+
+// KHỞI TẠO MODAL TÓM TẮT DỰA TRÊN DOM MỚI NHẤT
+function createSummaryModal() {
+    if (document.getElementById('summaryModal')) return;
+    const html = `
+    <div id="summaryModal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); z-index: 100000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div style="background: #ffffff; width: 90%; max-width: 750px; max-height: 85vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="padding: 20px 25px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800;"><i class="fa-solid fa-book-open-reader"></i> TÓM TẮT KIẾN THỨC</h3>
+                    <div id="summaryExamCode" style="font-size: 0.85rem; font-weight: 600; margin-top: 5px; opacity: 0.9;"></div>
+                </div>
+                <button onclick="document.getElementById('summaryModal').style.display='none'" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="summaryContent" style="padding: 30px; overflow-y: auto; flex: 1; font-size: 1.05rem; line-height: 1.7; color: #334155;">
+                <!-- Dữ liệu HTML sẽ được bơm vào đây -->
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        #summaryContent h3 { color: #1e40af; margin-top: 25px; margin-bottom: 15px; font-size: 1.2rem; border-left: 4px solid #3b82f6; padding-left: 10px; }
+        #summaryContent ul { margin-bottom: 20px; padding-left: 20px; }
+        #summaryContent li { margin-bottom: 8px; }
+        #summaryContent strong { color: #0f172a; }
+    </style>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+window.openSummaryModal = async function(examId) {
+    createSummaryModal();
+    const modal = document.getElementById('summaryModal');
+    const content = document.getElementById('summaryContent');
+    document.getElementById('summaryExamCode').innerText = "Mã đề: " + examId;
+    modal.style.display = 'flex';
+    
+    // Giao diện loading
+    content.innerHTML = `
+        <div style="text-align: center; padding: 60px 20px;">
+            <i class="fa-solid fa-wand-magic-sparkles fa-bounce" style="font-size: 3.5rem; color: #3b82f6; margin-bottom: 20px;"></i>
+            <h4 style="color: #1e293b; margin-bottom: 10px;">AI đang trích xuất kiến thức...</h4>
+            <p style="color: #64748b; font-size: 0.95rem;">Quá trình này tốn khoảng 5-10 giây cho lần khởi tạo đầu tiên.</p>
+        </div>
+    `;
+
+    try {
+        // 1. KIỂM TRA BỘ NHỚ ĐỆM (CACHE)
+        const summaryRef = doc(db, "summaries", examId);
+        const summarySnap = await getDoc(summaryRef);
+
+        if (summarySnap.exists()) {
+            content.innerHTML = summarySnap.data().htmlContent;
+            return;
+        }
+
+        // 2. NẾU CHƯA CÓ TRONG CACHE -> LOAD CÂU HỎI & GỌI AI
+        const qSnap = await getDocs(query(collection(db, "questions"), where("examId", "==", examId)));
+        if (qSnap.empty) {
+            content.innerHTML = '<p style="color: #dc2626; text-align: center; font-weight: bold;">Đề thi này chưa có câu hỏi nào để tóm tắt.</p>';
+            return;
+        }
+
+        const questions = qSnap.docs.map(d => d.data());
+        let promptString = questions.map((q, idx) => {
+            const correctOpt = q.options ? q.options[q.correctAnswer] : '';
+            return `[Câu ${idx + 1}] Hỏi: ${q.text} | Đáp án: ${correctOpt} | Giải thích: ${q.explanation || 'Không'}`;
+        }).join('\n\n');
+
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ promptText: promptString, action: 'summary' })
+        });
+
+        if (!response.ok) throw new Error("Lỗi kết nối với AI Backend.");
+        
+        const aiData = await response.json();
+        const summaryHtml = aiData.summary;
+
+        if (!summaryHtml) throw new Error("AI không trả về dữ liệu hợp lệ.");
+
+        // 3. LƯU LẠI VÀO FIRESTORE ĐỂ NHỮNG LẦN SAU DÙNG CHUNG
+        await setDoc(summaryRef, {
+            examId: examId,
+            htmlContent: summaryHtml,
+            createdAt: serverTimestamp()
+        });
+
+        content.innerHTML = summaryHtml;
+
+    } catch (error) {
+        console.error(error);
+        content.innerHTML = `<div style="text-align: center; padding: 40px; color: #dc2626;"><i class="fa-solid fa-triangle-exclamation fa-3x mb-3"></i><p>Đã xảy ra lỗi: ${error.message}</p></div>`;
+    }
+};
 
 window.openShareModal = function(examId) {
     currentShareExamId = examId;
@@ -253,7 +349,6 @@ async function loadAggregatedExamData() {
             }
         });
 
-        // BỎ QUA LỖI QUERY OR() BẰNG CÁCH TẢI TOÀN BỘ VÀ LỌC BÊN CLIENT
         const examsConfigRef = collection(db, "exams");
         const eSnap = await getDocs(examsConfigRef);
 
@@ -261,7 +356,6 @@ async function loadAggregatedExamData() {
             const eId = doc.id;
             const conf = doc.data();
             
-            // LOGIC LỌC: Đề công khai HOẶC Đề do user tự tạo HOẶC Đề cũ của Admin (không có 2 trường kia)
             const isPublicExam = conf.isPublic === true || (conf.isPublic === undefined && conf.creatorId === undefined);
             const isMyExam = auth.currentUser && conf.creatorId === auth.currentUser.uid;
 
@@ -326,10 +420,8 @@ async function loadAggregatedExamData() {
 
         allExamsData = Object.values(examMap);
 
-        // Lấy danh sách các đề người dùng đã chọn xóa/ẩn
         const hiddenExamsList = (currentUserData && currentUserData.hiddenExams) ? currentUserData.hiddenExams : [];
 
-        // --- LỌC CÁC ĐỀ ĐÃ BỊ ẨN, VÀ GIỚI HẠN TỐI ĐA 10 ĐỀ AI ---
         const aiExams = allExamsData
             .filter(e => e.technique === "AI Tự Động" && !hiddenExamsList.includes(e.id))
             .sort((a, b) => b.createdAt - a.createdAt)
@@ -338,7 +430,6 @@ async function loadAggregatedExamData() {
         const otherExams = allExamsData.filter(e => e.technique !== "AI Tự Động" && !hiddenExamsList.includes(e.id));
         
         allExamsData = [...otherExams, ...aiExams];
-        // -----------------------------------------------------------
 
         const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
         document.dispatchEvent(examsReadyEvent);
@@ -354,7 +445,6 @@ function renderExams() {
     const examListContainer = document.getElementById('examListContainer');
     const sortFilter = document.getElementById('sortFilter');
     
-    // Bơm CSS động để hiển thị nút xóa (ẩn) khi Hover vào thẻ card
     if (!document.getElementById('hide-exam-style')) {
         document.head.insertAdjacentHTML('beforeend', `
             <style id="hide-exam-style">
@@ -507,6 +597,7 @@ function renderExams() {
                 let displayScore = (correctAnswers / total) * 10;
                 displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
+                // THÊM NÚT "TÓM TẮT AI" VÀO GIAO DIỆN
                 actionAreaHtml = `
                     <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
                         <div>
@@ -516,9 +607,14 @@ function renderExams() {
                     </div>
                     
                     <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-                        <button onclick="goToFlashcard('${exam.id}')" style="flex: 1; min-width: 100%; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 5px;">
-                            <i class="fa-solid fa-bolt"></i> Flashcard AI Ôn Tập
-                        </button>
+                        <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
+                            <button onclick="goToFlashcard('${exam.id}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                <i class="fa-solid fa-bolt"></i> Flashcard
+                            </button>
+                            <button onclick="openSummaryModal('${exam.id}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                <i class="fa-solid fa-book-open"></i> Tóm tắt
+                            </button>
+                        </div>
                         <div style="display: flex; gap: 8px; width: 100%;">
                             <button onclick="goToReview('${resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                                 <i class="fa-solid fa-eye"></i> Xem lại
@@ -636,7 +732,6 @@ window.goToReview = function(resultId) {
     safeRedirect(`quiz.html?resultId=${resultId}`); 
 };
 
-// Hàm chuyển hướng sang trang thi mở tab mới với mode flashcard
 window.goToFlashcard = function(examId) {
     window.open(`quiz.html?examId=${examId}&mode=flashcard`, '_blank');
 };
