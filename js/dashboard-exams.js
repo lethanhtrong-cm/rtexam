@@ -1,6 +1,5 @@
 import { auth, db, safeRedirect } from "./dashboard-core.js";
-// Đã bổ sung hàm getDoc vào import
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, query, where, or, addDoc, onSnapshot, serverTimestamp } from "[https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js](https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js)";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, query, where, or, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export let allExamsData = []; 
 let currentUserData = null;
@@ -96,7 +95,6 @@ window.openSummaryModal = async function(examId) {
     `;
 
     try {
-        // 1. KIỂM TRA BỘ NHỚ ĐỆM (CACHE)
         const summaryRef = doc(db, "summaries", examId);
         const summarySnap = await getDoc(summaryRef);
 
@@ -105,7 +103,6 @@ window.openSummaryModal = async function(examId) {
             return;
         }
 
-        // 2. NẾU CHƯA CÓ TRONG CACHE -> LOAD CÂU HỎI & GỌI AI
         const qSnap = await getDocs(query(collection(db, "questions"), where("examId", "==", examId)));
         if (qSnap.empty) {
             content.innerHTML = '<p style="color: #dc2626; text-align: center; font-weight: bold;">Đề thi này chưa có câu hỏi nào để tóm tắt.</p>';
@@ -131,7 +128,6 @@ window.openSummaryModal = async function(examId) {
 
         if (!summaryHtml) throw new Error("AI không trả về dữ liệu hợp lệ.");
 
-        // 3. LƯU LẠI VÀO FIRESTORE ĐỂ NHỮNG LẦN SAU DÙNG CHUNG
         await setDoc(summaryRef, {
             examId: examId,
             htmlContent: summaryHtml,
@@ -444,237 +440,251 @@ async function loadAggregatedExamData() {
 function renderExams() {
     const examListContainer = document.getElementById('examListContainer');
     const sortFilter = document.getElementById('sortFilter');
-    
-    if (!document.getElementById('hide-exam-style')) {
-        document.head.insertAdjacentHTML('beforeend', `
-            <style id="hide-exam-style">
-                .exam-card-hover:hover .btn-hide-exam { display: flex !important; }
-            </style>
-        `);
-    }
 
     if (!examListContainer) return;
-
-    if (allExamsData.length === 0) {
-        examListContainer.innerHTML = '<div class="loading-text">Hiện tại chưa có khóa học / đề thi nào.</div>';
-        return;
-    }
-
-    let displayData = [...allExamsData];
-    const userBookmarks = (currentUserData && currentUserData.bookmarks) ? currentUserData.bookmarks : [];
-
-    if (currentTechnique === 'saved') {
-        displayData = displayData.filter(exam => userBookmarks.includes(exam.id));
-    } else if (currentTechnique !== 'all') {
-        displayData = displayData.filter(exam => exam.technique === currentTechnique);
-    }
     
-    if (currentLevel !== 'all') displayData = displayData.filter(exam => exam.level === currentLevel);
-    if (currentTime !== 'all') displayData = displayData.filter(exam => exam.timeLimit === parseInt(currentTime));
-    
-    if (currentSearchQuery !== '') {
-        displayData = displayData.filter(exam => 
-            exam.id.toLowerCase().includes(currentSearchQuery) || 
-            (exam.technique && exam.technique.toLowerCase().includes(currentSearchQuery))
-        );
-    }
+    // BỌC TOÀN BỘ BẰNG TRY-CATCH ĐỂ TRÁNH LỖI MÀN HÌNH TRẮNG (NULL)
+    try {
+        if (!document.getElementById('hide-exam-style')) {
+            document.head.insertAdjacentHTML('beforeend', `
+                <style id="hide-exam-style">
+                    .exam-card-hover:hover .btn-hide-exam { display: flex !important; }
+                </style>
+            `);
+        }
 
-    if (sortFilter) {
-        const filterType = sortFilter.value;
-        if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
-        else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
+        if (allExamsData.length === 0) {
+            examListContainer.innerHTML = '<div style="text-align:center; padding:40px; font-size:1.1rem; color:#64748b;">Hiện tại chưa có khóa học / đề thi nào.</div>';
+            return;
+        }
 
-        if (filterType === 'highest_rating') displayData.sort((a, b) => b.rating - a.rating);
-        else if (filterType === 'most_attempts') displayData.sort((a, b) => b.attemptCount - a.attemptCount);
-        else displayData.sort((a, b) => b.createdAt - a.createdAt); 
-    }
+        let displayData = [...allExamsData];
+        const userBookmarks = (currentUserData && currentUserData.bookmarks) ? currentUserData.bookmarks : [];
 
-    examListContainer.innerHTML = "";
-    
-    if (currentView === 'grid') {
-        examListContainer.className = "grid-view swimlane-view";
-    } else {
-        examListContainer.className = "list-view";
-    }
+        if (currentTechnique === 'saved') {
+            displayData = displayData.filter(exam => userBookmarks.includes(exam.id));
+        } else if (currentTechnique !== 'all') {
+            displayData = displayData.filter(exam => exam.technique === currentTechnique);
+        }
+        
+        if (currentLevel !== 'all') displayData = displayData.filter(exam => exam.level === currentLevel);
+        if (currentTime !== 'all') displayData = displayData.filter(exam => exam.timeLimit === parseInt(currentTime));
+        
+        if (currentSearchQuery !== '') {
+            displayData = displayData.filter(exam => 
+                exam.id.toLowerCase().includes(currentSearchQuery) || 
+                (exam.technique && exam.technique.toLowerCase().includes(currentSearchQuery))
+            );
+        }
 
-    if (displayData.length === 0) {
-        examListContainer.innerHTML = '<div class="loading-text">Không tìm thấy đề thi phù hợp với bộ lọc.</div>';
-        return;
-    }
+        if (sortFilter) {
+            const filterType = sortFilter.value;
+            if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
+            else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
 
-    const isUserVip = currentUserData && currentUserData.isVip === true;
+            if (filterType === 'highest_rating') displayData.sort((a, b) => b.rating - a.rating);
+            else if (filterType === 'most_attempts') displayData.sort((a, b) => b.attemptCount - a.attemptCount);
+            else displayData.sort((a, b) => b.createdAt - a.createdAt); 
+        }
 
-    const groups = [
-        { title: "📝 Đề đã thi & Cần ôn tập", data: displayData.filter(exam => !!completedExams[exam.id]) },
-        { title: "⚡ Khởi động nhanh (15 phút)", data: displayData.filter(exam => exam.timeLimit === 15) },
-        { title: "🔥 Thử thách chuyên sâu", data: displayData.filter(exam => exam.level === 'Khó') },
-        { title: "🧲 Khối kiến thức MRI", data: displayData.filter(exam => exam.technique === 'MRI') },
-        { title: "☢️ Khối kiến thức CT Scanner", data: displayData.filter(exam => exam.technique === 'CT') },
-        { title: "🩻 Khối kiến thức X-Quang", data: displayData.filter(exam => exam.technique === 'X quang') },
-        { title: "🧩 Đề Hỗn hợp và AI", data: displayData.filter(exam => exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) }
-    ];
+        examListContainer.innerHTML = "";
+        
+        if (currentView === 'grid') {
+            examListContainer.className = "grid-view swimlane-view";
+        } else {
+            examListContainer.className = "list-view";
+        }
 
-    groups.forEach(group => {
-        if (group.data.length === 0) return; 
+        if (displayData.length === 0) {
+            examListContainer.innerHTML = '<div style="text-align:center; padding:40px; font-size:1.1rem; color:#64748b;">Không tìm thấy đề thi phù hợp với bộ lọc.</div>';
+            return;
+        }
 
-        let rowHtml = `
-            <div class="exam-category-row mb-5">
-                <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
-                <div class="swimlane-wrapper">
-                    <button class="slider-btn left" onclick="slideLeft(this)"><i class="fa-solid fa-chevron-left"></i></button>
-                    <div class="swimlane-scroll-container hide-scrollbar" style="padding-top: 15px; padding-right: 15px; margin-top: -5px;">
-        `;
+        const isUserVip = currentUserData && currentUserData.isVip === true;
 
-        group.data.forEach(exam => {
-            const isExamVip = exam.isVip;
-            const isSaved = userBookmarks.includes(exam.id);
-            const isCompleted = !!completedExams[exam.id];
-            
-            const badgeHtml = isExamVip 
-                ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>`
-                : `<span class="course-badge badge-free header-badge">Free</span>`;
+        const groups = [
+            { title: "📝 Đề đã thi & Cần ôn tập", data: displayData.filter(exam => !!completedExams[exam.id]) },
+            { title: "⚡ Khởi động nhanh (15 phút)", data: displayData.filter(exam => exam.timeLimit === 15) },
+            { title: "🔥 Thử thách chuyên sâu", data: displayData.filter(exam => exam.level === 'Khó') },
+            { title: "🧲 Khối kiến thức MRI", data: displayData.filter(exam => exam.technique === 'MRI') },
+            { title: "☢️ Khối kiến thức CT Scanner", data: displayData.filter(exam => exam.technique === 'CT') },
+            { title: "🩻 Khối kiến thức X-Quang", data: displayData.filter(exam => exam.technique === 'X quang') },
+            { title: "🧩 Đề Hỗn hợp và AI", data: displayData.filter(exam => exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) }
+        ];
+
+        groups.forEach(group => {
+            if (group.data.length === 0) return; 
+
+            let rowHtml = `
+                <div class="exam-category-row mb-5">
+                    <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
+                    <div class="swimlane-wrapper">
+                        <button class="slider-btn left" onclick="slideLeft(this)"><i class="fa-solid fa-chevron-left"></i></button>
+                        <div class="swimlane-scroll-container hide-scrollbar" style="padding-top: 15px; padding-right: 15px; margin-top: -5px;">
+            `;
+
+            group.data.forEach(exam => {
+                // Thoát an toàn cho ID để tránh vỡ HTML do ký tự đặc biệt
+                const safeExamId = exam.id ? exam.id.replace(/'/g, "\\'") : '';
                 
-            const bookmarkHtml = `
-                <button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${exam.id}')" title="Lưu đề thi">
-                    <i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                </button>
-            `;
-
-            const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
-
-            const headerHtml = `
-                <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
-                        <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
-                        ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
-                    </div>
-                    <div style="display: flex; align-items: center; flex-shrink: 0;">
-                        <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-                        ${badgeHtml}
-                        ${bookmarkHtml}
-                    </div>
-                </div>
-            `;
-
-            let levelColor = '#d97706';
-            let levelIcon = 'fa-chart-bar';
-            if (exam.level === 'Dễ') { levelColor = '#059669'; levelIcon = 'fa-arrow-trend-up'; } 
-            else if (exam.level === 'Khó') { levelColor = '#dc2626'; levelIcon = 'fa-fire'; }
-
-            let datePillHtml = "";
-            if (exam.createdAt > 0) {
-                const dateObj = new Date(exam.createdAt);
-                const dd = String(dateObj.getDate()).padStart(2, '0');
-                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-                const yyyy = dateObj.getFullYear();
-                datePillHtml = `<span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-calendar-days" style="font-size: 0.7rem;"></i> ${dd}/${mm}/${yyyy} </span>`;
-            }
-
-            const mergedTagsHtml = `
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px;">
-                    <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level === 'Trung bình' ? 'T.Bình' : exam.level} </span>
-                    <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
-                    <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
-                    ${datePillHtml}
-                </div>
-            `;
-
-            let actionAreaHtml = '';
-            
-            if (isExamVip && !isUserVip) {
-                actionAreaHtml = `
-                    <button onclick="goToUpgrade()" style="width: 100%; display: block; padding: 12px; border: none; background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); color: #997404; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(255, 230, 156, 0.4);">
-                        <i class="fa-solid fa-crown me-2"></i> Nâng cấp tài khoản Pro
+                const isExamVip = exam.isVip;
+                const isSaved = userBookmarks.includes(exam.id);
+                const isCompleted = !!completedExams[exam.id];
+                
+                const badgeHtml = isExamVip 
+                    ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>`
+                    : `<span class="course-badge badge-free header-badge">Free</span>`;
+                    
+                const bookmarkHtml = `
+                    <button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${safeExamId}')" title="Lưu đề thi">
+                        <i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                     </button>
                 `;
-            } else if (isCompleted) {
-                const correctAnswers = completedExams[exam.id].score || 0;
-                const total = completedExams[exam.id].total || 1;
-                const resultId = completedExams[exam.id].resultId; 
 
-                let displayScore = (correctAnswers / total) * 10;
-                displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
+                const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
 
-                // THÊM NÚT "TÓM TẮT AI" VÀO GIAO DIỆN
-                actionAreaHtml = `
-                    <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
-                        <div>
-                            <span style="font-size: 0.85rem; color: #6c757d; font-weight: 600; display: block; margin-bottom: 4px;">Lần thi gần nhất</span>
-                            <span style="font-size: 1.15rem; color: #0ba360; font-weight: 800;">${displayScore} <span style="font-size:0.85rem; color:#6c757d; font-weight:600;">/ 10</span></span>
+                const headerHtml = `
+                    <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+                            <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
+                            ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
+                        </div>
+                        <div style="display: flex; align-items: center; flex-shrink: 0;">
+                            <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                            ${badgeHtml}
+                            ${bookmarkHtml}
                         </div>
                     </div>
-                    
-                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-                        <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
-                            <button onclick="goToFlashcard('${exam.id}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                                <i class="fa-solid fa-bolt"></i> Flashcard
-                            </button>
-                            <button onclick="openSummaryModal('${exam.id}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                                <i class="fa-solid fa-book-open"></i> Tóm tắt
-                            </button>
+                `;
+
+                let levelColor = '#d97706';
+                let levelIcon = 'fa-chart-bar';
+                if (exam.level === 'Dễ') { levelColor = '#059669'; levelIcon = 'fa-arrow-trend-up'; } 
+                else if (exam.level === 'Khó') { levelColor = '#dc2626'; levelIcon = 'fa-fire'; }
+
+                let datePillHtml = "";
+                if (exam.createdAt > 0) {
+                    const dateObj = new Date(exam.createdAt);
+                    const dd = String(dateObj.getDate()).padStart(2, '0');
+                    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    const yyyy = dateObj.getFullYear();
+                    datePillHtml = `<span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-calendar-days" style="font-size: 0.7rem;"></i> ${dd}/${mm}/${yyyy} </span>`;
+                }
+
+                const mergedTagsHtml = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px;">
+                        <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level === 'Trung bình' ? 'T.Bình' : exam.level} </span>
+                        <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
+                        <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
+                        ${datePillHtml}
+                    </div>
+                `;
+
+                let actionAreaHtml = '';
+                
+                if (isExamVip && !isUserVip) {
+                    actionAreaHtml = `
+                        <button onclick="goToUpgrade()" style="width: 100%; display: block; padding: 12px; border: none; background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%); color: #997404; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(255, 230, 156, 0.4);">
+                            <i class="fa-solid fa-crown me-2"></i> Nâng cấp tài khoản Pro
+                        </button>
+                    `;
+                } else if (isCompleted) {
+                    const correctAnswers = completedExams[exam.id].score || 0;
+                    const total = completedExams[exam.id].total || 1;
+                    const resultId = completedExams[exam.id].resultId; 
+
+                    let displayScore = (correctAnswers / total) * 10;
+                    displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
+
+                    actionAreaHtml = `
+                        <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <span style="font-size: 0.85rem; color: #6c757d; font-weight: 600; display: block; margin-bottom: 4px;">Lần thi gần nhất</span>
+                                <span style="font-size: 1.15rem; color: #0ba360; font-weight: 800;">${displayScore} <span style="font-size:0.85rem; color:#6c757d; font-weight:600;">/ 10</span></span>
+                            </div>
                         </div>
+                        
+                        <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
+                                <button onclick="goToFlashcard('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fa-solid fa-bolt"></i> Flashcard
+                                </button>
+                                <button onclick="openSummaryModal('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fa-solid fa-book-open"></i> Tóm tắt
+                                </button>
+                            </div>
+                            <div style="display: flex; gap: 8px; width: 100%;">
+                                <button onclick="goToReview('${resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fa-solid fa-eye"></i> Xem lại
+                                </button>
+                                <button onclick="goToQuiz('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fas fa-redo"></i> Thi lại
+                                </button>
+                                <button onclick="openShareModal('${safeExamId}')" style="width: 44px; flex-shrink: 0; background: #e0e7ff; color: #3730a3; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s;" title="Chia sẻ">
+                                    <i class="fa-solid fa-share-nodes"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    actionAreaHtml = `
                         <div style="display: flex; gap: 8px; width: 100%;">
-                            <button onclick="goToReview('${resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                                <i class="fa-solid fa-eye"></i> Xem lại
+                            <button class="btn-primary" style="flex: 1; padding: 10px; font-size: 1rem; border-radius: 8px; border: none;" onclick="goToQuiz('${safeExamId}')">
+                                Vào thi ngay <i class="fa-solid fa-arrow-right ms-2"></i>
                             </button>
-                            <button onclick="goToQuiz('${exam.id}')" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                                <i class="fas fa-redo"></i> Thi lại
-                            </button>
-                            <button onclick="openShareModal('${exam.id}')" style="width: 44px; flex-shrink: 0; background: #e0e7ff; color: #3730a3; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s;" title="Chia sẻ">
+                            <button onclick="openShareModal('${safeExamId}')" style="width: 44px; flex-shrink: 0; background: #e0e7ff; color: #3730a3; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Chia sẻ đề thi">
                                 <i class="fa-solid fa-share-nodes"></i>
                             </button>
                         </div>
+                    `;
+                }
+                
+                const hideBtnHtml = exam.technique === 'AI Tự Động' 
+                    ? `<button class="btn-hide-exam" onclick="hideExam(event, '${safeExamId}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` 
+                    : '';
+
+                rowHtml += `
+                    <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: visible; position: relative;">
+                        ${hideBtnHtml}
+                        <div class="card-body p-4 d-flex flex-column h-100">
+                            ${headerHtml}
+                            ${mergedTagsHtml}
+                            
+                            <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #6b7280; font-weight: normal; margin-bottom: 20px;">
+                                <div class="rating" style="display: flex; align-items: center; gap: 5px;">
+                                    <span>${exam.rating}</span> <i class="fa-solid fa-star" style="color: #fbbf24;"></i> <span>(${exam.ratingCount})</span>
+                                </div>
+                                <div class="attempts" style="display: flex; align-items: center; gap: 5px;">
+                                    <i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi
+                                </div>
+                            </div>
+                            
+                            <div>${actionAreaHtml}</div>
+                        </div>
                     </div>
                 `;
-            } else {
-                actionAreaHtml = `
-                    <div style="display: flex; gap: 8px; width: 100%;">
-                        <button class="btn-primary" style="flex: 1; padding: 10px; font-size: 1rem; border-radius: 8px; border: none;" onclick="goToQuiz('${exam.id}')">
-                            Vào thi ngay <i class="fa-solid fa-arrow-right ms-2"></i>
-                        </button>
-                        <button onclick="openShareModal('${exam.id}')" style="width: 44px; flex-shrink: 0; background: #e0e7ff; color: #3730a3; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="Chia sẻ đề thi">
-                            <i class="fa-solid fa-share-nodes"></i>
-                        </button>
-                    </div>
-                `;
-            }
-            
-            const hideBtnHtml = exam.technique === 'AI Tự Động' 
-                ? `<button class="btn-hide-exam" onclick="hideExam(event, '${exam.id}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` 
-                : '';
+            });
 
             rowHtml += `
-                <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: visible; position: relative;">
-                    ${hideBtnHtml}
-                    <div class="card-body p-4 d-flex flex-column h-100">
-                        ${headerHtml}
-                        ${mergedTagsHtml}
-                        
-                        <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #6b7280; font-weight: normal; margin-bottom: 20px;">
-                            <div class="rating" style="display: flex; align-items: center; gap: 5px;">
-                                <span>${exam.rating}</span> <i class="fa-solid fa-star" style="color: #fbbf24;"></i> <span>(${exam.ratingCount})</span>
-                            </div>
-                            <div class="attempts" style="display: flex; align-items: center; gap: 5px;">
-                                <i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi
-                            </div>
                         </div>
-                        
-                        <div>${actionAreaHtml}</div>
+                        <button class="slider-btn right" onclick="slideRight(this)"><i class="fa-solid fa-chevron-right"></i></button>
                     </div>
                 </div>
             `;
+            examListContainer.insertAdjacentHTML('beforeend', rowHtml);
         });
 
-        rowHtml += `
-                    </div>
-                    <button class="slider-btn right" onclick="slideRight(this)"><i class="fa-solid fa-chevron-right"></i></button>
-                </div>
-            </div>
-        `;
-        examListContainer.insertAdjacentHTML('beforeend', rowHtml);
-    });
+    } catch (err) {
+        console.error("LỖI HIỂN THỊ ĐỀ THI: ", err);
+        examListContainer.innerHTML = `<div style="text-align:center; padding:50px; color:#ef4444; border: 2px dashed #f87171; border-radius: 12px; background: #fef2f2; margin-top: 20px;">
+            <i class="fa-solid fa-triangle-exclamation fa-3x" style="margin-bottom: 15px;"></i>
+            <h3 style="margin-bottom: 10px;">Lỗi kết xuất giao diện</h3>
+            <p>Đã xảy ra sự cố khi tải thẻ đề thi. Chi tiết lỗi: <b>${err.message}</b></p>
+            <button onclick="location.reload()" style="margin-top: 15px; padding: 8px 20px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer;">Tải lại trang</button>
+        </div>`;
+    }
 }
 
 window.slideLeft = function(button) {
