@@ -17,7 +17,7 @@ export default async function handler(req, res) {
         let systemInstruction = "";
         
         if (action === "flashcard") {
-            // Lệnh tạo Flashcard ôn tập (AI trả về JSON)
+            // Lệnh tạo Flashcard ôn tập
             systemInstruction = `Bạn là một chuyên gia y khoa. Dựa vào nội dung câu hỏi và giải thích mà người dùng cung cấp, hãy chắt lọc ra các ý chính cực kỳ ngắn gọn để tạo Flashcard ôn tập.
             QUY TẮC TỐI THƯỢNG: Trả về DUY NHẤT một mảng JSON. TUYỆT ĐỐI KHÔNG dùng ký tự markdown như \`\`\`json. KHÔNG có văn bản chào hỏi.
             Cấu trúc bắt buộc: [{"front": "Từ khóa, khái niệm hoặc câu hỏi cực ngắn", "back": "Ý chính cần nhớ, giải thích cực kỳ xúc tích"}]`;
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
             - QUY TẮC TỐI THƯỢNG: TUYỆT ĐỐI CHỈ TRẢ VỀ MÃ HTML THUẦN TÚY. KHÔNG bọc kết quả trong cấu trúc JSON. KHÔNG dùng ký tự markdown như \`\`\`html. KHÔNG có văn bản chào hỏi.`;
             
         } else {
-            // Lệnh tạo Đề thi (AI trả về JSON)
+            // Lệnh tạo Đề thi (Mặc định giữ nguyên logic cũ)
             systemInstruction = `Bạn là một chuyên gia ra đề thi trắc nghiệm Kỹ thuật Hình ảnh Y học. Hãy tạo ra đúng ${questionCount \vert{}\vert{} 10} câu hỏi mức độ ${difficulty || 'medium'} dựa vào tài liệu sau.
             QUY TẮC TỐI THƯỢNG: Trả về DUY NHẤT một mảng JSON. TUYỆT ĐỐI KHÔNG dùng ký tự markdown như \`\`\`json. KHÔNG có văn bản chào hỏi.
             Cấu trúc bắt buộc: [{"text": "Câu hỏi", "options": ["A", "B", "C", "D"], "correctAnswer": 0, "explanation": "Giải thích"}]`;
@@ -43,7 +43,14 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 contents: [{ 
                     parts: [{ text: systemInstruction + "\n\n--- DỮ LIỆU ĐẦU VÀO ---\n" + promptText }] 
-                }]
+                }],
+                // BỔ SUNG QUAN TRỌNG: Tắt các màng lọc an toàn để tránh việc AI hiểu lầm thuật ngữ Y tế là nội dung nguy hiểm
+                safetySettings: [
+                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }
+                ]
             })
         });
 
@@ -53,23 +60,37 @@ export default async function handler(req, res) {
         }
 
         const data = await geminiResponse.json();
-        let responseText = data.candidates[0].content.parts[0].text;
+        
+        // KIỂM TRA PHÒNG VỆ: Đảm bảo AI trả về kết quả hợp lệ, tránh lỗi Crash 500 do biến bị 'undefined'
+        if (!data.candidates || data.candidates.length === 0) {
+            let blockReason = "AI không trả về kết quả hợp lệ.";
+            if (data.promptFeedback && data.promptFeedback.blockReason) {
+                blockReason = `Yêu cầu bị chặn bởi màng lọc Google: ${data.promptFeedback.blockReason}`;
+            }
+            throw new Error(blockReason);
+        }
+
+        const firstCandidate = data.candidates[0];
+        if (!firstCandidate.content || !firstCandidate.content.parts || firstCandidate.content.parts.length === 0) {
+            throw new Error(`AI bị ngắt quãng giữa chừng. Mã lỗi: ${firstCandidate.finishReason || 'Không rõ'}`);
+        }
+
+        let responseText = firstCandidate.content.parts[0].text;
         
         // Quét dọn các ký tự thừa markdown
         responseText = responseText.replace(/```json/gi, '').replace(/```html/gi, '').replace(/```/g, '').trim();
         
-        // KIỂM SOÁT LUỒNG TRẢ VỀ (TRÁNH LỖI PARSE JSON)
+        // KIỂM SOÁT LUỒNG TRẢ VỀ CHUẨN XÁC
         if (action === "summary") {
-            // Tự bọc HTML vào JSON một cách an toàn ở phía Backend
             return res.status(200).json({ summary: responseText });
         } else {
-            // Đối với Flashcard và Đề thi thì parse JSON như cũ
             const outputJson = JSON.parse(responseText);
             return res.status(200).json(outputJson);
         }
 
     } catch (error) {
-        console.error("Lỗi Server:", error);
-        return res.status(500).json({ error: error.message });
+        console.error("Lỗi Server Vercel:", error);
+        // Trả về thẳng message lỗi để hiển thị ra thông báo cho người dùng
+        return res.status(500).json({ error: error.message || "Lỗi cấu trúc máy chủ (Internal Server Error)" });
     }
 }
