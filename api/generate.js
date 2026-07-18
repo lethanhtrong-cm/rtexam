@@ -18,22 +18,22 @@ export default async function handler(req, res) {
         
         if (action === "flashcard") {
             // Lệnh tạo Flashcard ôn tập
-            systemInstruction = `Bạn là một chuyên gia y khoa. Dựa vào nội dung câu hỏi và giải thích mà người dùng cung cấp, hãy chắt lọc ra các ý chính cực kỳ ngắn gọn để tạo Flashcard ôn tập.
-            QUY TẮC TỐI THƯỢNG: Trả về DUY NHẤT một mảng JSON. TUYỆT ĐỐI KHÔNG dùng ký tự markdown như \`\`\`json. KHÔNG có văn bản chào hỏi.
-            Cấu trúc bắt buộc: [{"front": "Từ khóa, khái niệm hoặc câu hỏi cực ngắn", "back": "Ý chính cần nhớ, giải thích cực kỳ xúc tích"}]`;
+            systemInstruction = `Bạn là một chuyên gia y khoa. Hãy chắt lọc ý chính cực kỳ ngắn gọn để tạo Flashcard.
+            QUY TẮC: Trả về DUY NHẤT mảng JSON, KHÔNG bọc markdown \`\`\`json.
+            Cấu trúc: [{"front": "Hỏi ngắn gọn", "back": "Đáp án súc tích"}]`;
             
         } else if (action === "summary") {
-            // Lệnh tạo Tóm tắt kiến thức (AI CHỈ TRẢ VỀ HTML THUẦN)
-            systemInstruction = `Bạn là một chuyên gia y khoa và giảng viên xuất sắc. Dựa vào nội dung các câu hỏi, đáp án đúng và lời giải thích mà người dùng cung cấp, hãy tổng hợp lại thành một bản "Tóm tắt kiến thức cốt lõi" (Cheat Sheet) cực kỳ khoa học và dễ hiểu.
+            // Lệnh tạo Tóm tắt kiến thức (TỐI ƯU HÓA TỐC ĐỘ ĐỂ CHỐNG TIMEOUT VERCEL)
+            systemInstruction = `Bạn là giảng viên y khoa. Dựa vào các câu hỏi sau, hãy TÓM TẮT SIÊU NGẮN GỌN kiến thức lõi (tối đa 300 từ) để học viên ôn thi nhanh.
             Yêu cầu:
-            - Trình bày trực tiếp bằng các thẻ HTML cơ bản (như <h3>, <ul>, <li>, <strong>, <p>) để hiển thị đẹp mắt trên nền tảng web.
-            - Phân chia thành các nhóm chủ đề/ý chính rõ ràng, rành mạch.
-            - QUY TẮC TỐI THƯỢNG: TUYỆT ĐỐI CHỈ TRẢ VỀ MÃ HTML THUẦN TÚY. KHÔNG bọc kết quả trong cấu trúc JSON. KHÔNG dùng ký tự markdown như \`\`\`html. KHÔNG có văn bản chào hỏi.`;
+            - Trình bày trực tiếp bằng các thẻ HTML (như <h3>, <ul>, <li>, <b>).
+            - KHÔNG giải thích dông dài, tập trung thẳng vào key word.
+            - QUY TẮC TỐI THƯỢNG: Trả về DUY NHẤT MÃ HTML THUẦN TÚY. KHÔNG bọc kết quả trong cấu trúc JSON. KHÔNG dùng ký tự markdown như \`\`\`html.`;
             
         } else {
-            // Lệnh tạo Đề thi (Mặc định giữ nguyên logic cũ)
+            // Lệnh tạo Đề thi (Mặc định)
             systemInstruction = `Bạn là một chuyên gia ra đề thi trắc nghiệm Kỹ thuật Hình ảnh Y học. Hãy tạo ra đúng ${questionCount \vert{}\vert{} 10} câu hỏi mức độ ${difficulty || 'medium'} dựa vào tài liệu sau.
-            QUY TẮC TỐI THƯỢNG: Trả về DUY NHẤT một mảng JSON. TUYỆT ĐỐI KHÔNG dùng ký tự markdown như \`\`\`json. KHÔNG có văn bản chào hỏi.
+            QUY TẮC TỐI THƯỢNG: Trả về DUY NHẤT một mảng JSON. TUYỆT ĐỐI KHÔNG dùng ký tự markdown như \`\`\`json.
             Cấu trúc bắt buộc: [{"text": "Câu hỏi", "options": ["A", "B", "C", "D"], "correctAnswer": 0, "explanation": "Giải thích"}]`;
         }
 
@@ -44,24 +44,28 @@ export default async function handler(req, res) {
                 contents: [{ 
                     parts: [{ text: systemInstruction + "\n\n--- DỮ LIỆU ĐẦU VÀO ---\n" + promptText }] 
                 }],
-                // BỔ SUNG QUAN TRỌNG: Tắt các màng lọc an toàn để tránh việc AI hiểu lầm thuật ngữ Y tế là nội dung nguy hiểm
+                // Tắt màng lọc để tránh bị Google chặn nhầm thuật ngữ y khoa
                 safetySettings: [
                     { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
                     { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
                     { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
                     { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }
-                ]
+                ],
+                // Giới hạn Token để tăng tốc độ phản hồi, tránh lỗi 10s Timeout của Vercel
+                generationConfig: {
+                    maxOutputTokens: 1200
+                }
             })
         });
 
         if (!geminiResponse.ok) {
             const errorData = await geminiResponse.text(); 
-            throw new Error(`Google API báo lỗi ${geminiResponse.status}: ${errorData}`);
+            throw new Error(`Lỗi Google API (${geminiResponse.status}): ${errorData}`);
         }
 
         const data = await geminiResponse.json();
         
-        // KIỂM TRA PHÒNG VỆ: Đảm bảo AI trả về kết quả hợp lệ, tránh lỗi Crash 500 do biến bị 'undefined'
+        // CƠ CHẾ BẢO VỆ KHI AI TỪ CHỐI TRẢ LỜI
         if (!data.candidates || data.candidates.length === 0) {
             let blockReason = "AI không trả về kết quả hợp lệ.";
             if (data.promptFeedback && data.promptFeedback.blockReason) {
@@ -70,17 +74,12 @@ export default async function handler(req, res) {
             throw new Error(blockReason);
         }
 
-        const firstCandidate = data.candidates[0];
-        if (!firstCandidate.content || !firstCandidate.content.parts || firstCandidate.content.parts.length === 0) {
-            throw new Error(`AI bị ngắt quãng giữa chừng. Mã lỗi: ${firstCandidate.finishReason || 'Không rõ'}`);
-        }
-
-        let responseText = firstCandidate.content.parts[0].text;
+        let responseText = data.candidates[0].content.parts[0].text;
         
         // Quét dọn các ký tự thừa markdown
         responseText = responseText.replace(/```json/gi, '').replace(/```html/gi, '').replace(/```/g, '').trim();
         
-        // KIỂM SOÁT LUỒNG TRẢ VỀ CHUẨN XÁC
+        // ĐIỀU HƯỚNG DỮ LIỆU TRẢ VỀ
         if (action === "summary") {
             return res.status(200).json({ summary: responseText });
         } else {
@@ -90,7 +89,17 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error("Lỗi Server Vercel:", error);
-        // Trả về thẳng message lỗi để hiển thị ra thông báo cho người dùng
-        return res.status(500).json({ error: error.message || "Lỗi cấu trúc máy chủ (Internal Server Error)" });
+        
+        // TRẢ VỀ HTML BÁO LỖI TRỰC TIẾP LÊN POPUP TÓM TẮT THAY VÌ SẬP SERVER
+        if (req.body && req.body.action === "summary") {
+            return res.status(200).json({ 
+                summary: `<div style="padding: 20px; border: 2px dashed #ef4444; border-radius: 12px; background: #fef2f2; color: #b91c1c;">
+                    <h3 style="margin-top: 0; color: #dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi Trích Xuất AI</h3>
+                    <p style="margin-bottom: 0;"><b>Nguyên nhân:</b> ${error.message}</p>
+                </div>` 
+            });
+        }
+        
+        return res.status(500).json({ error: error.message });
     }
 }
