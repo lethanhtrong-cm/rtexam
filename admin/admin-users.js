@@ -98,15 +98,38 @@ export function renderUserList() {
         }
 
         const firstLetter = user.email.charAt(0);
+        
+        // ==============================================
+        // CẤU HÌNH GIAO DIỆN NÚT BẤM HIỆN ĐẠI
+        // ==============================================
         const vipBtnClass = user.isVip ? 'btn-user-vip-off' : 'btn-user-vip-on';
         const vipBtnText = user.isVip ? '💎 Tắt VIP' : '👑 Kích VIP';
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
         const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
 
+        // CSS inline cho các nút để đảm bảo màu sắc luôn hiển thị rực rỡ
+        const baseBtnStyle = "padding: 6px 12px; font-size: 12.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: white;";
+        
+        const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
+        
+        const vipStyle = user.isVip 
+            ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` // Màu xám khi tắt VIP
+            : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; // Màu Gold khi kích VIP
+            
+        const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
+        
+        const banStyle = user.isBanned
+            ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` // Màu xanh khi mở khóa
+            : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; // Màu đỏ khi khóa
+            
+        const hoverEffect = `onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'"`;
+
         const tr = document.createElement('tr');
         tr.className = 'user-row';
+        tr.style.transition = "background-color 0.2s ease";
+        tr.onmouseover = () => tr.style.backgroundColor = '#f8fafc';
+        tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
         
-        // CẬP NHẬT: Thêm nút 🔔 Gửi (Gửi Thông Báo Cá Nhân)
         tr.innerHTML = `
             <td class="text-center" style="font-weight: 600; color: #64748b;">${stt++}</td>
             <td>
@@ -114,26 +137,22 @@ export function renderUserList() {
                     <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)};">
                         ${firstLetter}
                     </div>
-                    <div style="font-weight: 600; color: #0f172a;">${user.email}</div>
+                    <div style="font-weight: 600; color: #0f172a; font-size: 14px;">${user.email}</div>
                 </div>
             </td>
-            <td class="text-center"><span class="badge ${badgeClass}">${badgeText}</span></td>
+            <td class="text-center"><span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span></td>
             <td class="text-center">
-                <div class="user-action-group" style="display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap;">
-                    <button class="btn-user-action btn-notify-user" data-email="${user.email}" 
-                            style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white; background-color: #8b5cf6;" title="Gửi thông báo riêng">
+                <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
+                    <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi thông báo riêng">
                         🔔 Gửi
                     </button>
-                    <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" 
-                            style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white;">
+                    <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" style="${vipStyle}" ${hoverEffect}>
                         ${vipBtnText}
                     </button>
-                    <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" 
-                            style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white; background-color: #3b82f6;">
+                    <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>
                         📊 Lịch Sử
                     </button>
-                    <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" 
-                            style="padding: 5px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: none; font-weight: 700; cursor: pointer; color: white;">
+                    <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>
                         ${banBtnText}
                     </button>
                 </div>
