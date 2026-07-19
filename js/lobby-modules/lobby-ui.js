@@ -406,8 +406,8 @@ export function renderUI() {
         let badgeBg, badgeColor, badgeText, badgeIcon;
         let progressHTML = '';
 
-        // TÍNH NĂNG MỚI: Chỉ hiển thị thẻ Giám thị nếu Chủ phòng đang ở trạng thái 'waiting'
-        if (pData.uid === state.currentHostUid && pData.status === 'waiting') {
+        // TÍNH NĂNG MỚI: Kiểm tra CẢ Uid chủ phòng VÀ Vai trò ('proctor')
+        if (pData.uid === state.currentHostUid && state.currentHostRole === 'proctor') {
             badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeText = 'Giám thị'; badgeIcon = '<i class="fa-solid fa-eye"></i>';
         } else if (pData.status === 'playing') {
             badgeBg = '#fff7ed'; badgeColor = '#d97706'; badgeText = 'Đang thi'; badgeIcon = '<i class="fa-solid fa-pen"></i>';
@@ -436,6 +436,7 @@ export function renderUI() {
 
         let hostBadgeHTML = '';
         if (pData.uid === state.currentHostUid) {
+            // Vương miện này sẽ LUÔN LUÔN hiển thị cho Chủ phòng dù là Giám thị hay Thi đấu
             hostBadgeHTML = `<div style="position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.7rem; font-weight: 800; padding: 4px 12px; border-radius: 12px; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.3); z-index: 10; white-space: nowrap; letter-spacing: 0.5px;"><i class="fa-solid fa-crown" style="margin-right: 4px;"></i> CHỦ PHÒNG</div>`;
         }
 
@@ -486,8 +487,7 @@ export function renderUI() {
         let displayScore = '-';
         let displayTime = '-';
 
-        // TÍNH NĂNG MỚI: Chỉ hiển thị thẻ Giám thị trên bảng xếp hạng nếu Chủ phòng đang ở trạng thái 'waiting'
-        if (pData.uid === state.currentHostUid && pData.status === 'waiting') {
+        if (pData.uid === state.currentHostUid && state.currentHostRole === 'proctor') {
             badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeText = 'Giám thị'; badgeIcon = '<i class="fa-solid fa-eye"></i>';
         } else if (pData.status === 'playing') {
             badgeBg = '#fff7ed'; badgeColor = '#d97706'; badgeText = 'Đang thi'; badgeIcon = '<i class="fa-solid fa-pen"></i>';
