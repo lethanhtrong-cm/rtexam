@@ -406,11 +406,11 @@ export function renderUI() {
         let badgeBg, badgeColor, badgeText, badgeIcon;
         let progressHTML = '';
 
-        if (pData.uid === state.currentHostUid) {
+        // TÍNH NĂNG MỚI: Chỉ hiển thị thẻ Giám thị nếu Chủ phòng đang ở trạng thái 'waiting'
+        if (pData.uid === state.currentHostUid && pData.status === 'waiting') {
             badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeText = 'Giám thị'; badgeIcon = '<i class="fa-solid fa-eye"></i>';
         } else if (pData.status === 'playing') {
             badgeBg = '#fff7ed'; badgeColor = '#d97706'; badgeText = 'Đang thi'; badgeIcon = '<i class="fa-solid fa-pen"></i>';
-            // TIẾN TRÌNH LÀM BÀI CHO GIÁM THỊ XEM TRỰC TIẾP
             if (pData.totalQuestions) {
                 const answered = pData.answeredCount || 0;
                 const percent = Math.round((answered / pData.totalQuestions) * 100);
@@ -486,7 +486,8 @@ export function renderUI() {
         let displayScore = '-';
         let displayTime = '-';
 
-        if (pData.uid === state.currentHostUid) {
+        // TÍNH NĂNG MỚI: Chỉ hiển thị thẻ Giám thị trên bảng xếp hạng nếu Chủ phòng đang ở trạng thái 'waiting'
+        if (pData.uid === state.currentHostUid && pData.status === 'waiting') {
             badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeText = 'Giám thị'; badgeIcon = '<i class="fa-solid fa-eye"></i>';
         } else if (pData.status === 'playing') {
             badgeBg = '#fff7ed'; badgeColor = '#d97706'; badgeText = 'Đang thi'; badgeIcon = '<i class="fa-solid fa-pen"></i>';
