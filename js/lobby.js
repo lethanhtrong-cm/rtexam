@@ -88,6 +88,8 @@ UI.btnStart.addEventListener('click', async () => {
         UI.btnStart.setAttribute('disabled', 'true');
         UI.btnStart.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ĐANG KHỞI ĐỘNG...';
         try {
+            // FIX: Ép Chủ phòng ở lại sảnh chờ khi phòng bắt đầu để làm vai trò Giám thị
+            state.forceLobbyView = true;
             await updateDoc(doc(db, 'rooms', state.roomId), { status: 'playing' });
         } catch (error) {
             UI.btnStart.removeAttribute('disabled');
@@ -171,7 +173,6 @@ UI.btnSubmitAiGenerate.addEventListener('click', async () => {
         if (!response.ok) throw new Error("Lỗi gọi API AI.");
         const questions = await response.json();
         
-        // TẠO ID MỚI ĐÁNH SỐ THỨ TỰ CHO ĐỀ AI
         const aiExamsSnap = await getDocs(query(collection(db, "exams"), where("technique", "==", "AI Tự Động")));
         const nextNumber = aiExamsSnap.size + 1;
         const examId = "AI-" + String(nextNumber).padStart(3, '0');
@@ -203,7 +204,6 @@ UI.btnSubmitAiGenerate.addEventListener('click', async () => {
         state.isExamsLoaded = false;
         await loadExamsToDropdown();
         
-        // ÉP BƠM TRỰC TIẾP ĐỀ VỪA TẠO VÀO DROPDOWN THÔNG QUA OBJECT UI
         UI.selectExamInLobby.insertAdjacentHTML('beforeend', `<optgroup label="✨ ĐỀ THI AI VỪA TẠO"><option value="${examId}">[AI Tự Động] ${examId} - ${examTitle}</option></optgroup>`);
         UI.selectExamInLobby.value = examId;
 
@@ -325,7 +325,7 @@ async function initLobby() {
             const roomData = docSnap.data();
             state.currentRoomStatus = roomData.status;
             state.currentHostEmail = roomData.hostEmail;
-            state.currentHostUid = roomData.hostUid; // FIX: Lấy thông tin HostUid để đẩy sang renderUI hiển thị nhãn Chủ phòng
+            state.currentHostUid = roomData.hostUid; 
             state.currentActiveExamId = roomData.examId;
             if (!state.viewingHistoryMode) state.currentViewedExamId = state.currentActiveExamId;
 
@@ -341,13 +341,13 @@ async function initLobby() {
                 if (state.currentRoomStatus === 'playing' || state.currentRoomStatus === 'closed') {
                     UI.btnEndRoom.style.display = 'block';
                     UI.selectExamInLobby.setAttribute('disabled', 'true');
-                    UI.btnStart.style.display = 'block'; // FIX: Hiện nút Xem BXH
+                    UI.btnStart.style.display = 'block'; 
                     UI.btnStart.innerHTML = '<i class="fa-solid fa-trophy"></i> XEM BẢNG XẾP HẠNG';
                     UI.btnStart.removeAttribute('disabled');
                 } else { 
                     UI.btnEndRoom.style.display = 'none';
                     UI.selectExamInLobby.removeAttribute('disabled');
-                    UI.btnStart.style.display = 'block'; // FIX: Hiện nút Bắt đầu
+                    UI.btnStart.style.display = 'block'; 
                     UI.btnStart.innerHTML = '<i class="fa-solid fa-play"></i> BẮT ĐẦU THI';
                     if (roomData.examId) UI.btnStart.removeAttribute('disabled');
                     else UI.btnStart.setAttribute('disabled', 'true');
@@ -385,12 +385,18 @@ async function initLobby() {
                 switchUIState('waiting');
             } 
             else if (state.currentRoomStatus === 'playing') {
-                if (state.myParticipantStatus !== 'finished') {
+                if (isHost) {
+                    // FIX: Nếu là Chủ Phòng -> Ở LẠI SẢNH CHỜ LÀM GIÁM THỊ
+                    if (state.forceLobbyView) switchUIState('waiting');
+                    else switchUIState('playing');
+                } else if (state.myParticipantStatus !== 'finished') {
+                    // Học viên -> bị kéo qua phòng thi làm bài
                     if (state.myParticipantStatus === 'waiting') await updateDoc(participantRef, { status: 'playing' });
                     window.location.href = `quiz-room.html?examId=${roomData.examId}&roomId=${state.roomId}`;
                 } else {
-                    if (isHost && state.forceLobbyView === false) { state.forceLobbyView = true; switchUIState('waiting'); } 
-                    else if (!state.forceLobbyView) switchUIState('playing');
+                    // Học viên đã xong -> Hiện Bảng xếp hạng hoặc Sảnh chờ
+                    if (!state.forceLobbyView) switchUIState('playing');
+                    else switchUIState('waiting');
                 }
             } 
         });
