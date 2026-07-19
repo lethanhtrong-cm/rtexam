@@ -67,40 +67,96 @@ document.addEventListener('ComponentsLoaded', () => {
             if (e.target === roomModal) closeModal();
         });
 
-        // Xử lý nút: TẠO PHÒNG MỚI
-        btnCreateNew.addEventListener('click', async () => {
-            const originalText = btnCreateNew.innerHTML;
-            btnCreateNew.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
-            btnCreateNew.disabled = true;
+        // =================================================================
+        // TÍNH NĂNG MỚI: BẬT POPUP CHỌN VAI TRÒ KHI NHẤN "TẠO PHÒNG MỚI"
+        // =================================================================
+        btnCreateNew.addEventListener('click', (e) => {
+            e.preventDefault();
 
-            const roomId = Math.floor(10000 + Math.random() * 90000).toString();
-            const targetUrl = `lobby.html?roomId=${roomId}`;
-            const newTab = window.open('about:blank', '_blank');
+            // 1. Tạo giao diện Popup Modal động (Tuân thủ CSS từ modal.html)
+            const popupHTML = `
+                <div class="custom-modal-overlay" id="roleSelectionModal" style="display: flex; z-index: 100000; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
+                    <div class="custom-modal-content" style="max-width: 400px; animation: modalNotifFade 0.25s ease-out;">
+                        <div class="custom-modal-header">
+                            <h3 style="margin: 0;"><i class="fa-solid fa-users-gear"></i> Vai trò Chủ phòng</h3>
+                            <button class="close-modal-btn" id="closeRoleModalBtn"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="custom-modal-body" style="text-align: center; padding: 25px 20px;">
+                            <p style="margin-bottom: 20px; color: #475569; font-size: 0.95rem;">Bạn muốn tham gia phòng thi này với tư cách gì?</p>
+                            <div style="display: flex; gap: 15px;">
+                                <button id="btnRoleProctor" style="flex: 1; padding: 15px; background: #0f172a; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <i class="fa-solid fa-eye" style="font-size: 1.8rem; color: #38bdf8;"></i> Giám thị
+                                </button>
+                                <button id="btnRolePlayer" style="flex: 1; padding: 15px; background: #2563eb; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);">
+                                    <i class="fa-solid fa-pen" style="font-size: 1.8rem; color: #93c5fd;"></i> Thi đấu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Thêm Popup vào cuối trang
+            document.body.insertAdjacentHTML('beforeend', popupHTML);
 
-            try {
-                const roomRef = doc(db, 'rooms', roomId);
-                await setDoc(roomRef, {
-                    hostEmail: auth.currentUser.email,
-                    hostUid: auth.currentUser.uid,
-                    status: 'waiting',
-                    isLocked: false,
-                    examId: null,   
-                    examName: null,
-                    createdAt: serverTimestamp()
-                });
+            const roleModal = document.getElementById('roleSelectionModal');
+            const closeBtn = document.getElementById('closeRoleModalBtn');
+            const btnProctor = document.getElementById('btnRoleProctor');
+            const btnPlayer = document.getElementById('btnRolePlayer');
 
-                if (newTab) newTab.location.href = targetUrl;
-                closeModal();
+            // Hiệu ứng Hover cho nút
+            btnProctor.onmouseover = () => btnProctor.style.transform = 'translateY(-3px)';
+            btnProctor.onmouseout = () => btnProctor.style.transform = 'translateY(0)';
+            btnPlayer.onmouseover = () => btnPlayer.style.transform = 'translateY(-3px)';
+            btnPlayer.onmouseout = () => btnPlayer.style.transform = 'translateY(0)';
+
+            const destroyModal = () => roleModal.remove();
+            closeBtn.addEventListener('click', destroyModal);
+            roleModal.addEventListener('click', (ev) => { if (ev.target === roleModal) destroyModal(); });
+
+            // 2. Hàm xử lý logic gốc sau khi chọn vai trò
+            const executeRoomCreation = async (role) => {
+                destroyModal(); // Đóng popup chọn vai trò
                 
-            } catch (error) {
-                console.error("Lỗi Firestore:", error);
-                if (newTab) newTab.close();
-                alert("Không thể tạo phòng! Vui lòng kiểm tra mạng.");
-            } finally {
-                btnCreateNew.innerHTML = originalText;
-                btnCreateNew.disabled = false;
-            }
+                const originalText = btnCreateNew.innerHTML;
+                btnCreateNew.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
+                btnCreateNew.disabled = true;
+
+                const roomId = Math.floor(10000 + Math.random() * 90000).toString();
+                const targetUrl = `lobby.html?roomId=${roomId}`;
+                const newTab = window.open('about:blank', '_blank');
+
+                try {
+                    const roomRef = doc(db, 'rooms', roomId);
+                    await setDoc(roomRef, {
+                        hostEmail: auth.currentUser.email,
+                        hostUid: auth.currentUser.uid,
+                        hostRole: role, // Ghi nhận 'proctor' (Giám thị) hoặc 'player' (Thi đấu)
+                        status: 'waiting',
+                        isLocked: false,
+                        examId: null,   
+                        examName: null,
+                        createdAt: serverTimestamp()
+                    });
+
+                    if (newTab) newTab.location.href = targetUrl;
+                    closeModal(); // Đóng form Modal chính
+                    
+                } catch (error) {
+                    console.error("Lỗi Firestore:", error);
+                    if (newTab) newTab.close();
+                    alert("Không thể tạo phòng! Vui lòng kiểm tra mạng.");
+                } finally {
+                    btnCreateNew.innerHTML = originalText;
+                    btnCreateNew.disabled = false;
+                }
+            };
+
+            // Lắng nghe click chọn vai trò
+            btnProctor.addEventListener('click', () => executeRoomCreation('proctor'));
+            btnPlayer.addEventListener('click', () => executeRoomCreation('player'));
         });
+
 
         // Xử lý nút: THAM GIA PHÒNG
         btnJoin.addEventListener('click', async () => {
@@ -168,7 +224,7 @@ function initDOMListeners() {
                 if (icon) icon.style.transform = content.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
 
                 const targetId = header.getAttribute('data-target');
-                if (targetId) switchTab(targetId, `Tất cả`); // Đã module hóa
+                if (targetId) switchTab(targetId, `Tất cả`); 
                 header.classList.add('active');
                 
                 const allSubMenu = content.querySelector('.sub-menu-item[data-technique="all"]');
