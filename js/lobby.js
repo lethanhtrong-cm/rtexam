@@ -85,10 +85,6 @@ UI.btnStart.addEventListener('click', async () => {
         switchUIState('playing'); 
         renderUI();
     } else {
-        // TÍNH NĂNG MỚI: CHO PHÉP CHỦ PHÒNG CHỌN CHẾ ĐỘ THI ĐẤU HOẶC GIÁM THỊ
-        const isPlaying = confirm("TÙY CHỌN VAI TRÒ:\n\n- Chọn [OK] để TRỰC TIẾP THI ĐẤU cùng mọi người.\n- Chọn [Hủy / Cancel] để làm GIÁM THỊ (Chỉ xem tiến trình).");
-        state.forceLobbyView = !isPlaying; // Nếu Cancel (false) -> forceLobbyView = true (Giám thị). Nếu OK (true) -> false (Thi đấu)
-
         UI.btnStart.setAttribute('disabled', 'true');
         UI.btnStart.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ĐANG KHỞI ĐỘNG...';
         try {
@@ -138,7 +134,6 @@ UI.btnEndRoom.addEventListener('click', async () => {
             });
             await batch.commit();
             
-            // TÍNH NĂNG MỚI: Reset trắng ExamId để chủ phòng chọn đề mới dễ dàng
             await updateDoc(roomRef, { status: 'waiting', examId: null, examName: null });
             UI.selectExamInLobby.value = ""; 
             
@@ -332,6 +327,8 @@ async function initLobby() {
             state.currentHostEmail = roomData.hostEmail;
             state.currentHostUid = roomData.hostUid; 
             state.currentActiveExamId = roomData.examId;
+            state.currentHostRole = roomData.hostRole || 'proctor'; // ĐỌC VÀ LƯU VAI TRÒ CHỦ PHÒNG
+
             if (!state.viewingHistoryMode) state.currentViewedExamId = state.currentActiveExamId;
 
             if (roomData.examId) UI.displayExamName.innerHTML = `<i class="fa-solid fa-book-open"></i> ${roomData.examName || "Đề thi đã chọn"}`;
@@ -385,33 +382,28 @@ async function initLobby() {
 
             renderUI();
 
-            // LOGIC ĐIỀU HƯỚNG MỚI
+            // LOGIC ĐIỀU HƯỚNG DỰA VÀO VAI TRÒ
             if (state.currentRoomStatus === 'waiting') {
-                state.forceLobbyView = false;
+                state.forceLobbyView = (state.currentHostRole === 'proctor');
                 switchUIState('waiting');
             } 
             else if (state.currentRoomStatus === 'playing') {
                 if (isHost) {
-                    if (state.forceLobbyView) {
-                        // Chọn làm giám thị -> Ở lại sảnh
+                    if (state.currentHostRole === 'proctor' || state.forceLobbyView) {
                         switchUIState('waiting'); 
                     } else {
-                        // Chọn thi đấu -> Kéo vào phòng thi
                         if (state.myParticipantStatus !== 'finished') {
                             if (state.myParticipantStatus === 'waiting') await updateDoc(participantRef, { status: 'playing' });
                             window.location.href = `quiz-room.html?examId=${roomData.examId}&roomId=${state.roomId}`;
                         } else {
-                            // Thi xong quay lại sẽ mở bảng xếp hạng
                             if (!state.forceLobbyView) switchUIState('playing');
                             else switchUIState('waiting');
                         }
                     }
                 } else if (state.myParticipantStatus !== 'finished') {
-                    // Học viên -> bị kéo qua phòng thi làm bài
                     if (state.myParticipantStatus === 'waiting') await updateDoc(participantRef, { status: 'playing' });
                     window.location.href = `quiz-room.html?examId=${roomData.examId}&roomId=${state.roomId}`;
                 } else {
-                    // Học viên đã xong
                     if (!state.forceLobbyView) switchUIState('playing');
                     else switchUIState('waiting');
                 }
