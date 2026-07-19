@@ -149,17 +149,16 @@ function initExamState() {
     btnSubmit.innerText = "Nộp bài ngay"; 
     btnSubmit.onclick = () => submitExam(false);
 
-    // ================= TÍNH NĂNG ROOM: BÁO ĐANG THI & LẮNG NGHE CHỦ PHÒNG =================
     if (currentRoomId && currentUser) {
         const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
-        setDoc(participantRef, { status: 'playing' }, { merge: true }).catch(err => console.error(err));
+        // Khởi tạo luôn số câu để render tiến trình
+        setDoc(participantRef, { status: 'playing', answeredCount: 0, totalQuestions: questions.length }, { merge: true }).catch(err => console.error(err));
 
         const roomRef = doc(db, "rooms", currentRoomId);
         onSnapshot(roomRef, (snapshot) => {
             if (snapshot.exists()) {
                 const roomData = snapshot.data();
                 if (roomData.status === 'closed' && !isSubmitted) {
-                    // SỬA LỖI: Hiện đúng thông báo bị ép nộp bài do chủ phòng đóng
                     const overlayText = document.querySelector('#force-submit-overlay div:nth-child(2)');
                     if (overlayText) overlayText.innerText = "Chủ phòng đã kết thúc bài thi. Đang tự động thu bài...";
 
@@ -169,7 +168,6 @@ function initExamState() {
             }
         });
     }
-    // =======================================================================================
 
     renderAll();
     startTimer();
@@ -186,7 +184,6 @@ async function fetchQuestionsFromFirestore() {
     });
     
     if (fetched.length > 0) {
-        // Fix Bug: Sắp xếp lại mảng theo thứ tự order trước khi nạp vào bài thi
         questions = fetched.sort((a, b) => (a.order || 0) - (b.order || 0));
     } else {
         throw new Error(`Không tìm thấy câu hỏi nào cho mã đề: ${currentExamId}`);
@@ -226,7 +223,6 @@ function updateTimerDisplay() {
     }
 }
 
-// ================= TÍNH NĂNG: XỬ LÝ NÚT VỀ PHÒNG CHỜ =================
 const btnBackLobby = document.getElementById('btn-back-lobby');
 if (btnBackLobby) {
     btnBackLobby.addEventListener('click', () => {
@@ -276,7 +272,6 @@ if (btnConfirmLeave) {
         redirect(`lobby.html?roomId=${currentRoomId}`);
     });
 }
-// ==================================================================
 
 async function executeSubmit() {
     stopTimer(); 
@@ -300,7 +295,6 @@ async function executeSubmit() {
     let score = (correctCount / total) * 10;
     score = Math.round(score * 100) / 100; 
 
-    // Cập nhật XP Leaderboard
     let gainedXP = 0;
     try {
         const resultsRef = collection(db, "results");
@@ -323,7 +317,6 @@ async function executeSubmit() {
         console.error("Lỗi khi tính XP Leaderboard:", xpError);
     }
 
-    // Cập nhật Điểm số vào Room
     if (currentRoomId && currentUser) {
         try {
             const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
@@ -376,11 +369,8 @@ function submitExam(isAutoSubmit = false) {
         
         document.getElementById('btn-confirm-submit').onclick = () => {
             confirmModal.classList.remove('active');
-            
-            // SỬA LỖI UI: Đang tự nộp thì báo đang nộp
             const overlayText = document.querySelector('#force-submit-overlay div:nth-child(2)');
             if (overlayText) overlayText.innerText = "Đang xử lý nộp bài của bạn...";
-
             executeSubmit();
         };
         document.getElementById('btn-cancel-submit').onclick = () => {
@@ -388,11 +378,8 @@ function submitExam(isAutoSubmit = false) {
         };
     } else {
         showToast("Hệ thống đang tự động thu bài!");
-        
-        // SỬA LỖI UI: Báo hết giờ
         const overlayText = document.querySelector('#force-submit-overlay div:nth-child(2)');
         if (overlayText) overlayText.innerText = "Đã hết thời gian làm bài. Đang tự động thu bài...";
-
         executeSubmit();
     }
 }
@@ -402,6 +389,14 @@ function handleOptionSelect(idx) {
     userAnswers[currentIndex] = idx; 
     renderQuestion(); 
     renderPalette();  
+
+    // BẮN SỐ LIỆU TIẾN TRÌNH (PROGRESS) VỀ CHO CHỦ PHÒNG (GIÁM THỊ) XEM THEO THỜI GIAN THỰC
+    if (currentRoomId && currentUser) {
+        const answeredCount = Object.keys(userAnswers).length;
+        const total = questions.length;
+        const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
+        setDoc(participantRef, { answeredCount: answeredCount, totalQuestions: total }, { merge: true }).catch(err => console.error(err));
+    }
     
     setTimeout(() => {
         if (isSubmitted) return; 
@@ -472,7 +467,6 @@ document.getElementById('btn-next').onclick = () => {
     if(currentIndex < questions.length - 1) { currentIndex++; renderAll(); } 
 };
 
-// PHÍM TẮT ĐIỀU HƯỚNG
 document.addEventListener('keydown', (e) => {
     if (questions.length === 0 || document.activeElement.tagName === 'TEXTAREA') return;
 
