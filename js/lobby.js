@@ -85,11 +85,13 @@ UI.btnStart.addEventListener('click', async () => {
         switchUIState('playing'); 
         renderUI();
     } else {
+        // TÍNH NĂNG MỚI: CHO PHÉP CHỦ PHÒNG CHỌN CHẾ ĐỘ THI ĐẤU HOẶC GIÁM THỊ
+        const isPlaying = confirm("TÙY CHỌN VAI TRÒ:\n\n- Chọn [OK] để TRỰC TIẾP THI ĐẤU cùng mọi người.\n- Chọn [Hủy / Cancel] để làm GIÁM THỊ (Chỉ xem tiến trình).");
+        state.forceLobbyView = !isPlaying; // Nếu Cancel (false) -> forceLobbyView = true (Giám thị). Nếu OK (true) -> false (Thi đấu)
+
         UI.btnStart.setAttribute('disabled', 'true');
         UI.btnStart.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ĐANG KHỞI ĐỘNG...';
         try {
-            // FIX: Ép Chủ phòng ở lại sảnh chờ khi phòng bắt đầu để làm vai trò Giám thị
-            state.forceLobbyView = true;
             await updateDoc(doc(db, 'rooms', state.roomId), { status: 'playing' });
         } catch (error) {
             UI.btnStart.removeAttribute('disabled');
@@ -132,10 +134,13 @@ UI.btnEndRoom.addEventListener('click', async () => {
 
             const batch = writeBatch(db);
             pSnapshot.forEach((docItem) => {
-                batch.update(docItem.ref, { status: 'waiting', score: 0, timeTaken: '00:00' });
+                batch.update(docItem.ref, { status: 'waiting', score: 0, timeTaken: '00:00', answeredCount: 0 });
             });
             await batch.commit();
-            await updateDoc(roomRef, { status: 'waiting' });
+            
+            // TÍNH NĂNG MỚI: Reset trắng ExamId để chủ phòng chọn đề mới dễ dàng
+            await updateDoc(roomRef, { status: 'waiting', examId: null, examName: null });
+            UI.selectExamInLobby.value = ""; 
             
             state.forceLobbyView = false;
             state.viewingHistoryMode = false;
@@ -380,21 +385,33 @@ async function initLobby() {
 
             renderUI();
 
+            // LOGIC ĐIỀU HƯỚNG MỚI
             if (state.currentRoomStatus === 'waiting') {
                 state.forceLobbyView = false;
                 switchUIState('waiting');
             } 
             else if (state.currentRoomStatus === 'playing') {
                 if (isHost) {
-                    // FIX: Nếu là Chủ Phòng -> Ở LẠI SẢNH CHỜ LÀM GIÁM THỊ
-                    if (state.forceLobbyView) switchUIState('waiting');
-                    else switchUIState('playing');
+                    if (state.forceLobbyView) {
+                        // Chọn làm giám thị -> Ở lại sảnh
+                        switchUIState('waiting'); 
+                    } else {
+                        // Chọn thi đấu -> Kéo vào phòng thi
+                        if (state.myParticipantStatus !== 'finished') {
+                            if (state.myParticipantStatus === 'waiting') await updateDoc(participantRef, { status: 'playing' });
+                            window.location.href = `quiz-room.html?examId=${roomData.examId}&roomId=${state.roomId}`;
+                        } else {
+                            // Thi xong quay lại sẽ mở bảng xếp hạng
+                            if (!state.forceLobbyView) switchUIState('playing');
+                            else switchUIState('waiting');
+                        }
+                    }
                 } else if (state.myParticipantStatus !== 'finished') {
                     // Học viên -> bị kéo qua phòng thi làm bài
                     if (state.myParticipantStatus === 'waiting') await updateDoc(participantRef, { status: 'playing' });
                     window.location.href = `quiz-room.html?examId=${roomData.examId}&roomId=${state.roomId}`;
                 } else {
-                    // Học viên đã xong -> Hiện Bảng xếp hạng hoặc Sảnh chờ
+                    // Học viên đã xong
                     if (!state.forceLobbyView) switchUIState('playing');
                     else switchUIState('waiting');
                 }
