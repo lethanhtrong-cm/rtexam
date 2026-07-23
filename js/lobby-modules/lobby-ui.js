@@ -540,6 +540,19 @@ export function renderUI() {
     
     const isCurrentUserHost = (state.currentHostEmail === state.currentUser.email);
 
+    // =====================================================================
+    // TÍNH NĂNG MỚI: Ẩn nút Xem Lại Bài Làm nếu Vai trò là Giám thị
+    // =====================================================================
+    const btnReviewExam = document.getElementById('btnReviewExam');
+    if (btnReviewExam) {
+        if (isCurrentUserHost && state.currentHostRole === 'proctor') {
+            btnReviewExam.style.setProperty('display', 'none', 'important'); // Ép ghi đè thuộc tính CSS !important
+        } else {
+            btnReviewExam.style.setProperty('display', 'flex', 'important');
+        }
+    }
+    // =====================================================================
+
     state.currentParticipantsArray.forEach(pData => {
         let badgeBg, badgeColor, badgeText, badgeIcon;
         let progressHTML = '';
