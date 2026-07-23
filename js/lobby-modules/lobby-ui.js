@@ -77,49 +77,20 @@ export function enhanceLeaderboardUI() {
         const customStyle = document.createElement('style');
         customStyle.id = 'sleek-lb-styles';
         customStyle.innerHTML = `
-            #historySidebar {
-                background: #ffffff !important;
-                border: 1px solid #e2e8f0 !important;
-                box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03) !important;
-                border-radius: 16px !important;
-            }
-            #lbCaptureArea {
-                background: #ffffff !important;
-                border: 1px solid #e2e8f0 !important;
-                box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03) !important;
-                border-radius: 16px !important;
-                overflow-x: auto !important; 
-            }
-            .history-item { 
-                padding: 14px 16px !important; margin-bottom: 8px !important; background: #f8fafc !important; 
-                border: 1px solid transparent !important; border-radius: 10px !important; cursor: pointer !important; 
-                transition: all 0.2s ease !important; color: #475569 !important;
-            }
+            #historySidebar { background: #ffffff !important; border: 1px solid #e2e8f0 !important; box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03) !important; border-radius: 16px !important; }
+            #lbCaptureArea { background: #ffffff !important; border: 1px solid #e2e8f0 !important; box-shadow: 0 4px 15px -3px rgba(0,0,0,0.03) !important; border-radius: 16px !important; overflow-x: auto !important; }
+            .history-item { padding: 14px 16px !important; margin-bottom: 8px !important; background: #f8fafc !important; border: 1px solid transparent !important; border-radius: 10px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #475569 !important; }
             .history-item:hover { background: #f1f5f9 !important; border-color: #cbd5e1 !important; }
-            .history-item.active { 
-                background: #eff6ff !important; border-color: #bfdbfe !important; color: #1d4ed8 !important; 
-                box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1) !important;
-            }
-            .lb-actions {
-                display: flex !important; flex-direction: row !important; flex-wrap: wrap !important;
-                justify-content: center !important; gap: 16px !important; margin-top: 30px !important;
-                padding-top: 25px !important; border-top: 1px dashed #e2e8f0 !important;
-            }
-            .lb-actions button {
-                margin: 0 !important; padding: 12px 24px !important; border-radius: 12px !important;
-                font-weight: 700 !important; font-size: 0.95rem !important; border: none !important;
-                cursor: pointer !important; transition: all 0.2s ease !important; display: flex !important;
-                align-items: center !important; gap: 8px !important; width: auto !important; 
-            }
+            .history-item.active { background: #eff6ff !important; border-color: #bfdbfe !important; color: #1d4ed8 !important; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1) !important; }
+            .lb-actions { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: center !important; gap: 16px !important; margin-top: 30px !important; padding-top: 25px !important; border-top: 1px dashed #e2e8f0 !important; }
+            .lb-actions button { margin: 0 !important; padding: 12px 24px !important; border-radius: 12px !important; font-weight: 700 !important; font-size: 0.95rem !important; border: none !important; cursor: pointer !important; transition: all 0.2s ease !important; display: flex !important; align-items: center !important; gap: 8px !important; width: auto !important; }
             .lb-actions button:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 15px rgba(0,0,0,0.08) !important; }
-
             #btnEndRoom { background: #fff1f2 !important; color: #e11d48 !important; border: 1px solid #fecdd3 !important; }
             #btnEndRoom:hover { background: #ffe4e6 !important; }
             #btnReviewExam { background: #eff6ff !important; color: #2563eb !important; border: 1px solid #bfdbfe !important; }
             #btnReviewExam:hover { background: #dbeafe !important; }
             #btnBackToLobby { background: #f8fafc !important; color: #475569 !important; border: 1px solid #e2e8f0 !important; }
             #btnBackToLobby:hover { background: #f1f5f9 !important; color: #0f172a !important;}
-
             .leaderboard-table { width: 100% !important; min-width: 650px !important; border-collapse: collapse !important; margin-top: 10px !important; }
             .leaderboard-table th { background: transparent !important; color: #64748b !important; font-weight: 700 !important; text-transform: uppercase !important; font-size: 0.85rem !important; letter-spacing: 0.5px !important; border-bottom: 2px solid #e2e8f0 !important; padding: 16px 12px !important; text-align: center !important; }
             .leaderboard-table th:nth-child(2) { text-align: left !important; padding-left: 20px !important; } 
@@ -212,6 +183,38 @@ export function enhanceLeaderboardUI() {
         });
     }
 
+    // TÍNH NĂNG MỚI: CHÈN MODAL LIVE VIEW
+    if (!document.getElementById('liveViewModal')) {
+        const liveModalHtml = `
+        <div class="modal" id="liveViewModal" style="z-index: 10000; padding-top: 5vh; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px);">
+            <div class="modal-content" style="max-width: 650px; width: 95%; max-height: 85vh; display: flex; flex-direction: column; padding: 0; background: #f8fafc; overflow: hidden; border-radius: 16px; border: none;">
+                <div style="padding: 18px 24px; background: #ffffff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; z-index: 10;">
+                    <h3 style="margin: 0; color: #0f172a; font-weight: 800; font-size: 1.25rem;"><i class="fa-solid fa-satellite-dish" style="color:#ef4444;"></i> GIÁM SÁT TRỰC TIẾP</h3>
+                    <button id="closeLiveViewBtn" style="background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="liveViewContent" style="padding: 24px; overflow-y: auto; text-align: left; flex: 1; scroll-behavior: smooth;">
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', liveModalHtml);
+
+        const closeBtn = document.getElementById('closeLiveViewBtn');
+        closeBtn.addEventListener('click', () => {
+             document.getElementById('liveViewModal').classList.remove('active');
+             state.currentlyViewingLiveUid = null;
+        });
+        closeBtn.onmouseover = function() { this.style.background = '#fee2e2'; this.style.color = '#e11d48'; };
+        closeBtn.onmouseout = function() { this.style.background = '#f1f5f9'; this.style.color = '#64748b'; };
+
+        document.getElementById('liveViewModal').addEventListener('click', (e) => {
+            if (e.target.id === 'liveViewModal') {
+                e.target.classList.remove('active');
+                state.currentlyViewingLiveUid = null;
+            }
+        });
+    }
+
     if (!window.html2canvas) {
         const script = document.createElement('script');
         script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
@@ -252,6 +255,100 @@ export function enhanceLeaderboardUI() {
         theadTr.insertBefore(th, theadTr.firstChild);
     }
 }
+
+// TÍNH NĂNG MỚI: MỞ BẢNG THEO DÕI LIVE
+export async function openLiveView(uid) {
+    state.currentlyViewingLiveUid = uid;
+    const modal = document.getElementById('liveViewModal');
+    modal.classList.add('active');
+    document.getElementById('liveViewContent').innerHTML = '<div style="text-align:center; padding: 50px;"><i class="fa-solid fa-circle-notch fa-spin fa-3x" style="color:#ef4444"></i><br><h4 style="color:#64748b; margin-top:20px;">Đang thiết lập kết nối trực tiếp...</h4></div>';
+
+    if (!state.liveQuestions || state.liveQuestionsExamId !== state.currentActiveExamId) {
+        try {
+            const qSnap = await getDocs(query(collection(db, "questions"), where("examId", "==", state.currentActiveExamId)));
+            let questions = [];
+            qSnap.forEach(d => questions.push({id: d.id, ...d.data()}));
+            questions.sort((a, b) => a.order - b.order);
+            state.liveQuestions = questions;
+            state.liveQuestionsExamId = state.currentActiveExamId;
+        } catch (err) {
+            console.error("Lỗi tải câu hỏi:", err);
+        }
+    }
+    updateLiveViewModal();
+}
+
+// TÍNH NĂNG MỚI: RENDER GIAO DIỆN MÀN HÌNH LIVE (CHẠY LIÊN TỤC THEO SNAPSHOT)
+export function updateLiveViewModal() {
+    if (!state.currentlyViewingLiveUid) return;
+    const modal = document.getElementById('liveViewModal');
+    if (!modal || !modal.classList.contains('active')) return;
+
+    const pData = state.currentParticipantsArray.find(p => p.uid === state.currentlyViewingLiveUid);
+    if (!pData) {
+        document.getElementById('liveViewContent').innerHTML = '<div style="text-align:center; color:#ef4444; padding:30px;"><b>Học viên đã rời phòng.</b></div>';
+        return;
+    }
+
+    if (pData.status !== 'playing') {
+         document.getElementById('liveViewContent').innerHTML = `<div style="text-align:center; color:#64748b; padding:30px; font-size: 1.1rem;"><b>Học viên hiện không ở trạng thái làm bài.</b><br><small>Trạng thái hiện tại: ${pData.status}</small></div>`;
+         return;
+    }
+
+    const currentQIdx = pData.currentQuestionIndex || 0;
+    const liveAnswers = pData.liveAnswers || {};
+    const questions = state.liveQuestions || [];
+
+    if (questions.length === 0) {
+        document.getElementById('liveViewContent').innerHTML = '<div style="text-align:center; color:#ef4444; padding:30px;"><b>Không thể tải nội dung câu hỏi.</b></div>';
+        return;
+    }
+
+    const q = questions[currentQIdx];
+    if(!q) return;
+
+    const selectedOptIdx = liveAnswers[currentQIdx];
+
+    let paletteHtml = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom: 20px; max-height: 140px; overflow-y:auto; padding-right:5px;">';
+    questions.forEach((_, i) => {
+        let bg = liveAnswers[i] !== undefined ? '#10b981' : '#f1f5f9';
+        let color = liveAnswers[i] !== undefined ? 'white' : '#64748b';
+        let border = i === currentQIdx ? '2px solid #ef4444' : '2px solid transparent';
+        paletteHtml += `<div style="width:32px; height:32px; border-radius:6px; background:${bg}; color:${color}; border:${border}; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:bold; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${i+1}</div>`;
+    });
+    paletteHtml += '</div>';
+
+    let optionsHtml = '';
+    const labels = ['A','B','C','D','E','F'];
+    (q.options || []).forEach((optText, oIdx) => {
+         let isSelected = oIdx === selectedOptIdx;
+         let bg = isSelected ? '#eff6ff' : '#ffffff';
+         let border = isSelected ? '2px solid #3b82f6' : '1px solid #e2e8f0';
+         let fw = isSelected ? '800' : '500';
+         let color = isSelected ? '#1d4ed8' : '#334155';
+         optionsHtml += `
+             <div style="padding: 14px 16px; margin-bottom: 10px; border-radius: 10px; background: ${bg}; border: ${border}; font-weight: ${fw}; color: ${color}; transition: 0.2s;">
+                 <span style="display:inline-block; width: 25px;">${labels[oIdx]}.</span> ${optText}
+             </div>
+         `;
+    });
+
+    let html = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #cbd5e1;">
+            <h4 style="margin:0; color:#0f172a; display:flex; align-items:center; gap:10px;"><img src="${pData.photoURL}" style="width:40px; height:40px; border-radius:50%; border:2px solid #e2e8f0; object-fit:cover;"> <span>${pData.displayName}</span></h4>
+            <span style="background:#fef2f2; color:#ef4444; padding:6px 12px; border-radius:12px; font-size:0.85rem; font-weight:800; box-shadow: 0 2px 4px rgba(239,68,68,0.1);"><i class="fa-solid fa-location-crosshairs"></i> Đang ở câu ${currentQIdx + 1}/${questions.length}</span>
+        </div>
+        ${paletteHtml}
+        <div style="background: white; padding: 22px; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+            <h5 style="margin: 0 0 18px 0; color:#0f172a; font-size: 1.05rem; line-height: 1.6;"><span style="background:#f1f5f9; color:#475569; padding:4px 10px; border-radius:6px; font-size:0.85rem; margin-right:8px; border: 1px solid #e2e8f0;">Câu ${currentQIdx + 1}</span> ${q.text}</h5>
+            <div>
+                ${optionsHtml}
+            </div>
+        </div>
+    `;
+    document.getElementById('liveViewContent').innerHTML = html;
+}
+
 
 export async function openReviewModal() {
     if (!state.currentViewedExamId) {
@@ -406,7 +503,6 @@ export function renderUI() {
         let badgeBg, badgeColor, badgeText, badgeIcon;
         let progressHTML = '';
 
-        // TÍNH NĂNG MỚI: Kiểm tra CẢ Uid chủ phòng VÀ Vai trò ('proctor')
         if (pData.uid === state.currentHostUid && state.currentHostRole === 'proctor') {
             badgeBg = '#fef3c7'; badgeColor = '#b45309'; badgeText = 'Giám thị'; badgeIcon = '<i class="fa-solid fa-eye"></i>';
         } else if (pData.status === 'playing') {
@@ -436,8 +532,13 @@ export function renderUI() {
 
         let hostBadgeHTML = '';
         if (pData.uid === state.currentHostUid) {
-            // Vương miện này sẽ LUÔN LUÔN hiển thị cho Chủ phòng dù là Giám thị hay Thi đấu
             hostBadgeHTML = `<div style="position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.7rem; font-weight: 800; padding: 4px 12px; border-radius: 12px; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.3); z-index: 10; white-space: nowrap; letter-spacing: 0.5px;"><i class="fa-solid fa-crown" style="margin-right: 4px;"></i> CHỦ PHÒNG</div>`;
+        }
+
+        // TÍNH NĂNG MỚI: NÚT XEM LIVE CHỈ HIỆN KHI CHỦ PHÒNG LÀ GIÁM THỊ VÀ HỌC VIÊN ĐANG THI
+        let liveBtnHTML = '';
+        if (isCurrentUserHost && state.currentHostRole === 'proctor' && pData.status === 'playing') {
+            liveBtnHTML = `<button class="btn-live-view" data-uid="${pData.uid}" style="margin-top:12px; width:100%; padding: 8px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'"><i class="fa-solid fa-satellite-dish" style="margin-right:5px; color:#ef4444;"></i> Xem Live</button>`;
         }
 
         const card = document.createElement('div');
@@ -453,6 +554,7 @@ export function renderUI() {
             <div style="font-weight: 700; color: #0f172a; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.95rem;" title="${pData.displayName}">${pData.displayName}</div>
             ${miniBadge}
             ${progressHTML}
+            ${liveBtnHTML}
             ${hostBadgeHTML}
         `;
         UI.participantsGrid.appendChild(card);
@@ -466,6 +568,13 @@ export function renderUI() {
                     await deleteDoc(doc(db, `rooms/${state.roomId}/participants/${uidToKick}`));
                 } catch (err) { console.error("Lỗi kick:", err); }
             }
+        });
+    });
+
+    // TÍNH NĂNG MỚI: BẮT SỰ KIỆN NÚT "XEM LIVE"
+    document.querySelectorAll('.btn-live-view').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            openLiveView(e.currentTarget.getAttribute('data-uid'));
         });
     });
 
@@ -512,4 +621,9 @@ export function renderUI() {
         UI.leaderboardBody.appendChild(tr);
         rank++;
     });
+
+    // Cập nhật lại màn hình Modal Giám sát nếu nó đang mở
+    if (state.currentlyViewingLiveUid) {
+        updateLiveViewModal();
+    }
 }
