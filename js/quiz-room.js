@@ -136,6 +136,22 @@ async function loadExamDataAndQuestions() {
     }
 }
 
+// TÍNH NĂNG MỚI: HÀM ĐỒNG BỘ TRỰC TIẾP (LIVE PROGRESS) CHO GIÁM THỊ
+function syncLiveProgress() {
+    if (currentRoomId && currentUser) {
+        const answeredCount = Object.keys(userAnswers).length;
+        const total = questions.length;
+        const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
+        
+        setDoc(participantRef, { 
+            answeredCount: answeredCount, 
+            totalQuestions: total,
+            currentQuestionIndex: currentIndex, // Bắn vị trí câu hỏi đang xem
+            liveAnswers: userAnswers            // Bắn các đáp án đã chọn
+        }, { merge: true }).catch(err => console.error(err));
+    }
+}
+
 function initExamState() {
     currentIndex = 0;
     userAnswers = {};
@@ -151,8 +167,8 @@ function initExamState() {
 
     if (currentRoomId && currentUser) {
         const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
-        // Khởi tạo luôn số câu để render tiến trình
-        setDoc(participantRef, { status: 'playing', answeredCount: 0, totalQuestions: questions.length }, { merge: true }).catch(err => console.error(err));
+        setDoc(participantRef, { status: 'playing' }, { merge: true }).catch(err => console.error(err));
+        syncLiveProgress(); // Cập nhật ngay lần đầu vào phòng
 
         const roomRef = doc(db, "rooms", currentRoomId);
         onSnapshot(roomRef, (snapshot) => {
@@ -389,25 +405,20 @@ function handleOptionSelect(idx) {
     userAnswers[currentIndex] = idx; 
     renderQuestion(); 
     renderPalette();  
-
-    // BẮN SỐ LIỆU TIẾN TRÌNH (PROGRESS) VỀ CHO CHỦ PHÒNG (GIÁM THỊ) XEM THEO THỜI GIAN THỰC
-    if (currentRoomId && currentUser) {
-        const answeredCount = Object.keys(userAnswers).length;
-        const total = questions.length;
-        const participantRef = doc(db, "rooms", currentRoomId, "participants", currentUser.uid);
-        setDoc(participantRef, { answeredCount: answeredCount, totalQuestions: total }, { merge: true }).catch(err => console.error(err));
-    }
+    syncLiveProgress(); // Cập nhật Live View
     
     setTimeout(() => {
         if (isSubmitted) return; 
         if (currentIndex < questions.length - 1) {
             currentIndex++; 
             renderAll();
+            syncLiveProgress(); // Cập nhật vị trí câu hỏi mới lên Live View
         } else {
             const firstUnansweredIdx = questions.findIndex((_, i) => userAnswers[i] === undefined);
             if (firstUnansweredIdx !== -1) {
                 currentIndex = firstUnansweredIdx; 
                 renderAll();
+                syncLiveProgress();
             }
         }
     }, 300);
@@ -455,16 +466,16 @@ function renderPalette() {
 
         btn.className = btnClasses;
         btn.innerText = idx + 1;
-        btn.onclick = () => { currentIndex = idx; renderAll(); };
+        btn.onclick = () => { currentIndex = idx; renderAll(); syncLiveProgress(); }; // Cập nhật Live
         container.appendChild(btn);
     });
 }
 
 document.getElementById('btn-prev').onclick = () => { 
-    if(currentIndex > 0) { currentIndex--; renderAll(); } 
+    if(currentIndex > 0) { currentIndex--; renderAll(); syncLiveProgress(); } 
 };
 document.getElementById('btn-next').onclick = () => { 
-    if(currentIndex < questions.length - 1) { currentIndex++; renderAll(); } 
+    if(currentIndex < questions.length - 1) { currentIndex++; renderAll(); syncLiveProgress(); } 
 };
 
 document.addEventListener('keydown', (e) => {
@@ -472,9 +483,9 @@ document.addEventListener('keydown', (e) => {
 
     const key = e.key;
     if (key === 'ArrowLeft') {
-        if(currentIndex > 0) { currentIndex--; renderAll(); } 
+        if(currentIndex > 0) { currentIndex--; renderAll(); syncLiveProgress(); } 
     } else if (key === 'ArrowRight') {
-        if(currentIndex < questions.length - 1) { currentIndex++; renderAll(); } 
+        if(currentIndex < questions.length - 1) { currentIndex++; renderAll(); syncLiveProgress(); } 
     } 
     else if (!isSubmitted) {
         const keyMap = { 'a': 0, 'A': 0, 'b': 1, 'B': 1, 'c': 2, 'C': 2, 'd': 3, 'D': 3 };
