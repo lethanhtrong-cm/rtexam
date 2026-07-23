@@ -183,7 +183,6 @@ export function enhanceLeaderboardUI() {
         });
     }
 
-    // TÍNH NĂNG MỚI: CHÈN MODAL LIVE VIEW
     if (!document.getElementById('liveViewModal')) {
         const liveModalHtml = `
         <div class="modal" id="liveViewModal" style="z-index: 10000; padding-top: 5vh; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px);">
@@ -203,6 +202,7 @@ export function enhanceLeaderboardUI() {
         closeBtn.addEventListener('click', () => {
              document.getElementById('liveViewModal').classList.remove('active');
              state.currentlyViewingLiveUid = null;
+             state.liveViewViewingIdx = null; // Xóa trạng thái xem khi đóng Modal
         });
         closeBtn.onmouseover = function() { this.style.background = '#fee2e2'; this.style.color = '#e11d48'; };
         closeBtn.onmouseout = function() { this.style.background = '#f1f5f9'; this.style.color = '#64748b'; };
@@ -211,6 +211,7 @@ export function enhanceLeaderboardUI() {
             if (e.target.id === 'liveViewModal') {
                 e.target.classList.remove('active');
                 state.currentlyViewingLiveUid = null;
+                state.liveViewViewingIdx = null; 
             }
         });
     }
@@ -256,9 +257,10 @@ export function enhanceLeaderboardUI() {
     }
 }
 
-// TÍNH NĂNG MỚI: MỞ BẢNG THEO DÕI LIVE
 export async function openLiveView(uid) {
     state.currentlyViewingLiveUid = uid;
+    state.liveViewViewingIdx = null; // Khởi tạo: Mặc định xem câu học viên đang làm
+    
     const modal = document.getElementById('liveViewModal');
     modal.classList.add('active');
     document.getElementById('liveViewContent').innerHTML = '<div style="text-align:center; padding: 50px;"><i class="fa-solid fa-circle-notch fa-spin fa-3x" style="color:#ef4444"></i><br><h4 style="color:#64748b; margin-top:20px;">Đang thiết lập kết nối trực tiếp...</h4></div>';
@@ -278,7 +280,6 @@ export async function openLiveView(uid) {
     updateLiveViewModal();
 }
 
-// TÍNH NĂNG MỚI: RENDER GIAO DIỆN MÀN HÌNH LIVE (CHẠY LIÊN TỤC THEO SNAPSHOT)
 export function updateLiveViewModal() {
     if (!state.currentlyViewingLiveUid) return;
     const modal = document.getElementById('liveViewModal');
@@ -295,7 +296,8 @@ export function updateLiveViewModal() {
          return;
     }
 
-    const currentQIdx = pData.currentQuestionIndex || 0;
+    const actualCurrentQIdx = pData.currentQuestionIndex || 0; // Câu học viên ĐANG LÀM
+    const viewingQIdx = state.liveViewViewingIdx !== null ? state.liveViewViewingIdx : actualCurrentQIdx; // Câu Giám thị MUỐN XEM
     const liveAnswers = pData.liveAnswers || {};
     const questions = state.liveQuestions || [];
 
@@ -304,17 +306,24 @@ export function updateLiveViewModal() {
         return;
     }
 
-    const q = questions[currentQIdx];
+    const q = questions[viewingQIdx];
     if(!q) return;
 
-    const selectedOptIdx = liveAnswers[currentQIdx];
+    const selectedOptIdx = liveAnswers[viewingQIdx];
 
+    // Tạo bảng Palette có thể CLICK được
     let paletteHtml = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom: 20px; max-height: 140px; overflow-y:auto; padding-right:5px;">';
     questions.forEach((_, i) => {
-        let bg = liveAnswers[i] !== undefined ? '#10b981' : '#f1f5f9';
-        let color = liveAnswers[i] !== undefined ? 'white' : '#64748b';
-        let border = i === currentQIdx ? '2px solid #ef4444' : '2px solid transparent';
-        paletteHtml += `<div style="width:32px; height:32px; border-radius:6px; background:${bg}; color:${color}; border:${border}; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:bold; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${i+1}</div>`;
+        let isAnswered = liveAnswers[i] !== undefined;
+        let bg = isAnswered ? '#10b981' : '#f1f5f9';
+        let color = isAnswered ? 'white' : '#64748b';
+        
+        let border = i === actualCurrentQIdx ? '2px solid #ef4444' : '2px solid transparent'; // Viền đỏ: Vị trí của Học viên
+        if (i === viewingQIdx && viewingQIdx !== actualCurrentQIdx) {
+            border = '2px solid #3b82f6'; // Viền xanh: Vị trí Giám thị đang chủ động xem
+        }
+        
+        paletteHtml += `<button class="live-palette-btn" data-idx="${i}" style="width:32px; height:32px; border-radius:6px; background:${bg}; color:${color}; border:${border}; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:bold; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s;">${i+1}</button>`;
     });
     paletteHtml += '</div>';
 
@@ -333,20 +342,52 @@ export function updateLiveViewModal() {
          `;
     });
 
+    let syncBtnHtml = '';
+    let viewingText = `Đang ở câu ${actualCurrentQIdx + 1}/${questions.length}`;
+    
+    // Nếu Giám thị đang xem câu khác, hiện nút để quay về theo dõi Học viên
+    if (viewingQIdx !== actualCurrentQIdx) {
+        viewingText = `Học viên đang ở câu ${actualCurrentQIdx + 1}`;
+        syncBtnHtml = `<button id="btnSyncLive" style="margin-left: 10px; padding: 4px 12px; background: #ffffff; color: #ef4444; border: 1px solid #fca5a5; border-radius: 8px; font-size: 0.8rem; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);"><i class="fa-solid fa-location-crosshairs"></i> Về Live</button>`;
+    }
+
     let html = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #cbd5e1;">
             <h4 style="margin:0; color:#0f172a; display:flex; align-items:center; gap:10px;"><img src="${pData.photoURL}" style="width:40px; height:40px; border-radius:50%; border:2px solid #e2e8f0; object-fit:cover;"> <span>${pData.displayName}</span></h4>
-            <span style="background:#fef2f2; color:#ef4444; padding:6px 12px; border-radius:12px; font-size:0.85rem; font-weight:800; box-shadow: 0 2px 4px rgba(239,68,68,0.1);"><i class="fa-solid fa-location-crosshairs"></i> Đang ở câu ${currentQIdx + 1}/${questions.length}</span>
+            <div style="display: flex; align-items: center;">
+                <span style="background:#fef2f2; color:#ef4444; padding:6px 12px; border-radius:12px; font-size:0.85rem; font-weight:800; box-shadow: 0 2px 4px rgba(239,68,68,0.1);"><i class="fa-solid fa-tower-broadcast"></i> ${viewingText}</span>
+                ${syncBtnHtml}
+            </div>
         </div>
         ${paletteHtml}
         <div style="background: white; padding: 22px; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
-            <h5 style="margin: 0 0 18px 0; color:#0f172a; font-size: 1.05rem; line-height: 1.6;"><span style="background:#f1f5f9; color:#475569; padding:4px 10px; border-radius:6px; font-size:0.85rem; margin-right:8px; border: 1px solid #e2e8f0;">Câu ${currentQIdx + 1}</span> ${q.text}</h5>
+            <h5 style="margin: 0 0 18px 0; color:#0f172a; font-size: 1.05rem; line-height: 1.6;">
+                <span style="background:#f1f5f9; color:#475569; padding:4px 10px; border-radius:6px; font-size:0.85rem; margin-right:8px; border: 1px solid #e2e8f0;">${viewingQIdx === actualCurrentQIdx ? 'Câu ' : 'Xem lại câu '}${viewingQIdx + 1}</span> ${q.text}
+            </h5>
             <div>
                 ${optionsHtml}
             </div>
         </div>
     `;
+    
     document.getElementById('liveViewContent').innerHTML = html;
+
+    // Gắn sự kiện click cho các nút Palette
+    document.querySelectorAll('.live-palette-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            state.liveViewViewingIdx = parseInt(e.currentTarget.getAttribute('data-idx'));
+            updateLiveViewModal(); // Gọi lại hàm để render ngay lập tức
+        });
+    });
+
+    // Gắn sự kiện click cho nút "Về Live"
+    const syncBtn = document.getElementById('btnSyncLive');
+    if (syncBtn) {
+        syncBtn.addEventListener('click', () => {
+            state.liveViewViewingIdx = null; // Hủy trạng thái xem riêng để bám theo học viên
+            updateLiveViewModal();
+        });
+    }
 }
 
 
@@ -535,7 +576,6 @@ export function renderUI() {
             hostBadgeHTML = `<div style="position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-size: 0.7rem; font-weight: 800; padding: 4px 12px; border-radius: 12px; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.3); z-index: 10; white-space: nowrap; letter-spacing: 0.5px;"><i class="fa-solid fa-crown" style="margin-right: 4px;"></i> CHỦ PHÒNG</div>`;
         }
 
-        // TÍNH NĂNG MỚI: NÚT XEM LIVE CHỈ HIỆN KHI CHỦ PHÒNG LÀ GIÁM THỊ VÀ HỌC VIÊN ĐANG THI
         let liveBtnHTML = '';
         if (isCurrentUserHost && state.currentHostRole === 'proctor' && pData.status === 'playing') {
             liveBtnHTML = `<button class="btn-live-view" data-uid="${pData.uid}" style="margin-top:12px; width:100%; padding: 8px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:8px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'"><i class="fa-solid fa-satellite-dish" style="margin-right:5px; color:#ef4444;"></i> Xem Live</button>`;
@@ -571,7 +611,6 @@ export function renderUI() {
         });
     });
 
-    // TÍNH NĂNG MỚI: BẮT SỰ KIỆN NÚT "XEM LIVE"
     document.querySelectorAll('.btn-live-view').forEach(btn => {
         btn.addEventListener('click', (e) => {
             openLiveView(e.currentTarget.getAttribute('data-uid'));
@@ -622,7 +661,6 @@ export function renderUI() {
         rank++;
     });
 
-    // Cập nhật lại màn hình Modal Giám sát nếu nó đang mở
     if (state.currentlyViewingLiveUid) {
         updateLiveViewModal();
     }
