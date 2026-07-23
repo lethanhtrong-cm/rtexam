@@ -611,9 +611,6 @@ function renderExams() {
                                 <button onclick="goToFlashcard('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                                     <i class="fa-solid fa-bolt"></i> Flashcard
                                 </button>
-                                <button onclick="openSummaryModal('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                                    <i class="fa-solid fa-book-open"></i> Tóm tắt
-                                </button>
                             </div>
                             <div style="display: flex; gap: 8px; width: 100%;">
                                 <button onclick="goToReview('${resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
