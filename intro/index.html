@@ -1,71 +1,54 @@
 <!DOCTYPE html>
-<html lang="vi" class="scroll-smooth">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RT-quiz | Nền tảng ôn luyện cho Kỹ thuật viên CĐHA</title>
+    <title>RT-quiz | Nền tảng Ôn thi Y Khoa</title>
     
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Cấu hình Tailwind nội bộ (Ép font Inter làm font mặc định) -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <!-- Custom CSS (Nếu có) -->
+    <!-- Load Tailwind V4 từ CDN (Theo đúng setup của bạn) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="css/style.css">
     
     <!-- CSS xử lý hiệu ứng Load Module mượt mà -->
     <style>
         .fade-in-module {
-            opacity: 0;
-            transform: translateY(15px);
-            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+            animation: fadeIn 0.6s ease-out forwards;
         }
-        .fade-in-module.loaded {
-            opacity: 1;
-            transform: translateY(0);
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-teal-200 selection:text-teal-900">
 
-    <!-- App Container -->
-    <div id="app" class="flex flex-col min-h-screen">
-        
-        <!-- Navbar Container -->
-        <header id="navbar-container" class="fade-in-module w-full z-50 sticky top-0"></header>
-        
-        <!-- Main Content -->
-        <main class="flex-grow">
-            <!-- Slide 1 -->
-            <div id="slide-1-container" class="fade-in-module"></div>
-            <!-- Slide 2 -->
-            <div id="slide-2-container" class="fade-in-module"></div>
-            <!-- Slide 3 -->
-            <div id="slide-3-container" class="fade-in-module"></div>
-        </main>
-        
-        <!-- Footer Container -->
-        <footer id="footer-container" class="fade-in-module w-full"></footer>
-        
-    </div>
+    <!-- Điều hướng Navbar -->
+    <div data-component="components/navbar.html" class="sticky top-0 z-50"></div>
 
-    <!-- Main JS -->
+    <main id="main-content" class="flex flex-col pt-8 lg:pt-16 pb-0">
+        
+        <!-- Slide 1: Hero Cover & Tính năng chung -->
+        <div data-component="components/hero-slide-1.html"></div>
+        
+        <!-- Divider phân cách nhẹ -->
+        <div class="max-w-6xl mx-auto w-full px-6 py-4">
+            <hr class="border-slate-200/60">
+        </div>
+
+        <!-- Slide 2: Lộ trình cá nhân hóa & Biểu đồ -->
+        <div data-component="components/hero-slide-2.html"></div>
+
+        <!-- Slide 3: Thi đấu giao hữu & Giám thị -->
+        <div data-component="components/hero-slide-3.html"></div>
+
+        <!-- Các tính năng khác (Features) -->
+        <div data-component="components/features.html"></div>
+
+    </main>
+
+    <!-- Chân trang Footer -->
+    <div data-component="components/footer.html"></div>
+
     <script src="js/main.js"></script>
 </body>
 </html>
