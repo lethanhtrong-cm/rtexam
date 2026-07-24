@@ -280,10 +280,13 @@ function initDOMListeners() {
             return;
         }
         if (e.target.closest('#btnConfirmPayment')) {
-            e.preventDefault();
-            e.stopPropagation();
+            e.preventDefault(); e.stopPropagation();
             if (userDropdown) userDropdown.classList.remove('show');
-            alert("Hệ thống đã ghi nhận yêu cầu. Chúng tôi sẽ kiểm tra và kích hoạt gói PRO cho bạn trong thời gian sớm nhất!");
+            if (auth.currentUser) {
+                setDoc(doc(collection(db, "payment_requests")), { uid: auth.currentUser.uid, email: auth.currentUser.email, status: "pending", amount: 20000, createdAt: serverTimestamp() })
+                .then(() => alert("Hệ thống đã ghi nhận yêu cầu. Sẽ tự động kích hoạt gói PRO trong ít phút!"))
+                .catch(() => alert("Lỗi kết nối máy chủ, vui lòng thử lại!"));
+            }
             return;
         }
 
