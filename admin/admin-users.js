@@ -7,9 +7,7 @@ let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
 
-// ==============================================
-// MỚI: Biến lưu trữ danh sách đang chờ duyệt VIP
-// ==============================================
+// Biến lưu trữ danh sách đang chờ duyệt VIP
 let pendingVIPRequests = new Set(); 
 
 export function initRealtimePaymentListener() {
@@ -21,7 +19,7 @@ export function initRealtimePaymentListener() {
                 pendingVIPRequests.add(data.uid);
             }
         });
-        renderUserList(); // Cập nhật lại giao diện ngay khi có người báo chuyển khoản
+        renderUserList(); 
     }, (error) => {
         console.error("Lỗi khi tải yêu cầu thanh toán:", error);
     });
@@ -45,6 +43,8 @@ export function initRealtimeUserListener() {
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
             const isOnline = user.isOnline || false; 
+            // Lấy lượng token đã dùng
+            const totalTokensUsed = user.totalTokensUsed || 0;
 
             totalUsersCount++;
             if (isVip) totalVipsCount++; 
@@ -60,7 +60,8 @@ export function initRealtimeUserListener() {
                 isVip: isVip,
                 isBanned: isBanned,
                 isOnline: isOnline,
-                statusKey: statusKey
+                statusKey: statusKey,
+                totalTokensUsed: totalTokensUsed
             });
         });
 
@@ -119,15 +120,19 @@ export function renderUserList() {
 
         const firstLetter = user.email.charAt(0);
         
-        // KIỂM TRA XEM USER NÀY CÓ ĐANG BẤM NÚT XÁC NHẬN CHUYỂN KHOẢN HAY KHÔNG
+        // Cảnh báo thanh toán
         const hasPendingRequest = pendingVIPRequests.has(user.userId);
         const pendingBadge = hasPendingRequest 
             ? `<span style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; margin-left: 8px; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); animation: pulse 2s infinite;">💸 Báo Đã CK</span>` 
             : '';
 
-        // ==============================================
+        // TÍNH TOÁN CHI PHÍ AI (Quy đổi VNĐ: 1M Token = ~19.740 VNĐ)
+        const costVND = Math.round((user.totalTokensUsed / 1000000) * 19740);
+        const costBadgeHtml = user.totalTokensUsed > 0 
+            ? `<div style="font-size: 11.5px; color: #059669; font-weight: 700; margin-top: 4px; display: inline-block; background: #d1fae5; padding: 2px 8px; border-radius: 6px;"><i class="fa-solid fa-microchip"></i> Đã dùng AI: ${costVND.toLocaleString('vi-VN')} đ</div>` 
+            : '';
+
         // CẤU HÌNH GIAO DIỆN NÚT BẤM HIỆN ĐẠI
-        // ==============================================
         const vipBtnClass = user.isVip ? 'btn-user-vip-off' : 'btn-user-vip-on';
         const vipBtnText = user.isVip ? '💎 Tắt VIP' : '👑 Kích VIP';
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
@@ -153,7 +158,6 @@ export function renderUserList() {
         tr.className = 'user-row';
         tr.style.transition = "background-color 0.2s ease";
         
-        // Nếu có thông báo CK, tô sáng dòng của User đó lên
         tr.style.backgroundColor = hasPendingRequest ? '#fff1f2' : 'transparent';
         tr.onmouseover = () => tr.style.backgroundColor = hasPendingRequest ? '#ffe4e6' : '#f8fafc';
         tr.onmouseout = () => tr.style.backgroundColor = hasPendingRequest ? '#fff1f2' : 'transparent';
@@ -165,8 +169,11 @@ export function renderUserList() {
                     <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)};">
                         ${firstLetter}
                     </div>
-                    <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center;">
-                        ${user.email} ${pendingBadge}
+                    <div>
+                        <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center;">
+                            ${user.email} ${pendingBadge}
+                        </div>
+                        ${costBadgeHtml}
                     </div>
                 </div>
             </td>
@@ -204,7 +211,6 @@ async function handleToggleVip(userId, currentVipStatus) {
         const newVipStatus = !currentVipStatus;
         await updateDoc(userRef, { isVip: newVipStatus });
         
-        // MỚI: Tự động xóa (chuyển status) yêu cầu VIP sau khi Admin duyệt
         if (newVipStatus) {
             const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
             const snapshot = await getDocs(q);
@@ -326,7 +332,6 @@ async function sendNotification() {
         if (target === 'ALL') {
             const activeUsers = cachedUsers.filter(u => !u.isBanned);
             
-            // Loop tạo document cho từng user đang Active
             const promises = activeUsers.map(user => {
                 return addDoc(notificationsRef, {
                     toEmail: user.email,
@@ -365,7 +370,7 @@ async function sendNotification() {
 
 document.addEventListener('componentsLoaded', () => {
     initRealtimeUserListener();
-    initRealtimePaymentListener(); // MỚI: Kích hoạt bộ lắng nghe thanh toán
+    initRealtimePaymentListener();
 
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -383,7 +388,7 @@ document.addEventListener('componentsLoaded', () => {
         });
     }
 
-    // TỰ ĐỘNG CHÈN NÚT "GỬI TOÀN HỆ THỐNG" VÀO THANH TOOLBAR TÌM KIẾM
+    // TỰ ĐỘNG CHÈN NÚT "GỬI TOÀN HỆ THỐNG"
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar && !document.getElementById('btnNotifyAll')) {
         const notifyAllBtn = document.createElement('button');
@@ -400,7 +405,6 @@ document.addEventListener('componentsLoaded', () => {
     const usersBody = document.getElementById('usersTableBody');
     if (usersBody) {
         usersBody.addEventListener('click', (e) => {
-            // Sự kiện Click Gửi Thông Báo Cá Nhân
             const notifyBtn = e.target.closest('.btn-notify-user');
             if (notifyBtn) return openNotificationModal(notifyBtn.dataset.email);
 
@@ -422,7 +426,6 @@ document.addEventListener('componentsLoaded', () => {
         };
     }
 
-    // Sự kiện Đóng Modal và Lưu Gửi Thông Báo
     const closeNotifyBtn = document.getElementById('close-notification-modal');
     if (closeNotifyBtn) {
         closeNotifyBtn.onclick = () => {
