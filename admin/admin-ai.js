@@ -160,7 +160,7 @@ function renderAiExamsTable() {
 
         // --- TÍNH TOÁN VÀ HIỂN THỊ CHI PHÍ VỐN CHO TỪNG ĐỀ ---
         const tokenUsed = exam.tokenUsed || 0;
-        const costVND = Math.round((tokenUsed / 1000000) * 19740);
+        const costVND = Math.round((tokenUsed / 1000000) * 42638);
         const costBadgeHtml = tokenUsed > 0 
             ? `<div style="font-size: 11px; color: #b45309; font-weight: 700; margin-top: 4px; display: inline-block; background: #fef3c7; padding: 3px 8px; border-radius: 6px; border: 1px solid #fde68a;"><i class="fa-solid fa-coins"></i> Vốn: ${costVND.toLocaleString('vi-VN')} đ</div>` 
             : '';
