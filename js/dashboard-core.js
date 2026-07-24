@@ -4,9 +4,9 @@
 import { app, auth, db } from "./dashboard/firebase-core.js";
 import { safeRedirect, formatDate, switchTab, showNotificationModal, renderAuthInfo, setVipInactive } from "./dashboard/dashboard-ui.js";
 
-// Import core logic của Firestore và Auth
+// Import core logic của Firestore và Auth (Đã bổ sung deleteDoc)
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Tái xuất khẩu (Re-export) để đảm bảo các file cũ (như dashboard-exams) vẫn hoạt động hoàn hảo
 export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
@@ -279,13 +279,57 @@ function initDOMListeners() {
             signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
             return;
         }
+
+        // --- CẬP NHẬT LOGIC XÁC NHẬN CHUYỂN KHOẢN ---
         if (e.target.closest('#btnConfirmPayment')) {
             e.preventDefault(); e.stopPropagation();
             if (userDropdown) userDropdown.classList.remove('show');
+            
+            const btn = document.getElementById('btnConfirmPayment');
+            if (btn && btn.disabled) return; 
+            
             if (auth.currentUser) {
-                setDoc(doc(collection(db, "payment_requests")), { uid: auth.currentUser.uid, email: auth.currentUser.email, status: "pending", amount: 20000, createdAt: serverTimestamp() })
-                .then(() => alert("Hệ thống đã ghi nhận yêu cầu. Sẽ tự động kích hoạt gói PRO trong ít phút!"))
-                .catch(() => alert("Lỗi kết nối máy chủ, vui lòng thử lại!"));
+                // Đổi trạng thái giao diện nút Xác nhận
+                if (btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Chờ phê duyệt...';
+                    btn.style.background = '#94a3b8';
+                    btn.style.boxShadow = 'none';
+                    btn.disabled = true;
+                }
+                // Hiển thị nút Hủy
+                const cancelBtn = document.getElementById('btnCancelPayment');
+                if (cancelBtn) cancelBtn.style.display = 'block';
+
+                // Ghi dữ liệu lên Firestore với ID là UID của user
+                setDoc(doc(db, "payment_requests", auth.currentUser.uid), { 
+                    uid: auth.currentUser.uid, 
+                    email: auth.currentUser.email, 
+                    status: "pending", 
+                    amount: 20000, 
+                    createdAt: serverTimestamp() 
+                }).catch(() => alert("Lỗi kết nối máy chủ, vui lòng thử lại!"));
+            }
+            return;
+        }
+
+        // --- TÍNH NĂNG MỚI: HỦY YÊU CẦU CHUYỂN KHOẢN ---
+        if (e.target.closest('#btnCancelPayment')) {
+            e.preventDefault(); e.stopPropagation();
+            if (auth.currentUser) {
+                // Xóa Document yêu cầu khỏi Firestore
+                deleteDoc(doc(db, "payment_requests", auth.currentUser.uid)).then(() => {
+                    // Khôi phục giao diện nút Xác nhận
+                    const btn = document.getElementById('btnConfirmPayment');
+                    if (btn) {
+                        btn.innerHTML = '<i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản';
+                        btn.style.background = ''; 
+                        btn.style.boxShadow = '';
+                        btn.disabled = false;
+                    }
+                    // Ẩn nút Hủy
+                    const cancelBtn = document.getElementById('btnCancelPayment');
+                    if (cancelBtn) cancelBtn.style.display = 'none';
+                }).catch(() => alert("Lỗi khi hủy thao tác, vui lòng thử lại!"));
             }
             return;
         }
