@@ -224,10 +224,12 @@ function setupToolbarEvents() {
     }
 
     // =========================================================================
-    // CẬP NHẬT LOGIC: KIỂM TRA PHÂN QUYỀN TRƯỚC KHI TẠO ĐỀ AI
+    // CẬP NHẬT LOGIC: KIỂM TRA PHÂN QUYỀN VÀ HIỂN THỊ POPUP NÂNG CAO
     // =========================================================================
     if (btnAutoGenerate) {
-        btnAutoGenerate.addEventListener('click', async () => {
+        btnAutoGenerate.addEventListener('click', async (e) => {
+            e.preventDefault(); // Ngăn chặn sự kiện mở Modal tự động từ HTML
+            
             if (!auth.currentUser) return alert("Vui lòng đăng nhập để sử dụng tính năng này!");
             
             const isVip = currentUserData && currentUserData.isVip;
@@ -239,7 +241,7 @@ function setupToolbarEvents() {
                 btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kiểm tra quyền...';
 
                 try {
-                    // Lấy toàn bộ đề do user này tạo, sau đó lọc phía Client để tránh lỗi thiếu Composite Index
+                    // Lấy toàn bộ đề do user này tạo
                     const examsRef = collection(db, "exams");
                     const q = query(examsRef, where("creatorId", "==", auth.currentUser.uid));
                     const snap = await getDocs(q);
@@ -249,14 +251,36 @@ function setupToolbarEvents() {
                         if (doc.data().technique === 'AI Tự Động') aiCount++;
                     });
                     
-                    // Chặn nếu tạo quá 5 đề
+                    // NẾU VƯỢT QUÁ GIỚI HẠN
                     if (aiCount >= 5) {
-                        alert(`Tài khoản Free chỉ được tạo tối đa 5 đề AI (Bạn đã tạo ${aiCount}/5). Vui lòng nâng cấp PRO để không giới hạn số lượng và độ khó!`);
-                        goToUpgrade();
-                        return; // Dừng lại, không mở modal
+                        // 1. Ép ẩn Modal Tạo đề AI nếu nó bị HTML tự động mở
+                        const modal = document.getElementById('aiGenerateModal');
+                        if (modal) {
+                            modal.classList.remove('active', 'show');
+                            modal.style.display = 'none';
+                            
+                            // 2. Tắt nút "Bắt đầu soạn đề" bên trong Form
+                            const btns = modal.querySelectorAll('button');
+                            btns.forEach(b => {
+                                if(b.innerText.toLowerCase().includes('bắt đầu') || b.textContent.toLowerCase().includes('bắt đầu')) {
+                                    b.style.display = 'none';
+                                }
+                            });
+                        }
+
+                        // 3. Ẩn luôn nút "Tạo đề AI" trên thanh Toolbar
+                        if (btnAutoGenerate) {
+                            btnAutoGenerate.style.display = 'none';
+                        }
+                        
+                        // 4. Hiển thị Popup Cảnh Báo tùy chỉnh
+                        if (typeof window.showLimitWarningPopup === 'function') {
+                            window.showLimitWarningPopup(aiCount);
+                        }
+                        return; // Dừng luồng thực thi, KHÔNG mở Form Tạo đề
                     }
 
-                    // Khóa Option "Khó" trong giao diện Modal
+                    // NẾU CÒN LƯỢT: Khóa Option "Khó" trong giao diện Modal
                     const modal = document.getElementById('aiGenerateModal');
                     if (modal) {
                         const hardOptions = modal.querySelectorAll('[value="Khó"]');
@@ -294,9 +318,12 @@ function setupToolbarEvents() {
                 }
             }
 
-            // Tiến hành mở Modal sau khi qua kiểm tra
+            // Tiến hành mở Modal sau khi qua kiểm tra (Nếu chưa vượt giới hạn)
             const modal = document.getElementById('aiGenerateModal');
-            if (modal) modal.classList.add('active');
+            if (modal) {
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+            }
         });
     }
 
@@ -843,5 +870,38 @@ window.hideExam = async function(event, examId) {
     } catch (error) {
         console.error("Lỗi khi ẩn đề thi:", error);
         alert("Đã xảy ra lỗi khi cố gắng ẩn đề thi.");
+    }
+};
+
+// =====================================================================
+// KHỞI TẠO POPUP CẢNH BÁO TÙY CHỈNH KHI HẾT LƯỢT FREE
+// =====================================================================
+window.showLimitWarningPopup = function(count) {
+    let popup = document.getElementById('limitWarningPopup');
+    if (!popup) {
+        const html = `
+        <div id="limitWarningPopup" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.75); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="background: #ffffff; width: 90%; max-width: 420px; border-radius: 16px; padding: 30px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                <div style="width: 70px; height: 70px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <i class="fa-solid fa-lock" style="font-size: 2.2rem; color: #ef4444;"></i>
+                </div>
+                <h3 style="color: #0f172a; margin-bottom: 12px; font-size: 1.4rem; font-weight: 800;">Đã đạt giới hạn Free</h3>
+                <p style="color: #475569; margin-bottom: 25px; line-height: 1.6; font-size: 1.05rem;">
+                    Tài khoản Free chỉ được tạo tối đa 5 đề AI (bạn đã tạo <strong style="color:#ef4444;" id="popupAiCountDisplay">${count}</strong>/5).<br>
+                    Vui lòng nâng cấp PRO để không giới hạn số lượng và mở khóa độ khó chuyên sâu!
+                </p>
+                <div style="display: flex; gap: 12px;">
+                    <button onclick="document.getElementById('limitWarningPopup').style.display='none'" style="flex: 1; padding: 12px; border: none; background: #e2e8f0; color: #475569; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s;">Đóng lại</button>
+                    <button onclick="document.getElementById('limitWarningPopup').style.display='none'; goToUpgrade();" style="flex: 1; padding: 12px; border: none; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); transition: 0.2s;">
+                        <i class="fa-solid fa-crown"></i> Nâng cấp PRO
+                    </button>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+    } else {
+        document.getElementById('popupAiCountDisplay').innerText = count;
+        popup.style.display = 'flex';
     }
 };
