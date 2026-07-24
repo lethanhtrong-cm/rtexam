@@ -54,8 +54,14 @@
             </div>
         </div>
         
-        <button id="btnConfirmPayment" class="btn-primary" style="width: 100%; padding: 16px; font-size: 1.1rem; border-radius: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
-            <i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản
-        </button>
+        <!-- NÚT XÁC NHẬN VÀ HỦY ĐƯỢC CHIA BỐ CỤC LẠI -->
+        <div style="display: flex; gap: 12px; width: 100%;">
+            <button id="btnConfirmPayment" class="btn-primary" style="flex: 1; padding: 16px; font-size: 1.1rem; border-radius: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+                <i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản
+            </button>
+            <button id="btnCancelPayment" style="display: none; padding: 16px 24px; font-size: 1.1rem; border-radius: 10px; font-weight: 600; background: #ef4444; color: white; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);" title="Hủy yêu cầu">
+                <i class="fa-solid fa-xmark"></i> Hủy
+            </button>
+        </div>
     </div>
 </div>
