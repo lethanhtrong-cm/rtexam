@@ -223,8 +223,78 @@ function setupToolbarEvents() {
         });
     }
 
+    // =========================================================================
+    // CẬP NHẬT LOGIC: KIỂM TRA PHÂN QUYỀN TRƯỚC KHI TẠO ĐỀ AI
+    // =========================================================================
     if (btnAutoGenerate) {
-        btnAutoGenerate.addEventListener('click', () => {
+        btnAutoGenerate.addEventListener('click', async () => {
+            if (!auth.currentUser) return alert("Vui lòng đăng nhập để sử dụng tính năng này!");
+            
+            const isVip = currentUserData && currentUserData.isVip;
+
+            // KIỂM TRA NẾU TÀI KHOẢN FREE
+            if (!isVip) {
+                const originalHtml = btnAutoGenerate.innerHTML;
+                btnAutoGenerate.disabled = true;
+                btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kiểm tra quyền...';
+
+                try {
+                    // Lấy toàn bộ đề do user này tạo, sau đó lọc phía Client để tránh lỗi thiếu Composite Index
+                    const examsRef = collection(db, "exams");
+                    const q = query(examsRef, where("creatorId", "==", auth.currentUser.uid));
+                    const snap = await getDocs(q);
+                    
+                    let aiCount = 0;
+                    snap.forEach(doc => {
+                        if (doc.data().technique === 'AI Tự Động') aiCount++;
+                    });
+                    
+                    // Chặn nếu tạo quá 5 đề
+                    if (aiCount >= 5) {
+                        alert(`Tài khoản Free chỉ được tạo tối đa 5 đề AI (Bạn đã tạo ${aiCount}/5). Vui lòng nâng cấp PRO để không giới hạn số lượng và độ khó!`);
+                        goToUpgrade();
+                        return; // Dừng lại, không mở modal
+                    }
+
+                    // Khóa Option "Khó" trong giao diện Modal
+                    const modal = document.getElementById('aiGenerateModal');
+                    if (modal) {
+                        const hardOptions = modal.querySelectorAll('[value="Khó"]');
+                        hardOptions.forEach(el => {
+                            el.disabled = true;
+                            el.title = "Tính năng khóa: Yêu cầu tài khoản PRO";
+                            // Nếu user đang chọn sẵn Khó thì reset về Trung bình
+                            if (el.selected || el.checked) {
+                                const tbOption = modal.querySelector('[value="Trung bình"]');
+                                if (tbOption) {
+                                    if(tbOption.tagName === 'OPTION') tbOption.selected = true;
+                                    else tbOption.checked = true;
+                                }
+                            }
+                        });
+                    }
+
+                } catch (error) {
+                    console.error("Lỗi khi kiểm tra giới hạn AI:", error);
+                    alert("Có lỗi xảy ra khi xác thực quyền tạo đề.");
+                    return;
+                } finally {
+                    btnAutoGenerate.disabled = false;
+                    btnAutoGenerate.innerHTML = originalHtml;
+                }
+            } else {
+                // NẾU TÀI KHOẢN PRO -> MỞ KHÓA TẤT CẢ TÙY CHỌN "KHÓ"
+                const modal = document.getElementById('aiGenerateModal');
+                if (modal) {
+                    const hardOptions = modal.querySelectorAll('[value="Khó"]');
+                    hardOptions.forEach(el => {
+                        el.disabled = false;
+                        el.removeAttribute('title');
+                    });
+                }
+            }
+
+            // Tiến hành mở Modal sau khi qua kiểm tra
             const modal = document.getElementById('aiGenerateModal');
             if (modal) modal.classList.add('active');
         });
