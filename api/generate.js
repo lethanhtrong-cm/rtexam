@@ -45,12 +45,20 @@ export default async function handler(req, res) {
         }
 
         const data = await geminiResponse.json();
+        
+        // --- TÍNH NĂNG MỚI: LẤY SỐ LƯỢNG TOKEN THỰC TẾ ---
+        const totalTokens = data.usageMetadata ? data.usageMetadata.totalTokenCount : 0;
+        
         let responseText = data.candidates[0].content.parts[0].text;
         
         // Quét dọn các ký tự thừa
         responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
         
         const outputJson = JSON.parse(responseText);
+        
+        // --- TRUYỀN TOKEN QUA HEADER ĐỂ BẢO TOÀN LOGIC FRONTEND ---
+        res.setHeader('X-Token-Usage', totalTokens);
+        
         return res.status(200).json(outputJson);
 
     } catch (error) {
