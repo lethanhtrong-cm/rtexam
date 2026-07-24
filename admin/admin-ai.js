@@ -158,13 +158,21 @@ function renderAiExamsTable() {
             ? `<span style="background: #f3e8ff; color: #7e22ce; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #e9d5ff; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-robot"></i> Hệ thống AI</span>`
             : `<span style="background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-regular fa-user"></i> ${exam.displayCreator}</span>`;
 
+        // --- TÍNH TOÁN VÀ HIỂN THỊ CHI PHÍ VỐN CHO TỪNG ĐỀ ---
+        const tokenUsed = exam.tokenUsed || 0;
+        const costVND = Math.round((tokenUsed / 1000000) * 19740);
+        const costBadgeHtml = tokenUsed > 0 
+            ? `<div style="font-size: 11px; color: #b45309; font-weight: 700; margin-top: 4px; display: inline-block; background: #fef3c7; padding: 3px 8px; border-radius: 6px; border: 1px solid #fde68a;"><i class="fa-solid fa-coins"></i> Vốn: ${costVND.toLocaleString('vi-VN')} đ</div>` 
+            : '';
+
         tr.innerHTML = `
             <td class="text-center"><span style="font-weight: 700; color: #64748b;">${stt++}</span></td>
             <td>
-                <div style="display: flex; align-items: center;">
+                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
                     <span style="background: #f8fafc; color: #0f172a; padding: 6px 12px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-weight: 700; font-size: 0.9rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                         <i class="fa-solid fa-barcode" style="color: #94a3b8; margin-right: 6px;"></i>${exam.id}
                     </span>
+                    ${costBadgeHtml}
                 </div>
             </td>
             <td>${creatorBadge}</td>
