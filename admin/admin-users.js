@@ -7,6 +7,26 @@ let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
 
+// ==============================================
+// MỚI: Biến lưu trữ danh sách đang chờ duyệt VIP
+// ==============================================
+let pendingVIPRequests = new Set(); 
+
+export function initRealtimePaymentListener() {
+    onSnapshot(collection(db, "payment_requests"), (snapshot) => {
+        pendingVIPRequests.clear();
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            if (data.status === "pending") {
+                pendingVIPRequests.add(data.uid);
+            }
+        });
+        renderUserList(); // Cập nhật lại giao diện ngay khi có người báo chuyển khoản
+    }, (error) => {
+        console.error("Lỗi khi tải yêu cầu thanh toán:", error);
+    });
+}
+
 export function initRealtimeUserListener() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
@@ -99,6 +119,12 @@ export function renderUserList() {
 
         const firstLetter = user.email.charAt(0);
         
+        // KIỂM TRA XEM USER NÀY CÓ ĐANG BẤM NÚT XÁC NHẬN CHUYỂN KHOẢN HAY KHÔNG
+        const hasPendingRequest = pendingVIPRequests.has(user.userId);
+        const pendingBadge = hasPendingRequest 
+            ? `<span style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; margin-left: 8px; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); animation: pulse 2s infinite;">💸 Báo Đã CK</span>` 
+            : '';
+
         // ==============================================
         // CẤU HÌNH GIAO DIỆN NÚT BẤM HIỆN ĐẠI
         // ==============================================
@@ -107,28 +133,30 @@ export function renderUserList() {
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
         const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
 
-        // CSS inline cho các nút để đảm bảo màu sắc luôn hiển thị rực rỡ
+        // CSS inline cho các nút
         const baseBtnStyle = "padding: 6px 12px; font-size: 12.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: white;";
-        
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
         
         const vipStyle = user.isVip 
-            ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` // Màu xám khi tắt VIP
-            : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; // Màu Gold khi kích VIP
+            ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` 
+            : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; 
             
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
         
         const banStyle = user.isBanned
-            ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` // Màu xanh khi mở khóa
-            : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; // Màu đỏ khi khóa
+            ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` 
+            : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
             
         const hoverEffect = `onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'"`;
 
         const tr = document.createElement('tr');
         tr.className = 'user-row';
         tr.style.transition = "background-color 0.2s ease";
-        tr.onmouseover = () => tr.style.backgroundColor = '#f8fafc';
-        tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+        
+        // Nếu có thông báo CK, tô sáng dòng của User đó lên
+        tr.style.backgroundColor = hasPendingRequest ? '#fff1f2' : 'transparent';
+        tr.onmouseover = () => tr.style.backgroundColor = hasPendingRequest ? '#ffe4e6' : '#f8fafc';
+        tr.onmouseout = () => tr.style.backgroundColor = hasPendingRequest ? '#fff1f2' : 'transparent';
         
         tr.innerHTML = `
             <td class="text-center" style="font-weight: 600; color: #64748b;">${stt++}</td>
@@ -137,7 +165,9 @@ export function renderUserList() {
                     <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)};">
                         ${firstLetter}
                     </div>
-                    <div style="font-weight: 600; color: #0f172a; font-size: 14px;">${user.email}</div>
+                    <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center;">
+                        ${user.email} ${pendingBadge}
+                    </div>
                 </div>
             </td>
             <td class="text-center"><span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span></td>
@@ -173,6 +203,16 @@ async function handleToggleVip(userId, currentVipStatus) {
         const userRef = doc(db, "users", userId);
         const newVipStatus = !currentVipStatus;
         await updateDoc(userRef, { isVip: newVipStatus });
+        
+        // MỚI: Tự động xóa (chuyển status) yêu cầu VIP sau khi Admin duyệt
+        if (newVipStatus) {
+            const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
+            const snapshot = await getDocs(q);
+            snapshot.forEach(async (docSnap) => {
+                await updateDoc(docSnap.ref, { status: "completed" });
+            });
+        }
+
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
@@ -325,6 +365,7 @@ async function sendNotification() {
 
 document.addEventListener('componentsLoaded', () => {
     initRealtimeUserListener();
+    initRealtimePaymentListener(); // MỚI: Kích hoạt bộ lắng nghe thanh toán
 
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
