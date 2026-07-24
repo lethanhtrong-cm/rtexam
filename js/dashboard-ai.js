@@ -1,6 +1,6 @@
 import { auth, db } from "./dashboard-core.js";
-// Bổ sung thêm các hàm query, collection, where, getCountFromServer để đếm số lượng đề
-import { doc, setDoc, collection, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Bổ sung thêm hàm updateDoc và increment để cộng dồn Token cho User
+import { doc, setDoc, collection, query, where, getCountFromServer, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // CHỜ GIAO DIỆN TẢI XONG MỚI GẮN SỰ KIỆN ĐỂ TRÁNH LỖI NULL
@@ -95,6 +95,9 @@ document.addEventListener('ComponentsLoaded', () => {
                     })
                 });
 
+                // LẤY SỐ TOKEN TỪ HEADER DO BACKEND TRẢ VỀ
+                const usedTokens = parseInt(response.headers.get('X-Token-Usage')) || 0; 
+
                 if (!response.ok) {
                     const errorData = await response.text();
                     throw new Error(`Lỗi gọi API (${response.status}): ${errorData}`);
@@ -129,7 +132,7 @@ document.addEventListener('ComponentsLoaded', () => {
 
                 await Promise.all(savePromises);
 
-                // GHI THÔNG TIN ĐỀ THI VÀO FIRESTORE
+                // GHI THÔNG TIN ĐỀ THI VÀO FIRESTORE (KÈM TOKEN)
                 await setDoc(doc(db, "exams", currentGeneratedExamId), {
                     id: currentGeneratedExamId,
                     technique: "AI Tự Động",
@@ -139,8 +142,20 @@ document.addEventListener('ComponentsLoaded', () => {
                     isVip: false,
                     attemptCount: 0,
                     creatorId: auth.currentUser.uid,
-                    isPublic: false
+                    isPublic: false,
+                    tokenUsed: usedTokens
                 });
+
+                // CỘNG DỒN CHI PHÍ TOKEN VÀO TÀI KHOẢN NGƯỜI DÙNG HIỆN TẠI
+                if (usedTokens > 0) {
+                    try {
+                        await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                            totalTokensUsed: increment(usedTokens)
+                        });
+                    } catch (tokenErr) {
+                        console.warn("Chưa thể cập nhật Token cho User (Có thể do Rules Firebase):", tokenErr);
+                    }
+                }
 
                 // HIỂN THỊ GIAO DIỆN CHÚC MỪNG
                 aiLoadingSpinner.style.display = 'none';
