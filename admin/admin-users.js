@@ -127,7 +127,7 @@ export function renderUserList() {
             : '';
 
         // TÍNH TOÁN CHI PHÍ AI (Quy đổi VNĐ: 1M Token = ~19.740 VNĐ)
-        const costVND = Math.round((user.totalTokensUsed / 1000000) * 19740);
+        const costVND = Math.round((user.totalTokensUsed / 1000000) * 42638);
         const costBadgeHtml = user.totalTokensUsed > 0 
             ? `<div style="font-size: 11.5px; color: #059669; font-weight: 700; margin-top: 4px; display: inline-block; background: #d1fae5; padding: 2px 8px; border-radius: 6px;"><i class="fa-solid fa-microchip"></i> Đã dùng AI: ${costVND.toLocaleString('vi-VN')} đ</div>` 
             : '';
