@@ -4,9 +4,9 @@
 import { app, auth, db } from "./dashboard/firebase-core.js";
 import { safeRedirect, formatDate, switchTab, showNotificationModal, renderAuthInfo, setVipInactive } from "./dashboard/dashboard-ui.js";
 
-// Import core logic của Firestore và Auth (Đã bổ sung deleteDoc)
+// Import core logic của Firestore và Auth (Bổ sung thêm addDoc để tạo thông báo)
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getDoc, setDoc, deleteDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Tái xuất khẩu (Re-export) để đảm bảo các file cũ (như dashboard-exams) vẫn hoạt động hoàn hảo
 export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
@@ -576,7 +576,7 @@ function fetchUserData(user) {
                     }
                     
                     // =========================================================================
-                    // TÍNH NĂNG ĐIỀU HƯỚNG TỰ ĐỘNG VỀ KHO ĐỀ THI KHI ĐƯỢC DUYỆT
+                    // TÍNH NĂNG ĐIỀU HƯỚNG TỰ ĐỘNG, PUSH THÔNG BÁO VÀ POPUP XỊN XÒ KHI ĐƯỢC DUYỆT
                     // =========================================================================
                     const tabVip = document.getElementById('tab-vip');
                     if (tabVip && tabVip.classList.contains('active')) {
@@ -598,7 +598,50 @@ function fetchUserData(user) {
                             allExamsMenu.click();
                         }
                         
-                        alert("Chúc mừng! Tài khoản của bạn đã được nâng cấp lên PRO thành công.");
+                        // XÓA ALERT CŨ - PUSH THÔNG BÁO LÊN FIRESTORE VÀ HIỂN THỊ POPUP HTML/CSS
+                        try {
+                            addDoc(collection(db, "notifications"), {
+                                toEmail: auth.currentUser.email,
+                                title: "👑 Kích hoạt tài khoản PRO thành công",
+                                message: "Cảm ơn bạn đã đồng hành cùng hệ thống. Tài khoản PRO đã được kích hoạt, mở khóa toàn bộ đề thi độc quyền và tiện ích giải thích chi tiết!",
+                                status: "unread",
+                                type: "system_broadcast",
+                                timestamp: serverTimestamp()
+                            });
+                        } catch (err) {
+                            console.error("Lỗi khi tự động push thông báo:", err);
+                        }
+
+                        // Xóa popup cũ nếu bị kẹt
+                        const existingModal = document.getElementById('vipSuccessModalCustom');
+                        if (existingModal) existingModal.remove();
+
+                        // Bơm Modal Popup mới vào body
+                        const popupHTML = `
+                            <div class="custom-modal-overlay" id="vipSuccessModalCustom" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); justify-content: center; align-items: center;">
+                                <div class="custom-modal-content" style="max-width: 450px; background: #fff; border-radius: 16px; padding: 35px 25px; text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                                        <i class="fa-solid fa-crown" style="font-size: 2.5rem; color: white;"></i>
+                                    </div>
+                                    <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.6rem;">Nâng Cấp Thành Công!</h2>
+                                    <p style="color: #475569; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;">
+                                        Chào mừng bạn đến với hội viên <strong>PRO</strong>. Bạn đã mở khóa toàn bộ đặc quyền không giới hạn trên hệ thống.
+                                    </p>
+                                    <button id="closeVipSuccessBtn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
+                                        Khám phá ngay <i class="fa-solid fa-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.insertAdjacentHTML('beforeend', popupHTML);
+                        
+                        // Lắng nghe sự kiện đóng Popup
+                        const successModal = document.getElementById('vipSuccessModalCustom');
+                        const closeBtn = document.getElementById('closeVipSuccessBtn');
+                        
+                        const closeCustomModal = () => { if (successModal) successModal.remove(); };
+                        closeBtn.addEventListener('click', closeCustomModal);
+                        successModal.addEventListener('click', (e) => { if (e.target === successModal) closeCustomModal(); });
                     }
                     // =========================================================================
                     
