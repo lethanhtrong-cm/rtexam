@@ -289,14 +289,14 @@ function initDOMListeners() {
             if (btn && btn.disabled) return; 
             
             if (auth.currentUser) {
-                // Đổi trạng thái giao diện nút Xác nhận
+                // Đổi trạng thái giao diện nút Xác nhận TẠM THỜI (Real-time listener sẽ gánh phần còn lại)
                 if (btn) {
                     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Chờ phê duyệt...';
                     btn.style.background = '#94a3b8';
                     btn.style.boxShadow = 'none';
                     btn.disabled = true;
                 }
-                // Hiển thị nút Hủy
+                
                 const cancelBtn = document.getElementById('btnCancelPayment');
                 if (cancelBtn) cancelBtn.style.display = 'block';
 
@@ -316,20 +316,8 @@ function initDOMListeners() {
         if (e.target.closest('#btnCancelPayment')) {
             e.preventDefault(); e.stopPropagation();
             if (auth.currentUser) {
-                // Xóa Document yêu cầu khỏi Firestore
-                deleteDoc(doc(db, "payment_requests", auth.currentUser.uid)).then(() => {
-                    // Khôi phục giao diện nút Xác nhận
-                    const btn = document.getElementById('btnConfirmPayment');
-                    if (btn) {
-                        btn.innerHTML = '<i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản';
-                        btn.style.background = ''; 
-                        btn.style.boxShadow = '';
-                        btn.disabled = false;
-                    }
-                    // Ẩn nút Hủy
-                    const cancelBtn = document.getElementById('btnCancelPayment');
-                    if (cancelBtn) cancelBtn.style.display = 'none';
-                }).catch(() => alert("Lỗi khi hủy thao tác, vui lòng thử lại!"));
+                // Xóa Document yêu cầu khỏi Firestore (Listener sẽ tự động phục hồi nút bấm)
+                deleteDoc(doc(db, "payment_requests", auth.currentUser.uid)).catch(() => alert("Lỗi khi hủy thao tác, vui lòng thử lại!"));
             }
             return;
         }
@@ -470,6 +458,43 @@ function initNotificationListener(user) {
 }
 
 // =========================================================================
+// XỬ LÝ LẮNG NGHE TRẠNG THÁI THANH TOÁN (GIỮ TRẠNG THÁI KHI RELOAD TRANG)
+// =========================================================================
+function initPaymentStatusListener(user) {
+    if (!user) return;
+    
+    const paymentRef = doc(db, "payment_requests", user.uid);
+    onSnapshot(paymentRef, (docSnap) => {
+        const btn = document.getElementById('btnConfirmPayment');
+        const cancelBtn = document.getElementById('btnCancelPayment');
+        
+        // NẾU CÓ YÊU CẦU ĐANG CHỜ PHÊ DUYỆT TRONG DB
+        if (docSnap.exists() && docSnap.data().status === 'pending') {
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Chờ phê duyệt...';
+                btn.style.background = '#94a3b8';
+                btn.style.boxShadow = 'none';
+                btn.disabled = true;
+            }
+            if (cancelBtn) cancelBtn.style.display = 'block';
+        } 
+        // NẾU KHÔNG CÓ YÊU CẦU (Bị Hủy, Hoặc Đã Duyệt)
+        else {
+            // Phục hồi lại nút nếu nó đang bị kẹt chữ "Chờ phê duyệt"
+            if (btn && btn.innerHTML.includes('Chờ phê duyệt')) {
+                btn.innerHTML = '<i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản';
+                btn.style.background = ''; 
+                btn.style.boxShadow = '';
+                btn.disabled = false;
+            }
+            if (cancelBtn) cancelBtn.style.display = 'none';
+        }
+    }, (error) => {
+        console.error("Lỗi khi lắng nghe tiến trình thanh toán cá nhân:", error);
+    });
+}
+
+// =========================================================================
 // XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI THÔNG TIN USER
 // =========================================================================
 function fetchUserData(user) {
@@ -551,7 +576,7 @@ function fetchUserData(user) {
                     }
                     
                     // =========================================================================
-                    // TÍNH NĂNG MỚI: TỰ ĐỘNG CHUYỂN HƯỚNG KHI ĐƯỢC DUYỆT VIP
+                    // TÍNH NĂNG ĐIỀU HƯỚNG TỰ ĐỘNG VỀ KHO ĐỀ THI KHI ĐƯỢC DUYỆT
                     // =========================================================================
                     const tabVip = document.getElementById('tab-vip');
                     if (tabVip && tabVip.classList.contains('active')) {
@@ -566,11 +591,13 @@ function fetchUserData(user) {
                         if (btnCancel) {
                             btnCancel.style.display = 'none';
                         }
+                        
                         // Tìm chính xác mục menu con "Tất cả" của Kho Đề Thi để chuyển hướng về
                         const allExamsMenu = document.querySelector('.sub-menu-item[data-technique="all"]') || document.querySelector('[data-target="tab-dashboard"]');
                         if (allExamsMenu) {
                             allExamsMenu.click();
                         }
+                        
                         alert("Chúc mừng! Tài khoản của bạn đã được nâng cấp lên PRO thành công.");
                     }
                     // =========================================================================
@@ -597,6 +624,7 @@ async function executeAuthUI(user) {
     const currentUserData = await fetchUserData(user);
     
     initNotificationListener(user);
+    initPaymentStatusListener(user); 
     
     if (currentUserData) {
         const authReadyEvent = new CustomEvent("authReady", { detail: { user, currentUserData } });
