@@ -566,10 +566,10 @@ function fetchUserData(user) {
                         if (btnCancel) {
                             btnCancel.style.display = 'none';
                         }
-                        // Ưu tiên tìm tab Dashboard (Kho đề thi), nếu không có sẽ dự phòng lấy tab đầu tiên
-                        const targetMenu = document.querySelector('.sidebar-menu > .menu-item[data-target="tab-dashboard"]') || document.querySelector('.sidebar-menu > .menu-item[data-target="tab-exams"]') || document.querySelector('.sidebar-menu > .menu-item[data-target]');
-                        if (targetMenu) {
-                            targetMenu.click();
+                        // Tìm chính xác mục menu con "Tất cả" của Kho Đề Thi để chuyển hướng về
+                        const allExamsMenu = document.querySelector('.sub-menu-item[data-technique="all"]') || document.querySelector('[data-target="tab-dashboard"]');
+                        if (allExamsMenu) {
+                            allExamsMenu.click();
                         }
                         alert("Chúc mừng! Tài khoản của bạn đã được nâng cấp lên PRO thành công.");
                     }
