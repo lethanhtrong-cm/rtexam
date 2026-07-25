@@ -549,6 +549,31 @@ function fetchUserData(user) {
                             </div>
                         `;
                     }
+                    
+                    // =========================================================================
+                    // TÍNH NĂNG MỚI: TỰ ĐỘNG CHUYỂN HƯỚNG KHI ĐƯỢC DUYỆT VIP
+                    // =========================================================================
+                    const tabVip = document.getElementById('tab-vip');
+                    if (tabVip && tabVip.classList.contains('active')) {
+                        const btn = document.getElementById('btnConfirmPayment');
+                        const btnCancel = document.getElementById('btnCancelPayment');
+                        if (btn) { 
+                            btn.innerHTML = '<i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản'; 
+                            btn.style.background = ''; 
+                            btn.style.boxShadow = '';
+                            btn.disabled = false; 
+                        }
+                        if (btnCancel) {
+                            btnCancel.style.display = 'none';
+                        }
+                        const defaultMenu = document.querySelector('.sidebar-menu > .menu-item[data-target]');
+                        if (defaultMenu) {
+                            defaultMenu.click();
+                        }
+                        alert("Chúc mừng! Tài khoản của bạn đã được nâng cấp lên PRO thành công.");
+                    }
+                    // =========================================================================
+                    
                 } else {
                     setVipInactive();
                 }
