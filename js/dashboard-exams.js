@@ -600,7 +600,8 @@ function renderExams() {
         const isUserVip = currentUserData && currentUserData.isVip === true;
 
         const groups = [
-            { title: "📝 Đề đã thi & Cần ôn tập", data: displayData.filter(exam => !!completedExams[exam.id]) },
+            { title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
+            { title: "📝 Đề cần ôn tập", data: displayData.filter(exam => completedExams[exam.id] && ((completedExams[exam.id].score / (completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) },
             { title: "⚡ Khởi động nhanh (15 phút)", data: displayData.filter(exam => exam.timeLimit === 15) },
             { title: "🔥 Thử thách chuyên sâu", data: displayData.filter(exam => exam.level === 'Khó') },
             { title: "🧲 Khối kiến thức MRI", data: displayData.filter(exam => exam.technique === 'MRI') },
