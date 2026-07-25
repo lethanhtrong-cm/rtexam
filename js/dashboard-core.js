@@ -566,9 +566,10 @@ function fetchUserData(user) {
                         if (btnCancel) {
                             btnCancel.style.display = 'none';
                         }
-                        const defaultMenu = document.querySelector('.sidebar-menu > .menu-item[data-target]');
-                        if (defaultMenu) {
-                            defaultMenu.click();
+                        // Ưu tiên tìm tab Dashboard (Kho đề thi), nếu không có sẽ dự phòng lấy tab đầu tiên
+                        const targetMenu = document.querySelector('.sidebar-menu > .menu-item[data-target="tab-dashboard"]') || document.querySelector('.sidebar-menu > .menu-item[data-target="tab-exams"]') || document.querySelector('.sidebar-menu > .menu-item[data-target]');
+                        if (targetMenu) {
+                            targetMenu.click();
                         }
                         alert("Chúc mừng! Tài khoản của bạn đã được nâng cấp lên PRO thành công.");
                     }
