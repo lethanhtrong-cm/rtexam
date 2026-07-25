@@ -223,25 +223,20 @@ function setupToolbarEvents() {
         });
     }
 
-    // =========================================================================
-    // CẬP NHẬT LOGIC: KIỂM TRA PHÂN QUYỀN VÀ HIỂN THỊ POPUP NÂNG CAO
-    // =========================================================================
     if (btnAutoGenerate) {
         btnAutoGenerate.addEventListener('click', async (e) => {
-            e.preventDefault(); // Ngăn chặn sự kiện mở Modal tự động từ HTML
+            e.preventDefault(); 
             
             if (!auth.currentUser) return alert("Vui lòng đăng nhập để sử dụng tính năng này!");
             
             const isVip = currentUserData && currentUserData.isVip;
 
-            // KIỂM TRA NẾU TÀI KHOẢN FREE
             if (!isVip) {
                 const originalHtml = btnAutoGenerate.innerHTML;
                 btnAutoGenerate.disabled = true;
                 btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kiểm tra quyền...';
 
                 try {
-                    // Lấy toàn bộ đề do user này tạo
                     const examsRef = collection(db, "exams");
                     const q = query(examsRef, where("creatorId", "==", auth.currentUser.uid));
                     const snap = await getDocs(q);
@@ -251,15 +246,12 @@ function setupToolbarEvents() {
                         if (doc.data().technique === 'AI Tự Động') aiCount++;
                     });
                     
-                    // NẾU VƯỢT QUÁ GIỚI HẠN
                     if (aiCount >= 5) {
-                        // 1. Ép ẩn Modal Tạo đề AI nếu nó bị HTML tự động mở
                         const modal = document.getElementById('aiGenerateModal');
                         if (modal) {
                             modal.classList.remove('active', 'show');
                             modal.style.display = 'none';
                             
-                            // 2. Tắt nút "Bắt đầu soạn đề" bên trong Form
                             const btns = modal.querySelectorAll('button');
                             btns.forEach(b => {
                                 if(b.innerText.toLowerCase().includes('bắt đầu') || b.textContent.toLowerCase().includes('bắt đầu')) {
@@ -268,26 +260,22 @@ function setupToolbarEvents() {
                             });
                         }
 
-                        // 3. Ẩn luôn nút "Tạo đề AI" trên thanh Toolbar
                         if (btnAutoGenerate) {
                             btnAutoGenerate.style.display = 'none';
                         }
                         
-                        // 4. Hiển thị Popup Cảnh Báo tùy chỉnh
                         if (typeof window.showLimitWarningPopup === 'function') {
                             window.showLimitWarningPopup(aiCount);
                         }
-                        return; // Dừng luồng thực thi, KHÔNG mở Form Tạo đề
+                        return; 
                     }
 
-                    // NẾU CÒN LƯỢT: Khóa Option "Khó" trong giao diện Modal
                     const modal = document.getElementById('aiGenerateModal');
                     if (modal) {
                         const hardOptions = modal.querySelectorAll('[value="Khó"]');
                         hardOptions.forEach(el => {
                             el.disabled = true;
                             el.title = "Tính năng khóa: Yêu cầu tài khoản PRO";
-                            // Nếu user đang chọn sẵn Khó thì reset về Trung bình
                             if (el.selected || el.checked) {
                                 const tbOption = modal.querySelector('[value="Trung bình"]');
                                 if (tbOption) {
@@ -307,7 +295,6 @@ function setupToolbarEvents() {
                     btnAutoGenerate.innerHTML = originalHtml;
                 }
             } else {
-                // NẾU TÀI KHOẢN PRO -> MỞ KHÓA TẤT CẢ TÙY CHỌN "KHÓ"
                 const modal = document.getElementById('aiGenerateModal');
                 if (modal) {
                     const hardOptions = modal.querySelectorAll('[value="Khó"]');
@@ -318,7 +305,6 @@ function setupToolbarEvents() {
                 }
             }
 
-            // Tiến hành mở Modal sau khi qua kiểm tra (Nếu chưa vượt giới hạn)
             const modal = document.getElementById('aiGenerateModal');
             if (modal) {
                 modal.classList.add('active');
@@ -455,6 +441,8 @@ async function loadAggregatedExamData() {
             if (isPublicExam || isMyExam) {
                 if (examMap[eId]) {
                     examMap[eId].isValid = true; 
+                    // NÂNG CẤP: Lấy tên đề từ Database (nếu có)
+                    examMap[eId].examName = conf.examName || ""; 
                     examMap[eId].isVip = conf.isVip || false;
                     examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
                     examMap[eId].attemptCount = conf.attemptCount || 0;
@@ -540,7 +528,6 @@ function renderExams() {
 
     if (!examListContainer) return;
     
-    // BỌC TOÀN BỘ BẰNG TRY-CATCH ĐỂ TRÁNH LỖI MÀN HÌNH TRẮNG (NULL)
     try {
         if (!document.getElementById('hide-exam-style')) {
             document.head.insertAdjacentHTML('beforeend', `
@@ -570,6 +557,7 @@ function renderExams() {
         if (currentSearchQuery !== '') {
             displayData = displayData.filter(exam => 
                 exam.id.toLowerCase().includes(currentSearchQuery) || 
+                (exam.examName && exam.examName.toLowerCase().includes(currentSearchQuery)) || // NÂNG CẤP: Tìm cả theo Tên
                 (exam.technique && exam.technique.toLowerCase().includes(currentSearchQuery))
             );
         }
@@ -622,9 +610,7 @@ function renderExams() {
             `;
 
             group.data.forEach(exam => {
-                // Thoát an toàn cho ID để tránh vỡ HTML do ký tự đặc biệt
                 const safeExamId = exam.id ? exam.id.replace(/'/g, "\\'") : '';
-                
                 const isExamVip = exam.isVip;
                 const isSaved = userBookmarks.includes(exam.id);
                 const isCompleted = !!completedExams[exam.id];
@@ -641,10 +627,15 @@ function renderExams() {
 
                 const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
 
+                // NÂNG CẤP: Ưu tiên in Tên đề (exam.examName), nếu không có mới in ID
+                const displayTitle = exam.examName && exam.examName.trim() !== "" ? exam.examName : exam.id;
+                // Nếu có Tên đề, in thêm ID nhỏ phía sau để dễ tra cứu
+                const displaySubId = exam.examName && exam.examName.trim() !== "" ? `<span style="font-size: 0.75rem; color: #64748b; font-weight: normal; margin-left: 8px;">(Mã: ${exam.id})</span>` : '';
+
                 const headerHtml = `
                     <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px;">
-                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
-                            <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${exam.id}</h3>
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;" title="${displayTitle} (${exam.id})">
+                            <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayTitle}${displaySubId}</h3>
                             ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
                         </div>
                         <div style="display: flex; align-items: center; flex-shrink: 0;">
