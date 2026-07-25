@@ -13,9 +13,9 @@ export default async function handler(req, res) {
         }
 
         // Tối ưu 1: Chuyển đổi Model dựa trên độ khó để cân bằng chi phí/độ chính xác
-        let modelName = 'gemini-1.5-flash'; // Mặc định cho Dễ/Trung bình/Flashcard (Nhanh, Rẻ)
+        let modelName = 'gemini-2.5-flash'; // Mặc định cho Dễ/Trung bình/Flashcard (Nhanh, Rẻ)
         if (difficulty === 'hard' && action !== 'flashcard') {
-            modelName = 'gemini-1.5-pro'; // Dùng Pro cho câu hỏi khó (Thông minh hơn, Suy luận sâu)
+            modelName = 'gemini-2.5-pro'; // Dùng Pro cho câu hỏi khó (Thông minh hơn, Suy luận sâu)
         }
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
