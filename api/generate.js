@@ -18,7 +18,7 @@ export default async function handler(req, res) {
             modelName = 'gemini-1.5-pro'; // Dùng Pro cho câu hỏi khó (Thông minh hơn, Suy luận sâu)
         }
 
-        const url = `[https://generativelanguage.googleapis.com/v1beta/models/$](https://generativelanguage.googleapis.com/v1beta/models/$){modelName}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
         let systemInstruction = "";
         let responseSchema = {};
