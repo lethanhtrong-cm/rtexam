@@ -1,6 +1,6 @@
 import { db, showToast } from './admin-core.js';
 import { 
-    collection, getDocs, doc, deleteDoc, query, where 
+    collection, getDocs, doc, deleteDoc, updateDoc, query, where 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Biến lưu trữ dữ liệu các đề AI
@@ -158,21 +158,13 @@ function renderAiExamsTable() {
             ? `<span style="background: #f3e8ff; color: #7e22ce; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #e9d5ff; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-solid fa-robot"></i> Hệ thống AI</span>`
             : `<span style="background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-regular fa-user"></i> ${exam.displayCreator}</span>`;
 
-        // --- TÍNH TOÁN VÀ HIỂN THỊ CHI PHÍ VỐN CHO TỪNG ĐỀ ---
-        const tokenUsed = exam.tokenUsed || 0;
-        const costVND = Math.round((tokenUsed / 1000000) * 42638);
-        const costBadgeHtml = tokenUsed > 0 
-            ? `<div style="font-size: 11px; color: #b45309; font-weight: 700; margin-top: 4px; display: inline-block; background: #fef3c7; padding: 3px 8px; border-radius: 6px; border: 1px solid #fde68a;"><i class="fa-solid fa-coins"></i> Vốn: ${costVND.toLocaleString('vi-VN')} đ</div>` 
-            : '';
-
         tr.innerHTML = `
             <td class="text-center"><span style="font-weight: 700; color: #64748b;">${stt++}</span></td>
             <td>
-                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                <div style="display: flex; align-items: center;">
                     <span style="background: #f8fafc; color: #0f172a; padding: 6px 12px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-weight: 700; font-size: 0.9rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                         <i class="fa-solid fa-barcode" style="color: #94a3b8; margin-right: 6px;"></i>${exam.id}
                     </span>
-                    ${costBadgeHtml}
                 </div>
             </td>
             <td>${creatorBadge}</td>
@@ -188,6 +180,9 @@ function renderAiExamsTable() {
             </td>
             <td class="text-center">
                 <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
+                    <button class="btn-modern-action btn-convert-ai" data-id="${exam.id}" style="padding: 6px 12px; font-size: 0.8rem; background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe;" title="Chuyển thành đề Admin">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i> Chuyển
+                    </button>
                     <button class="btn-modern-action btn-export-ai-single" data-id="${exam.id}" style="padding: 6px 12px; font-size: 0.8rem; background-color: #f0fdfa; color: #059669; border-color: #a7f3d0;" title="Xuất Excel">
                         <i class="fa-solid fa-file-excel"></i> Xuất
                     </button>
@@ -204,7 +199,7 @@ function renderAiExamsTable() {
 }
 
 // ==========================================
-// 3. VẼ THANH ĐIỀU HƯỚNG PHÂN TRANG (MỚI)
+// 3. VẼ THANH ĐIỀU HƯỚNG PHÂN TRANG
 // ==========================================
 function renderPagination(totalPages) {
     let paginationContainer = document.getElementById('ai-pagination-container');
@@ -259,7 +254,95 @@ function renderPagination(totalPages) {
 }
 
 // ==========================================
-// 4. XÓA ĐỀ AI
+// 4. CHUYỂN ĐỔI ĐỀ AI THÀNH ĐỀ ADMIN (TÍNH NĂNG MỚI)
+// ==========================================
+function openConvertAiModal(examId) {
+    // Xóa modal cũ nếu có
+    const oldModal = document.getElementById('convert-ai-modal');
+    if (oldModal) oldModal.remove();
+
+    const modalHtml = `
+        <div id="convert-ai-modal" style="display: flex; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); justify-content: center; align-items: center;">
+            <div style="background-color: #fff; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                    <h3 style="margin:0; color: #1e293b; font-size: 1.1rem;"><i class="fa-solid fa-arrow-right-arrow-left" style="color: #3b82f6;"></i> Chuyển đổi thành Đề Chính Thức</h3>
+                </div>
+                
+                <p style="font-size: 14px; color: #475569; margin-bottom: 20px;">Bạn đang thao tác với mã đề: <strong style="color:#2563eb;">${examId}</strong></p>
+
+                <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Chuyên khoa đích:</label>
+                <select id="convert-tech" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #cbd5e1; outline:none; font-family:inherit;">
+                    <option value="MRI">MRI</option>
+                    <option value="CT">CT</option>
+                    <option value="X quang">X quang</option>
+                    <option value="Hỗn hợp">Hỗn hợp</option>
+                </select>
+
+                <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Mức độ khó:</label>
+                <select id="convert-level" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #cbd5e1; outline:none; font-family:inherit;">
+                    <option value="Dễ">Dễ</option>
+                    <option value="Trung bình" selected>Trung bình</option>
+                    <option value="Khó">Khó</option>
+                </select>
+
+                <label style="display:block; font-weight:600; margin-bottom:8px; font-size:14px; color:#334155;">Thời gian làm bài:</label>
+                <select id="convert-time" style="width:100%; padding:10px; margin-bottom:25px; border-radius:8px; border:1px solid #cbd5e1; outline:none; font-family:inherit;">
+                    <option value="15">15 phút</option>
+                    <option value="30">30 phút</option>
+                    <option value="45">45 phút</option>
+                </select>
+
+                <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <button id="btn-cancel-convert" style="padding:10px 20px; border:none; border-radius:8px; background:#e2e8f0; color:#475569; cursor:pointer; font-weight:bold; transition:0.2s;">Hủy Bỏ</button>
+                    <button id="btn-confirm-convert" style="padding:10px 20px; border:none; border-radius:8px; background:#3b82f6; color:white; cursor:pointer; font-weight:bold; transition:0.2s; box-shadow:0 4px 6px rgba(59,130,246,0.2);">Xác Nhận Chuyển</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById('btn-cancel-convert').onclick = () => {
+        document.getElementById('convert-ai-modal').remove();
+    };
+
+    document.getElementById('btn-confirm-convert').onclick = async () => {
+        const tech = document.getElementById('convert-tech').value;
+        const level = document.getElementById('convert-level').value;
+        const time = parseInt(document.getElementById('convert-time').value, 10);
+        const btn = document.getElementById('btn-confirm-convert');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+        try {
+            const examRef = doc(db, "exams", examId);
+            await updateDoc(examRef, {
+                technique: tech,
+                level: level,
+                timeLimit: time,
+                creatorEmail: "Admin", // Đánh dấu lại người sở hữu
+                creator: "Admin",
+                isPublic: true // Đảm bảo đề hiển thị công khai như mọi đề Admin khác
+            });
+            
+            showToast(`Tuyệt vời! Đề "${examId}" đã được chuyển sang tab quản lý ${tech}.`, "success");
+            document.getElementById('convert-ai-modal').remove();
+            
+            // Reload lại danh sách (đề này sẽ tự động biến mất khỏi bảng AI)
+            loadAiExams(); 
+        } catch (error) {
+            console.error("Lỗi khi chuyển đổi:", error);
+            showToast("Có lỗi xảy ra khi chuyển đổi đề thi.", "error");
+            btn.disabled = false;
+            btn.innerHTML = "Xác Nhận Chuyển";
+        }
+    };
+}
+
+
+// ==========================================
+// 5. XÓA ĐỀ AI
 // ==========================================
 async function deleteAiExam(examId, btnElement) {
     if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn đề AI "${examId}" và toàn bộ câu hỏi bên trong không?`)) return;
@@ -288,7 +371,7 @@ async function deleteAiExam(examId, btnElement) {
 }
 
 // ==========================================
-// 5. XUẤT EXCEL 1 ĐỀ CỤ THỂ
+// 6. XUẤT EXCEL 1 ĐỀ CỤ THỂ
 // ==========================================
 function exportSingleAiExam(examId) {
     const exam = aiExamsData.find(e => e.id === examId);
@@ -302,7 +385,7 @@ function exportSingleAiExam(examId) {
 }
 
 // ==========================================
-// 6. XUẤT EXCEL TẤT CẢ CÁC ĐỀ AI
+// 7. XUẤT EXCEL TẤT CẢ CÁC ĐỀ AI
 // ==========================================
 function exportAllAiExamsToExcel() {
     if (aiExamsData.length === 0) {
@@ -358,7 +441,7 @@ function processAndDownloadExcel(examsArray, fileName) {
 }
 
 // ==========================================
-// 7. KHỞI TẠO VÀ LẮNG NGHE SỰ KIỆN
+// 8. KHỞI TẠO VÀ LẮNG NGHE SỰ KIỆN
 // ==========================================
 document.addEventListener('componentsLoaded', () => {
     
@@ -379,10 +462,18 @@ document.addEventListener('componentsLoaded', () => {
         btnExport.addEventListener('click', exportAllAiExamsToExcel);
     }
 
-    // Lắng nghe các nút click bên trong bảng (Xóa, Xuất Excel lẻ)
+    // Lắng nghe các nút click bên trong bảng (Chuyển đổi, Xóa, Xuất Excel lẻ)
     const tbody = document.getElementById('ai-exam-list-body');
     if (tbody) {
         tbody.addEventListener('click', (e) => {
+            
+            // Nút Chuyển Đổi thành đề Admin
+            const convertBtn = e.target.closest('.btn-convert-ai');
+            if (convertBtn) {
+                const examId = convertBtn.getAttribute('data-id');
+                openConvertAiModal(examId);
+            }
+
             // Nút xóa đề
             const deleteBtn = e.target.closest('.btn-delete-ai');
             if (deleteBtn) {
