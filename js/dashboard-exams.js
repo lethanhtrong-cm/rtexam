@@ -629,8 +629,8 @@ function renderExams() {
 
                 // NÂNG CẤP: Ưu tiên in Tên đề (exam.examName), nếu không có mới in ID
                 const displayTitle = exam.examName && exam.examName.trim() !== "" ? exam.examName : exam.id;
-                // Nếu có Tên đề, in thêm ID nhỏ phía sau để dễ tra cứu
-                const displaySubId = exam.examName && exam.examName.trim() !== "" ? `<span style="font-size: 0.75rem; color: #64748b; font-weight: normal; margin-left: 8px;">(Mã: ${exam.id})</span>` : '';
+                /// Đã ẩn mã đề phụ theo yêu cầu
+const displaySubId = '';
 
                 const headerHtml = `
                     <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px;">
