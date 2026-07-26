@@ -1,27 +1,36 @@
-<nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 transition-all">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16 sm:h-20">
+<nav class="bg-white/80 backdrop-blur-md border-b border-slate-200/60 w-full transition-all">
+    <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16 lg:h-20">
+            
+            <!-- Logo -->
             <div class="flex-shrink-0 flex items-center cursor-pointer">
-                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg mr-2 shadow-md">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center mr-2 shadow-sm shadow-teal-500/30">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
                 </div>
-               <span class="font-extrabold text-xl text-slate-800 tracking-tight">RT-<span class="text-teal-600">quiz</span></span>
+                <span class="font-extrabold text-xl tracking-tight text-slate-800">RT<span class="text-teal-600">-quiz</span></span>
             </div>
 
-            <div class="hidden md:flex items-center space-x-8">
-                <a href="#features" class="text-sm font-medium text-slate-600 hover:text-teal-600 transition-colors">Tính năng</a>
-                <a href="#guide" class="text-sm font-medium text-slate-600 hover:text-teal-600 transition-colors">Hướng dẫn</a>
-                <a href="#leaderboard" class="text-sm font-medium text-slate-600 hover:text-teal-600 transition-colors">Bảng xếp hạng</a>
+            <!-- Main Navigation (Desktop) -->
+            <div class="hidden md:flex space-x-8 items-center">
+                <a href="#" class="text-sm font-semibold text-teal-600 border-b-2 border-teal-600 pb-1">Trang chủ</a>
+                <a href="#" class="text-sm font-semibold text-slate-600 hover:text-teal-600 transition-colors">Thư viện đề</a>
+                <a href="#" class="text-sm font-semibold text-slate-600 hover:text-teal-600 transition-colors">Thi đấu</a>
+                <a href="#" class="text-sm font-semibold text-slate-600 hover:text-teal-600 transition-colors">Về chúng tôi</a>
             </div>
 
-            <div class="flex items-center space-x-4">
-                <a href="#login" class="hidden sm:inline-block text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors">
+            <!-- Nút tương tác Đăng nhập / Đăng ký -->
+            <div class="flex items-center space-x-3">
+                <!-- Chú ý: class nav-auth-trigger và data-tab để JS nhận diện -->
+                <button class="nav-auth-trigger hidden sm:block px-4 py-2 text-sm font-semibold text-slate-600 hover:text-teal-600 transition-colors" data-tab="login">
                     Đăng nhập
-                </a>
-                <a href="#register" class="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all animate-pulse hover:animate-none">
+                </button>
+                <button class="nav-auth-trigger px-5 py-2 md:py-2.5 text-sm font-semibold bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm shadow-teal-600/20 transition-all active:scale-95" data-tab="register">
                     Đăng ký miễn phí
-                </a>
+                </button>
             </div>
+            
         </div>
     </div>
 </nav>
