@@ -1,9 +1,15 @@
-/**
- * Hệ thống tải Module động dựa trên thuộc tính data-component
- * Giúp chia nhỏ giao diện để dễ quản lý, phù hợp cho kiến trúc Landing Page dài.
- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { 
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    GoogleAuthProvider, signInWithPopup, setPersistence, 
+    browserLocalPersistence, browserSessionPersistence, sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// ==========================================
+// PHẦN 1: HỆ THỐNG LOAD MODULE (HTML LOADER)
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Tìm tất cả các phần tử có thuộc tính data-component
     const components = document.querySelectorAll('[data-component]');
     
     components.forEach(async (container) => {
@@ -11,16 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             const response = await fetch(filePath);
-            if (!response.ok) {
-                throw new Error(`Mã lỗi: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`Lỗi: ${response.status}`);
             
-            // Lấy nội dung HTML và nhúng vào container
             const html = await response.text();
             container.innerHTML = html;
             
-            // Thêm class để kích hoạt hiệu ứng fade-in nhẹ nhàng
-            // Sử dụng setTimeout ngắn để đảm bảo DOM đã render xong trước khi animate
+            // Kích hoạt hiệu ứng Fade-in
             setTimeout(() => {
                 if (container.firstElementChild) {
                     container.firstElementChild.classList.add('fade-in-module');
@@ -32,12 +34,190 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error(`Không thể load module [${filePath}]:`, error);
             container.innerHTML = `
-                <div class="p-6 m-4 rounded-xl border border-red-100 bg-red-50 text-red-500 text-sm text-center flex flex-col items-center justify-center">
-                    <svg class="w-6 h-6 mb-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    <b>Lỗi tải giao diện:</b> Không thể tìm thấy file <i>${filePath}</i><br>
-                    <span class="text-xs mt-1 text-red-400">Vui lòng kiểm tra lại đường dẫn hoặc chạy qua Live Server.</span>
+                <div class="p-6 m-4 rounded-xl border border-red-100 bg-red-50 text-red-500 text-sm text-center">
+                    <b>Lỗi tải giao diện:</b> Không thể tìm thấy file <i>${filePath}</i>
                 </div>
             `;
         }
     });
+});
+
+// ==========================================
+// PHẦN 2: LOGIC XỬ LÝ FIREBASE & GIAO DIỆN FORM
+// ==========================================
+
+// Cấu hình Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
+    authDomain: "rt-examination.firebaseapp.com",
+    projectId: "rt-examination",
+    storageBucket: "rt-examination.firebasestorage.app",
+    messagingSenderId: "920482699854",
+    appId: "1:920482699854:web:44f9b0d735bdc001c6c11f",
+    measurementId: "G-8N7RTTREQM"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Hàm tiện ích UI
+function showMsg(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.textContent = message;
+    el.className = 'p-3 rounded-lg text-sm text-center mb-4 font-medium block transition-all';
+    if (type === 'error') {
+        el.classList.add('bg-red-50', 'text-red-600', 'border', 'border-red-100');
+    } else {
+        el.classList.add('bg-emerald-50', 'text-emerald-600', 'border', 'border-emerald-100');
+    }
+}
+
+function hideMsg(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) el.className = 'hidden';
+}
+
+function setLoadingBtn(btn, isLoading, text = '') {
+    if (!btn) return;
+    if (isLoading) {
+        if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+        btn.innerHTML = `<svg class="animate-spin h-5 w-5 mr-2 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${text}`;
+    } else {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+        if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+    }
+}
+
+// Bắt các sự kiện click trên toàn bộ trang (Event Delegation)
+document.addEventListener('click', async (e) => {
+    
+    // Đảo Form (Chuyển Đăng nhập <=> Đăng ký)
+    if (e.target.id === 'go-to-register') {
+        hideMsg('login-msg');
+        document.getElementById('login-form').classList.add('hidden');
+        document.getElementById('register-form').classList.remove('hidden');
+    }
+    
+    if (e.target.id === 'go-to-login') {
+        hideMsg('register-msg');
+        document.getElementById('register-form').classList.add('hidden');
+        document.getElementById('login-form').classList.remove('hidden');
+    }
+
+    // Nút Đăng Ký
+    if (e.target.closest('#btn-register')) {
+        const btn = e.target.closest('#btn-register');
+        hideMsg('register-msg');
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+
+        if(!email || !password) {
+            showMsg('register-msg', 'Vui lòng nhập đầy đủ Email và Mật khẩu!', 'error');
+            return;
+        }
+
+        setLoadingBtn(btn, true, 'Đang đăng ký...');
+        createUserWithEmailAndPassword(auth, email, password)
+            .then(async (userCredential) => {
+                await setDoc(doc(db, "users", userCredential.user.uid), { email: email, isVip: false });
+                showMsg('register-msg', '✅ Đăng ký thành công! Đang vào hệ thống...', 'success');
+                // Tự động chuyển trang sẽ do onAuthStateChanged xử lý, hoặc anh có thể gán location.href ở đây.
+                window.location.href = 'dashboard.html';
+            })
+            .catch((error) => {
+                setLoadingBtn(btn, false);
+                const code = error.code;
+                if (code === 'auth/email-already-in-use') showMsg('register-msg', 'Email này đã được đăng ký!', 'error');
+                else if (code === 'auth/weak-password') showMsg('register-msg', 'Mật khẩu quá ngắn (ít nhất 6 ký tự)!', 'error');
+                else showMsg('register-msg', 'Lỗi hệ thống: ' + error.message, 'error');
+            });
+    }
+
+    // Nút Đăng Nhập Email
+    if (e.target.closest('#btn-login')) {
+        const btn = e.target.closest('#btn-login');
+        hideMsg('login-msg');
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        // Sửa lỗi: Đảm bảo tồn tại thẻ remember-me mới gọi .checked
+        const rememberCheckbox = document.getElementById('remember-me');
+        const isRememberMe = rememberCheckbox ? rememberCheckbox.checked : false;
+
+        if(!email || !password) {
+            showMsg('login-msg', 'Vui lòng nhập đầy đủ Email và Mật khẩu!', 'error');
+            return;
+        }
+
+        setLoadingBtn(btn, true, 'Đang kết nối...');
+        const persistenceType = isRememberMe ? browserLocalPersistence : browserSessionPersistence;
+        
+        setPersistence(auth, persistenceType)
+            .then(() => signInWithEmailAndPassword(auth, email, password))
+            .then(async (userCredential) => { 
+                await setDoc(doc(db, "users", userCredential.user.uid), { email: userCredential.user.email, isVip: false }, { merge: true });
+                const redirectUrl = localStorage.getItem('redirectAfterLogin');
+                if (redirectUrl) {
+                    localStorage.removeItem('redirectAfterLogin');
+                    window.location.href = redirectUrl;
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
+            })
+            .catch((error) => {
+                setLoadingBtn(btn, false);
+                if (error.code.includes('auth/invalid-credential') || error.code.includes('auth/user-not-found')) {
+                    showMsg('login-msg', 'Lỗi: Sai email hoặc mật khẩu!', 'error');
+                } else {
+                    showMsg('login-msg', 'Lỗi đăng nhập: ' + error.message, 'error');
+                }
+            });
+    }
+
+    // Nút Đăng Nhập Google
+    if (e.target.closest('#btn-google')) {
+        const btn = e.target.closest('#btn-google');
+        hideMsg('login-msg');
+        setLoadingBtn(btn, true, 'Đang kết nối...');
+        
+        const rememberCheckbox = document.getElementById('remember-me');
+        const isRememberMe = rememberCheckbox ? rememberCheckbox.checked : false;
+        const persistenceType = isRememberMe ? browserLocalPersistence : browserSessionPersistence;
+
+        setPersistence(auth, persistenceType)
+            .then(() => signInWithPopup(auth, new GoogleAuthProvider()))
+            .then(async (result) => { 
+                await setDoc(doc(db, "users", result.user.uid), { email: result.user.email, isVip: false }, { merge: true });
+                const redirectUrl = localStorage.getItem('redirectAfterLogin');
+                if (redirectUrl) {
+                    localStorage.removeItem('redirectAfterLogin');
+                    window.location.href = redirectUrl;
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
+            })
+            .catch((error) => {
+                setLoadingBtn(btn, false);
+                if (error.code !== 'auth/popup-closed-by-user') showMsg('login-msg', 'Lỗi: ' + error.message, 'error');
+            });
+    }
+
+    // Nút Quên Mật Khẩu
+    if (e.target.id === 'btn-forgot-password') {
+        hideMsg('login-msg');
+        let email = document.getElementById('login-email').value.trim();
+        if (!email) {
+            email = prompt("Vui lòng nhập địa chỉ email bạn đã dùng để đăng ký:");
+            if (!email) return;
+        }
+        showMsg('login-msg', 'Đang gửi yêu cầu...', 'success');
+        sendPasswordResetEmail(auth, email.trim())
+            .then(() => showMsg('login-msg', `✅ Đã gửi link reset đến email: ${email}`, 'success'))
+            .catch(err => showMsg('login-msg', 'Lỗi: ' + err.message, 'error'));
+    }
 });
