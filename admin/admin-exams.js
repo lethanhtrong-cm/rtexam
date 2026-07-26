@@ -1,6 +1,6 @@
 import { db, showToast } from './admin-core.js';
 import { 
-    collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, where, getDoc 
+    collection, getDocs, doc, setDoc, updateDoc, deleteDoc, addDoc, query, where, getDoc, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Các biến trạng thái bộ lọc toàn cục
@@ -319,7 +319,7 @@ async function updateExamProperties() {
         
         showToast(`Cập nhật thuộc tính đề "${currentEditingExamId}" thành công!`, "success");
         if (modal) modal.style.display = "none";
-        loadExamList(); 
+        // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
     } catch (error) {
         showToast("Không thể lưu thay đổi thuộc tính đề", "error");
     } finally {
@@ -344,7 +344,7 @@ async function toggleExamVip(examId, currentVipState) {
         
         await setDoc(docRef, payload, { merge: true });
         showToast(`Cập nhật trạng thái VIP đề "${examId}" thành công!`, "success");
-        loadExamList();
+        // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
     } catch (error) { showToast("Lỗi thay đổi quyền VIP", "error"); }
 }
 
@@ -365,7 +365,7 @@ async function deleteExam(examId, buttonElement) {
         const deletePromises = querySnapshot.docs.map(docSnap => deleteDoc(doc(db, "questions", docSnap.id)));
         await Promise.all(deletePromises);
         showToast(`Đã xóa sạch thành công ${deletePromises.length} câu hỏi của đề "${examId}"!`, "success");
-        loadExamList();
+        // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
     } catch (error) {
         showToast("Lỗi hệ thống khi thực thi lệnh xóa", "error");
         buttonElement.innerHTML = originalText;
@@ -571,7 +571,7 @@ async function publishExam() {
         if (fileNameDisplay) fileNameDisplay.style.display = "none";
         
         renderPreview();
-        loadExamList();
+        // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
 
     } catch (error) {
         alert("❌ Quá trình xuất bản thất bại. Chi tiết: " + error.message);
@@ -581,7 +581,11 @@ async function publishExam() {
 }
 
 document.addEventListener('componentsLoaded', () => {
-    loadExamList();
+    // THÊM TÍNH NĂNG REAL-TIME
+    onSnapshot(collection(db, "exams"), () => {
+        loadExamList();
+    });
+    
     handleExcelRead();
     initFilterChangeListeners(); 
 
