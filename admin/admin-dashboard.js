@@ -6,15 +6,9 @@ import {
 let timeChartInstance = null;
 let levelChartInstance = null;
 let techChartInstance = null;
-let dashboardPollingInterval = null; // Biến lưu trữ vòng lặp thời gian
 
 export function initDashboardRealtime() {
-    // 1. Dọn dẹp vòng lặp cũ nếu có (tránh rò rỉ bộ nhớ khi admin chuyển tab liên tục)
-    if (dashboardPollingInterval) {
-        clearInterval(dashboardPollingInterval);
-    }
-
-    // 2. Hàm đếm số liệu trực tiếp trên Server Firebase (Tối ưu chi phí Read)
+    // Hàm đếm số liệu trực tiếp trên Server Firebase (Tối ưu chi phí Read tuyệt đối)
     const fetchLiveCounts = async () => {
         try {
             const usersRef = collection(db, "users");
@@ -39,15 +33,12 @@ export function initDashboardRealtime() {
             if (testingEl) testingEl.innerText = testingCount;
 
         } catch (error) {
-            console.error("Lỗi khi đếm dữ liệu Realtime từ server:", error);
+            console.error("Lỗi khi đếm dữ liệu từ server:", error);
         }
     };
 
-    // 3. Thực thi ngay lập tức lần đầu tiên khi vừa mở trang
+    // Chỉ thực thi ngay lập tức MỘT LẦN DUY NHẤT khi vừa mở trang hoặc chuyển tab
     fetchLiveCounts();
-
-    // 4. Thiết lập Polling lặp lại mỗi 10 giây để mô phỏng Real-time an toàn
-    dashboardPollingInterval = setInterval(fetchLiveCounts, 10000);
 }
 
 export async function loadDashboardStats() {
@@ -99,7 +90,6 @@ export async function loadDashboardStats() {
             }
 
             // Phân tích Nhóm 2 (Xu hướng cấu hình dựa vào Exam Code)
-            // SỬA LỖI Ở ĐÂY: Thêm data.examId để lấy đúng trường mã đề từ bảng results
             const eCode = data.examId || data.examCode || data.quizId;
             
             if (eCode && examsMap[eCode]) {
@@ -197,7 +187,7 @@ document.addEventListener('componentsLoaded', () => {
     initDashboardRealtime();
     loadDashboardStats();
     
-    // Refresh lại Dashboard khi Admin bấm qua lại giữa các tab
+    // Tải lại dữ liệu đếm mỗi khi Admin bấm chuyển lại tab Dashboard
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
