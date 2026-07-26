@@ -171,10 +171,11 @@ export function renderExamList() {
             <hr class="premium-divider">
             <div class="card-premium-footer">
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn-modern-action btn-edit-properties" data-examid="${exam.examId}" data-examname="${exam.examName}" data-technique="${exam.technique}" data-time="${exam.timeLimit}" data-level="${exam.level}"><i class="fa-solid fa-gear"></i> Sửa Thuộc Tính</button>
+                    <button class="btn-modern-action btn-edit-properties" data-examid="${exam.examId}" data-examname="${(exam.examName || '').replace(/"/g, '&quot;')}" data-technique="${exam.technique}" data-time="${exam.timeLimit}" data-level="${exam.level}"><i class="fa-solid fa-gear"></i> Sửa Thuộc Tính</button>
                     <button class="btn-modern-action btn-edit-content" data-examid="${exam.examId}" style="color: #0284c7; border-color: #bae6fd;"><i class="fa-solid fa-pen-to-square"></i> Sửa Nội Dung</button>
                 </div>
                 <div class="footer-actions-right">
+                    <button class="btn-modern-action btn-view-feedback" data-examid="${exam.examId}"><i class="fa-solid fa-star"></i> Đánh Giá</button>
                     <button class="btn-modern-action toggle-vip" data-examid="${exam.examId}" data-vip="${exam.isVip}"><i class="fa-solid ${exam.isVip ? 'fa-unlock' : 'fa-lock'}"></i> ${exam.isVip ? 'Hủy VIP' : 'Kích VIP'}</button>
                     <button class="btn-modern-action btn-delete-danger btn-delete" data-examid="${exam.examId}"><i class="fa-solid fa-trash-can"></i> Xóa Đề</button>
                 </div>
@@ -259,9 +260,9 @@ function initActionListeners() {
             
             btnVip.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             try {
-                await updateDoc(doc(db, "exams", examId), { isVip: !isVip });
+                // SỬ DỤNG setDoc kèm merge ĐỂ CHỐNG LỖI TÀI LIỆU KHÔNG TỒN TẠI
+                await setDoc(doc(db, "exams", examId), { isVip: !isVip }, { merge: true });
                 showToast(`Đã ${!isVip ? 'Kích' : 'Hủy'} quyền VIP thành công!`, "success");
-                // Không cần gọi loadExamList vì onSnapshot sẽ tự động load lại UI
             } catch (error) {
                 console.error("Lỗi cập nhật VIP:", error);
                 showToast("Có lỗi xảy ra khi cập nhật quyền.", "error");
@@ -368,12 +369,14 @@ function openEditPropertiesModal(examId, currentName, currentTech, currentTime, 
         const newTime = parseInt(document.getElementById('edit-exam-time').value, 10);
 
         try {
-            await updateDoc(doc(db, "exams", examId), {
+            // SỬ DỤNG setDoc kèm merge ĐỂ CHỐNG LỖI TÀI LIỆU KHÔNG TỒN TẠI
+            await setDoc(doc(db, "exams", examId), {
                 examName: newName,
                 technique: newTech,
                 level: newLevel,
                 timeLimit: newTime
-            });
+            }, { merge: true });
+            
             showToast("Đã cập nhật thuộc tính đề thi thành công!", "success");
             document.getElementById('edit-props-modal').remove();
         } catch (error) {
