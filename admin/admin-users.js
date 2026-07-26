@@ -274,8 +274,9 @@ async function handleViewHistory(userEmail) {
 
         let htmlContent = '';
         querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const examCode = data.examCode || data.quizId || 'Không rõ';
+           const data = docSnap.data();
+            // Đã bổ sung trường data.examId để nhận diện đúng mã đề
+            const examCode = data.examId || data.examCode || data.quizId || 'Không rõ';
             const score = data.score !== undefined ? data.score : 'N/A';
             
             let timeStr = 'Không rõ';
