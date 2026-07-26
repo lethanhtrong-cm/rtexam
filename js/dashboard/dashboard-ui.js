@@ -48,6 +48,12 @@ export function switchTab(targetTabId, titleOverride) {
     if (currentTabTitle) {
         currentTabTitle.textContent = titleOverride || tabTitleMap[targetTabId] || 'Bảng Điều Khiển';
     }
+
+    // Tự động đóng Sidebar trên Mobile sau khi click chọn menu
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar && window.innerWidth <= 768) {
+        sidebar.classList.remove('active');
+    }
 }
 
 // =========================================================================
@@ -155,3 +161,20 @@ export function setVipInactive() {
         `;
     }
 }
+
+// =========================================================================
+// LOGIC UI: XỬ LÝ ĐÓNG/MỞ SIDEBAR TRÊN MOBILE
+// =========================================================================
+document.addEventListener('click', (e) => {
+    const toggleBtn = e.target.closest('#mobileMenuToggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    // Nếu bấm vào nút Hamburger thì Mở/Đóng Sidebar
+    if (toggleBtn) {
+        if (sidebar) sidebar.classList.toggle('active');
+    } 
+    // Nếu Sidebar đang mở mà người dùng click ra vùng xám bên ngoài thì tự Đóng
+    else if (sidebar && sidebar.classList.contains('active') && !e.target.closest('.sidebar')) {
+        sidebar.classList.remove('active');
+    }
+});
