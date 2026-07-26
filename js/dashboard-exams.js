@@ -557,7 +557,7 @@ function renderExams() {
         if (currentSearchQuery !== '') {
             displayData = displayData.filter(exam => 
                 exam.id.toLowerCase().includes(currentSearchQuery) || 
-                (exam.examName && exam.examName.toLowerCase().includes(currentSearchQuery)) || // NÂNG CẤP: Tìm cả theo Tên
+                (exam.examName && exam.examName.toLowerCase().includes(currentSearchQuery)) || 
                 (exam.technique && exam.technique.toLowerCase().includes(currentSearchQuery))
             );
         }
@@ -587,15 +587,33 @@ function renderExams() {
 
         const isUserVip = currentUserData && currentUserData.isVip === true;
 
+        // =========================================================================
+        // TÁI CẤU TRÚC PHÂN NHÓM: MA TRẬN KỸ THUẬT VÀ ĐỘ KHÓ
+        // =========================================================================
         const groups = [
             { title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
             { title: "📝 Đề cần ôn tập", data: displayData.filter(exam => completedExams[exam.id] && ((completedExams[exam.id].score / (completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) },
             { title: "⚡ Khởi động nhanh (15 phút)", data: displayData.filter(exam => exam.timeLimit === 15) },
-            { title: "🔥 Thử thách chuyên sâu", data: displayData.filter(exam => exam.level === 'Khó') },
-            { title: "🧲 Khối kiến thức MRI", data: displayData.filter(exam => exam.technique === 'MRI') },
-            { title: "☢️ Khối kiến thức CT Scanner", data: displayData.filter(exam => exam.technique === 'CT') },
-            { title: "🩻 Khối kiến thức X-Quang", data: displayData.filter(exam => exam.technique === 'X quang') },
-            { title: "🧩 Đề Hỗn hợp và AI", data: displayData.filter(exam => exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) }
+            
+            // NHÓM MRI
+            { title: "🧲 MRI - Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
+            { title: "🧲 MRI - Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Trung bình') },
+            { title: "🧲 MRI - Mức độ Khó", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Khó') },
+            
+            // NHÓM CT SCANNER
+            { title: "☢️ CT Scanner - Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Dễ') },
+            { title: "☢️ CT Scanner - Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Trung bình') },
+            { title: "☢️ CT Scanner - Mức độ Khó", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Khó') },
+            
+            // NHÓM X-QUANG
+            { title: "🩻 X-Quang - Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Dễ') },
+            { title: "🩻 X-Quang - Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Trung bình') },
+            { title: "🩻 X-Quang - Mức độ Khó", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Khó') },
+            
+            // NHÓM HỖN HỢP VÀ AI
+            { title: "🧩 Hỗn hợp & AI - Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Dễ') },
+            { title: "🧩 Hỗn hợp & AI - Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Trung bình') },
+            { title: "🧩 Hỗn hợp & AI - Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Khó') }
         ];
 
         groups.forEach(group => {
@@ -630,7 +648,7 @@ function renderExams() {
                 // NÂNG CẤP: Ưu tiên in Tên đề (exam.examName), nếu không có mới in ID
                 const displayTitle = exam.examName && exam.examName.trim() !== "" ? exam.examName : exam.id;
                 /// Đã ẩn mã đề phụ theo yêu cầu
-const displaySubId = '';
+                const displaySubId = '';
 
                 const headerHtml = `
                     <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px;">
