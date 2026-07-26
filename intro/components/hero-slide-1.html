@@ -1,148 +1,168 @@
-<section class="relative w-full pt-12 md:pt-20 lg:pt-24 pb-6 md:pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
-    <div class="absolute inset-0 pointer-events-none opacity-40">
-        <div class="absolute top-10 right-10 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
+<section class="relative w-full pt-8 lg:pt-12 pb-12 px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto overflow-visible">
+    <!-- Nền trang trí nhẹ -->
+    <div class="absolute inset-0 pointer-events-none opacity-40 z-0">
+        <div class="absolute top-10 right-1/3 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
         <div class="absolute bottom-10 left-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
     </div>
 
-    <div class="relative grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+    <!-- CẤU TRÚC LƯỚI CHIA ĐÔI MÀN HÌNH -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start relative z-10">
         
-        <div class="lg:col-span-7 flex flex-col justify-center text-left z-10">
+        <!-- ==========================================
+             CỘT TRÁI: NỘI DUNG HERO (CUỘN TỰ DO)
+             ========================================== -->
+        <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-10">
             
-            <div class="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200/60 text-teal-700 text-xs font-semibold uppercase tracking-wider mb-6">
-                <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                </svg>
-                Giải pháp khảo thí dành riêng cho nhân viên y tế
+            <!-- Phần 1: Text & Features -->
+            <div>
+                <div class="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200/60 text-teal-700 text-xs font-semibold uppercase tracking-wider mb-6">
+                    <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    Giải pháp khảo thí dành riêng cho Kỹ thuật viên
+                </div>
+
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+                    Ôn luyện thông minh.<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Làm chủ kiến thức Y khoa.</span>
+                </h1>
+
+                <p class="text-base sm:text-lg text-slate-600 mb-8 max-w-xl leading-relaxed">
+                    Nền tảng trắc nghiệm trực tuyến tích hợp AI, tối ưu hóa lộ trình ôn tập độc quyền cho Kỹ thuật viên Chẩn đoán hình ảnh (X-Quang, CT, MRI). Đề thi chuẩn hóa, liên tục cập nhật đa cấp độ.
+                </p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
+                            <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">Giải thích chuẩn Y khoa</h4>
+                            <p class="text-xs text-slate-500 mt-0.5">Đối chiếu đáp án chi tiết.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
+                            <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">Tạo đề bằng AI</h4>
+                            <p class="text-xs text-slate-500 mt-0.5">Biên soạn theo chuyên khoa riêng.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
-                Ôn luyện thông minh.<br>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Làm chủ kiến thức Y khoa.</span>
-            </h1>
-
-            <p class="text-base sm:text-lg text-slate-600 mb-8 max-w-xl leading-relaxed">
-                Nền tảng trắc nghiệm trực tuyến tích hợp AI, tối ưu hóa lộ trình ôn tập độc quyền cho Kỹ thuật viên Chẩn đoán hình ảnh (X-Quang, CT, MRI). Đề thi chuẩn hóa, liên tục cập nhật đa cấp độ.
-            </p>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+            <!-- Phần 2: Đồ họa Mockup (Xếp ngay dưới Text) -->
+            <div class="relative w-full max-w-2xl bg-gradient-to-br from-slate-100 to-teal-50/40 border border-slate-200/50 p-6 rounded-2xl shadow-inner min-h-[320px] overflow-hidden">
                 
-                <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
-                        <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 text-sm">Giao diện thân thiện & Giải thích đầy đủ</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">Dễ dàng xem lại bài thi kèm đối chiếu đáp án chuẩn y khoa.</p>
-                    </div>
-                </div>
-
-                <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
-                        <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 text-sm">Tạo đề thi tùy thích bằng AI</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">Biên soạn câu hỏi theo đúng chuyên khoa và yêu cầu riêng.</p>
-                    </div>
-                </div>
-
-                <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
-                        <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 text-sm">Làm lại bài thi nhiều lần</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">Không giới hạn lượt thi, ghi nhận biểu đồ tiến bộ rõ ràng.</p>
-                    </div>
-                </div>
-
-                <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-5 h-5 rounded-full bg-teal-100 flex items-center justify-center mt-0.5">
-                        <svg class="w-3.5 h-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-slate-800 text-sm">Phòng thi đấu trực tuyến</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">Tạo phòng nhanh chóng, thách đấu kiến thức với đồng nghiệp.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-4">
-                <a href="#test" class="px-6 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-medium transition-all shadow-md shadow-teal-600/10 hover:shadow-lg text-center cursor-pointer animate-pulse hover:animate-none">
-                    Bắt đầu thi thử miễn phí
-                </a>
-                <a href="#room" class="px-6 py-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-all text-center shadow-sm cursor-pointer">
-                    Tạo phòng thi trực tuyến
-                </a>
-            </div>
-        </div>
-
-        <div class="lg:col-span-5 relative w-full aspect-[4/3] sm:aspect-[16/10] lg:aspect-square flex items-center justify-center">
-            
-            <div class="relative w-full h-full max-h-[440px] rounded-2xl bg-gradient-to-br from-slate-100 to-teal-50/40 border border-slate-200/50 p-6 overflow-hidden shadow-inner">
-                
-                <div class="absolute top-6 left-6 right-6 bg-white rounded-xl border border-slate-100 shadow-xl p-4 sm:p-5 transform transition-all duration-500 hover:-translate-y-1">
+                <!-- Thẻ Mockup Chính: Câu hỏi MRI -->
+                <div class="absolute top-6 left-6 right-6 lg:right-24 bg-white rounded-xl border border-slate-100 shadow-xl p-4 transform transition-all hover:-translate-y-1">
                     <div class="flex justify-between items-center mb-3 border-b border-slate-100 pb-2.5">
                         <span class="text-[10px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md">Câu 14/50: MRI Thần kinh</span>
                         <span class="text-[11px] font-mono font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">⏳ 00:42:15</span>
                     </div>
-                    
                     <p class="text-xs font-bold text-slate-800 mb-3 leading-relaxed">
                         Chuỗi xung MRI nào nhạy cảm nhất trong việc phát hiện nhồi máu não ở giai đoạn siêu cấp (trong vòng 6 giờ đầu)?
                     </p>
-                    
                     <div class="space-y-2">
                         <div class="p-2.5 rounded-lg border border-slate-100 text-xs text-slate-500 flex items-center gap-2">
-                            <span class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[9px] font-bold text-slate-400">A</span>
-                            Chuỗi xung FLAIR
+                            <span class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[9px]">A</span> FLAIR
                         </div>
                         <div class="p-2.5 rounded-lg border border-teal-500 bg-teal-50/40 text-xs text-slate-800 flex items-center gap-2 font-semibold">
-                            <span class="w-4 h-4 rounded-full bg-teal-600 text-white flex items-center justify-center text-[9px] font-bold">B</span>
-                            Chuỗi xung khuếch tán (DWI)
+                            <span class="w-4 h-4 rounded-full bg-teal-600 text-white flex items-center justify-center text-[9px]">B</span> Chuỗi xung DWI
                         </div>
-                    </div>
-
-                    <div class="mt-3.5 p-2.5 bg-emerald-50/70 border border-emerald-100 rounded-lg text-[11px] text-emerald-800 animate-fadeIn">
-                        <div class="font-bold flex items-center gap-1 mb-1 text-emerald-700">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            Đáp án đúng: B (Giải thích chi tiết)
-                        </div>
-                        DWI phát hiện rất sớm hiện tượng hạn chế khuếch tán của phân tử nước do phù nề tế bào (cytotoxic edema), hiển thị dưới dạng tăng tín hiệu rõ rệt.
                     </div>
                 </div>
 
-                <div class="absolute bottom-4 right-4 left-10 lg:-right-4 lg:left-auto lg:w-76 bg-slate-900 text-white rounded-xl shadow-2xl p-4 border border-slate-800 transform rotate-1 transition-transform hover:rotate-0">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2">
-                            <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-400">Trợ Lý AI Đang Tạo Đề</span>
+                <!-- Thẻ Trợ lý AI -->
+                <div class="absolute bottom-6 right-6 lg:-right-4 bg-slate-900 text-white rounded-xl shadow-2xl p-4 border border-slate-800 w-64">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-400">Trợ Lý AI Đang Tạo Đề</span>
+                    </div>
+                    <div class="text-[11px] text-slate-300 bg-slate-800/60 p-2 rounded border border-slate-700/50 break-all">
+                        "Tạo 30 câu, MRI Sọ não..."
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             CỘT PHẢI: FORM ĐĂNG NHẬP / ĐĂNG KÝ (STICKY)
+             ========================================== -->
+        <div class="lg:col-span-5 xl:col-span-4 sticky top-24 z-20">
+            <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 sm:p-8 w-full transition-all">
+                
+                <!-- === FORM ĐĂNG NHẬP === -->
+                <div id="login-form">
+                    <h2 class="text-2xl font-extrabold text-slate-800 text-center mb-6">Đăng Nhập</h2>
+                    
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-semibold text-slate-700 mb-2">Email</label>
+                        <input type="email" id="login-email" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15 transition-all text-sm outline-none text-slate-700 placeholder:text-slate-400" placeholder="Nhập địa chỉ email" required>
+                    </div>
+                    
+                    <div class="mb-5">
+                        <div class="flex justify-between items-center mb-2">
+                            <label for="login-password" class="block text-sm font-semibold text-slate-700">Mật khẩu</label>
+                            <span id="btn-forgot-password" class="text-xs font-semibold text-teal-600 hover:text-teal-700 cursor-pointer transition-colors">Quên mật khẩu?</span>
                         </div>
-                        <span class="text-[9px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded">V4.0</span>
+                        <input type="password" id="login-password" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15 transition-all text-sm outline-none text-slate-700 placeholder:text-slate-400" placeholder="Nhập mật khẩu" required>
                     </div>
-                    <div class="text-[11px] text-slate-300 mb-2.5 bg-slate-800/60 p-2 rounded border border-slate-700/50 font-mono break-all">
-                        "Tạo 30 câu, Cấp độ: Khó, Chuyên khoa: MRI Sọ não..."
+
+                    <div class="flex items-center gap-2 mb-6">
+                        <input type="checkbox" id="remember-me" class="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 cursor-pointer" checked>
+                        <label for="remember-me" class="text-sm text-slate-600 font-medium cursor-pointer">Ghi nhớ đăng nhập</label>
                     </div>
-                    <div class="flex justify-between items-center text-[10px] text-slate-400">
-                        <span class="flex items-center gap-1">✨ Đang quét nguồn chuẩn Bộ Y Tế</span>
-                        <span class="font-bold text-teal-400">100%</span>
+                    
+                    <!-- Thông báo lỗi/thành công -->
+                    <div id="login-msg" class="hidden p-3 rounded-lg text-sm text-center mb-4 font-medium transition-all"></div>
+
+                    <button id="btn-login" class="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2 shadow-md shadow-teal-600/20 active:scale-[0.98]">
+                        Đăng Nhập
+                    </button>
+                    
+                    <div class="flex items-center gap-3 my-6 text-sm text-slate-400 font-medium before:content-[''] before:flex-1 before:border-b before:border-slate-200 after:content-[''] after:flex-1 after:border-b after:border-slate-200">HOẶC</div>
+                    
+                    <button id="btn-google" class="w-full py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-all flex justify-center items-center gap-2 active:scale-[0.98]">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        </svg>
+                        Đăng nhập bằng Google
+                    </button>
+
+                    <div class="text-center mt-6 text-sm text-slate-500">
+                        Chưa có tài khoản? <span id="go-to-register" class="text-teal-600 font-bold cursor-pointer hover:underline">Đăng ký ngay</span>
                     </div>
                 </div>
 
-                <div class="absolute top-1/2 left-4 -translate-y-1/2 bg-white rounded-xl shadow-xl p-3 border border-slate-100 flex flex-col gap-1.5 max-w-[130px] hidden sm:flex transform -rotate-2 hover:rotate-0 transition-transform">
-                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Phòng thi đấu #087</span>
-                    <div class="flex items-center gap-1">
-                        <span class="relative flex h-2 w-2">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <span class="text-[11px] font-bold text-slate-700">Live (3)</span>
+                <!-- === FORM ĐĂNG KÝ === -->
+                <div id="register-form" class="hidden">
+                    <h2 class="text-2xl font-extrabold text-slate-800 text-center mb-6">Tạo Tài Khoản Mới</h2>
+                    
+                    <div class="mb-4">
+                        <label for="register-email" class="block text-sm font-semibold text-slate-700 mb-2">Email</label>
+                        <input type="email" id="register-email" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15 transition-all text-sm outline-none text-slate-700 placeholder:text-slate-400" placeholder="Nhập địa chỉ email hợp lệ" required>
                     </div>
-                    <div class="flex -space-x-1.5 overflow-hidden my-0.5">
-                        <div class="inline-block h-5 w-5 rounded-full ring-2 ring-white bg-teal-600 text-[8px] font-bold flex items-center justify-center text-white">XQ</div>
-                        <div class="inline-block h-5 w-5 rounded-full ring-2 ring-white bg-blue-600 text-[8px] font-bold flex items-center justify-center text-white">CT</div>
-                        <div class="inline-block h-5 w-5 rounded-full ring-2 ring-white bg-slate-300 text-[8px] font-bold flex items-center justify-center text-slate-600">MR</div>
+                    
+                    <div class="mb-6">
+                        <label for="register-password" class="block text-sm font-semibold text-slate-700 mb-2">Mật khẩu</label>
+                        <input type="password" id="register-password" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/15 transition-all text-sm outline-none text-slate-700 placeholder:text-slate-400" placeholder="Tạo mật khẩu (Ít nhất 6 ký tự)" required>
                     </div>
-                    <span class="text-[9px] text-slate-500">Kỷ lục phòng: <b class="text-teal-600">92%</b></span>
+                    
+                    <div id="register-msg" class="hidden p-3 rounded-lg text-sm text-center mb-4 font-medium transition-all"></div>
+
+                    <button id="btn-register" class="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold transition-all flex justify-center items-center gap-2 shadow-md shadow-teal-600/20 active:scale-[0.98]">
+                        Đăng Ký
+                    </button>
+                
+                    <div class="text-center mt-6 text-sm text-slate-500">
+                        Đã có tài khoản? <span id="go-to-login" class="text-teal-600 font-bold cursor-pointer hover:underline">Quay lại đăng nhập</span>
+                    </div>
                 </div>
 
             </div>
