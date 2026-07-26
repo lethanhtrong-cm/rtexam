@@ -68,7 +68,7 @@ export async function updateUserDashboardRank(currentUser) {
 
 async function initLeaderboard(currentUser) {
     const podiumContainer = document.getElementById('leaderboardPodium');
-    const tableBody = document.getElementById('leaderboardTableBody');
+    const tableBody = document.getElementById('leaderboardTableBody'); // Bây giờ là container div list
     const stickyRank = document.getElementById('stickyUserRank');
     const stickyStats = document.getElementById('stickyUserStats');
 
@@ -96,7 +96,7 @@ async function initLeaderboard(currentUser) {
         podiumContainer.innerHTML = ''; // Clear loading text
 
         if (top3.length === 0) {
-            podiumContainer.innerHTML = '<p class="text-muted">Chưa có dữ liệu xếp hạng.</p>';
+            podiumContainer.innerHTML = '<p class="text-muted" style="padding: 20px;">Chưa có dữ liệu xếp hạng.</p>';
         } else {
             // Sắp xếp lại thứ tự DOM để Top 1 nằm giữa: Top 2 -> Top 1 -> Top 3
             const displayOrder = [];
@@ -105,7 +105,7 @@ async function initLeaderboard(currentUser) {
             if (top3[2]) displayOrder.push({ ...top3[2], rank: 3, class: 'step-3' });
 
             displayOrder.forEach(user => {
-                const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=random`;
+                const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=random&color=fff`;
                 const crown = user.rank === 1 ? '<i class="fa-solid fa-crown crown-icon"></i>' : '';
                 
                 podiumContainer.innerHTML += `
@@ -121,20 +121,26 @@ async function initLeaderboard(currentUser) {
         }
 
         // ==========================
-        // KHU VỰC 2: RENDER TABLE (TOP 4 - 30)
+        // KHU VỰC 2: RENDER MODERN LIST (TOP 4 - 30)
         // ==========================
         tableBody.innerHTML = '';
         if (rest.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="3" class="text-muted">Chưa có đủ dữ liệu học viên.</td></tr>';
+            tableBody.innerHTML = '<div style="text-align: center; color: #64748b; padding: 30px; font-size: 1rem; border: 1px dashed #cbd5e1; border-radius: 12px; margin-top: 10px;">Chưa có đủ dữ liệu học viên.</div>';
         } else {
             rest.forEach((user, index) => {
                 const actualRank = index + 4;
+                // Ảnh fallback chuyên nghiệp với màu xám xanh
+                const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=e2e8f0&color=334155`;
+                
                 tableBody.innerHTML += `
-                    <tr>
-                        <td><strong>#${actualRank}</strong></td>
-                        <td>${user.displayName || 'Học viên ẩn danh'}</td>
-                        <td class="text-primary fw-bold">${(user.totalXP || 0).toLocaleString()}</td>
-                    </tr>
+                    <div class="leaderboard-row">
+                        <div class="row-rank">#${actualRank}</div>
+                        <div class="row-info">
+                            <img src="${avatar}" alt="Avatar" class="row-avatar">
+                            <div class="row-name">${user.displayName || 'Học viên ẩn danh'}</div>
+                        </div>
+                        <div class="row-xp">${(user.totalXP || 0).toLocaleString()} XP</div>
+                    </div>
                 `;
             });
         }
@@ -190,7 +196,7 @@ async function initLeaderboard(currentUser) {
 
     } catch (error) {
         console.error("Lỗi khi tải Bảng Xếp Hạng:", error);
-        podiumContainer.innerHTML = '<p class="text-danger">Không thể tải dữ liệu xếp hạng lúc này.</p>';
-        tableBody.innerHTML = '<tr><td colspan="3" class="text-danger">Lỗi kết nối máy chủ.</td></tr>';
+        podiumContainer.innerHTML = '<p style="color: #ef4444; padding: 20px;">Không thể tải dữ liệu xếp hạng lúc này.</p>';
+        tableBody.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Lỗi kết nối máy chủ.</div>';
     }
 }
