@@ -805,3 +805,121 @@ table th { background-color: var(--light-blue); color: var(--primary-blue); }
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(220, 38, 38, 0.15);
 }
+
+/* =========================================
+   4. MOBILE RESPONSIVE (TỐI ƯU GIAO DIỆN ĐIỆN THOẠI)
+   ========================================= */
+@media screen and (max-width: 768px) {
+    /* Bố cục chính */
+    .sidebar {
+        position: fixed;
+        left: -260px; /* Ẩn sidebar ngoài màn hình */
+        top: 0;
+        bottom: 0;
+        height: 100%;
+        transition: left 0.3s ease;
+        z-index: 1040;
+    }
+    .sidebar.active {
+        left: 0; /* Mở sidebar khi có class active */
+    }
+    .main-content {
+        padding: 15px 15px 80px 15px; /* Thu hẹp lề */
+    }
+
+    /* Topbar */
+    .topbar-fullwidth {
+        padding: 12px 15px;
+    }
+    .topbar-greeting {
+        display: none; /* Ẩn chữ chào mừng để tiết kiệm không gian */
+    }
+    .btn-premium-pro {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Thống kê nhanh */
+    .quick-stats-grid {
+        grid-template-columns: 1fr; /* 1 cột trên mobile */
+        gap: 15px;
+    }
+
+    /* Thanh công cụ (Bộ lọc, Tìm kiếm) */
+    .action-bar > div {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 15px !important;
+    }
+    .action-bar .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    .action-bar .pill-group {
+        width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 5px;
+    }
+    .action-bar .pill-btn {
+        white-space: nowrap;
+    }
+    .sort-wrapper {
+        width: 100%;
+    }
+    .modern-select {
+        width: 100%;
+    }
+    .view-toggle-group {
+        display: none; /* Ẩn nút chuyển Grid/List vì mobile mặc định là List 1 cột */
+    }
+
+    /* Lưới thẻ đề thi */
+    .grid-view {
+        grid-template-columns: 1fr; /* 1 cột */
+    }
+    /* Swimlane trượt ngang: thu nhỏ thẻ lại cho vừa màn hình đt */
+    .swimlane-view .course-card {
+        min-width: 280px !important;
+        max-width: 280px !important;
+    }
+
+    /* Tab Profile & VIP */
+    .profile-grid-layout {
+        grid-template-columns: 1fr;
+    }
+    .profile-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .vip-layout {
+        flex-direction: column;
+    }
+
+    /* Bảng xếp hạng */
+    .podium-container {
+        gap: 10px;
+    }
+    .podium-step {
+        width: 90px;
+    }
+    .step-1 { height: 180px; }
+    .step-2 { height: 140px; }
+    .step-3 { height: 110px; }
+    .podium-avatar {
+        width: 45px;
+        height: 45px;
+    }
+    .podium-name {
+        font-size: 0.8rem;
+    }
+
+    /* Bảng lịch sử */
+    #tab-history table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
