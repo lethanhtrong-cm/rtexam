@@ -263,22 +263,39 @@ async function handleViewHistory(userEmail) {
     modal.style.display = "block";
 
     try {
-        const resultsRef = collection(db, "results");
-        const q = query(resultsRef, where("email", "==", userEmail));
-        const querySnapshot = await getDocs(q);
+        // TẢI SONG SONG Lịch sử thi và Cấu hình các đề thi
+        const [querySnapshot, examsSnap] = await Promise.all([
+            getDocs(query(collection(db, "results"), where("email", "==", userEmail))),
+            getDocs(collection(db, "exams"))
+        ]);
 
         if (querySnapshot.empty) {
             historyBody.innerHTML = '<tr><td colspan="3" class="empty-message">Thành viên này chưa làm bài thi trắc nghiệm nào trên hệ thống.</td></tr>';
             return;
         }
 
+        // Tạo danh bạ ánh xạ: Mã Đề => Tên Đề
+        const examsMap = {};
+        examsSnap.forEach(docSnap => {
+            const exData = docSnap.data();
+            if (exData.examName) {
+                examsMap[docSnap.id] = exData.examName;
+            }
+        });
+
         let htmlContent = '';
         querySnapshot.forEach((docSnap) => {
-           const data = docSnap.data();
-            // Đã bổ sung trường data.examId để nhận diện đúng mã đề
+            const data = docSnap.data();
+            // Đảm bảo lấy đúng trường nhận dạng đề thi
             const examCode = data.examId || data.examCode || data.quizId || 'Không rõ';
             const score = data.score !== undefined ? data.score : 'N/A';
             
+            // Tìm Tên đề từ Map. Nếu có Tên -> In Tên + Mã nhỏ. Nếu không có Tên -> In Mã đề.
+            const examName = examsMap[examCode];
+            const displayTitle = examName 
+                ? `<span style="font-weight:600; color:#0f172a;">${examName}</span><br><span style="font-size:11.5px; color:#64748b; font-weight:normal;">(Mã: ${examCode})</span>` 
+                : `<strong>${examCode}</strong>`;
+
             let timeStr = 'Không rõ';
             if (data.timestamp) {
                 if (typeof data.timestamp.toDate === 'function') {
@@ -290,7 +307,7 @@ async function handleViewHistory(userEmail) {
 
             htmlContent += `
                 <tr>
-                    <td><strong>${examCode}</strong></td>
+                    <td>${displayTitle}</td>
                     <td class="text-center"><strong style="color: #ef4444; font-size: 15px;">${score}</strong></td>
                     <td style="color: #64748b; font-size: 13px;">${timeStr}</td>
                 </tr>
