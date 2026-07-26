@@ -6,6 +6,7 @@ import {
 let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
+let userPollingInterval = null; // Biến lưu trữ vòng lặp thời gian cho danh sách user
 
 // Biến lưu trữ danh sách đang chờ duyệt VIP
 let pendingVIPRequests = new Set(); 
@@ -25,67 +26,75 @@ export function initRealtimePaymentListener() {
     });
 }
 
+// ==========================================
+// THAY ĐỔI: TẢI DỮ LIỆU USER BẰNG POLLING (10s/lần)
+// ==========================================
 export function initRealtimeUserListener() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    onSnapshot(collection(db, "users"), (snapshot) => {
-        cachedUsers = [];
-        
-        let totalUsersCount = 0;
-        let totalVipsCount = 0;
-        let totalOnlineCount = 0;
+    // Dọn dẹp vòng lặp cũ nếu có để tránh rò rỉ bộ nhớ
+    if (userPollingInterval) {
+        clearInterval(userPollingInterval);
+    }
 
-        snapshot.forEach((docSnap) => {
-            const user = docSnap.data();
-            const userId = docSnap.id;
-            const email = user.email || 'Chưa cập nhật';
-            const isVip = user.isVip || false;
-            const isBanned = user.isBanned || false;
-            const isOnline = user.isOnline || false; 
-            // Lấy lượng token đã dùng
-            const totalTokensUsed = user.totalTokensUsed || 0;
+    const fetchUsers = async () => {
+        try {
+            const snapshot = await getDocs(collection(db, "users"));
+            cachedUsers = [];
+            
+            let totalUsersCount = 0;
+            let totalVipsCount = 0;
 
-            totalUsersCount++;
-            if (isVip) totalVipsCount++; 
-            if (isOnline && !isBanned) totalOnlineCount++; 
+            snapshot.forEach((docSnap) => {
+                const user = docSnap.data();
+                const userId = docSnap.id;
+                const email = user.email || 'Chưa cập nhật';
+                const isVip = user.isVip || false;
+                const isBanned = user.isBanned || false;
+                
+                // Kiểm tra chính xác trạng thái Online
+                const isOnline = (user.isOnline === true || user.isOnline === "true");
+                
+                // Lấy lượng token đã dùng
+                const totalTokensUsed = user.totalTokensUsed || 0;
 
-            let statusKey = 'normal';
-            if (isBanned) statusKey = 'banned';
-            else if (isVip) statusKey = 'vip';
+                totalUsersCount++;
+                if (isVip) totalVipsCount++; 
 
-            cachedUsers.push({
-                userId: userId,
-                email: email,
-                isVip: isVip,
-                isBanned: isBanned,
-                isOnline: isOnline,
-                statusKey: statusKey,
-                totalTokensUsed: totalTokensUsed
+                let statusKey = 'normal';
+                if (isBanned) statusKey = 'banned';
+                else if (isVip) statusKey = 'vip';
+
+                cachedUsers.push({
+                    userId: userId,
+                    email: email,
+                    isVip: isVip,
+                    isBanned: isBanned,
+                    isOnline: isOnline,
+                    statusKey: statusKey,
+                    totalTokensUsed: totalTokensUsed
+                });
             });
-        });
 
-        const totalUsersEl = document.getElementById('totalUsers');
-        const totalVipUsersEl = document.getElementById('totalVipUsers');
-        const totalOnlineUsersEl = document.getElementById('totalOnlineUsers');
+            // Cập nhật thống kê (Đã loại bỏ số người online theo yêu cầu)
+            const totalUsersEl = document.getElementById('totalUsers');
+            const totalVipUsersEl = document.getElementById('totalVipUsers');
 
-        if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
-        if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
-        if (totalOnlineUsersEl) totalOnlineUsersEl.innerText = totalOnlineCount;
+            if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
+            if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
 
-        renderUserList();
-    }, (error) => {
-        console.error("Lỗi kết nối Firestore Real-time:", error);
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" class="loading-text" style="color: #ef4444; font-weight: 500;">
-                    ❌ Có lỗi xảy ra khi tải dữ liệu từ Cloud Firestore.<br>
-                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra lại cấu hình Security Rules hoặc kết nối mạng.</span>
-                </td>
-            </tr>
-        `;
-        showToast("Không thể đồng bộ danh sách học viên Real-time", "error");
-    });
+            renderUserList();
+        } catch (error) {
+            console.error("Lỗi kết nối Firestore Polling User:", error);
+        }
+    };
+
+    // Thực thi ngay lần đầu
+    fetchUsers();
+
+    // Thiết lập Polling lặp lại mỗi 10 giây
+    userPollingInterval = setInterval(fetchUsers, 10000);
 }
 
 export function renderUserList() {
@@ -120,6 +129,11 @@ export function renderUserList() {
 
         const firstLetter = user.email.charAt(0);
         
+        // CHẤM XANH NHẬN BIẾT NGƯỜI DÙNG ONLINE
+        const onlineStatusHtml = user.isOnline 
+            ? `<span title="Đang trực tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-left: 8px; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></span>` 
+            : `<span title="Ngoại tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #cbd5e1; border-radius: 50%; margin-left: 8px;"></span>`;
+
         // Cảnh báo thanh toán
         const hasPendingRequest = pendingVIPRequests.has(user.userId);
         const pendingBadge = hasPendingRequest 
@@ -171,7 +185,7 @@ export function renderUserList() {
                     </div>
                     <div>
                         <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center;">
-                            ${user.email} ${pendingBadge}
+                            ${user.email} ${onlineStatusHtml} ${pendingBadge}
                         </div>
                         ${costBadgeHtml}
                     </div>
@@ -371,6 +385,17 @@ async function sendNotification() {
 document.addEventListener('componentsLoaded', () => {
     initRealtimeUserListener();
     initRealtimePaymentListener();
+
+    // Refresh Polling User khi Admin bấm chuyển tab
+    const sidebarMenuItems = document.querySelectorAll('.menu-item');
+    sidebarMenuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const target = item.getAttribute('data-target');
+            if (target === 'tab-users') {
+                initRealtimeUserListener();
+            }
+        });
+    });
 
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
