@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const html = await response.text();
             container.innerHTML = html;
             
-            // Kích hoạt hiệu ứng Fade-in
+            // Kích hoạt hiệu ứng Fade-in mượt mà
             setTimeout(() => {
                 if (container.firstElementChild) {
                     container.firstElementChild.classList.add('fade-in-module');
@@ -61,7 +61,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Hàm tiện ích UI
+// Hàm tiện ích UI hiển thị thông báo
 function showMsg(elementId, message, type) {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -93,10 +93,37 @@ function setLoadingBtn(btn, isLoading, text = '') {
     }
 }
 
-// Bắt các sự kiện click trên toàn bộ trang (Event Delegation)
+// Bắt sự kiện trên toàn bộ trang (Event Delegation)
 document.addEventListener('click', async (e) => {
     
-    // Đảo Form (Chuyển Đăng nhập <=> Đăng ký)
+    // 1. Xử lý click từ Navbar để cuộn trang mượt mà và chuyển Tab Form tương ứng
+    if (e.target.closest('.nav-auth-trigger')) {
+        const triggerBtn = e.target.closest('.nav-auth-trigger');
+        const targetTab = triggerBtn.getAttribute('data-tab'); // 'login' hoặc 'register'
+        
+        const authSection = document.getElementById('hero-auth-section');
+        if (authSection) {
+            const yOffset = -80; // Trừ hao chiều cao navbar
+            const y = authSection.getBoundingClientRect().top + window.scrollY + yOffset;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+
+        if (targetTab === 'register') {
+            hideMsg('login-msg');
+            const loginForm = document.getElementById('login-form');
+            const regForm = document.getElementById('register-form');
+            if (loginForm) loginForm.classList.add('hidden');
+            if (regForm) regForm.classList.remove('hidden');
+        } else {
+            hideMsg('register-msg');
+            const loginForm = document.getElementById('login-form');
+            const regForm = document.getElementById('register-form');
+            if (regForm) regForm.classList.add('hidden');
+            if (loginForm) loginForm.classList.remove('hidden');
+        }
+    }
+
+    // 2. Chuyển đổi qua lại giữa Form Đăng nhập và Đăng ký tại chỗ
     if (e.target.id === 'go-to-register') {
         hideMsg('login-msg');
         document.getElementById('login-form').classList.add('hidden');
@@ -109,12 +136,16 @@ document.addEventListener('click', async (e) => {
         document.getElementById('login-form').classList.remove('hidden');
     }
 
-    // Nút Đăng Ký
+    // 3. Xử lý Nút Đăng Ký Firebase
     if (e.target.closest('#btn-register')) {
         const btn = e.target.closest('#btn-register');
         hideMsg('register-msg');
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
+        const emailInput = document.getElementById('register-email');
+        const passInput = document.getElementById('register-password');
+        
+        if(!emailInput || !passInput) return;
+        const email = emailInput.value;
+        const password = passInput.value;
 
         if(!email || !password) {
             showMsg('register-msg', 'Vui lòng nhập đầy đủ Email và Mật khẩu!', 'error');
@@ -126,7 +157,6 @@ document.addEventListener('click', async (e) => {
             .then(async (userCredential) => {
                 await setDoc(doc(db, "users", userCredential.user.uid), { email: email, isVip: false });
                 showMsg('register-msg', '✅ Đăng ký thành công! Đang vào hệ thống...', 'success');
-                // Tự động chuyển trang sẽ do onAuthStateChanged xử lý, hoặc anh có thể gán location.href ở đây.
                 window.location.href = 'dashboard.html';
             })
             .catch((error) => {
@@ -138,14 +168,17 @@ document.addEventListener('click', async (e) => {
             });
     }
 
-    // Nút Đăng Nhập Email
+    // 4. Xử lý Nút Đăng Nhập Email Firebase
     if (e.target.closest('#btn-login')) {
         const btn = e.target.closest('#btn-login');
         hideMsg('login-msg');
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
+        const emailInput = document.getElementById('login-email');
+        const passInput = document.getElementById('login-password');
         
-        // Sửa lỗi: Đảm bảo tồn tại thẻ remember-me mới gọi .checked
+        if(!emailInput || !passInput) return;
+        const email = emailInput.value;
+        const password = passInput.value;
+        
         const rememberCheckbox = document.getElementById('remember-me');
         const isRememberMe = rememberCheckbox ? rememberCheckbox.checked : false;
 
@@ -179,7 +212,7 @@ document.addEventListener('click', async (e) => {
             });
     }
 
-    // Nút Đăng Nhập Google
+    // 5. Xử lý Đăng Nhập Google
     if (e.target.closest('#btn-google')) {
         const btn = e.target.closest('#btn-google');
         hideMsg('login-msg');
@@ -207,10 +240,11 @@ document.addEventListener('click', async (e) => {
             });
     }
 
-    // Nút Quên Mật Khẩu
+    // 6. Xử lý Quên Mật Khẩu
     if (e.target.id === 'btn-forgot-password') {
         hideMsg('login-msg');
-        let email = document.getElementById('login-email').value.trim();
+        const emailField = document.getElementById('login-email');
+        let email = emailField ? emailField.value.trim() : '';
         if (!email) {
             email = prompt("Vui lòng nhập địa chỉ email bạn đã dùng để đăng ký:");
             if (!email) return;
