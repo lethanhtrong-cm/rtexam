@@ -879,10 +879,10 @@ table th { background-color: var(--light-blue); color: var(--primary-blue); }
     .grid-view {
         grid-template-columns: 1fr; /* 1 cột */
     }
-    /* Swimlane trượt ngang: thu nhỏ thẻ lại cho vừa màn hình đt */
-    .swimlane-view .course-card {
-        min-width: 280px !important;
-        max-width: 280px !important;
+    /* Swimlane trượt ngang: Tối ưu thẻ đề thi chống tràn viền trên mobile */
+    .swimlane-view .course-card { min-width: 85vw !important; max-width: 320px !important; }
+    .course-card .card-body { padding: 15px !important; }
+    .course-card .card-stats-bg { flex-wrap: wrap !important; gap: 8px; padding: 10px !important; justify-content: center !important; }
     }
 
     /* Tab Profile & VIP */
