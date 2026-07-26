@@ -1,4 +1,4 @@
-<header style="position: sticky; top: 0; z-index: 9999; background-color: #084298; color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); display: flex; justify-content: space-between; align-items: center; padding: 12px 24px;">
+<header class="main-topbar" style="position: sticky; top: 0; z-index: 9999; background-color: #084298; color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); display: flex; justify-content: space-between; align-items: center; padding: 12px 24px;">
     
     <!-- KHU VỰC LOGO VÀ NÚT MENU MOBILE -->
     <div class="logo-area" style="display: flex; align-items: center; gap: 12px; flex: 1;">
@@ -6,7 +6,7 @@
             <i class="fa-solid fa-bars"></i>
         </button>
         <i class="fa-solid fa-hospital" style="font-size: 1.6rem;"></i>
-        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px;">Hệ Thống Thi Trắc Nghiệm Trực Tuyến</h2>
+        <h2 class="logo-text" style="margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap;">Hệ Thống Thi Trắc Nghiệm</h2>
     </div>
 
     <!-- KHU VỰC MENU ĐIỀU HƯỚNG TRUNG TÂM -->
@@ -21,8 +21,8 @@
         
         <!-- Nút Nâng cấp VIP -->
         <div id="topbar-vip-container">
-            <button id="btnUpgradeHeader" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);">
-                <i class="fa-solid fa-crown"></i> Nâng cấp Pro
+            <button id="btnUpgradeHeader" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3); white-space: nowrap;">
+                <i class="fa-solid fa-crown"></i> <span>Nâng cấp Pro</span>
             </button>
         </div>
 
@@ -46,7 +46,7 @@
 
         <!-- Menu User -->
         <div id="userMenuToggle" style="position: relative; display: flex; align-items: center; gap: 12px; cursor: pointer; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 20px;">
-            <div style="text-align: right; display: flex; flex-direction: column;">
+            <div class="user-greeting-text" style="text-align: right; display: flex; flex-direction: column;">
                 <span style="font-size: 0.75rem; color: #cbd5e1;">Xin chào,</span>
                 <span id="topbarName" style="font-size: 0.95rem; font-weight: 600; white-space: nowrap;">Đang tải...</span>
             </div>
@@ -129,12 +129,34 @@
     #userDropdown a:hover { background-color: #f1f5f9; color: #0f172a; }
     #btnLogout:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
 
-    /* Reponsive: Ẩn thanh menu trung tâm hoặc Logo nếu màn hình quá nhỏ, hiển thị Hamburger Menu */
-    @media (max-width: 992px) {
-        .logo-area h2 { display: none; }
+    /* =========================================================================
+       TỐI ƯU HÓA RESPONSIVE DI ĐỘNG BẰNG CÁCH ÉP KIỂU !IMPORTANT
+       ========================================================================= */
+    /* 1. Màn hình Tablet/Laptop nhỏ (Dưới 1100px) */
+    @media (max-width: 1100px) {
+        .logo-text { display: none !important; }
     }
-    @media (max-width: 768px) {
-        .topbar-center-menu { display: none; }
+    
+    /* 2. Màn hình Tablet chuẩn (Dưới 992px) */
+    @media (max-width: 992px) {
+        .topbar-center-menu { display: none !important; }
         #mobileMenuToggle { display: block !important; }
+        .main-topbar { padding: 10px 15px !important; }
+    }
+    
+    /* 3. Siêu tối ưu cho màn hình Điện thoại (Dưới 576px) */
+    @media (max-width: 576px) {
+        .topbar-actions { gap: 10px !important; }
+        
+        /* Ẩn chữ Xin Chào để tiết kiệm diện tích */
+        .user-greeting-text { display: none !important; }
+        #userMenuToggle { padding-left: 0 !important; border-left: none !important; gap: 5px !important;}
+        
+        /* Dùng thủ thuật font-size: 0 để ẩn chữ "Nâng cấp Pro", chỉ giữ lại Icon Vương miện */
+        #btnUpgradeHeader { font-size: 0 !important; padding: 8px 12px !important; }
+        #btnUpgradeHeader i { font-size: 1rem !important; margin: 0 !important; }
+        
+        /* Thu nhỏ kích thước badge chữ PRO khi đã nâng cấp */
+        .topbar-vip-badge { padding: 6px 10px !important; font-size: 0.8rem !important; }
     }
 </style>
