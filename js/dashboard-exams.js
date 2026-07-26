@@ -588,40 +588,63 @@ function renderExams() {
         const isUserVip = currentUserData && currentUserData.isVip === true;
 
         // =========================================================================
-        // TÁI CẤU TRÚC PHÂN NHÓM: MA TRẬN KỸ THUẬT VÀ ĐỘ KHÓ (CÓ CSS INLINE)
+        // TÁI CẤU TRÚC PHÂN NHÓM: SỬ DỤNG MAINCATEGORY ĐỂ IN TIÊU ĐỀ LỚN
         // =========================================================================
         const groups = [
-            { title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
-            { title: "📝 Đề cần ôn tập", data: displayData.filter(exam => completedExams[exam.id] && ((completedExams[exam.id].score / (completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) },
-            { title: "⚡ Khởi động nhanh (15 phút)", data: displayData.filter(exam => exam.timeLimit === 15) },
+            { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
+            { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => completedExams[exam.id] && ((completedExams[exam.id].score / (completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) },
+            { mainCategory: null, title: "⚡ Khởi động nhanh (15 phút)", data: displayData.filter(exam => exam.timeLimit === 15) },
             
             // NHÓM MRI
-            { title: "🧲 MRI <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Dễ</span>", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
-            { title: "🧲 MRI <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Trung bình</span>", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Trung bình') },
-            { title: "🧲 MRI <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Khó</span>", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Khó') },
+            { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
+            { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Trung bình') },
+            { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Khó') },
             
             // NHÓM CT SCANNER
-            { title: "☢️ CT Scanner <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Dễ</span>", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Dễ') },
-            { title: "☢️ CT Scanner <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Trung bình</span>", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Trung bình') },
-            { title: "☢️ CT Scanner <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Khó</span>", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Khó') },
+            { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Dễ') },
+            { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Trung bình') },
+            { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Khó') },
             
             // NHÓM X-QUANG
-            { title: "🩻 X-Quang <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Dễ</span>", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Dễ') },
-            { title: "🩻 X-Quang <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Trung bình</span>", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Trung bình') },
-            { title: "🩻 X-Quang <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Khó</span>", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Khó') },
+            { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Dễ') },
+            { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Trung bình') },
+            { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Khó') },
             
             // NHÓM HỖN HỢP VÀ AI
-            { title: "🧩 Hỗn hợp & AI <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Dễ</span>", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Dễ') },
-            { title: "🧩 Hỗn hợp & AI <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Trung bình</span>", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Trung bình') },
-            { title: "🧩 Hỗn hợp & AI <span style='font-size: 0.95rem; font-weight: normal; margin-left: 10px; color: #64748b;'>- Mức độ Khó</span>", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Khó') }
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Dễ') },
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Trung bình') },
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Khó') }
         ];
+
+        let currentMainCategoryTracker = null;
 
         groups.forEach(group => {
             if (group.data.length === 0) return; 
 
-            let rowHtml = `
-                <div class="exam-category-row mb-5">
-                    <h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>
+            let rowHtml = '';
+
+            // 1. KIỂM TRA VÀ IN TIÊU ĐỀ LỚN NẾU CHUYỂN SANG NHÓM CHUYÊN MÔN MỚI
+            if (group.mainCategory && group.mainCategory !== currentMainCategoryTracker) {
+                rowHtml += `
+                    <div class="main-category-header mt-5 mb-3" style="border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+                        <h3 class="fw-bold text-dark" style="font-size: 1.4rem; margin: 0; color: #1e293b !important;">
+                            ${group.mainCategory}
+                        </h3>
+                    </div>
+                `;
+                currentMainCategoryTracker = group.mainCategory;
+            } else if (!group.mainCategory && currentMainCategoryTracker !== null) {
+                currentMainCategoryTracker = null; 
+            }
+
+            // 2. TÙY BIẾN CSS CHO TIÊU ĐỀ CON (THỤT LỀ, CHỮ NHỎ) HOẶC TIÊU ĐỀ ĐỘC LẬP (TO RÕ)
+            let titleHtml = group.mainCategory
+                ? `<h5 class="fw-semibold mb-3 text-secondary" style="font-size: 1rem; margin-left: 15px; border-left: 3px solid #94a3b8; padding-left: 10px; color: #475569;">${group.title}</h5>`
+                : `<h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>`;
+
+            rowHtml += `
+                <div class="exam-category-row mb-4">
+                    ${titleHtml}
                     <div class="swimlane-wrapper">
                         <button class="slider-btn left" onclick="slideLeft(this)"><i class="fa-solid fa-chevron-left"></i></button>
                         <div class="swimlane-scroll-container hide-scrollbar" style="padding-top: 15px; padding-right: 15px; margin-top: -5px;">
