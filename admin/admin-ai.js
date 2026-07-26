@@ -180,6 +180,10 @@ function renderAiExamsTable() {
             </td>
             <td class="text-center">
                 <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
+                    <!-- THÊM MỚI NÚT SỬA NỘI DUNG -->
+                    <button class="btn-modern-action btn-edit-ai" data-id="${exam.id}" style="padding: 6px 12px; font-size: 0.8rem; background-color: #fef3c7; color: #d97706; border-color: #fde68a;" title="Sửa Nội Dung">
+                        <i class="fa-solid fa-pen-to-square"></i> Sửa
+                    </button>
                     <button class="btn-modern-action btn-convert-ai" data-id="${exam.id}" style="padding: 6px 12px; font-size: 0.8rem; background-color: #eff6ff; color: #2563eb; border-color: #bfdbfe;" title="Chuyển thành đề Admin">
                         <i class="fa-solid fa-arrow-right-arrow-left"></i> Chuyển
                     </button>
@@ -254,7 +258,7 @@ function renderPagination(totalPages) {
 }
 
 // ==========================================
-// 4. CHUYỂN ĐỔI ĐỀ AI THÀNH ĐỀ ADMIN (TÍNH NĂNG MỚI)
+// 4. CHUYỂN ĐỔI ĐỀ AI THÀNH ĐỀ ADMIN
 // ==========================================
 function openConvertAiModal(examId) {
     // Xóa modal cũ nếu có
@@ -462,11 +466,18 @@ document.addEventListener('componentsLoaded', () => {
         btnExport.addEventListener('click', exportAllAiExamsToExcel);
     }
 
-    // Lắng nghe các nút click bên trong bảng (Chuyển đổi, Xóa, Xuất Excel lẻ)
+    // Lắng nghe các nút click bên trong bảng (Sửa, Chuyển đổi, Xóa, Xuất Excel lẻ)
     const tbody = document.getElementById('ai-exam-list-body');
     if (tbody) {
         tbody.addEventListener('click', (e) => {
             
+            // THÊM MỚI: Nút Sửa nội dung đề thi
+            const editBtn = e.target.closest('.btn-edit-ai');
+            if (editBtn) {
+                const examId = editBtn.getAttribute('data-id');
+                window.location.href = `admin-edit-exam.html?examId=${examId}`;
+            }
+
             // Nút Chuyển Đổi thành đề Admin
             const convertBtn = e.target.closest('.btn-convert-ai');
             if (convertBtn) {
