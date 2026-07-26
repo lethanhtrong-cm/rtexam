@@ -370,7 +370,6 @@ async function executeSubmit() {
                 perfectBonus = 20; // Đề xuất: Cố định +20 XP cho điểm tuyệt đối
                 
                 // Thưởng tốc độ: Còn càng nhiều thời gian, điểm thưởng càng cao (Tối đa 30 XP)
-                // Ví dụ: Làm xong trong một nửa thời gian -> (0.5 * 30) = 15 XP
                 speedBonus = Math.round((timeRemaining / examDuration) * 30);
             }
 
@@ -504,23 +503,27 @@ function openReviewModal(score, correctCount, total) {
         }
 
         let statusBadge = isUnanswered ? '<span style="background: var(--bg-hover); color: var(--text-muted); padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Chưa chọn</span>' : 
-                          (userAns === correctAns) ? '<span style="background: rgba(16, 185, 129, 0.2); color: #059669; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Đúng</span>' : 
-                          '<span style="background: rgba(239, 68, 68, 0.2); color: #dc2626; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px; white-space: nowrap;">Sai</span>';
+                          (userAns === correctAns) ? '<span style="background: rgba(16, 185, 129, 0.2); color: #059669; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; white-space: nowrap;">Đúng</span>' : 
+                          '<span style="background: rgba(239, 68, 68, 0.2); color: #dc2626; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; white-space: nowrap;">Sai</span>';
 
         let safeQuestionText = (q.text || "").replace(/"/g, '&quot;');
         
+        // TỐI ƯU UI MOBILE: Chia layout thành 2 hàng dọc thay vì 1 hàng ngang
         html += `
-            <div style="background: var(--bg-panel); padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);">
+            <div style="background: var(--bg-panel); padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);">
                 
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; gap: 15px;">
-                    <div style="color: var(--text-main); font-weight: 600; font-size: 1.05rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 12px; flex: 1;">
-                        <span style="background: #3b82f6; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap; margin-top: 2px;">Câu ${idx+1}</span>
-                        <div style="flex: 1;">${q.text} ${statusBadge}</div>
-                    </div>
-                    
+                <!-- Hàng 1: Nút Câu X và Nút Báo lỗi dàn đều sang 2 bên -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="background: #3b82f6; color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap;">Câu ${idx+1}</span>
                     <button class="btn-report-error" data-qid="${q.id}" data-qtext="${safeQuestionText}" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #f87171; color: #dc2626; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: 0.2s;">
                         <i class="fa-solid fa-flag"></i> Báo lỗi
                     </button>
+                </div>
+                
+                <!-- Hàng 2: Nội dung câu hỏi và Badge Trạng thái -->
+                <div style="color: var(--text-main); font-weight: 600; font-size: 1.05rem; line-height: 1.6; margin-bottom: 15px;">
+                    ${q.text} 
+                    <div style="margin-top: 8px; display: inline-block;">${statusBadge}</div>
                 </div>
 
                 <div>${optionsHtml}</div>
