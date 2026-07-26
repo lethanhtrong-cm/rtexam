@@ -593,7 +593,6 @@ function renderExams() {
         const groups = [
             { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
             { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => completedExams[exam.id] && ((completedExams[exam.id].score / (completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) },
-            { mainCategory: null, title: "⚡ Khởi động nhanh (15 phút)", data: displayData.filter(exam => exam.timeLimit === 15) },
             
             // NHÓM MRI
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
