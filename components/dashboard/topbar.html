@@ -11,9 +11,9 @@
 
     <!-- KHU VỰC MENU ĐIỀU HƯỚNG TRUNG TÂM -->
     <nav class="topbar-center-menu" style="display: flex; gap: 12px; justify-content: center; align-items: center;">
-        <a href="#" id="btnAutoGenerate"><i class="fa-solid fa-robot"></i> Tạo đề thi AI</a>
-        <a href="#" id="topbarNavCreateRoom"><i class="fa-solid fa-users-viewfinder"></i> Tạo phòng thi</a>
-        <a href="#" id="btnUploadExam"><i class="fa-solid fa-cloud-arrow-up"></i> Upload đề thi</a>
+        <a href="#" id="btnAutoGenerate"><i class="fa-solid fa-robot"></i> Tạo đề AI</a>
+        <a href="#" id="topbarNavCreateRoom"><i class="fa-solid fa-users-viewfinder"></i> Tạo phòng</a>
+        <a href="#" id="btnUploadExam"><i class="fa-solid fa-cloud-arrow-up"></i> Upload đề</a>
     </nav>
     
     <!-- KHU VỰC CHỨC NĂNG BÊN PHẢI -->
@@ -95,28 +95,15 @@
 
     /* Hiệu ứng nhấp nháy phát sáng nhẹ nhàng (Glow) dành riêng cho nút AI */
     @keyframes elegantGlow {
-        0%, 100% { 
-            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); 
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-        50% { 
-            box-shadow: 0 0 14px 0 rgba(255, 255, 255, 0.45); 
-            border-color: rgba(255, 255, 255, 0.9);
-            background-color: rgba(255, 255, 255, 0.2);
-        }
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); border-color: rgba(255, 255, 255, 0.5); }
+        50% { box-shadow: 0 0 14px 0 rgba(255, 255, 255, 0.45); border-color: rgba(255, 255, 255, 0.9); background-color: rgba(255, 255, 255, 0.2); }
     }
     
-    #btnAutoGenerate {
-        animation: elegantGlow 2.5s infinite ease-in-out;
-    }
-    
-    #btnAutoGenerate:hover {
-        animation: none; /* Dừng chớp nháy khi người dùng trỏ chuột vào để tương tác */
-    }
+    #btnAutoGenerate { animation: elegantGlow 2.5s infinite ease-in-out; }
+    #btnAutoGenerate:hover { animation: none; }
 
     /* Hỗ trợ UI/UX Dropdown và hover state cũ */
     #notiDropdown.show, #userDropdown.show { display: block !important; }
-    
     #notiListContainer .noti-item { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; display: flex; gap: 12px; transition: background 0.2s; }
     #notiListContainer .noti-item:hover { background-color: #f8fafc; }
     #notiListContainer .noti-item.unread { background-color: #eff6ff; }
@@ -125,7 +112,6 @@
     #notiListContainer .noti-text { font-size: 0.9rem; color: #334155; line-height: 1.4; }
     #notiListContainer .noti-time { font-size: 0.75rem; color: #94a3b8; }
     #notiListContainer .noti-empty { padding: 25px; text-align: center; color: #64748b; font-size: 0.95rem; }
-    
     #userDropdown a:hover { background-color: #f1f5f9; color: #0f172a; }
     #btnLogout:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
 
@@ -139,24 +125,57 @@
     
     /* 2. Màn hình Tablet chuẩn (Dưới 992px) */
     @media (max-width: 992px) {
-        .topbar-center-menu { display: none !important; }
         #mobileMenuToggle { display: block !important; }
         .main-topbar { padding: 10px 15px !important; }
+        .topbar-center-menu a { padding: 6px 10px !important; font-size: 0.85rem !important; }
     }
     
-    /* 3. Siêu tối ưu cho màn hình Điện thoại (Dưới 576px) */
+    /* 3. ĐIỆN THOẠI (Dưới 768px): BIẾN MENU TRUNG TÂM THÀNH THANH BOTTOM NAVIGATION */
+    @media (max-width: 768px) {
+        .topbar-center-menu {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            background: #ffffff !important;
+            border-top: 1px solid #e2e8f0 !important;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05) !important;
+            padding: 8px 5px !important;
+            margin: 0 !important;
+            z-index: 9999 !important;
+            justify-content: space-around !important;
+            border-radius: 0 !important;
+        }
+        .topbar-center-menu a {
+            flex-direction: column !important;
+            background: transparent !important;
+            border: none !important;
+            color: #64748b !important;
+            font-size: 0.75rem !important;
+            padding: 5px !important;
+            gap: 4px !important;
+            box-shadow: none !important;
+            flex: 1 !important;
+            text-align: center !important;
+            border-radius: 8px !important;
+        }
+        .topbar-center-menu a i { font-size: 1.25rem !important; margin-bottom: 2px !important; }
+        .topbar-center-menu a:hover, .topbar-center-menu a:active {
+            background: #f1f5f9 !important;
+            color: #084298 !important;
+            transform: none !important;
+        }
+        /* Phá hiệu ứng phát sáng của nút AI trên mobile để đồng bộ màu */
+        #btnAutoGenerate { animation: none !important; color: #8b5cf6 !important; }
+    }
+
+    /* 4. Siêu tối ưu cho màn hình Điện thoại (Dưới 576px) */
     @media (max-width: 576px) {
         .topbar-actions { gap: 10px !important; }
-        
-        /* Ẩn chữ Xin Chào để tiết kiệm diện tích */
         .user-greeting-text { display: none !important; }
         #userMenuToggle { padding-left: 0 !important; border-left: none !important; gap: 5px !important;}
-        
-        /* Dùng thủ thuật font-size: 0 để ẩn chữ "Nâng cấp Pro", chỉ giữ lại Icon Vương miện */
         #btnUpgradeHeader { font-size: 0 !important; padding: 8px 12px !important; }
-        #btnUpgradeHeader i { font-size: 1rem !important; margin: 0 !important; }
-        
-        /* Thu nhỏ kích thước badge chữ PRO khi đã nâng cấp */
+        #btnUpgradeHeader i { font-size: 1.1rem !important; margin: 0 !important; }
         .topbar-vip-badge { padding: 6px 10px !important; font-size: 0.8rem !important; }
     }
 </style>
