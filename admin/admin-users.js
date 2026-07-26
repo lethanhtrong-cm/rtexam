@@ -1,72 +1,82 @@
 import { db, showToast } from './admin-core.js';
 import { 
-    collection, onSnapshot, doc, updateDoc, query, where, getDocs, addDoc, serverTimestamp 
+    collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
+let userPollingInterval = null; // Biến lưu trữ vòng lặp thời gian
 
+// ==========================================
+// 1. TẢI DỮ LIỆU BẰNG POLLING (REAL-TIME)
+// ==========================================
 export function initRealtimeUserListener() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    onSnapshot(collection(db, "users"), (snapshot) => {
-        cachedUsers = [];
-        
-        let totalUsersCount = 0;
-        let totalVipsCount = 0;
-        let totalOnlineCount = 0;
+    // Dọn dẹp vòng lặp cũ nếu có (tránh rò rỉ bộ nhớ)
+    if (userPollingInterval) {
+        clearInterval(userPollingInterval);
+    }
 
-        snapshot.forEach((docSnap) => {
-            const user = docSnap.data();
-            const userId = docSnap.id;
-            const email = user.email || 'Chưa cập nhật';
-            const isVip = user.isVip || false;
-            const isBanned = user.isBanned || false;
-            const isOnline = user.isOnline || false; 
+    const fetchUsers = async () => {
+        try {
+            const snapshot = await getDocs(collection(db, "users"));
+            cachedUsers = [];
+            
+            let totalUsersCount = 0;
+            let totalVipsCount = 0;
 
-            totalUsersCount++;
-            if (isVip) totalVipsCount++; 
-            if (isOnline && !isBanned) totalOnlineCount++; 
+            snapshot.forEach((docSnap) => {
+                const user = docSnap.data();
+                const userId = docSnap.id;
+                const email = user.email || 'Chưa cập nhật';
+                const isVip = user.isVip || false;
+                const isBanned = user.isBanned || false;
+                
+                // Kiểm tra chính xác trạng thái Online (chấp nhận cả kiểu Boolean và String)
+                const isOnline = (user.isOnline === true || user.isOnline === "true");
 
-            let statusKey = 'normal';
-            if (isBanned) statusKey = 'banned';
-            else if (isVip) statusKey = 'vip';
+                totalUsersCount++;
+                if (isVip) totalVipsCount++; 
 
-            cachedUsers.push({
-                userId: userId,
-                email: email,
-                isVip: isVip,
-                isBanned: isBanned,
-                isOnline: isOnline,
-                statusKey: statusKey
+                let statusKey = 'normal';
+                if (isBanned) statusKey = 'banned';
+                else if (isVip) statusKey = 'vip';
+
+                cachedUsers.push({
+                    userId: userId,
+                    email: email,
+                    isVip: isVip,
+                    isBanned: isBanned,
+                    isOnline: isOnline,
+                    statusKey: statusKey
+                });
             });
-        });
 
-        const totalUsersEl = document.getElementById('totalUsers');
-        const totalVipUsersEl = document.getElementById('totalVipUsers');
-        const totalOnlineUsersEl = document.getElementById('totalOnlineUsers');
+            const totalUsersEl = document.getElementById('totalUsers');
+            const totalVipUsersEl = document.getElementById('totalVipUsers');
 
-        if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
-        if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
-        if (totalOnlineUsersEl) totalOnlineUsersEl.innerText = totalOnlineCount;
+            if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
+            if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
 
-        renderUserList();
-    }, (error) => {
-        console.error("Lỗi kết nối Firestore Real-time:", error);
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" class="loading-text" style="color: #ef4444; font-weight: 500;">
-                    ❌ Có lỗi xảy ra khi tải dữ liệu từ Cloud Firestore.<br>
-                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra lại cấu hình Security Rules hoặc kết nối mạng.</span>
-                </td>
-            </tr>
-        `;
-        showToast("Không thể đồng bộ danh sách học viên Real-time", "error");
-    });
+            renderUserList();
+        } catch (error) {
+            console.error("Lỗi kết nối Firestore Polling:", error);
+        }
+    };
+
+    // Thực thi ngay lần đầu
+    fetchUsers();
+
+    // Thiết lập Polling lặp lại mỗi 10 giây giống admin-dashboard.js
+    userPollingInterval = setInterval(fetchUsers, 10000);
 }
 
+// ==========================================
+// 2. RENDER GIAO DIỆN DANH SÁCH HỌC VIÊN
+// ==========================================
 export function renderUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
@@ -99,32 +109,23 @@ export function renderUserList() {
 
         const firstLetter = user.email.charAt(0);
         
-        // ==============================================
-        // TÍNH NĂNG NHẬN BIẾT NGƯỜI DÙNG ONLINE
-        // ==============================================
+        // CHẤM XANH NHẬN BIẾT NGƯỜI DÙNG ONLINE
         const onlineStatusHtml = user.isOnline 
             ? `<span title="Đang trực tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-left: 8px; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></span>` 
             : `<span title="Ngoại tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #cbd5e1; border-radius: 50%; margin-left: 8px;"></span>`;
         
-        // ==============================================
-        // CẤU HÌNH GIAO DIỆN NÚT BẤM HIỆN ĐẠI
-        // ==============================================
+        // CẤU HÌNH GIAO DIỆN NÚT BẤM
         const vipBtnClass = user.isVip ? 'btn-user-vip-off' : 'btn-user-vip-on';
         const vipBtnText = user.isVip ? '💎 Tắt VIP' : '👑 Kích VIP';
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
         const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
 
-        // CSS inline cho các nút để đảm bảo màu sắc luôn hiển thị rực rỡ
         const baseBtnStyle = "padding: 6px 12px; font-size: 12.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: white;";
-        
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
-        
         const vipStyle = user.isVip 
             ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` 
             : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`;
-            
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
-        
         const banStyle = user.isBanned
             ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` 
             : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`;
@@ -183,6 +184,7 @@ async function handleToggleVip(userId, currentVipStatus) {
         const newVipStatus = !currentVipStatus;
         await updateDoc(userRef, { isVip: newVipStatus });
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
+        // Dữ liệu sẽ tự động cập nhật ở vòng lặp Polling tiếp theo
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
@@ -257,7 +259,9 @@ async function handleViewHistory(userEmail) {
     }
 }
 
-// MỞ MODAL THÔNG BÁO
+// ==========================================
+// 3. XỬ LÝ GỬI THÔNG BÁO
+// ==========================================
 function openNotificationModal(targetEmail) {
     const modal = document.getElementById('notification-modal');
     if (!modal) {
@@ -273,7 +277,6 @@ function openNotificationModal(targetEmail) {
     modal.style.display = 'block';
 }
 
-// XỬ LÝ GỬI THÔNG BÁO
 async function sendNotification() {
     const target = document.getElementById('notify-target-value').value;
     const title = document.getElementById('notifyTitle').value.trim();
@@ -291,11 +294,8 @@ async function sendNotification() {
     try {
         const notificationsRef = collection(db, "notifications");
         
-        // NẾU LÀ GỬI BROADCAST (TOÀN HỆ THỐNG)
         if (target === 'ALL') {
             const activeUsers = cachedUsers.filter(u => !u.isBanned);
-            
-            // Loop tạo document cho từng user đang Active
             const promises = activeUsers.map(user => {
                 return addDoc(notificationsRef, {
                     toEmail: user.email,
@@ -308,9 +308,7 @@ async function sendNotification() {
             });
             await Promise.all(promises);
             showToast(`Đã gửi thông báo hàng loạt đến ${activeUsers.length} tài khoản thành công!`, "success");
-        } 
-        // NẾU LÀ GỬI CÁ NHÂN
-        else {
+        } else {
             await addDoc(notificationsRef, {
                 toEmail: target,
                 title: title,
@@ -332,8 +330,22 @@ async function sendNotification() {
     }
 }
 
+// ==========================================
+// 4. KHỞI CHẠY VÀ LẮNG NGHE SỰ KIỆN
+// ==========================================
 document.addEventListener('componentsLoaded', () => {
     initRealtimeUserListener();
+
+    // Refresh Polling khi chuyển tab
+    const sidebarMenuItems = document.querySelectorAll('.menu-item');
+    sidebarMenuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const target = item.getAttribute('data-target');
+            if (target === 'tab-users') {
+                initRealtimeUserListener();
+            }
+        });
+    });
 
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -351,7 +363,6 @@ document.addEventListener('componentsLoaded', () => {
         });
     }
 
-    // TỰ ĐỘNG CHÈN NÚT "GỬI TOÀN HỆ THỐNG" VÀO THANH TOOLBAR TÌM KIẾM
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar && !document.getElementById('btnNotifyAll')) {
         const notifyAllBtn = document.createElement('button');
