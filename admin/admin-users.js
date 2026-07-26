@@ -26,13 +26,16 @@ export function initRealtimePaymentListener() {
 }
 
 // ==========================================
-// TẢI DỮ LIỆU USER BẰNG ONSNAPSHOT (TỐI ƯU CHI PHÍ FIREBASE)
+// TẢI DỮ LIỆU USER 1 LẦN KHI MỞ TRANG / CHUYỂN TAB (TIẾT KIỆM QUOTA)
 // ==========================================
-export function initRealtimeUserListener() {
+export async function loadUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    onSnapshot(collection(db, "users"), (snapshot) => {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading-text">⏳ Đang tải dữ liệu học viên...</td></tr>';
+
+    try {
+        const snapshot = await getDocs(collection(db, "users"));
         cachedUsers = [];
         
         let totalUsersCount = 0;
@@ -45,7 +48,7 @@ export function initRealtimeUserListener() {
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
             
-            // Lấy trạng thái online trực tiếp từ realtime snapshot
+            // Nhận biết trạng thái Online tại thời điểm tải
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
 
@@ -67,7 +70,6 @@ export function initRealtimeUserListener() {
             });
         });
 
-        // Chỉ cập nhật tổng số User và VIP (đã xóa bộ đếm Online tổng quan)
         const totalUsersEl = document.getElementById('totalUsers');
         const totalVipUsersEl = document.getElementById('totalVipUsers');
 
@@ -75,18 +77,18 @@ export function initRealtimeUserListener() {
         if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
 
         renderUserList();
-    }, (error) => {
-        console.error("Lỗi kết nối Firestore Real-time:", error);
+    } catch (error) {
+        console.error("Lỗi kết nối Firestore khi tải danh sách người dùng:", error);
         tbody.innerHTML = `
             <tr>
                 <td colspan="4" class="loading-text" style="color: #ef4444; font-weight: 500;">
-                    ❌ Có lỗi xảy ra khi tải dữ liệu từ Cloud Firestore. (Quota Exceeded / Network Error)<br>
-                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra lại giới hạn miễn phí của Firebase.</span>
+                    ❌ Có lỗi xảy ra khi tải dữ liệu từ Cloud Firestore.<br>
+                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra kết nối mạng.</span>
                 </td>
             </tr>
         `;
-        showToast("Không thể đồng bộ danh sách học viên", "error");
-    });
+        showToast("Không thể tải danh sách học viên", "error");
+    }
 }
 
 export function renderUserList() {
@@ -121,7 +123,7 @@ export function renderUserList() {
 
         const firstLetter = user.email.charAt(0);
         
-        // CHẤM TRẠNG THÁI ONLINE (Đồng bộ Real-time từ onSnapshot)
+        // CHẤM XANH/XÁM HIỂN THỊ TRẠNG THÁI ONLINE
         const onlineStatusHtml = user.isOnline 
             ? `<span title="Đang trực tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-left: 8px; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></span>` 
             : `<span title="Ngoại tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #cbd5e1; border-radius: 50%; margin-left: 8px;"></span>`;
@@ -226,6 +228,7 @@ async function handleToggleVip(userId, currentVipStatus) {
         }
 
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
+        loadUserList(); // Tải lại danh sách sau khi sửa
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
@@ -241,6 +244,7 @@ async function handleToggleBan(userId, currentBannedStatus) {
         const newBannedStatus = !currentBannedStatus;
         await updateDoc(userRef, { isBanned: newBannedStatus });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
+        loadUserList(); // Tải lại danh sách sau khi sửa
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
         showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
@@ -375,8 +379,19 @@ async function sendNotification() {
 }
 
 document.addEventListener('componentsLoaded', () => {
-    initRealtimeUserListener();
+    loadUserList(); // Tải danh sách user 1 lần khi load components
     initRealtimePaymentListener();
+
+    // Tải lại danh sách mỗi khi Admin chuyển lại qua tab User
+    const sidebarMenuItems = document.querySelectorAll('.menu-item');
+    sidebarMenuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const target = item.getAttribute('data-target');
+            if (target === 'tab-users') {
+                loadUserList();
+            }
+        });
+    });
 
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
