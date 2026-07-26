@@ -29,6 +29,7 @@ let isShowExplanation = false;
 let timerInterval;
 let examDuration = 15 * 60; 
 let timeRemaining = examDuration;
+let currentDifficulty = 'medium'; // Thêm biến lưu độ khó của đề thi
 
 let finalScore = 0;
 let finalCorrectCount = 0;
@@ -181,8 +182,10 @@ async function loadExamDataAndQuestions() {
         const examDocRef = doc(db, "exams", currentExamId);
         const examDoc = await getDoc(examDocRef);
         
-        if (examDoc.exists() && examDoc.data().timeLimit) {
-            examDuration = examDoc.data().timeLimit * 60; 
+        if (examDoc.exists()) {
+            const examData = examDoc.data();
+            if (examData.timeLimit) examDuration = examData.timeLimit * 60; 
+            if (examData.difficulty) currentDifficulty = String(examData.difficulty).toLowerCase(); // Lấy độ khó
         }
         await fetchQuestionsFromFirestore();
         initExamState(); 
@@ -347,14 +350,43 @@ async function executeSubmit() {
 
     finalScore = Math.round(((finalCorrectCount / finalTotal) * 10) * 100) / 100; 
 
+    // Lô-gic tính điểm XP nâng cao
     let gainedXP = 0;
     try {
         const resultsRef = collection(db, "results");
         const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId));
         const resultSnapshot = await getDocs(qResult);
         
-        if (resultSnapshot.empty) {
-            gainedXP = Math.round((finalCorrectCount / finalTotal) * 10 * 10);
+        if (resultSnapshot.empty && finalTotal > 0) {
+            
+            // 1. Tính Base XP (Dựa trên tỷ lệ hoàn thành, tối đa 100 điểm)
+            let baseXP = Math.round((finalCorrectCount / finalTotal) * 100);
+
+            // 2. Tính các khoản Bonus (Chỉ khi làm đúng 100% tất cả các câu)
+            let speedBonus = 0;
+            let perfectBonus = 0;
+            
+            if (finalCorrectCount === finalTotal) {
+                perfectBonus = 20; // Đề xuất: Cố định +20 XP cho điểm tuyệt đối
+                
+                // Thưởng tốc độ: Còn càng nhiều thời gian, điểm thưởng càng cao (Tối đa 30 XP)
+                // Ví dụ: Làm xong trong một nửa thời gian -> (0.5 * 30) = 15 XP
+                speedBonus = Math.round((timeRemaining / examDuration) * 30);
+            }
+
+            // 3. Hệ số độ khó (Difficulty Multiplier)
+            let difficultyMultiplier = 1.0;
+            if (currentDifficulty === 'hard') {
+                difficultyMultiplier = 1.5;
+            } else if (currentDifficulty === 'medium') {
+                difficultyMultiplier = 1.2;
+            } else if (currentDifficulty === 'easy') {
+                difficultyMultiplier = 1.0;
+            }
+
+            // 4. Tính Tổng Điểm Cuối Cùng
+            gainedXP = Math.round((baseXP + perfectBonus + speedBonus) * difficultyMultiplier);
+
             if (gainedXP > 0) {
                 const leaderboardRef = doc(db, "users_leaderboard", currentUser.uid);
                 await setDoc(leaderboardRef, {
@@ -363,10 +395,10 @@ async function executeSubmit() {
                     photoURL: currentUser.photoURL || "",
                     totalXP: increment(gainedXP) 
                 }, { merge: true });
-                showToast(`🎉 Bạn đã nhận được +${gainedXP} XP cho lần đầu hoàn thành!`);
+                showToast(`🎉 Xuất sắc! Bạn nhận được +${gainedXP} XP cho bài thi này!`);
             }
         }
-    } catch (xpError) {}
+    } catch (xpError) { console.error("Lỗi cập nhật XP:", xpError); }
 
     if (currentRoomId && currentUser) {
         try {
