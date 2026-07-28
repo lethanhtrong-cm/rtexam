@@ -29,11 +29,7 @@ export async function updateUserDashboardRank(currentUser) {
     const statElement = document.getElementById('statAccountStatus');
     if (!statElement) return;
 
-    const cachedRank = sessionStorage.getItem('dashboard_user_rank');
-    if (cachedRank) {
-        statElement.innerHTML = cachedRank;
-        return;
-    }
+    // ĐÃ GỠ BỎ SESSION STORAGE CACHE ĐỂ DỮ LIỆU LUÔN FRESH (REAL-TIME)
 
     try {
         const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
@@ -54,7 +50,6 @@ export async function updateUserDashboardRank(currentUser) {
         const countHigher = snapshot.data().count;
         const actualRank = countHigher + 1;
         
-        sessionStorage.setItem('dashboard_user_rank', `Hạng ${actualRank}`);
         statElement.innerHTML = `Hạng ${actualRank}`;
     } catch (error) {
         console.error("Lỗi khi cập nhật thứ hạng Dashboard:", error);
@@ -120,6 +115,7 @@ async function initLeaderboard(currentUser) {
         // RENDER THÀNH TÍCH CÁ NHÂN GỌN GÀNG
         // ==========================
         currentUserDataIndex = globalTopUsers.findIndex(u => u.id === currentUser.uid);
+        const statElement = document.getElementById('statAccountStatus'); // Nút quick stat ngoài màn hình chính
         
         if (currentUserDataIndex !== -1) {
             // Nằm trong Top 100
@@ -129,6 +125,7 @@ async function initLeaderboard(currentUser) {
                 <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
                 <span class="rank-badge">Hạng: ${currentRank}</span>
             `;
+            if(statElement) statElement.innerHTML = `Hạng ${currentRank}`; // Cập nhật đồng bộ ra thẻ ngoài
         } else {
             // Ngoài Top 100
             const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
@@ -141,6 +138,7 @@ async function initLeaderboard(currentUser) {
                 <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
                 <span class="rank-badge out-of-rank">Ngoài Top 100</span>
             `;
+            if(statElement) statElement.innerHTML = `Ngoài Top 100`; // Cập nhật đồng bộ ra thẻ ngoài
         }
 
         // ==========================
