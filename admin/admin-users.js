@@ -3,6 +3,9 @@ import {
     collection, onSnapshot, doc, updateDoc, query, where, getDocs, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// IMPORT MODULE TÍNH TOÁN TIỀN TỪ FILE MỚI TÁCH RỜI
+import { getCostBadgeHtml } from './admin-billing.js';
+
 let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
@@ -262,10 +265,8 @@ export function renderUserList() {
             ? `<span style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; margin-left: 8px; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); animation: pulse 2s infinite;">💸 Báo Đã CK</span>` 
             : '';
 
-        const costVND = Math.round((user.totalTokensUsed / 1000000) * 42638);
-        const costBadgeHtml = user.totalTokensUsed > 0 
-            ? `<span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 8px; display: inline-block; background: #d1fae5; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-microchip"></i> Đã dùng AI: ${costVND.toLocaleString('vi-VN')}đ</span>` 
-            : '';
+        // ĐÃ TÁCH LOGIC RA MODULE admin-billing.js ĐỂ BẢO TOÀN KIẾN TRÚC
+        const costBadgeHtml = getCostBadgeHtml(user.totalTokensUsed);
 
         // TÍNH TOÁN VÀ HIỂN THỊ NGÀY THÁNG (Cải thiện UI cho acc cũ)
         let datesHtml = `<div style="font-size: 11.5px; color: #64748b; margin-top: 5px;">`;
@@ -289,7 +290,6 @@ export function renderUserList() {
                     remainingText = `<span style="color: #ef4444; font-weight: bold;">(Đã hết hạn)</span>`;
                 }
             } else {
-                // Nhắc nhở tài khoản VIP cũ chưa có dữ liệu ngày tháng
                 remainingText = `<span style="color: #f59e0b; font-weight: bold; font-style: italic;">(Cần Tắt/Bật lại VIP để tạo ngày)</span>`;
             }
             
