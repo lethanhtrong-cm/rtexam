@@ -34,6 +34,19 @@ export function initDashboardRealtime() {
 
         } catch (error) {
             console.error("Lỗi khi đếm dữ liệu từ server:", error);
+            
+            // Hiển thị cảnh báo trực quan khi hết hạn mức (Quota Exceeded)
+            if (error.message && (error.message.includes('Quota') || error.message.includes('resource-exhausted') || error.code === 'resource-exhausted')) {
+                const onlineEl = document.getElementById('dash-online-users');
+                const testingEl = document.getElementById('dash-testing-users');
+                
+                if (onlineEl) {
+                    onlineEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
+                }
+                if (testingEl) {
+                    testingEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
+                }
+            }
         }
     };
 
@@ -117,6 +130,15 @@ export async function loadDashboardStats() {
 
     } catch (error) {
         console.error("Lỗi khi tải dữ liệu Dashboard:", error);
+        
+        // Xử lý báo lỗi trên giao diện biểu đồ/số liệu tích lũy nếu hết Quota
+        if (error.message && (error.message.includes('Quota') || error.message.includes('resource-exhausted') || error.code === 'resource-exhausted')) {
+            const els = ['dash-day-users', 'dash-week-users', 'dash-month-users', 'dash-year-users'];
+            els.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = `<span style="font-size: 13px; color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
+            });
+        }
     }
 }
 
