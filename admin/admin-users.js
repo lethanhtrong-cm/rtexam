@@ -10,7 +10,7 @@ let currentFilterStatus = "all";
 // --- CÁC BIẾN PHÂN TRANG VÀ THAO TÁC HÀNG LOẠT ---
 let currentPage = 1;
 const itemsPerPage = 20;
-let selectedUserIds = new Set(); // Lưu trữ ID của các user đang được check
+let selectedUserIds = new Set(); 
 
 // Biến lưu trữ danh sách đang chờ duyệt VIP
 let pendingVIPRequests = new Set(); 
@@ -64,12 +64,11 @@ export async function loadUserList() {
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
 
-            // Xử lý dữ liệu ngày tháng
+            // Xử lý dữ liệu ngày tháng (Quét sâu các trường có thể lưu ngày đăng nhập đầu tiên)
+            let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp || null;
             let createdAtMs = 0;
-            if (user.createdAt) {
-                createdAtMs = (typeof user.createdAt.toDate === 'function') ? user.createdAt.toDate().getTime() : new Date(user.createdAt).getTime();
-            } else if (user.timestamp) {
-                createdAtMs = (typeof user.timestamp.toDate === 'function') ? user.timestamp.toDate().getTime() : new Date(user.timestamp).getTime();
+            if (createdAtRaw) {
+                createdAtMs = (typeof createdAtRaw.toDate === 'function') ? createdAtRaw.toDate().getTime() : new Date(createdAtRaw).getTime();
             }
 
             totalUsersCount++;
@@ -87,8 +86,8 @@ export async function loadUserList() {
                 isOnline: isOnline,
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
-                createdAtMs: createdAtMs, // Dùng để sort
-                createdAt: user.createdAt || user.timestamp,
+                createdAtMs: createdAtMs, // Dùng để sort (Mới nhất lên đầu)
+                createdAt: createdAtRaw,
                 vipActivationDate: user.vipActivationDate || null,
                 vipExpirationDate: user.vipExpirationDate || null
             });
@@ -103,7 +102,7 @@ export async function loadUserList() {
         // Reset state khi tải lại dữ liệu
         selectedUserIds.clear();
         currentPage = 1;
-        injectTableHeadersAndToolbar(); // Đảm bảo UI Checkbox tồn tại
+        injectTableHeadersAndToolbar(); 
         
         renderUserList();
     } catch (error) {
@@ -268,13 +267,17 @@ export function renderUserList() {
             ? `<span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 8px; display: inline-block; background: #d1fae5; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-microchip"></i> Đã dùng AI: ${costVND.toLocaleString('vi-VN')}đ</span>` 
             : '';
 
-        // TÍNH TOÁN VÀ HIỂN THỊ NGÀY THÁNG
+        // TÍNH TOÁN VÀ HIỂN THỊ NGÀY THÁNG (Có fallback cho các acc cũ chưa có dữ liệu)
         let datesHtml = `<div style="font-size: 11.5px; color: #64748b; margin-top: 5px;">`;
-        datesHtml += `<div><i class="fa-regular fa-calendar-plus" style="margin-right:4px;"></i>Ngày ĐK: <strong>${formatDateTime(user.createdAt)}</strong></div>`;
+        const regDateDisplay = user.createdAt ? formatDateTime(user.createdAt) : 'Dữ liệu cũ (Không rõ)';
+        datesHtml += `<div><i class="fa-regular fa-calendar-plus" style="margin-right:4px;"></i>Ngày ĐK: <strong>${regDateDisplay}</strong></div>`;
         
         if (user.isVip) {
             let remainingText = '';
+            let expDisplay = 'Dữ liệu cũ (Không rõ)';
+            
             if (user.vipExpirationDate) {
+                expDisplay = formatDateTime(user.vipExpirationDate);
                 const now = Date.now();
                 const expMs = (typeof user.vipExpirationDate.toDate === 'function') ? user.vipExpirationDate.toDate().getTime() : new Date(user.vipExpirationDate).getTime();
                 const diff = expMs - now;
@@ -285,8 +288,11 @@ export function renderUserList() {
                     remainingText = `<span style="color: #ef4444; font-weight: bold;">(Đã hết hạn)</span>`;
                 }
             }
-            datesHtml += `<div style="margin-top: 2px;"><i class="fa-solid fa-crown" style="margin-right:4px; color:#f59e0b;"></i>Kích hoạt: <strong>${formatDateTime(user.vipActivationDate)}</strong></div>`;
-            datesHtml += `<div style="margin-top: 2px;"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>Hết hạn: <strong>${formatDateTime(user.vipExpirationDate)}</strong> ${remainingText}</div>`;
+            
+            const actDisplay = user.vipActivationDate ? formatDateTime(user.vipActivationDate) : 'Trước bản cập nhật';
+            
+            datesHtml += `<div style="margin-top: 2px;"><i class="fa-solid fa-crown" style="margin-right:4px; color:#f59e0b;"></i>Kích hoạt: <strong>${actDisplay}</strong></div>`;
+            datesHtml += `<div style="margin-top: 2px;"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>Hết hạn: <strong>${expDisplay}</strong> ${remainingText}</div>`;
         }
         datesHtml += `</div>`;
 
@@ -405,10 +411,10 @@ async function handleToggleVip(userId, currentVipStatus) {
         const newVipStatus = !currentVipStatus;
         
         let updates = { isVip: newVipStatus };
-        // Tự động cấp VVIP 30 ngày nếu bật
+        // Tự động cấp VVIP 30 ngày tính từ thời điểm bấm Kích VIP
         if (newVipStatus) {
             updates.vipActivationDate = Date.now();
-            updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 ngày
+            updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000); 
         }
 
         await updateDoc(userRef, updates);
@@ -458,9 +464,7 @@ async function handleBulkAction(actionType) {
     }
 
     const count = selectedUserIds.size;
-    let confirmMsg = '';
     let isVipAction = false, isBanAction = false;
-    let toggleValue = false;
 
     if (actionType === 'vip') {
         if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái VIP cho ${count} tài khoản đã chọn? (Tài khoản đang Thường sẽ thành VIP 30 ngày, đang VIP sẽ bị Tắt)`)) return;
@@ -480,6 +484,7 @@ async function handleBulkAction(actionType) {
         if (isVipAction) {
             const newVipStatus = !u.isVip;
             updates.isVip = newVipStatus;
+            // Tự động cấp VVIP 30 ngày cho các tài khoản được Kích VIP Hàng Loạt
             if (newVipStatus) {
                 updates.vipActivationDate = Date.now();
                 updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
