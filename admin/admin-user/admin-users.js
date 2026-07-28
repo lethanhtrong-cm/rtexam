@@ -69,11 +69,13 @@ export async function loadUserList() {
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
 
-            let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp || null;
-            let createdAtMs = 0;
-            if (createdAtRaw) {
-                createdAtMs = (typeof createdAtRaw.toDate === 'function') ? createdAtRaw.toDate().getTime() : new Date(createdAtRaw).getTime();
+            // Xử lý dữ liệu ngày tháng: Tự động fix lỗi acc cũ thành ngày hôm nay
+            let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp;
+            if (!createdAtRaw) {
+                createdAtRaw = Date.now();
+                updateDoc(doc(db, "users", userId), { createdAt: createdAtRaw }).catch(e=>e);
             }
+            let createdAtMs = (typeof createdAtRaw.toDate === 'function') ? createdAtRaw.toDate().getTime() : new Date(createdAtRaw).getTime();
 
             totalUsersCount++;
             if (isVip) totalVipsCount++; 
