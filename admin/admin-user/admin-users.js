@@ -7,7 +7,6 @@ import {
     collection, onSnapshot, doc, updateDoc, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// IMPORT CÁC MODULE ĐÃ ĐƯỢC PHÂN TÁCH (Cùng thư mục admin-user)
 import { getCostBadgeHtml } from './admin-billing.js';
 import { handleViewHistory } from './admin-history.js';
 import { openNotificationModal, sendNotification } from './admin-users-notify.js';
@@ -15,13 +14,11 @@ import { openNotificationModal, sendNotification } from './admin-users-notify.js
 let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
+let isUserListLoaded = false; // CỜ CACHE CHỐNG TRÀN QUOTA DỮ LIỆU USER
 
-// --- CÁC BIẾN PHÂN TRANG VÀ THAO TÁC HÀNG LOẠT ---
 let currentPage = 1;
 const itemsPerPage = 20;
 let selectedUserIds = new Set(); 
-
-// Biến lưu trữ danh sách đang chờ duyệt VIP
 let pendingVIPRequests = new Set(); 
 
 export function initRealtimePaymentListener() {
@@ -33,7 +30,7 @@ export function initRealtimePaymentListener() {
                 pendingVIPRequests.add(data.uid);
             }
         });
-        renderUserList(); 
+        if (isUserListLoaded) renderUserList(); 
     }, (error) => {
         console.error("Lỗi khi tải yêu cầu thanh toán:", error);
     });
@@ -46,9 +43,16 @@ function formatDateTime(timestamp) {
     return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
 }
 
-export async function loadUserList() {
+// Bổ sung tham số forceRefresh để phân luồng tải
+export async function loadUserList(forceRefresh = false) {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
+
+    // NẾU KHÔNG ÉP TẢI LẠI VÀ ĐÃ CÓ DATA -> VẼ LUÔN TỪ CACHE, KHÔNG ĐỌC DB
+    if (!forceRefresh && isUserListLoaded) {
+        renderUserList();
+        return;
+    }
 
     tbody.innerHTML = '<tr><td colspan="5" class="loading-text">⏳ Đang tải dữ liệu học viên...</td></tr>';
 
@@ -69,7 +73,7 @@ export async function loadUserList() {
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
 
-            // Xử lý dữ liệu ngày tháng: Tự động fix lỗi acc cũ thành ngày hôm nay
+            // Xử lý bù đắp ngày giờ (Fix lỗi acc cũ)
             let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp;
             if (!createdAtRaw) {
                 createdAtRaw = Date.now();
@@ -105,6 +109,7 @@ export async function loadUserList() {
         if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
         if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
 
+        isUserListLoaded = true; // Lưu cờ thành công
         selectedUserIds.clear();
         currentPage = 1;
         injectTableHeadersAndToolbar(); 
@@ -112,11 +117,12 @@ export async function loadUserList() {
         renderUserList();
     } catch (error) {
         console.error("Lỗi kết nối Firestore khi tải danh sách người dùng:", error);
+        isUserListLoaded = false;
         tbody.innerHTML = `
             <tr>
                 <td colspan="5" class="loading-text" style="color: #ef4444; font-weight: 500;">
                     ❌ Có lỗi xảy ra khi tải dữ liệu từ Cloud Firestore.<br>
-                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra kết nối mạng.</span>
+                    <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra kết nối mạng hoặc Quota Firebase.</span>
                 </td>
             </tr>
         `;
@@ -407,7 +413,7 @@ async function handleToggleVip(userId, currentVipStatus) {
             });
         }
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
-        loadUserList(); 
+        loadUserList(true); // GỌI API LÀM MỚI KHI THAY ĐỔI
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
@@ -423,7 +429,7 @@ async function handleToggleBan(userId, currentBannedStatus) {
         const newBannedStatus = !currentBannedStatus;
         await updateDoc(userRef, { isBanned: newBannedStatus });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
-        loadUserList(); 
+        loadUserList(true); // GỌI API LÀM MỚI KHI THAY ĐỔI
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
         showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
@@ -479,7 +485,7 @@ async function handleBulkAction(actionType) {
         await Promise.all(promises);
         showToast(`Đã thực thi thao tác thành công trên ${count} tài khoản!`, "success");
         selectedUserIds.clear();
-        loadUserList();
+        loadUserList(true); // GỌI API LÀM MỚI KHI THAY ĐỔI HÀNG LOẠT
     } catch(err) {
         console.error("Lỗi bulk actions:", err);
         showToast("Lỗi khi thực thi hàng loạt", "error");
@@ -495,7 +501,7 @@ document.addEventListener('componentsLoaded', () => {
         item.addEventListener('click', (e) => {
             const target = item.getAttribute('data-target');
             if (target === 'tab-users') {
-                loadUserList();
+                loadUserList(false); // CHỈ VẼ UI TỪ CACHE, KHÔNG ĐỌC DB KHI CHUYỂN TAB
             }
         });
     });
