@@ -27,7 +27,8 @@ document.addEventListener('ComponentsLoaded', async () => {
 // Cập nhật thứ hạng của User vào Dashboard Thống kê nhanh
 export async function updateUserDashboardRank(currentUser) {
     const statElement = document.getElementById('statAccountStatus');
-    if (!statElement) return;
+    // Nếu initLeaderboard đã ghi Hạng thành công thì hủy gọi DB để tiết kiệm Read
+    if (!statElement || statElement.innerHTML.includes('Hạng')) return;
 
     // ĐÃ GỠ BỎ SESSION STORAGE CACHE ĐỂ DỮ LIỆU LUÔN FRESH (REAL-TIME)
 
@@ -53,7 +54,7 @@ export async function updateUserDashboardRank(currentUser) {
         statElement.innerHTML = `Hạng ${actualRank}`;
     } catch (error) {
         console.error("Lỗi khi cập nhật thứ hạng Dashboard:", error);
-        statElement.innerHTML = 'Lỗi tính toán';
+        // Giữ nguyên kết quả đúng từ hàm initLeaderboard, không ghi đè lỗi ra UI
     }
 }
 
