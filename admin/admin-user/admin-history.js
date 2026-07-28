@@ -7,6 +7,8 @@ import {
     collection, query, where, getDocs 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+let cachedExamsMap = null; // CỜ CACHE CẤU HÌNH ĐỀ THI
+
 export async function handleViewHistory(userEmail) {
     const modal = document.getElementById('historyModal');
     const historyBody = document.getElementById('historyTableBody');
@@ -19,23 +21,31 @@ export async function handleViewHistory(userEmail) {
     modal.style.display = "block";
 
     try {
-        const [querySnapshot, examsSnap] = await Promise.all([
-            getDocs(query(collection(db, "results"), where("email", "==", userEmail))),
-            getDocs(collection(db, "exams"))
-        ]);
+        let querySnapshot;
+        
+        // Tối ưu Quota: Chỉ tải danh sách đề thi 1 lần duy nhất cho toàn bộ phiên làm việc
+        if (!cachedExamsMap) {
+            const [qSnap, eSnap] = await Promise.all([
+                getDocs(query(collection(db, "results"), where("email", "==", userEmail))),
+                getDocs(collection(db, "exams"))
+            ]);
+            querySnapshot = qSnap;
+            cachedExamsMap = {};
+            eSnap.forEach(docSnap => {
+                const exData = docSnap.data();
+                if (exData.examName) {
+                    cachedExamsMap[docSnap.id] = exData.examName;
+                }
+            });
+        } else {
+            // Nếu đã có cache đề thi, chỉ cần tải bài làm của cá nhân đó
+            querySnapshot = await getDocs(query(collection(db, "results"), where("email", "==", userEmail)));
+        }
 
         if (querySnapshot.empty) {
             historyBody.innerHTML = '<tr><td colspan="3" class="empty-message">Thành viên này chưa làm bài thi trắc nghiệm nào trên hệ thống.</td></tr>';
             return;
         }
-
-        const examsMap = {};
-        examsSnap.forEach(docSnap => {
-            const exData = docSnap.data();
-            if (exData.examName) {
-                examsMap[docSnap.id] = exData.examName;
-            }
-        });
 
         let htmlContent = '';
         querySnapshot.forEach((docSnap) => {
@@ -43,7 +53,7 @@ export async function handleViewHistory(userEmail) {
             const examCode = data.examId || data.examCode || data.quizId || 'Không rõ';
             const score = data.score !== undefined ? data.score : 'N/A';
             
-            const examName = examsMap[examCode];
+            const examName = cachedExamsMap[examCode];
             const displayTitle = examName 
                 ? `<span style="font-weight:600; color:#0f172a;">${examName}</span><br><span style="font-size:11.5px; color:#64748b; font-weight:normal;">(Mã: ${examCode})</span>` 
                 : `<strong>${examCode}</strong>`;
