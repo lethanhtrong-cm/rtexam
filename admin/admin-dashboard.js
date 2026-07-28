@@ -6,26 +6,21 @@ import {
 let timeChartInstance = null;
 let levelChartInstance = null;
 let techChartInstance = null;
+let isDashboardStatsLoaded = false; // CỜ CACHE DỮ LIỆU ĐỂ CHỐNG SPAM READS
 
 export function initDashboardRealtime() {
-    // Hàm đếm số liệu trực tiếp trên Server Firebase (Tối ưu chi phí Read tuyệt đối)
+    // Hàm đếm này dùng getCountFromServer (rất rẻ: 1 lượt read / 1000 users) nên được phép gọi khi chuyển tab
     const fetchLiveCounts = async () => {
         try {
             const usersRef = collection(db, "users");
-            
-            // --- ĐẾM SỐ NGƯỜI ĐANG THI ---
-            // Yêu cầu Client khi vào thi phải cập nhật field: examStatus = 'testing'
             const qTesting = query(usersRef, where("examStatus", "==", "testing"));
             const snapTesting = await getCountFromServer(qTesting);
             const testingCount = snapTesting.data().count;
 
-            // --- ĐẾM SỐ NGƯỜI ONLINE ---
-            // Yêu cầu Client khi đăng nhập phải cập nhật field: isOnline = true
             const qOnline = query(usersRef, where("isOnline", "==", true));
             const snapOnline = await getCountFromServer(qOnline);
-            const onlineCount = snapOnline.data().count + 1; // Mặc định cộng 1 cho chính Admin đang trực tuyến
+            const onlineCount = snapOnline.data().count + 1; 
 
-            // In dữ liệu ra giao diện
             const onlineEl = document.getElementById('dash-online-users');
             const testingEl = document.getElementById('dash-testing-users');
             
@@ -34,54 +29,42 @@ export function initDashboardRealtime() {
 
         } catch (error) {
             console.error("Lỗi khi đếm dữ liệu từ server:", error);
-            
-            // Hiển thị cảnh báo trực quan khi hết hạn mức (Quota Exceeded)
             if (error.message && (error.message.includes('Quota') || error.message.includes('resource-exhausted') || error.code === 'resource-exhausted')) {
                 const onlineEl = document.getElementById('dash-online-users');
                 const testingEl = document.getElementById('dash-testing-users');
-                
-                if (onlineEl) {
-                    onlineEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
-                }
-                if (testingEl) {
-                    testingEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
-                }
+                if (onlineEl) onlineEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
+                if (testingEl) testingEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
             }
         }
     };
-
-    // Chỉ thực thi ngay lập tức MỘT LẦN DUY NHẤT khi vừa mở trang hoặc chuyển tab
     fetchLiveCounts();
 }
 
-export async function loadDashboardStats() {
+export async function loadDashboardStats(forceRefresh = false) {
+    // NẾU KHÔNG ÉP LÀM MỚI VÀ DỮ LIỆU ĐÃ TẢI RỒI -> DÙNG CACHE, KHÔNG ĐỌC FIREBASE
+    if (!forceRefresh && isDashboardStatsLoaded) return;
+
     try {
-        // Tải toàn bộ Result (Lịch sử làm bài) và Exams (Cấu hình đề)
         const [resultsSnap, examsSnap] = await Promise.all([
             getDocs(collection(db, "results")),
             getDocs(collection(db, "exams"))
         ]);
 
-        // Map cấu hình đề thi (để đối chiếu)
         const examsMap = {};
         examsSnap.forEach(docSnap => {
             examsMap[docSnap.id] = docSnap.data();
         });
 
-        // Nhóm 1: Biến đếm Thời gian nộp bài tích lũy
         let countToday = 0, countWeek = 0, countMonth = 0, countYear = 0;
         const now = new Date();
-        now.setHours(0,0,0,0); // Chuẩn hóa mốc tính toán về đầu ngày
+        now.setHours(0,0,0,0); 
 
-        // Nhóm 2: Biến đếm xu hướng lựa chọn
         let timeStats = { "15": 0, "30": 0, "45": 0 };
         let levelStats = { "Dễ": 0, "Trung bình": 0, "Khó": 0 };
         let techStats = { "MRI": 0, "CT": 0, "X quang": 0, "Hỗn hợp": 0 };
 
         resultsSnap.forEach(docSnap => {
             const data = docSnap.data();
-            
-            // Phân tích Nhóm 1 (Theo ngày tháng)
             let examDate = null;
             if (data.timestamp) {
                 if (typeof data.timestamp.toDate === 'function') {
@@ -95,43 +78,33 @@ export async function loadDashboardStats() {
                 const diffTime = Math.abs(new Date() - examDate);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
                 
-                // Cùng ngày, tháng, năm so với hiện tại
                 if (examDate.toDateString() === new Date().toDateString()) countToday++;
                 if (diffDays <= 7) countWeek++;
                 if (diffDays <= 30) countMonth++;
                 if (diffDays <= 365) countYear++;
             }
 
-            // Phân tích Nhóm 2 (Xu hướng cấu hình dựa vào Exam Code)
             const eCode = data.examId || data.examCode || data.quizId;
-            
             if (eCode && examsMap[eCode]) {
                 const config = examsMap[eCode];
-                
-                // Map Time
                 if (timeStats[config.timeLimit] !== undefined) timeStats[config.timeLimit]++;
-                
-                // Map Level
                 if (levelStats[config.level] !== undefined) levelStats[config.level]++;
-                
-                // Map Technique
                 if (techStats[config.technique] !== undefined) techStats[config.technique]++;
             }
         });
 
-        // Ghi ra giao diện (Nhóm 1)
         document.getElementById('dash-day-users').innerText = countToday;
         document.getElementById('dash-week-users').innerText = countWeek;
         document.getElementById('dash-month-users').innerText = countMonth;
         document.getElementById('dash-year-users').innerText = countYear;
 
-        // Tiến hành vẽ biểu đồ (Nhóm 2)
         renderCharts(timeStats, levelStats, techStats);
+        isDashboardStatsLoaded = true; // Lưu cờ đã tải xong
 
     } catch (error) {
         console.error("Lỗi khi tải dữ liệu Dashboard:", error);
+        isDashboardStatsLoaded = false;
         
-        // Xử lý báo lỗi trên giao diện biểu đồ/số liệu tích lũy nếu hết Quota
         if (error.message && (error.message.includes('Quota') || error.message.includes('resource-exhausted') || error.code === 'resource-exhausted')) {
             const els = ['dash-day-users', 'dash-week-users', 'dash-month-users', 'dash-year-users'];
             els.forEach(id => {
@@ -143,7 +116,6 @@ export async function loadDashboardStats() {
 }
 
 function renderCharts(timeStats, levelStats, techStats) {
-    // 1. Biểu đồ tròn - Mốc Thời Gian
     const ctxTime = document.getElementById('chart-time');
     if (ctxTime) {
         if (timeChartInstance) timeChartInstance.destroy();
@@ -161,7 +133,6 @@ function renderCharts(timeStats, levelStats, techStats) {
         });
     }
 
-    // 2. Biểu đồ cột - Mức Độ Khó
     const ctxLevel = document.getElementById('chart-level');
     if (ctxLevel) {
         if (levelChartInstance) levelChartInstance.destroy();
@@ -185,7 +156,6 @@ function renderCharts(timeStats, levelStats, techStats) {
         });
     }
 
-    // 3. Biểu đồ Doughnut - Kỹ Thuật
     const ctxTech = document.getElementById('chart-tech');
     if (ctxTech) {
         if (techChartInstance) techChartInstance.destroy();
@@ -204,18 +174,16 @@ function renderCharts(timeStats, levelStats, techStats) {
     }
 }
 
-// Lắng nghe tín hiệu khi các components HTML đã load xong
 document.addEventListener('componentsLoaded', () => {
     initDashboardRealtime();
     loadDashboardStats();
     
-    // Tải lại dữ liệu đếm mỗi khi Admin bấm chuyển lại tab Dashboard
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             const target = item.getAttribute('data-target');
             if (target === 'tab-dashboard') {
-                loadDashboardStats(); 
+                loadDashboardStats(); // Mặc định false -> Tận dụng Cache
                 initDashboardRealtime();
             }
         });
