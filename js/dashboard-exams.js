@@ -12,6 +12,9 @@ let currentSearchQuery = '';
 let completedExams = {}; 
 let currentShareExamId = null;
 
+// HẰNG SỐ ĐỊNH NGHĨA THỜI GIAN SỐNG CỦA CACHE: 30 PHÚT (Tính bằng milliseconds)
+const CACHE_TTL_MS = 30 * 60 * 1000; 
+
 document.addEventListener("authReady", async (e) => {
     currentUserData = e.detail.currentUserData;
     if (currentUserData) {
@@ -21,24 +24,45 @@ document.addEventListener("authReady", async (e) => {
     
     try {
         if (e.detail.user && e.detail.user.email) {
-            const resultsRef = collection(db, "results");
-            const q = query(resultsRef, where("email", "==", e.detail.user.email));
-            const snap = await getDocs(q);
-            snap.forEach(doc => {
-                const data = doc.data();
-                const examId = data.examId || data.examCode;
-                if (examId) {
-                    const ts = data.createdAt ? (typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : data.timestamp || 0;
-                    if (!completedExams[examId] || ts >= completedExams[examId].timestamp) {
-                        completedExams[examId] = {
-                            score: data.score || 0,
-                            total: data.totalQuestions || data.total || 1,
-                            timestamp: ts,
-                            resultId: doc.id
-                        };
-                    }
+            // TỐI ƯU 1: CACHE LỊCH SỬ LÀM BÀI CÓ THỜI HẠN (TTL)
+            const cacheKeyResults = `completedExams_${e.detail.user.uid}`;
+            const cachedResultsStr = sessionStorage.getItem(cacheKeyResults);
+            let useCache = false;
+            
+            if (cachedResultsStr) {
+                const cachedObj = JSON.parse(cachedResultsStr);
+                // Kiểm tra xem cache đã quá 30 phút chưa (Tránh lỗi treo tab)
+                if (Date.now() - cachedObj.timestamp < CACHE_TTL_MS) {
+                    completedExams = cachedObj.data;
+                    useCache = true;
                 }
-            });
+            }
+            
+            if (!useCache) {
+                const resultsRef = collection(db, "results");
+                const q = query(resultsRef, where("email", "==", e.detail.user.email));
+                const snap = await getDocs(q);
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    const examId = data.examId || data.examCode;
+                    if (examId) {
+                        const ts = data.createdAt ? (typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : data.timestamp || 0;
+                        if (!completedExams[examId] || ts >= (completedExams[examId].timestamp || 0)) {
+                            completedExams[examId] = {
+                                score: data.score || 0,
+                                total: data.totalQuestions || data.total || 1,
+                                timestamp: ts,
+                                resultId: doc.id
+                            };
+                        }
+                    }
+                });
+                // Lưu lại kết quả vào cache kèm theo mốc thời gian hiện tại
+                sessionStorage.setItem(cacheKeyResults, JSON.stringify({
+                    data: completedExams,
+                    timestamp: Date.now()
+                }));
+            }
         }
     } catch (err) {
         console.error("Lỗi khởi tạo Dashboard:", err);
@@ -415,6 +439,22 @@ function setupFilterEvents() {
 
 async function loadAggregatedExamData() {
     try {
+        // TỐI ƯU 2: CACHE ĐỀ THI CÓ THỜI HẠN (TTL)
+        const cacheKeyExams = 'allExamsDataCache_' + (auth.currentUser ? auth.currentUser.uid : 'guest');
+        const cachedExamsStr = sessionStorage.getItem(cacheKeyExams);
+        
+        if (cachedExamsStr) {
+            const cachedObj = JSON.parse(cachedExamsStr);
+            // Kiểm tra xem cache đã quá 30 phút chưa
+            if (Date.now() - cachedObj.timestamp < CACHE_TTL_MS) {
+                allExamsData = cachedObj.data;
+                const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
+                document.dispatchEvent(examsReadyEvent);
+                renderExams();
+                return; // KẾT THÚC SỚM - KHÔNG TỐN MỘT LƯỢT ĐỌC NÀO
+            }
+        }
+
         const questionsRef = collection(db, "questions");
         const qSnap = await getDocs(questionsRef);
         const examMap = {}; 
@@ -441,7 +481,6 @@ async function loadAggregatedExamData() {
             if (isPublicExam || isMyExam) {
                 if (examMap[eId]) {
                     examMap[eId].isValid = true; 
-                    // NÂNG CẤP: Lấy tên đề từ Database (nếu có)
                     examMap[eId].examName = conf.examName || ""; 
                     examMap[eId].isVip = conf.isVip || false;
                     examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
@@ -511,6 +550,12 @@ async function loadAggregatedExamData() {
         const otherExams = allExamsData.filter(e => e.technique !== "AI Tự Động" && !hiddenExamsList.includes(e.id));
         
         allExamsData = [...otherExams, ...aiExams];
+
+        // LƯU LẠI KẾT QUẢ VÀO CACHE KÈM MỐC THỜI GIAN
+        sessionStorage.setItem(cacheKeyExams, JSON.stringify({
+            data: allExamsData,
+            timestamp: Date.now()
+        }));
 
         const examsReadyEvent = new CustomEvent("examsReady", { detail: { allExamsData } });
         document.dispatchEvent(examsReadyEvent);
@@ -587,9 +632,6 @@ function renderExams() {
 
         const isUserVip = currentUserData && currentUserData.isVip === true;
 
-        // =========================================================================
-        // TÁI CẤU TRÚC PHÂN NHÓM: SỬ DỤNG MAINCATEGORY ĐỂ IN TIÊU ĐỀ LỚN
-        // =========================================================================
         const groups = [
             { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
             { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => completedExams[exam.id] && ((completedExams[exam.id].score / (completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) },
@@ -622,7 +664,6 @@ function renderExams() {
 
             let rowHtml = '';
 
-            // 1. KIỂM TRA VÀ IN TIÊU ĐỀ LỚN NẾU CHUYỂN SANG NHÓM CHUYÊN MÔN MỚI
             if (group.mainCategory && group.mainCategory !== currentMainCategoryTracker) {
                 rowHtml += `
                     <div class="main-category-header mt-5 mb-3" style="border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
@@ -636,7 +677,6 @@ function renderExams() {
                 currentMainCategoryTracker = null; 
             }
 
-            // 2. TÙY BIẾN CSS CHO TIÊU ĐỀ CON (THỤT LỀ, CHỮ NHỎ) HOẶC TIÊU ĐỀ ĐỘC LẬP (TO RÕ)
             let titleHtml = group.mainCategory
                 ? `<h5 class="fw-semibold mb-3 text-secondary" style="font-size: 1rem; margin-left: 15px; border-left: 3px solid #94a3b8; padding-left: 10px; color: #475569;">${group.title}</h5>`
                 : `<h4 class="fw-bold mb-3 text-dark" style="font-size: 1.15rem; border-left: 4px solid #084298; padding-left: 10px;">${group.title}</h4>`;
@@ -667,9 +707,7 @@ function renderExams() {
 
                 const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
 
-                // NÂNG CẤP: Ưu tiên in Tên đề (exam.examName), nếu không có mới in ID
                 const displayTitle = exam.examName && exam.examName.trim() !== "" ? exam.examName : exam.id;
-                /// Đã ẩn mã đề phụ theo yêu cầu
                 const displaySubId = '';
 
                 const headerHtml = `
