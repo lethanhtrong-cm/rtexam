@@ -32,9 +32,9 @@ export function initRealtimePaymentListener() {
 
 // Hàm hỗ trợ format ngày tháng thống nhất
 function formatDateTime(timestamp) {
-    if (!timestamp) return 'Không rõ';
+    if (!timestamp) return '---';
     const date = (typeof timestamp.toDate === 'function') ? timestamp.toDate() : new Date(timestamp);
-    if (isNaN(date.getTime())) return 'Không rõ';
+    if (isNaN(date.getTime())) return '---';
     return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
 }
 
@@ -64,7 +64,7 @@ export async function loadUserList() {
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
 
-            // Xử lý dữ liệu ngày tháng (Quét sâu các trường có thể lưu ngày đăng nhập đầu tiên)
+            // Xử lý dữ liệu ngày tháng
             let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp || null;
             let createdAtMs = 0;
             if (createdAtRaw) {
@@ -267,14 +267,15 @@ export function renderUserList() {
             ? `<span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 8px; display: inline-block; background: #d1fae5; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-microchip"></i> Đã dùng AI: ${costVND.toLocaleString('vi-VN')}đ</span>` 
             : '';
 
-        // TÍNH TOÁN VÀ HIỂN THỊ NGÀY THÁNG (Có fallback cho các acc cũ chưa có dữ liệu)
+        // TÍNH TOÁN VÀ HIỂN THỊ NGÀY THÁNG (Cải thiện UI cho acc cũ)
         let datesHtml = `<div style="font-size: 11.5px; color: #64748b; margin-top: 5px;">`;
-        const regDateDisplay = user.createdAt ? formatDateTime(user.createdAt) : 'Dữ liệu cũ (Không rõ)';
+        const regDateDisplay = user.createdAt ? formatDateTime(user.createdAt) : '---';
         datesHtml += `<div><i class="fa-regular fa-calendar-plus" style="margin-right:4px;"></i>Ngày ĐK: <strong>${regDateDisplay}</strong></div>`;
         
         if (user.isVip) {
             let remainingText = '';
-            let expDisplay = 'Dữ liệu cũ (Không rõ)';
+            let expDisplay = '---';
+            let actDisplay = '---';
             
             if (user.vipExpirationDate) {
                 expDisplay = formatDateTime(user.vipExpirationDate);
@@ -287,9 +288,12 @@ export function renderUserList() {
                 } else {
                     remainingText = `<span style="color: #ef4444; font-weight: bold;">(Đã hết hạn)</span>`;
                 }
+            } else {
+                // Nhắc nhở tài khoản VIP cũ chưa có dữ liệu ngày tháng
+                remainingText = `<span style="color: #f59e0b; font-weight: bold; font-style: italic;">(Cần Tắt/Bật lại VIP để tạo ngày)</span>`;
             }
             
-            const actDisplay = user.vipActivationDate ? formatDateTime(user.vipActivationDate) : 'Trước bản cập nhật';
+            if (user.vipActivationDate) actDisplay = formatDateTime(user.vipActivationDate);
             
             datesHtml += `<div style="margin-top: 2px;"><i class="fa-solid fa-crown" style="margin-right:4px; color:#f59e0b;"></i>Kích hoạt: <strong>${actDisplay}</strong></div>`;
             datesHtml += `<div style="margin-top: 2px;"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>Hết hạn: <strong>${expDisplay}</strong> ${remainingText}</div>`;
