@@ -7,6 +7,11 @@ let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
 
+// --- CÁC BIẾN PHÂN TRANG VÀ THAO TÁC HÀNG LOẠT ---
+let currentPage = 1;
+const itemsPerPage = 20;
+let selectedUserIds = new Set(); // Lưu trữ ID của các user đang được check
+
 // Biến lưu trữ danh sách đang chờ duyệt VIP
 let pendingVIPRequests = new Set(); 
 
@@ -25,14 +30,22 @@ export function initRealtimePaymentListener() {
     });
 }
 
+// Hàm hỗ trợ format ngày tháng thống nhất
+function formatDateTime(timestamp) {
+    if (!timestamp) return 'Không rõ';
+    const date = (typeof timestamp.toDate === 'function') ? timestamp.toDate() : new Date(timestamp);
+    if (isNaN(date.getTime())) return 'Không rõ';
+    return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+}
+
 // ==========================================
-// TẢI DỮ LIỆU USER 1 LẦN KHI MỞ TRANG / CHUYỂN TAB (TIẾT KIỆM QUOTA)
+// TẢI DỮ LIỆU USER 1 LẦN KHI MỞ TRANG / CHUYỂN TAB 
 // ==========================================
 export async function loadUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="4" class="loading-text">⏳ Đang tải dữ liệu học viên...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="loading-text">⏳ Đang tải dữ liệu học viên...</td></tr>';
 
     try {
         const snapshot = await getDocs(collection(db, "users"));
@@ -48,9 +61,16 @@ export async function loadUserList() {
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
             
-            // Nhận biết trạng thái Online tại thời điểm tải
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
+
+            // Xử lý dữ liệu ngày tháng
+            let createdAtMs = 0;
+            if (user.createdAt) {
+                createdAtMs = (typeof user.createdAt.toDate === 'function') ? user.createdAt.toDate().getTime() : new Date(user.createdAt).getTime();
+            } else if (user.timestamp) {
+                createdAtMs = (typeof user.timestamp.toDate === 'function') ? user.timestamp.toDate().getTime() : new Date(user.timestamp).getTime();
+            }
 
             totalUsersCount++;
             if (isVip) totalVipsCount++; 
@@ -66,7 +86,11 @@ export async function loadUserList() {
                 isBanned: isBanned,
                 isOnline: isOnline,
                 statusKey: statusKey,
-                totalTokensUsed: totalTokensUsed
+                totalTokensUsed: totalTokensUsed,
+                createdAtMs: createdAtMs, // Dùng để sort
+                createdAt: user.createdAt || user.timestamp,
+                vipActivationDate: user.vipActivationDate || null,
+                vipExpirationDate: user.vipExpirationDate || null
             });
         });
 
@@ -76,12 +100,17 @@ export async function loadUserList() {
         if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
         if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
 
+        // Reset state khi tải lại dữ liệu
+        selectedUserIds.clear();
+        currentPage = 1;
+        injectTableHeadersAndToolbar(); // Đảm bảo UI Checkbox tồn tại
+        
         renderUserList();
     } catch (error) {
         console.error("Lỗi kết nối Firestore khi tải danh sách người dùng:", error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" class="loading-text" style="color: #ef4444; font-weight: 500;">
+                <td colspan="5" class="loading-text" style="color: #ef4444; font-weight: 500;">
                     ❌ Có lỗi xảy ra khi tải dữ liệu từ Cloud Firestore.<br>
                     <span style="font-size: 12px; color: #64748b;">Vui lòng kiểm tra kết nối mạng.</span>
                 </td>
@@ -91,25 +120,125 @@ export async function loadUserList() {
     }
 }
 
+// ==========================================
+// THÊM ĐỘNG GIAO DIỆN BULK ACTIONS & HEADER CHECKBOX
+// ==========================================
+function injectTableHeadersAndToolbar() {
+    const table = document.querySelector('#usersTableBody').closest('table');
+    const theadTr = table.querySelector('thead tr');
+    
+    // Thêm cột Checkbox All nếu chưa có
+    if (theadTr && !theadTr.querySelector('.th-bulk-checkbox')) {
+        const th = document.createElement('th');
+        th.className = 'text-center th-bulk-checkbox';
+        th.style.width = '5%';
+        th.innerHTML = '<input type="checkbox" id="selectAllUsers" style="cursor:pointer; transform: scale(1.2);">';
+        theadTr.insertBefore(th, theadTr.firstChild);
+
+        // Chỉnh lại tỷ lệ các cột cho vừa vặn
+        const ths = theadTr.querySelectorAll('th');
+        if(ths.length > 1) ths[1].style.width = '5%';  // STT
+        if(ths.length > 2) ths[2].style.width = '40%'; // Email
+        if(ths.length > 3) ths[3].style.width = '15%'; // Trạng Thái
+        if(ths.length > 4) ths[4].style.width = '35%'; // Hành Động
+    }
+
+    // Lắng nghe sự kiện Select All
+    const selectAllCb = document.getElementById('selectAllUsers');
+    if (selectAllCb) {
+        selectAllCb.onclick = (e) => {
+            const isChecked = e.target.checked;
+            const checkboxes = document.querySelectorAll('.user-row-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = isChecked;
+                if (isChecked) selectedUserIds.add(cb.dataset.id);
+                else selectedUserIds.delete(cb.dataset.id);
+            });
+            updateBulkActionBar();
+        };
+    }
+
+    // Thêm Thanh Toolbar Thao Tác Hàng Loạt (Ẩn mặc định)
+    const tableContainer = table.closest('.table-container');
+    if (tableContainer && !document.getElementById('bulk-action-bar')) {
+        const bulkBar = document.createElement('div');
+        bulkBar.id = 'bulk-action-bar';
+        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 2px 4px rgba(0,0,0,0.02);';
+        
+        bulkBar.innerHTML = `
+            <div style="font-weight: 600; color: #1e3a8a; font-size: 14px;">
+                Đã chọn: <span id="bulk-selected-count" style="color: #ef4444; font-size: 16px;">0</span> tài khoản
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="btnBulkNotify" class="btn-modern-action" style="background: #8b5cf6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-bell"></i> TB Hàng Loạt</button>
+                <button id="btnBulkVip" class="btn-modern-action" style="background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-crown"></i> Kích VIP Loạt</button>
+                <button id="btnBulkBan" class="btn-modern-action" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-ban"></i> Khóa Loạt</button>
+            </div>
+        `;
+        tableContainer.parentNode.insertBefore(bulkBar, tableContainer);
+
+        // Lắng nghe các nút Bulk Actions
+        document.getElementById('btnBulkVip').onclick = () => handleBulkAction('vip');
+        document.getElementById('btnBulkBan').onclick = () => handleBulkAction('ban');
+        document.getElementById('btnBulkNotify').onclick = () => handleBulkAction('notify');
+    }
+}
+
+function updateBulkActionBar() {
+    const bulkBar = document.getElementById('bulk-action-bar');
+    const countEl = document.getElementById('bulk-selected-count');
+    if (bulkBar && countEl) {
+        if (selectedUserIds.size > 0) {
+            bulkBar.style.display = 'flex';
+            countEl.innerText = selectedUserIds.size;
+        } else {
+            bulkBar.style.display = 'none';
+        }
+    }
+}
+
+// ==========================================
+// RENDER DANH SÁCH (SẮP XẾP & PHÂN TRANG)
+// ==========================================
 export function renderUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    const filteredUsers = cachedUsers.filter(user => {
+    // Sắp xếp: Mới nhất đến cũ nhất dựa theo createdAtMs
+    let sortedUsers = [...cachedUsers].sort((a, b) => b.createdAtMs - a.createdAtMs);
+
+    // Lọc dữ liệu
+    const filteredUsers = sortedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
         const matchStatus = currentFilterStatus === "all" || user.statusKey === currentFilterStatus;
         return matchSearch && matchStatus;
     });
 
+    // Reset UI
     tbody.innerHTML = '';
-    let stt = 1;
-
+    const selectAllCb = document.getElementById('selectAllUsers');
+    if (selectAllCb) selectAllCb.checked = false; 
+    
+    // Nếu mảng rỗng
     if (filteredUsers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-message">Không tìm thấy thành viên nào khớp với điều kiện tìm kiếm.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-message">Không tìm thấy thành viên nào khớp với điều kiện tìm kiếm.</td></tr>';
+        renderPagination(0);
         return;
     }
 
-    filteredUsers.forEach(user => {
+    // Logic Phân Trang 20 user / trang
+    const totalItems = filteredUsers.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+    let stt = startIndex + 1;
+
+    paginatedUsers.forEach(user => {
         let badgeClass = 'badge-normal';
         let badgeText = 'Thường';
 
@@ -123,88 +252,142 @@ export function renderUserList() {
 
         const firstLetter = user.email.charAt(0);
         
-        // CHẤM XANH/XÁM HIỂN THỊ TRẠNG THÁI ONLINE
+        // CHẤM XANH/XÁM ONLINE
         const onlineStatusHtml = user.isOnline 
             ? `<span title="Đang trực tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-left: 8px; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></span>` 
             : `<span title="Ngoại tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #cbd5e1; border-radius: 50%; margin-left: 8px;"></span>`;
 
-        // Cảnh báo thanh toán
+        // Báo chuyển khoản & Token
         const hasPendingRequest = pendingVIPRequests.has(user.userId);
         const pendingBadge = hasPendingRequest 
             ? `<span style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; margin-left: 8px; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); animation: pulse 2s infinite;">💸 Báo Đã CK</span>` 
             : '';
 
-        // TÍNH TOÁN CHI PHÍ AI (Quy đổi VNĐ: 1M Token = ~19.740 VNĐ)
         const costVND = Math.round((user.totalTokensUsed / 1000000) * 42638);
         const costBadgeHtml = user.totalTokensUsed > 0 
-            ? `<div style="font-size: 11.5px; color: #059669; font-weight: 700; margin-top: 4px; display: inline-block; background: #d1fae5; padding: 2px 8px; border-radius: 6px;"><i class="fa-solid fa-microchip"></i> Đã dùng AI: ${costVND.toLocaleString('vi-VN')} đ</div>` 
+            ? `<span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 8px; display: inline-block; background: #d1fae5; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-microchip"></i> Đã dùng AI: ${costVND.toLocaleString('vi-VN')}đ</span>` 
             : '';
 
-        // CẤU HÌNH GIAO DIỆN NÚT BẤM HIỆN ĐẠI
+        // TÍNH TOÁN VÀ HIỂN THỊ NGÀY THÁNG
+        let datesHtml = `<div style="font-size: 11.5px; color: #64748b; margin-top: 5px;">`;
+        datesHtml += `<div><i class="fa-regular fa-calendar-plus" style="margin-right:4px;"></i>Ngày ĐK: <strong>${formatDateTime(user.createdAt)}</strong></div>`;
+        
+        if (user.isVip) {
+            let remainingText = '';
+            if (user.vipExpirationDate) {
+                const now = Date.now();
+                const expMs = (typeof user.vipExpirationDate.toDate === 'function') ? user.vipExpirationDate.toDate().getTime() : new Date(user.vipExpirationDate).getTime();
+                const diff = expMs - now;
+                if (diff > 0) {
+                    const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                    remainingText = `<span style="color: #10b981; font-weight: bold;">(Còn ${daysLeft} ngày)</span>`;
+                } else {
+                    remainingText = `<span style="color: #ef4444; font-weight: bold;">(Đã hết hạn)</span>`;
+                }
+            }
+            datesHtml += `<div style="margin-top: 2px;"><i class="fa-solid fa-crown" style="margin-right:4px; color:#f59e0b;"></i>Kích hoạt: <strong>${formatDateTime(user.vipActivationDate)}</strong></div>`;
+            datesHtml += `<div style="margin-top: 2px;"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>Hết hạn: <strong>${formatDateTime(user.vipExpirationDate)}</strong> ${remainingText}</div>`;
+        }
+        datesHtml += `</div>`;
+
+        // NÚT BẤM
         const vipBtnClass = user.isVip ? 'btn-user-vip-off' : 'btn-user-vip-on';
         const vipBtnText = user.isVip ? '💎 Tắt VIP' : '👑 Kích VIP';
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
         const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
-
-        // CSS inline cho các nút
+        
         const baseBtnStyle = "padding: 6px 12px; font-size: 12.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: white;";
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
-        
-        const vipStyle = user.isVip 
-            ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` 
-            : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; 
-            
+        const vipStyle = user.isVip ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; 
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
-        
-        const banStyle = user.isBanned
-            ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` 
-            : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
-            
+        const banStyle = user.isBanned ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
         const hoverEffect = `onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'"`;
+
+        const isChecked = selectedUserIds.has(user.userId) ? 'checked' : '';
 
         const tr = document.createElement('tr');
         tr.className = 'user-row';
         tr.style.transition = "background-color 0.2s ease";
-        
         tr.style.backgroundColor = hasPendingRequest ? '#fff1f2' : 'transparent';
         tr.onmouseover = () => tr.style.backgroundColor = hasPendingRequest ? '#ffe4e6' : '#f8fafc';
         tr.onmouseout = () => tr.style.backgroundColor = hasPendingRequest ? '#fff1f2' : 'transparent';
         
         tr.innerHTML = `
+            <td class="text-center">
+                <input type="checkbox" class="user-row-checkbox" data-id="${user.userId}" data-email="${user.email}" ${isChecked} style="cursor:pointer; transform: scale(1.2);">
+            </td>
             <td class="text-center" style="font-weight: 600; color: #64748b;">${stt++}</td>
             <td>
-                <div class="user-email-cell">
-                    <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)};">
+                <div class="user-email-cell" style="align-items: flex-start;">
+                    <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; margin-top: 5px;">
                         ${firstLetter}
                     </div>
                     <div>
-                        <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center;">
-                            ${user.email} ${onlineStatusHtml} ${pendingBadge}
+                        <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
+                            ${user.email} ${onlineStatusHtml} ${pendingBadge} ${costBadgeHtml}
                         </div>
-                        ${costBadgeHtml}
+                        ${datesHtml}
                     </div>
                 </div>
             </td>
             <td class="text-center"><span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span></td>
             <td class="text-center">
                 <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
-                    <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi thông báo riêng">
-                        🔔 Gửi
-                    </button>
-                    <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" style="${vipStyle}" ${hoverEffect}>
-                        ${vipBtnText}
-                    </button>
-                    <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>
-                        📊 Lịch Sử
-                    </button>
-                    <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>
-                        ${banBtnText}
-                    </button>
+                    <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi TB">🔔 Gửi</button>
+                    <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" style="${vipStyle}" ${hoverEffect}>${vipBtnText}</button>
+                    <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
+                    <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
     });
+
+    renderPagination(totalPages);
+    updateBulkActionBar();
+}
+
+// VẼ THANH PHÂN TRANG
+function renderPagination(totalPages) {
+    let paginationContainer = document.getElementById('user-pagination-container');
+    const tableContainer = document.querySelector('#usersTableBody').closest('.table-container');
+    
+    if (!paginationContainer) {
+        paginationContainer = document.createElement('div');
+        paginationContainer.id = 'user-pagination-container';
+        paginationContainer.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding-bottom: 10px;';
+        tableContainer.parentNode.insertBefore(paginationContainer, tableContainer.nextSibling);
+    }
+
+    paginationContainer.innerHTML = ''; 
+    if (totalPages <= 1) return; 
+
+    const prevBtn = document.createElement('button');
+    prevBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Trước';
+    prevBtn.className = 'btn-modern-action';
+    prevBtn.style.padding = '8px 16px';
+    prevBtn.disabled = currentPage === 1;
+    if (currentPage === 1) prevBtn.style.opacity = '0.4';
+    prevBtn.onclick = () => {
+        if (currentPage > 1) { currentPage--; renderUserList(); }
+    };
+    paginationContainer.appendChild(prevBtn);
+
+    const pageInfo = document.createElement('div');
+    pageInfo.innerHTML = `Trang <strong style="color:#3b82f6;">${currentPage}</strong> / ${totalPages}`;
+    pageInfo.style.cssText = 'font-size: 14px; font-weight: 600; color: #475569; background: #f8fafc; padding: 8px 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin: 0 5px;';
+    paginationContainer.appendChild(pageInfo);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.innerHTML = 'Tiếp <i class="fa-solid fa-arrow-right"></i>';
+    nextBtn.className = 'btn-modern-action';
+    nextBtn.style.padding = '8px 16px';
+    nextBtn.disabled = currentPage === totalPages;
+    if (currentPage === totalPages) nextBtn.style.opacity = '0.4';
+    nextBtn.onclick = () => {
+        if (currentPage < totalPages) { currentPage++; renderUserList(); }
+    };
+    paginationContainer.appendChild(nextBtn);
 }
 
 function getAvatarColor(letter) {
@@ -213,11 +396,22 @@ function getAvatarColor(letter) {
     return colors[charCode % colors.length];
 }
 
+// ==========================================
+// THỰC THI THAO TÁC CÁ NHÂN VÀ HÀNG LOẠT
+// ==========================================
 async function handleToggleVip(userId, currentVipStatus) {
     try {
         const userRef = doc(db, "users", userId);
         const newVipStatus = !currentVipStatus;
-        await updateDoc(userRef, { isVip: newVipStatus });
+        
+        let updates = { isVip: newVipStatus };
+        // Tự động cấp VVIP 30 ngày nếu bật
+        if (newVipStatus) {
+            updates.vipActivationDate = Date.now();
+            updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 ngày
+        }
+
+        await updateDoc(userRef, updates);
         
         if (newVipStatus) {
             const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
@@ -226,9 +420,8 @@ async function handleToggleVip(userId, currentVipStatus) {
                 await updateDoc(docSnap.ref, { status: "completed" });
             });
         }
-
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
-        loadUserList(); // Tải lại danh sách sau khi sửa
+        loadUserList(); 
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
@@ -244,10 +437,68 @@ async function handleToggleBan(userId, currentBannedStatus) {
         const newBannedStatus = !currentBannedStatus;
         await updateDoc(userRef, { isBanned: newBannedStatus });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
-        loadUserList(); // Tải lại danh sách sau khi sửa
+        loadUserList(); 
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
         showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
+    }
+}
+
+async function handleBulkAction(actionType) {
+    if (selectedUserIds.size === 0) return;
+    
+    if (actionType === 'notify') {
+        const emails = [];
+        selectedUserIds.forEach(id => {
+            const u = cachedUsers.find(user => user.userId === id);
+            if(u) emails.push(u.email);
+        });
+        openNotificationModal(emails.join(', '));
+        return;
+    }
+
+    const count = selectedUserIds.size;
+    let confirmMsg = '';
+    let isVipAction = false, isBanAction = false;
+    let toggleValue = false;
+
+    if (actionType === 'vip') {
+        if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái VIP cho ${count} tài khoản đã chọn? (Tài khoản đang Thường sẽ thành VIP 30 ngày, đang VIP sẽ bị Tắt)`)) return;
+        isVipAction = true;
+    } else if (actionType === 'ban') {
+        if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái KHÓA cho ${count} tài khoản đã chọn? (TK bình thường sẽ bị khóa, TK bị khóa sẽ mở lại)`)) return;
+        isBanAction = true;
+    }
+
+    const promises = [];
+    selectedUserIds.forEach(id => {
+        const userRef = doc(db, "users", id);
+        const u = cachedUsers.find(user => user.userId === id);
+        if (!u) return;
+        
+        let updates = {};
+        if (isVipAction) {
+            const newVipStatus = !u.isVip;
+            updates.isVip = newVipStatus;
+            if (newVipStatus) {
+                updates.vipActivationDate = Date.now();
+                updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
+            }
+        }
+        if (isBanAction) {
+            updates.isBanned = !u.isBanned;
+        }
+        promises.push(updateDoc(userRef, updates));
+    });
+
+    try {
+        await Promise.all(promises);
+        showToast(`Đã thực thi thao tác thành công trên ${count} tài khoản!`, "success");
+        selectedUserIds.clear();
+        loadUserList();
+    } catch(err) {
+        console.error("Lỗi bulk actions:", err);
+        showToast("Lỗi khi thực thi hàng loạt", "error");
     }
 }
 
@@ -263,7 +514,6 @@ async function handleViewHistory(userEmail) {
     modal.style.display = "block";
 
     try {
-        // TẢI SONG SONG Lịch sử thi và Cấu hình các đề thi
         const [querySnapshot, examsSnap] = await Promise.all([
             getDocs(query(collection(db, "results"), where("email", "==", userEmail))),
             getDocs(collection(db, "exams"))
@@ -274,7 +524,6 @@ async function handleViewHistory(userEmail) {
             return;
         }
 
-        // Tạo danh bạ ánh xạ: Mã Đề => Tên Đề
         const examsMap = {};
         examsSnap.forEach(docSnap => {
             const exData = docSnap.data();
@@ -286,11 +535,9 @@ async function handleViewHistory(userEmail) {
         let htmlContent = '';
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            // Đảm bảo lấy đúng trường nhận dạng đề thi
             const examCode = data.examId || data.examCode || data.quizId || 'Không rõ';
             const score = data.score !== undefined ? data.score : 'N/A';
             
-            // Tìm Tên đề từ Map. Nếu có Tên -> In Tên + Mã nhỏ. Nếu không có Tên -> In Mã đề.
             const examName = examsMap[examCode];
             const displayTitle = examName 
                 ? `<span style="font-weight:600; color:#0f172a;">${examName}</span><br><span style="font-size:11.5px; color:#64748b; font-weight:normal;">(Mã: ${examCode})</span>` 
@@ -322,7 +569,6 @@ async function handleViewHistory(userEmail) {
     }
 }
 
-// MỞ MODAL THÔNG BÁO
 function openNotificationModal(targetEmail) {
     const modal = document.getElementById('notification-modal');
     if (!modal) {
@@ -330,7 +576,16 @@ function openNotificationModal(targetEmail) {
         return;
     }
     
-    document.getElementById('notify-target-display').innerText = targetEmail === 'ALL' ? 'TẤT CẢ HỌC VIÊN (HỆ THỐNG)' : targetEmail;
+    // Rút gọn text nếu gửi nhiều email
+    let displayTarget = targetEmail;
+    if (targetEmail.includes(',') && targetEmail.length > 30) {
+        const count = targetEmail.split(',').length;
+        displayTarget = `${count} TÀI KHOẢN ĐÃ CHỌN`;
+    } else if (targetEmail === 'ALL') {
+        displayTarget = 'TẤT CẢ HỌC VIÊN (HỆ THỐNG)';
+    }
+
+    document.getElementById('notify-target-display').innerText = displayTarget;
     document.getElementById('notify-target-value').value = targetEmail;
     document.getElementById('notifyTitle').value = '';
     document.getElementById('notifyMessage').value = '';
@@ -338,7 +593,6 @@ function openNotificationModal(targetEmail) {
     modal.style.display = 'block';
 }
 
-// XỬ LÝ GỬI THÔNG BÁO
 async function sendNotification() {
     const target = document.getElementById('notify-target-value').value;
     const title = document.getElementById('notifyTitle').value.trim();
@@ -356,37 +610,38 @@ async function sendNotification() {
     try {
         const notificationsRef = collection(db, "notifications");
         
-        // NẾU LÀ GỬI BROADCAST (TOÀN HỆ THỐNG)
         if (target === 'ALL') {
             const activeUsers = cachedUsers.filter(u => !u.isBanned);
-            
             const promises = activeUsers.map(user => {
                 return addDoc(notificationsRef, {
-                    toEmail: user.email,
-                    title: title,
-                    message: message,
-                    status: 'unread',
-                    type: 'system_broadcast',
-                    timestamp: serverTimestamp()
+                    toEmail: user.email, title: title, message: message, status: 'unread', type: 'system_broadcast', timestamp: serverTimestamp()
                 });
             });
             await Promise.all(promises);
-            showToast(`Đã gửi thông báo hàng loạt đến ${activeUsers.length} tài khoản thành công!`, "success");
+            showToast(`Đã gửi thông báo hàng loạt đến ${activeUsers.length} tài khoản!`, "success");
         } 
-        // NẾU LÀ GỬI CÁ NHÂN
+        else if (target.includes(',')) {
+            // Trường hợp gửi cho nhiều tài khoản được chọn qua Checkbox
+            const emails = target.split(',').map(e => e.trim());
+            const promises = emails.map(email => {
+                return addDoc(notificationsRef, {
+                    toEmail: email, title: title, message: message, status: 'unread', type: 'admin_bulk', timestamp: serverTimestamp()
+                });
+            });
+            await Promise.all(promises);
+            showToast(`Đã gửi thông báo cho ${emails.length} tài khoản được chọn!`, "success");
+        }
         else {
             await addDoc(notificationsRef, {
-                toEmail: target,
-                title: title,
-                message: message,
-                status: 'unread',
-                type: 'admin_direct',
-                timestamp: serverTimestamp()
+                toEmail: target, title: title, message: message, status: 'unread', type: 'admin_direct', timestamp: serverTimestamp()
             });
             showToast(`Đã gửi thông báo riêng tư cho ${target} thành công!`, "success");
         }
 
         document.getElementById('notification-modal').style.display = 'none';
+        selectedUserIds.clear();
+        updateBulkActionBar();
+        renderUserList();
     } catch (error) {
         console.error("Lỗi khi gửi thông báo:", error);
         showToast("Có lỗi xảy ra khi ghi dữ liệu lên Firebase", "error");
@@ -397,10 +652,9 @@ async function sendNotification() {
 }
 
 document.addEventListener('componentsLoaded', () => {
-    loadUserList(); // Tải danh sách user 1 lần khi load components
+    loadUserList(); 
     initRealtimePaymentListener();
 
-    // Tải lại danh sách mỗi khi Admin chuyển lại qua tab User
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
@@ -415,6 +669,7 @@ document.addEventListener('componentsLoaded', () => {
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.trim().toLowerCase();
+            currentPage = 1;
             renderUserList(); 
         });
     }
@@ -423,11 +678,11 @@ document.addEventListener('componentsLoaded', () => {
     if (filterSelect) {
         filterSelect.addEventListener('change', (e) => {
             currentFilterStatus = e.target.value;
+            currentPage = 1;
             renderUserList();
         });
     }
 
-    // TỰ ĐỘNG CHÈN NÚT "GỬI TOÀN HỆ THỐNG"
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar && !document.getElementById('btnNotifyAll')) {
         const notifyAllBtn = document.createElement('button');
@@ -443,7 +698,17 @@ document.addEventListener('componentsLoaded', () => {
 
     const usersBody = document.getElementById('usersTableBody');
     if (usersBody) {
+        usersBody.addEventListener('change', (e) => {
+            if (e.target.classList.contains('user-row-checkbox')) {
+                if (e.target.checked) selectedUserIds.add(e.target.dataset.id);
+                else selectedUserIds.delete(e.target.dataset.id);
+                updateBulkActionBar();
+            }
+        });
+
         usersBody.addEventListener('click', (e) => {
+            if(e.target.classList.contains('user-row-checkbox')) return; 
+
             const notifyBtn = e.target.closest('.btn-notify-user');
             if (notifyBtn) return openNotificationModal(notifyBtn.dataset.email);
 
