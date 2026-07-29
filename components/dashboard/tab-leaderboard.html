@@ -5,8 +5,8 @@
     .leaderboard-header { color: #d97706; margin: 0; font-weight: 800; font-size: 1.3rem; display: flex; align-items: center; gap: 10px;}
     
     /* NÚT CẬP NHẬT THỦ CÔNG */
-    .refresh-leaderboard-btn { background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease; }
-    .refresh-leaderboard-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; transform: translateY(-1px); }
+    .refresh-leaderboard-btn { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border: none; color: #ffffff; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+    .refresh-leaderboard-btn:hover { background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4); color: #ffffff; }
     .refresh-leaderboard-btn i { transition: transform 0.5s ease; }
     .refresh-leaderboard-btn:active i { transform: rotate(180deg); }
 
@@ -17,22 +17,19 @@
     .podium-avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 6px 15px rgba(0,0,0,0.08); margin-bottom: 12px; background: #fff; z-index: 2; }
     .crown-icon { position: absolute; top: -30px; font-size: 2.3rem; color: #fbbf24; filter: drop-shadow(0 4px 8px rgba(251, 191, 36, 0.4)); animation: floatCrown 2.5s infinite ease-in-out; z-index: 3;}
     
-    /* Đã Fix lỗi cắt tên: thêm flex-shrink, line-height và padding-bottom */
+    /* Chống cắt tên: thêm flex-shrink, line-height và padding-bottom */
     .podium-name { font-weight: 700; font-size: 0.92rem; color: #1e293b; text-align: center; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; flex-shrink: 0; line-height: 1.4; padding-bottom: 2px; }
     
     .podium-xp { font-size: 0.82rem; color: #64748b; font-weight: 700; margin-bottom: 15px; background: #e2e8f0; padding: 3px 10px; border-radius: 10px;}
     .podium-rank-box { width: 100%; text-align: center; padding: 10px 0; font-size: 1.1rem; font-weight: 800; color: white; margin-top: auto; border-radius: 0; letter-spacing: 0.5px;}
     
-    /* Đã nâng height để không ép text */
     .step-1 { height: 260px; z-index: 3; border: 2px solid #fbbf24; border-bottom: none; background: linear-gradient(180deg, #fffdf4 0%, #fef3c7 100%); }
     .step-1 .podium-rank-box { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
     .step-1 .podium-avatar { border-color: #fbbf24; width: 88px; height: 88px; margin-bottom: 12px;}
     
-    /* Đã sửa màu Top 2 thành Bạc Sáng, tăng độ tương phản và chiều cao */
-    .step-2 { height: 220px; z-index: 2; border: 2px solid #94a3b8; border-bottom: none; background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%); }
-    .step-2 .podium-rank-box { background: linear-gradient(135deg, #94a3b8 0%, #475569 100%); text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+    .step-2 { height: 220px; z-index: 2; border: 2px solid #93c5fd; border-bottom: none; background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%); }
+    .step-2 .podium-rank-box { background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: inset 0 2px 4px rgba(255,255,255,0.2); }
     
-    /* Đã nâng height bục Top 3 để không cắt chữ */
     .step-3 { height: 195px; z-index: 1; border: 2px solid #fcd34d; border-bottom: none; background: linear-gradient(180deg, #fffbeb 0%, #fef9c3 100%); }
     .step-3 .podium-rank-box { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
 
