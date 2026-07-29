@@ -275,7 +275,14 @@ function initDOMListeners() {
             e.preventDefault();
             e.stopPropagation();
             if (userDropdown) userDropdown.classList.remove('show');
-            sessionStorage.removeItem('dashboard_user_rank'); 
+            sessionStorage.removeItem('dashboard_user_rank');
+            
+            // XÓA TRẠNG THÁI ONLINE VÀ CACHE ONLINE KHI ĐĂNG XUẤT
+            if (auth.currentUser) {
+                sessionStorage.removeItem(`online_flag_${auth.currentUser.uid}`);
+                updateDoc(doc(db, "users", auth.currentUser.uid), { isOnline: false }).catch(() => {});
+            }
+            
             signOut(auth).catch((error) => alert("Đã xảy ra lỗi khi đăng xuất!"));
             return;
         }
@@ -678,6 +685,18 @@ async function executeAuthUI(user) {
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUserInstance = user; 
+        
+        // TỐI ƯU LƯỢT GHI: Chỉ ghi trạng thái Online lên Firebase nếu phiên (session) này chưa ghi
+        if (!sessionStorage.getItem(`online_flag_${user.uid}`)) {
+            updateDoc(doc(db, "users", user.uid), { isOnline: true }).catch(() => {});
+            sessionStorage.setItem(`online_flag_${user.uid}`, 'true');
+        }
+        
+        // SỰ KIỆN: Cập nhật Offline khi người dùng đóng trình duyệt hoặc tắt tab
+        window.addEventListener('beforeunload', () => {
+            updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
+        });
+
         if (isComponentsLoaded) {
             executeAuthUI(user);
         }
