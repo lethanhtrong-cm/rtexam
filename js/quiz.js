@@ -26,6 +26,9 @@ let isSubmitted = false;
 let currentUser = null; 
 let isShowExplanation = false;
 
+// CỜ THEO DÕI ĐIỀU HƯỚNG ĐỂ CHỐNG XUNG ĐỘT TRẠNG THÁI ONLINE
+let isNavigating = false; 
+
 let timerInterval;
 let examDuration = 15 * 60; 
 let timeRemaining = examDuration;
@@ -63,6 +66,7 @@ const flashcardAPI = initFlashcard(db, () => ({
 }));
 
 async function returnToLobbyOrDashboard() {
+    isNavigating = true; // Kích hoạt cờ để hàm beforeunload bỏ qua việc ghi Offline
     if (currentUser && !isSubmitted) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
@@ -768,6 +772,11 @@ document.getElementById('btn-prev').onclick = () => { if(currentIndex > 0) { cur
 document.getElementById('btn-next').onclick = () => { if(currentIndex < questions.length - 1) { currentIndex++; saveDraft(); renderAll(); } };
 
 document.getElementById('btn-logout').addEventListener('click', () => {
+    isNavigating = true; // NGĂN CHẶN XUNG ĐỘT TRẠNG THÁI KHI ĐĂNG XUẤT
+    if (currentUser) {
+        updateDoc(doc(db, "users", currentUser.uid), { isOnline: false, examStatus: 'idle' }).catch(() => {});
+        sessionStorage.removeItem(`online_flag_${currentUser.uid}`);
+    }
     signOut(auth).then(() => { redirect('index.html'); }).catch((error) => { showToast("Có lỗi xảy ra khi đăng xuất."); });
 });
 
@@ -782,5 +791,20 @@ document.addEventListener('keydown', (e) => {
         if (optionIndex !== undefined && questions[currentIndex].options && optionIndex < questions[currentIndex].options.length) {
             handleOptionSelect(optionIndex); 
         }
+    }
+});
+
+// =========================================================================
+// SỰ KIỆN: XỬ LÝ KHI NGƯỜI DÙNG TẮT TRÌNH DUYỆT / ĐÓNG TAB NGANG
+// =========================================================================
+window.addEventListener('beforeunload', () => {
+    // Chỉ kích hoạt ghi Offline nếu người dùng thực sự đóng tab (không phải điều hướng nội bộ)
+    if (!isNavigating && currentUser) {
+        updateDoc(doc(db, "users", currentUser.uid), { 
+            isOnline: false, 
+            examStatus: 'idle' 
+        }).catch(() => {});
+        // Xóa cờ cache để lần sau mở lại web sẽ tự nhận là Online
+        sessionStorage.removeItem(`online_flag_${currentUser.uid}`);
     }
 });
