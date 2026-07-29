@@ -1,4 +1,4 @@
-import { auth, db } from "./dashboard-core.js";
+import { auth, db } from "./dashboard-core.js"; // Nhớ cập nhật đường dẫn import nếu bạn để file trong thư mục con
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Biến toàn cục để quản lý dữ liệu phân trang
@@ -7,10 +7,20 @@ let currentPage = 1;
 const itemsPerPage = 10;
 let currentUserDataIndex = -1;
 
+// Hằng số định nghĩa thời gian sống của Cache bảng xếp hạng: 15 PHÚT
+const CACHE_TTL_MS = 15 * 60 * 1000; 
+
 // Lắng nghe sự kiện authReady từ hệ thống cốt lõi
 document.addEventListener('authReady', async (e) => {
     const user = e.detail ? e.detail.user : auth.currentUser;
     if (user) {
+        // KIỂM TRA HÀNH ĐỘNG RELOAD (F5) - Làm mới cache nếu tải lại trang
+        const navEntries = performance.getEntriesByType("navigation");
+        if (navEntries.length > 0 && navEntries[0].type === "reload") {
+            sessionStorage.removeItem('leaderboardCache');
+            sessionStorage.removeItem(`userRankCache_${user.uid}`);
+        }
+
         await initLeaderboard(user);
         await updateUserDashboardRank(user); // Cập nhật thứ hạng vào Quick Stats
     }
@@ -24,15 +34,25 @@ document.addEventListener('ComponentsLoaded', async () => {
     }
 });
 
-// Cập nhật thứ hạng của User vào Dashboard Thống kê nhanh
+// Cập nhật thứ hạng của User vào Dashboard Thống kê nhanh (Có áp dụng Cache)
 export async function updateUserDashboardRank(currentUser) {
     const statElement = document.getElementById('statAccountStatus');
-    // Nếu initLeaderboard đã ghi Hạng thành công thì hủy gọi DB để tiết kiệm Read
+    // Chặn gọi DB nếu đã in kết quả thành công
     if (!statElement || statElement.innerHTML.includes('Hạng')) return;
 
-    // ĐÃ GỠ BỎ SESSION STORAGE CACHE ĐỂ DỮ LIỆU LUÔN FRESH (REAL-TIME)
-
     try {
+        const cacheKey = `userRankCache_${currentUser.uid}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        
+        // Dùng cache nếu còn thời hạn
+        if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
+                statElement.innerHTML = `Hạng ${parsed.rank}`;
+                return; // Kết thúc, tốn 0 lượt Read
+            }
+        }
+
         const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         
@@ -52,6 +72,9 @@ export async function updateUserDashboardRank(currentUser) {
         const actualRank = countHigher + 1;
         
         statElement.innerHTML = `Hạng ${actualRank}`;
+        
+        // Lưu lại cache
+        sessionStorage.setItem(cacheKey, JSON.stringify({ rank: actualRank, timestamp: Date.now() }));
     } catch (error) {
         console.error("Lỗi khi cập nhật thứ hạng Dashboard:", error);
         // Giữ nguyên kết quả đúng từ hàm initLeaderboard, không ghi đè lỗi ra UI
@@ -62,23 +85,40 @@ async function initLeaderboard(currentUser) {
     const podiumContainer = document.getElementById('leaderboardPodium');
     const cRankStats = document.getElementById('cRankStats');
 
-    // Ẩn vĩnh viễn thanh Sticky bar khổng lồ cũ nếu nó còn tồn tại ở đâu đó trong HTML
     const oldSticky = document.getElementById('stickyUserRank');
     if (oldSticky) oldSticky.style.display = 'none';
 
     try {
-        // Tải 103 người (3 người Top trên bục, và 100 người cho 10 trang bên dưới)
-        const q = query(
-            collection(db, "users_leaderboard"), 
-            orderBy("totalXP", "desc"), 
-            limit(103) 
-        );
-        const querySnapshot = await getDocs(q);
+        const cacheKey = 'leaderboardCache';
+        const cachedData = sessionStorage.getItem(cacheKey);
+        let useCache = false;
 
-        globalTopUsers = [];
-        querySnapshot.forEach(docSnap => {
-            globalTopUsers.push({ id: docSnap.id, ...docSnap.data() });
-        });
+        // KIỂM TRA BỘ NHỚ ĐỆM (CACHE)
+        if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
+                globalTopUsers = parsed.data;
+                useCache = true;
+            }
+        }
+
+        // TẢI TỪ FIREBASE NẾU KHÔNG CÓ CACHE (Tiêu tốn ~103 Reads)
+        if (!useCache) {
+            const q = query(
+                collection(db, "users_leaderboard"), 
+                orderBy("totalXP", "desc"), 
+                limit(103) 
+            );
+            const querySnapshot = await getDocs(q);
+
+            globalTopUsers = [];
+            querySnapshot.forEach(docSnap => {
+                globalTopUsers.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            // Ghi vào bộ nhớ đệm
+            sessionStorage.setItem(cacheKey, JSON.stringify({ data: globalTopUsers, timestamp: Date.now() }));
+        }
 
         // Tách dữ liệu Top 3 và Danh sách còn lại
         const top3 = globalTopUsers.slice(0, 3);
@@ -116,7 +156,7 @@ async function initLeaderboard(currentUser) {
         // RENDER THÀNH TÍCH CÁ NHÂN GỌN GÀNG
         // ==========================
         currentUserDataIndex = globalTopUsers.findIndex(u => u.id === currentUser.uid);
-        const statElement = document.getElementById('statAccountStatus'); // Nút quick stat ngoài màn hình chính
+        const statElement = document.getElementById('statAccountStatus'); 
         
         if (currentUserDataIndex !== -1) {
             // Nằm trong Top 100
@@ -126,20 +166,21 @@ async function initLeaderboard(currentUser) {
                 <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
                 <span class="rank-badge">Hạng: ${currentRank}</span>
             `;
-            if(statElement) statElement.innerHTML = `Hạng ${currentRank}`; // Cập nhật đồng bộ ra thẻ ngoài
+            if(statElement) statElement.innerHTML = `Hạng ${currentRank}`; 
         } else {
-            // Ngoài Top 100
+            // Ngoài Top 100 - Bắt buộc đọc thêm 1 lượt DB để lấy điểm cá nhân (nếu chưa có cache)
+            let currentXP = 0;
             const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
-            let currentXP = 0;
             if (userDocSnap.exists()) {
                 currentXP = userDocSnap.data().totalXP || 0;
             }
+            
             cRankStats.innerHTML = `
                 <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
                 <span class="rank-badge out-of-rank">Ngoài Top 100</span>
             `;
-            if(statElement) statElement.innerHTML = `Ngoài Top 100`; // Cập nhật đồng bộ ra thẻ ngoài
+            if(statElement) statElement.innerHTML = `Ngoài Top 100`; 
         }
 
         // ==========================
@@ -155,15 +196,12 @@ async function initLeaderboard(currentUser) {
     }
 }
 
-// Xử lý logic nút bấm tiến lùi
 function setupPaginationControls(restUsersList) {
     const btnPrev = document.getElementById('btnPrevPage');
     const btnNext = document.getElementById('btnNextPage');
 
-    // Hiển thị trang đầu tiên
     renderLeaderboardPage(restUsersList, currentPage);
 
-    // Gỡ bỏ sự kiện cũ bằng cách clone nút (chống chồng chéo khi tải lại tab)
     const newBtnPrev = btnPrev.cloneNode(true);
     const newBtnNext = btnNext.cloneNode(true);
     btnPrev.parentNode.replaceChild(newBtnPrev, btnPrev);
@@ -185,7 +223,6 @@ function setupPaginationControls(restUsersList) {
     });
 }
 
-// Kết xuất ra 10 người tương ứng với từng Trang
 function renderLeaderboardPage(restUsersList, page) {
     const tableBody = document.getElementById('leaderboardTableBody');
     const pageIndicator = document.getElementById('pageIndicator');
@@ -203,7 +240,7 @@ function renderLeaderboardPage(restUsersList, page) {
         tableBody.innerHTML = '<div style="text-align: center; color: #64748b; padding: 30px; font-size: 1rem; border: 1px dashed #cbd5e1; border-radius: 12px; margin-top: 10px;">Chưa có đủ dữ liệu học viên.</div>';
     } else {
         pageData.forEach((user, index) => {
-            const actualRank = startIndex + index + 4; // Cộng bù 3 người trên bục
+            const actualRank = startIndex + index + 4; 
             const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=e2e8f0&color=334155`;
             
             tableBody.innerHTML += `
@@ -219,7 +256,6 @@ function renderLeaderboardPage(restUsersList, page) {
         });
     }
 
-    // Cập nhật trạng thái hiển thị Nút
     pageIndicator.innerText = `Trang ${page} / ${maxPage}`;
     btnPrev.disabled = page === 1;
     btnNext.disabled = page === maxPage;
