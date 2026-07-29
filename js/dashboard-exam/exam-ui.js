@@ -148,6 +148,8 @@ export function renderExams() {
                     </div>
                 `;
 
+                const descriptionHtml = `<div style="font-size: 0.85rem; color: #475569; margin-bottom: 15px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border-left: 3px solid #94a3b8;" title="${exam.description || 'Chưa có mô tả chi tiết'}">${exam.description || '<i style="opacity: 0.7;">Đề thi này chưa có mô tả chi tiết.</i>'}</div>`;
+
                 let actionAreaHtml = '';
                 if (isExamVip && !isUserVip) {
                     actionAreaHtml = `
@@ -189,7 +191,7 @@ export function renderExams() {
                     <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: visible; position: relative;">
                         ${hideBtnHtml}
                         <div class="card-body p-4 d-flex flex-column h-100">
-                            ${headerHtml}${mergedTagsHtml}
+                            ${headerHtml}${mergedTagsHtml}${descriptionHtml}
                             <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #6b7280; font-weight: normal; margin-bottom: 20px;">
                                 <div class="rating" style="display: flex; align-items: center; gap: 5px;"><span>${exam.rating}</span> <i class="fa-solid fa-star" style="color: #fbbf24;"></i> <span>(${exam.ratingCount})</span></div>
                                 <div class="attempts" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi</div>
