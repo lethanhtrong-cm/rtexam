@@ -36,7 +36,8 @@ export async function loadExamList() {
                 technique: data.technique || "Hỗn hợp",
                 level: data.level || "Trung bình",
                 createdAt: data.createdAt,
-                examName: data.examName || ""
+                examName: data.examName || "",
+                description: data.description || "" // Lấy dữ liệu mô tả đề thi
             };
         });
 
@@ -63,7 +64,7 @@ export async function loadExamList() {
         cachedExams = [];
         for (const examId in examGroups) {
             const count = examGroups[examId];
-            const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "" };
+            const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "", description: "" };
 
             const fCount = feedbackCounts[examId] || 0;
             const fStars = feedbackStars[examId] || 0;
@@ -72,6 +73,7 @@ export async function loadExamList() {
             cachedExams.push({
                 examId: examId, 
                 examName: config.examName,
+                description: config.description, // Đẩy vào mảng cache
                 count: count, 
                 isVip: config.isVip,
                 timeLimit: config.timeLimit, 
@@ -151,6 +153,9 @@ export function renderExamList() {
         }
         const feedbackBtnClass = exam.feedbackCount > 0 ? "btn-modern-action btn-view-feedback has-feedback" : "btn-modern-action btn-view-feedback";
 
+        // Mã hóa đoạn văn bản mô tả để truyền vào Dataset không bị gãy giao diện HTML
+        const safeDescription = encodeURIComponent(exam.description || "");
+
         const cardDiv = document.createElement('div');
         cardDiv.className = 'exam-premium-card';
         
@@ -182,7 +187,7 @@ export function renderExamList() {
 
             <div class="card-premium-footer">
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn-modern-action btn-edit-properties" data-examid="${exam.examId}" data-examname="${exam.examName}" data-technique="${exam.technique}" data-time="${exam.timeLimit}" data-level="${exam.level}">
+                    <button class="btn-modern-action btn-edit-properties" data-examid="${exam.examId}" data-examname="${exam.examName}" data-technique="${exam.technique}" data-time="${exam.timeLimit}" data-level="${exam.level}" data-description="${safeDescription}">
                         <i class="fa-solid fa-gear"></i> Sửa Thuộc Tính
                     </button>
                     <button class="btn-modern-action btn-edit-content" data-examid="${exam.examId}" style="color: #0284c7; border-color: #bae6fd;">
@@ -277,7 +282,7 @@ function initFilterChangeListeners() {
     }
 }
 
-function openEditPropertiesModal(examId, examName, technique, time, level) {
+function openEditPropertiesModal(examId, examName, technique, time, level, description) {
     currentEditingExamId = examId;
     const modal = document.getElementById('edit-properties-modal');
     if (!modal) return;
@@ -288,6 +293,10 @@ function openEditPropertiesModal(examId, examName, technique, time, level) {
     document.getElementById('edit-select-time').value = time || "15";
     document.getElementById('edit-select-level').value = level || "Trung bình";
     
+    // Gắn giá trị Mô tả vào Textarea
+    const descInput = document.getElementById('edit-exam-description');
+    if (descInput) descInput.value = description || "";
+
     modal.style.display = "block";
 }
 
@@ -310,6 +319,12 @@ async function updateExamProperties() {
             level: document.getElementById('edit-select-level').value,
             isPublic: true 
         };
+
+        // Thu thập mô tả
+        const descInput = document.getElementById('edit-exam-description');
+        if (descInput) {
+            payload.description = descInput.value.trim();
+        }
 
         if (!docSnap.exists() || !docSnap.data().createdAt) {
             payload.createdAt = Date.now();
@@ -536,6 +551,10 @@ async function publishExam() {
     const timeLimitValue = parseInt(document.getElementById('select-time').value, 10);
     const levelValue = document.getElementById('select-level').value;
 
+    // Truy xuất và lưu kèm mô tả (nếu được khai báo tại màn hình import)
+    const descInput = document.getElementById('input-description');
+    const descValue = descInput ? descInput.value.trim() : "";
+
     if (!publishBtn || draftData.length === 0) return;
     if (!confirm(`Bạn có chắc chắn muốn xuất bản ${draftData.length} câu hỏi kèm cấu hình thuộc tính đã chọn không?`)) return;
 
@@ -556,6 +575,7 @@ async function publishExam() {
                 technique: techniqueValue,
                 timeLimit: timeLimitValue,
                 level: levelValue,
+                description: descValue, // Đẩy description lên Firestore
                 isVip: false,
                 isPublic: true,
                 createdAt: Date.now()
@@ -569,6 +589,8 @@ async function publishExam() {
         if (fileInput) fileInput.value = "";
         const fileNameDisplay = document.getElementById('file-name-display');
         if (fileNameDisplay) fileNameDisplay.style.display = "none";
+        
+        if (descInput) descInput.value = ""; // Xóa trắng khung description sau khi publish
         
         renderPreview();
         // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
@@ -619,7 +641,9 @@ document.addEventListener('componentsLoaded', () => {
             const editPropsBtn = e.target.closest('.btn-edit-properties');
             if (editPropsBtn) {
                 const dataset = editPropsBtn.dataset;
-                return openEditPropertiesModal(dataset.examid, dataset.examname, dataset.technique, dataset.time, dataset.level);
+                // Giải mã description trước khi đưa vào modal
+                const description = decodeURIComponent(dataset.description || ""); 
+                return openEditPropertiesModal(dataset.examid, dataset.examname, dataset.technique, dataset.time, dataset.level, description);
             }
             
             // Lắng nghe sự kiện click mở tab Trình Sửa Nội Dung Đề
