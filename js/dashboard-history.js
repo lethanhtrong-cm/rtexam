@@ -63,11 +63,7 @@ async function fetchHistory(email) {
         wrapper.id = 'btnRefreshHistoryWrapper';
         wrapper.style = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;';
         wrapper.innerHTML = `
-            <span style="color: #0369a1; font-weight: 600; font-size: 0.9rem; background: #e0f2fe; padding: 6px 12px; border-radius: 8px; border: 1px solid #bae6fd; box-shadow: 0 2px 4px rgba(3, 105, 161, 0.1);"><i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i> Chỉ thể hiện danh sách 10 lần thi gần nhất</span>
-            <button id="btnRefreshHistory" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16,185,129,0.2);">
-                <i class="fa-solid fa-rotate-right"></i> Cập nhật dữ liệu
-            </button>
-        `;
+            <span style="color: #64748b; font-size: 0.95rem; font-style: italic;"><i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i>* Chỉ thể hiện danh sách 10 lần thi gần nhất</span>
             <button id="btnRefreshHistory" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16,185,129,0.2);">
                 <i class="fa-solid fa-rotate-right"></i> Cập nhật dữ liệu
             </button>
