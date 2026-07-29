@@ -32,10 +32,10 @@ export function initModals() {
         catch (error) { console.error("Lỗi khi ẩn đề thi:", error); alert("Đã xảy ra lỗi khi cố gắng ẩn đề thi."); }
     };
 
-    window.openShareModal = function(examId) {
+   window.openShareModal = function(examId) {
         State.currentShareExamId = examId;
-        const currentUrl = window.location.href;
-        document.getElementById('shareLinkInput').value = `${currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1)}quiz.html?examId=${examId}`;
+        // Cố định link chia sẻ trỏ về tên miền mới theo yêu cầu
+        document.getElementById('shareLinkInput').value = `https://exam.ktv3mien.com/quiz.html?examId=${examId}`;
         document.getElementById('shareEmailInput').value = '';
         document.getElementById('shareExamModal').classList.add('active');
     };
