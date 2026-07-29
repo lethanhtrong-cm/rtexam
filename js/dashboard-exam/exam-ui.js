@@ -148,8 +148,7 @@ export function renderExams() {
                     </div>
                 `;
 
-                const descriptionHtml = `<div style="font-size: 0.85rem; color: #475569; margin-bottom: 15px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border-left: 3px solid #94a3b8;" title="${exam.description || 'Chưa có mô tả chi tiết'}">${exam.description || '<i style="opacity: 0.7;">Đề thi này chưa có mô tả chi tiết.</i>'}</div>`;
-
+                const descriptionHtml = `<div style="font-size: 0.85rem; color: #334155; margin-bottom: 15px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; background: #eff6ff; padding: 10px 12px; border-radius: 8px; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.05);" title="${exam.description || 'Chưa có mô tả chi tiết'}">${exam.description || '<i style="opacity: 0.7;">Đề thi này chưa có mô tả chi tiết.</i>'}</div>`;
                 let actionAreaHtml = '';
                 if (isExamVip && !isUserVip) {
                     actionAreaHtml = `
