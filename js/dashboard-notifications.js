@@ -39,14 +39,52 @@ document.addEventListener('ComponentsLoaded', () => {
 });
 
 // =========================================================================
-// 2. LẮNG NGHE REAL-TIME KHI USER ĐĂNG NHẬP
+// 2. LẮNG NGHE REAL-TIME KHI USER ĐĂNG NHẬP & KIỂM TRA NGƯỜI MỚI
 // =========================================================================
 document.addEventListener('authReady', (e) => {
     const user = e.detail ? e.detail.user : auth.currentUser;
     if (user && user.email) {
         initNotifications(user.email);
+        checkAndShowWelcomeModal(user); // GỌI HÀM KIỂM TRA VÀ HIỂN THỊ CHÀO MỪNG
     }
 });
+
+// HÀM MỚI: Hiển thị thông báo chào mừng cho người dùng lần đầu
+function checkAndShowWelcomeModal(user) {
+    const welcomeKey = `hasSeenWelcome_${user.uid}`;
+    
+    if (!localStorage.getItem(welcomeKey)) {
+        const welcomeHtml = `
+            <div id="welcome-new-user-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); z-index: 100000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+                <div style="background: white; width: 90%; max-width: 450px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; animation: welcomePopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                    <div style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%); padding: 30px 20px; text-align: center; color: white;">
+                        <i class="fa-solid fa-hands-clapping fa-bounce" style="font-size: 3.5rem; margin-bottom: 15px; color: #fde047;"></i>
+                        <h2 style="margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: 0.5px;">Chào mừng bạn mới!</h2>
+                    </div>
+                    <div style="padding: 30px; text-align: center; color: #334155; font-size: 1.05rem; line-height: 1.6;">
+                        <p style="margin-bottom: 20px;">Cảm ơn bạn đã tham gia hệ thống trắc nghiệm <b>RT-quiz</b>. Chúng tôi đã chuẩn bị sẵn rất nhiều đề thi thú vị để giúp bạn nâng cao kiến thức.</p>
+                        <p style="margin-bottom: 0;">Chúc bạn có những giờ phút học tập thật hiệu quả!</p>
+                    </div>
+                    <div style="padding: 20px 30px 30px; text-align: center;">
+                        <button onclick="document.getElementById('welcome-new-user-modal').remove()" style="background: #2563eb; color: white; border: none; padding: 12px 35px; border-radius: 50px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);">
+                            Bắt đầu ngay <i class="fa-solid fa-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <style>
+                @keyframes welcomePopIn { 
+                    0% { opacity: 0; transform: scale(0.8); } 
+                    100% { opacity: 1; transform: scale(1); } 
+                }
+            </style>
+        `;
+        document.body.insertAdjacentHTML('beforeend', welcomeHtml);
+        
+        // Đánh dấu là đã xem để không hiện lại ở các lần F5 sau
+        localStorage.setItem(welcomeKey, 'true');
+    }
+}
 
 function initNotifications(userEmail) {
     const notiListContainer = document.getElementById('notiListContainer');
