@@ -15,7 +15,11 @@ import { openNotificationModal, sendNotification } from './admin-users-notify.js
 let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
-let isUserListLoaded = false; // CỜ CACHE CHỐNG TRÀN QUOTA DỮ LIỆU USER
+let currentSortMethod = "newest"; // Tiêu chí sắp xếp mặc định
+
+let isUserListLoaded = false; 
+let isResultsLoaded = false; 
+let globalUserStats = {}; // Lưu trữ điểm TB và XP trong RAM (Tiết kiệm Read)
 
 let currentPage = 1;
 const itemsPerPage = 20;
@@ -44,30 +48,52 @@ function formatDateTime(timestamp) {
     return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
 }
 
-// Bổ sung tham số forceRefresh để phân luồng tải
 export async function loadUserList(forceRefresh = false) {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    // NẾU KHÔNG ÉP TẢI LẠI VÀ ĐÃ CÓ DATA -> VẼ LUÔN TỪ CACHE, KHÔNG ĐỌC DB
+    // Tận dụng Cache 100% nếu không ép tải lại
     if (!forceRefresh && isUserListLoaded) {
         renderUserList();
         return;
     }
 
-    // Không làm trắng bảng nếu đang forceRefresh để tránh giật UI, chỉ đổi text nếu load lần đầu
     if (!isUserListLoaded) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading-text">⏳ Đang tải dữ liệu học viên...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="loading-text">⏳ Đang tải và phân tích dữ liệu học viên...</td></tr>';
     }
 
     try {
-        const snapshot = await getDocs(collection(db, "users"));
-        cachedUsers = [];
+        // TẢI SONG SONG USERS VÀ RESULTS (Chỉ tải Results nếu chưa có hoặc ép làm mới để tối ưu Quota)
+        let promises = [getDocs(collection(db, "users"))];
+        if (!isResultsLoaded || forceRefresh) {
+            promises.push(getDocs(collection(db, "results")));
+        }
+
+        const snapshots = await Promise.all(promises);
+        const usersSnap = snapshots[0];
         
+        // Phân tích điểm và XP trên RAM (Không tốn thêm request)
+        if (snapshots[1]) {
+            globalUserStats = {};
+            snapshots[1].forEach(docSnap => {
+                const data = docSnap.data();
+                const email = data.email;
+                if (!email) return;
+                
+                if (!globalUserStats[email]) globalUserStats[email] = { totalScore: 0, totalXp: 0, count: 0 };
+                
+                globalUserStats[email].totalScore += (parseFloat(data.score) || 0);
+                globalUserStats[email].totalXp += (parseFloat(data.xp) || 0); 
+                globalUserStats[email].count += 1;
+            });
+            isResultsLoaded = true;
+        }
+
+        cachedUsers = [];
         let totalUsersCount = 0;
         let totalVipsCount = 0;
 
-        snapshot.forEach((docSnap) => {
+        usersSnap.forEach((docSnap) => {
             const user = docSnap.data();
             const userId = docSnap.id;
             const email = user.email || 'Chưa cập nhật';
@@ -78,7 +104,15 @@ export async function loadUserList(forceRefresh = false) {
             const totalTokensUsed = user.totalTokensUsed || 0;
             const examStatus = user.examStatus || 'none'; 
 
-            // Xử lý bù đắp ngày giờ (Fix lỗi acc cũ)
+            // Logic tính toán Điểm Trung Bình & XP cho từng user
+            const userStats = globalUserStats[email] || { totalScore: 0, totalXp: 0, count: 0 };
+            const computedAvgScore = userStats.count > 0 ? (userStats.totalScore / userStats.count) : 0;
+            
+            // Ưu tiên lấy XP từ user doc nếu có lưu thẳng trên DB, không thì tính tổng từ các bài làm
+            const finalAvgScore = user.avgScore !== undefined ? user.avgScore : computedAvgScore;
+            const finalXp = user.xp !== undefined ? user.xp : userStats.totalXp;
+
+            // Xử lý bù đắp ngày giờ
             let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp;
             if (!createdAtRaw) {
                 createdAtRaw = Date.now();
@@ -102,6 +136,8 @@ export async function loadUserList(forceRefresh = false) {
                 examStatus: examStatus,
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
+                avgScore: finalAvgScore, 
+                xp: finalXp, 
                 createdAtMs: createdAtMs, 
                 createdAt: createdAtRaw,
                 vipActivationDate: user.vipActivationDate || null,
@@ -115,9 +151,8 @@ export async function loadUserList(forceRefresh = false) {
         if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
         if (totalVipUsersEl) totalVipUsersEl.innerText = totalVipsCount;
 
-        isUserListLoaded = true; // Lưu cờ thành công
+        isUserListLoaded = true;
         selectedUserIds.clear();
-        // Không reset currentPage = 1 ở đây để giữ nguyên trang hiện tại khi bấm Cập nhật
         
         injectTableHeadersAndToolbar(); 
         renderUserList();
@@ -153,6 +188,26 @@ function injectTableHeadersAndToolbar() {
         if(ths.length > 2) ths[2].style.width = '40%';
         if(ths.length > 3) ths[3].style.width = '15%';
         if(ths.length > 4) ths[4].style.width = '35%';
+    }
+
+    // TẠO ĐỘNG GIAO DIỆN BỘ LỌC SORT
+    const filterSelect = document.getElementById('filterSelect');
+    if (filterSelect && !document.getElementById('sortSelect')) {
+        const sortSelect = document.createElement('select');
+        sortSelect.id = 'sortSelect';
+        sortSelect.className = filterSelect.className; // Mượn style CSS của thẻ lọc trạng thái
+        sortSelect.style.marginRight = '10px';
+        sortSelect.innerHTML = `
+            <option value="newest">Ngày ĐK gần nhất</option>
+            <option value="avgScore">Điểm TB cao nhất</option>
+            <option value="xp">XP cao nhất</option>
+        `;
+        sortSelect.addEventListener('change', (e) => {
+            currentSortMethod = e.target.value;
+            currentPage = 1; // Reset trang khi đổi kiểu xếp hạng
+            renderUserList();
+        });
+        filterSelect.parentNode.insertBefore(sortSelect, filterSelect);
     }
 
     const selectAllCb = document.getElementById('selectAllUsers');
@@ -210,11 +265,19 @@ export function renderUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    let sortedUsers = [...cachedUsers].sort((a, b) => b.createdAtMs - a.createdAtMs);
+    let sortedUsers = [...cachedUsers];
+    
+    // ÁP DỤNG THUẬT TOÁN SẮP XẾP THEO YÊU CẦU
+    if (currentSortMethod === "newest") {
+        sortedUsers.sort((a, b) => b.createdAtMs - a.createdAtMs);
+    } else if (currentSortMethod === "avgScore") {
+        sortedUsers.sort((a, b) => b.avgScore - a.avgScore);
+    } else if (currentSortMethod === "xp") {
+        sortedUsers.sort((a, b) => b.xp - a.xp);
+    }
 
     const filteredUsers = sortedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
-        // Bắt điều kiện currentFilterStatus tương thích với trạng thái testing
         const matchStatus = currentFilterStatus === "all" || (currentFilterStatus === "testing" ? user.examStatus === "testing" : user.statusKey === currentFilterStatus);
         return matchSearch && matchStatus;
     });
@@ -261,6 +324,10 @@ export function renderUserList() {
         const testingBadgeHtml = user.examStatus === 'testing'
             ? `<span style="font-size: 11px; color: #d97706; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef3c7; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-pen-clip"></i> Đang thi</span>`
             : '';
+
+        // UI ĐIỂM TRUNG BÌNH & XP
+        const scoreBadgeHtml = `<span style="font-size: 11px; color: #4338ca; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0e7ff; padding: 2px 6px; border-radius: 6px;" title="Điểm trung bình (ĐTB)"><i class="fa-solid fa-star"></i> ĐTB: ${user.avgScore.toFixed(2)}</span>`;
+        const xpBadgeHtml = `<span style="font-size: 11px; color: #a16207; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef08a; padding: 2px 6px; border-radius: 6px;" title="Kinh nghiệm"><i class="fa-solid fa-bolt"></i> XP: ${Math.round(user.xp)}</span>`;
 
         const hasPendingRequest = pendingVIPRequests.has(user.userId);
         const pendingBadge = hasPendingRequest 
@@ -333,7 +400,7 @@ export function renderUserList() {
                     </div>
                     <div>
                         <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
-                            ${user.email} ${onlineStatusHtml} ${testingBadgeHtml} ${pendingBadge} ${costBadgeHtml}
+                            ${user.email} ${onlineStatusHtml} ${testingBadgeHtml} ${scoreBadgeHtml} ${xpBadgeHtml} ${pendingBadge} ${costBadgeHtml}
                         </div>
                         ${datesHtml}
                     </div>
@@ -538,7 +605,6 @@ document.addEventListener('componentsLoaded', () => {
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        // Tích hợp Nút Cập nhật thủ công không reset trạng thái bộ lọc
         if (!document.getElementById('btnRefreshUsers')) {
             const refreshBtn = document.createElement('button');
             refreshBtn.id = 'btnRefreshUsers';
@@ -550,7 +616,7 @@ document.addEventListener('componentsLoaded', () => {
             refreshBtn.onclick = async () => {
                 refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
                 refreshBtn.disabled = true;
-                await loadUserList(true); // Ép Firebase fetch data mới
+                await loadUserList(true); 
                 refreshBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Cập Nhật';
                 refreshBtn.disabled = false;
             };
