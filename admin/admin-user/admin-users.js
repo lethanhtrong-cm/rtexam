@@ -7,6 +7,7 @@ import {
     collection, onSnapshot, doc, updateDoc, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// IMPORT CÁC MODULE ĐÃ ĐƯỢC PHÂN TÁCH (Cùng thư mục admin-user)
 import { getCostBadgeHtml } from './admin-billing.js';
 import { handleViewHistory } from './admin-history.js';
 import { openNotificationModal, sendNotification } from './admin-users-notify.js';
@@ -14,16 +15,14 @@ import { openNotificationModal, sendNotification } from './admin-users-notify.js
 let cachedUsers = [];
 let currentSearchQuery = "";
 let currentFilterStatus = "all";
-let currentSortMethod = "newest"; // Tiêu chí sắp xếp mặc định
+let currentSortMethod = "newest"; 
 
 let isUserListLoaded = false; 
-// Cờ Cache cho 2 bảng phụ
 let isResultsLoaded = false; 
 let isLeaderboardLoaded = false; 
 
-// Lưu trữ dữ liệu thống kê trong RAM để ghép nối
-let globalResultsStats = {}; // Lưu Điểm TB
-let globalLeaderboardStats = {}; // Lưu XP
+let globalResultsStats = {}; 
+let globalLeaderboardStats = {}; 
 
 let currentPage = 1;
 const itemsPerPage = 20;
@@ -66,7 +65,6 @@ export async function loadUserList(forceRefresh = false) {
     }
 
     try {
-        // 1. TẢI SONG SONG CÁC BẢNG (Tiết kiệm Request bằng Promise.all)
         let promises = [getDocs(collection(db, "users"))];
         
         let resultsIndex = -1;
@@ -85,7 +83,6 @@ export async function loadUserList(forceRefresh = false) {
         const snapshots = await Promise.all(promises);
         const usersSnap = snapshots[0];
         
-        // 2. PHÂN TÍCH ĐIỂM TRUNG BÌNH TỪ BẢNG RESULTS
         if (resultsIndex !== -1) {
             globalResultsStats = {};
             snapshots[resultsIndex].forEach(docSnap => {
@@ -100,7 +97,6 @@ export async function loadUserList(forceRefresh = false) {
             isResultsLoaded = true;
         }
 
-        // 3. LẤY TỔNG XP TỪ BẢNG USERS_LEADERBOARD
         if (leaderboardIndex !== -1) {
             globalLeaderboardStats = {};
             snapshots[leaderboardIndex].forEach(docSnap => {
@@ -109,7 +105,6 @@ export async function loadUserList(forceRefresh = false) {
             isLeaderboardLoaded = true;
         }
 
-        // 4. GHÉP NỐI DỮ LIỆU CHUẨN BỊ RENDER
         cachedUsers = [];
         let totalUsersCount = 0;
         let totalVipsCount = 0;
@@ -125,7 +120,6 @@ export async function loadUserList(forceRefresh = false) {
             const totalTokensUsed = user.totalTokensUsed || 0;
             const examStatus = user.examStatus || 'none'; 
 
-            // Lấy Điểm TB (từ Map email) và XP (từ Map uid)
             const rStats = globalResultsStats[email] || { totalScore: 0, count: 0 };
             const finalAvgScore = rStats.count > 0 ? (rStats.totalScore / rStats.count) : 0;
             const finalXp = globalLeaderboardStats[userId] || 0;
@@ -172,6 +166,7 @@ export async function loadUserList(forceRefresh = false) {
         selectedUserIds.clear();
         
         injectTableHeadersAndToolbar(); 
+        // Tuyệt đối không gán currentPage = 1 ở đây để giữ trang hiện tại khi Cập nhật dữ liệu
         renderUserList();
         
     } catch (error) {
@@ -220,7 +215,7 @@ function injectTableHeadersAndToolbar() {
         `;
         sortSelect.addEventListener('change', (e) => {
             currentSortMethod = e.target.value;
-            currentPage = 1; 
+            currentPage = 1; // Đổi cách sắp xếp thì mới về trang 1
             renderUserList();
         });
         filterSelect.parentNode.insertBefore(sortSelect, filterSelect);
@@ -309,6 +304,8 @@ export function renderUserList() {
 
     const totalItems = filteredUsers.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    // Bảo vệ trang hiện tại: Không để trang lớn hơn tổng số trang thực tế
     if (currentPage < 1) currentPage = 1;
     if (currentPage > totalPages) currentPage = totalPages;
 
@@ -506,7 +503,24 @@ async function handleToggleVip(userId, currentVipStatus) {
             });
         }
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
-        loadUserList(true); 
+        
+        // Tối ưu Quota: Cập nhật RAM nội bộ
+        const u = cachedUsers.find(user => user.userId === userId);
+        if (u) {
+            u.isVip = newVipStatus;
+            u.statusKey = newVipStatus ? 'vip' : 'normal';
+            if (newVipStatus) {
+                u.vipActivationDate = updates.vipActivationDate;
+                u.vipExpirationDate = updates.vipExpirationDate;
+            } else {
+                u.vipActivationDate = null;
+                u.vipExpirationDate = null;
+            }
+        }
+        
+        // Ghi chú: Gọi renderUserList tự động dùng lại biến currentPage hiện tại, KHÔNG nhảy về trang 1
+        renderUserList(); 
+        
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
@@ -522,7 +536,17 @@ async function handleToggleBan(userId, currentBannedStatus) {
         const newBannedStatus = !currentBannedStatus;
         await updateDoc(userRef, { isBanned: newBannedStatus });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
-        loadUserList(true); 
+        
+        // Tối ưu Quota: Cập nhật RAM nội bộ
+        const u = cachedUsers.find(user => user.userId === userId);
+        if (u) {
+            u.isBanned = newBannedStatus;
+            u.statusKey = newBannedStatus ? 'banned' : (u.isVip ? 'vip' : 'normal');
+        }
+        
+        // Ghi chú: Giữ nguyên trang hiện tại, KHÔNG nhảy về trang 1
+        renderUserList(); 
+        
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
         showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
@@ -577,8 +601,33 @@ async function handleBulkAction(actionType) {
     try {
         await Promise.all(promises);
         showToast(`Đã thực thi thao tác thành công trên ${count} tài khoản!`, "success");
+        
+        // Tối ưu Quota: Cập nhật RAM nội bộ
+        selectedUserIds.forEach(id => {
+            const u = cachedUsers.find(user => user.userId === id);
+            if (!u) return;
+            if (isVipAction) {
+                u.isVip = !u.isVip;
+                u.statusKey = u.isVip ? 'vip' : 'normal';
+                if (u.isVip) {
+                    u.vipActivationDate = Date.now();
+                    u.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
+                } else {
+                    u.vipActivationDate = null;
+                    u.vipExpirationDate = null;
+                }
+            }
+            if (isBanAction) {
+                u.isBanned = !u.isBanned;
+                if (u.isBanned) u.statusKey = 'banned';
+                else u.statusKey = u.isVip ? 'vip' : 'normal';
+            }
+        });
+        
         selectedUserIds.clear();
-        loadUserList(true); 
+        
+        // Ghi chú: Giữ nguyên trang hiện tại, KHÔNG nhảy về trang 1
+        renderUserList(); 
     } catch(err) {
         console.error("Lỗi bulk actions:", err);
         showToast("Lỗi khi thực thi hàng loạt", "error");
@@ -603,7 +652,7 @@ document.addEventListener('componentsLoaded', () => {
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.trim().toLowerCase();
-            currentPage = 1;
+            currentPage = 1; // Chỉ nhảy về 1 khi tìm kiếm thủ công
             renderUserList(); 
         });
     }
@@ -612,7 +661,7 @@ document.addEventListener('componentsLoaded', () => {
     if (filterSelect) {
         filterSelect.addEventListener('change', (e) => {
             currentFilterStatus = e.target.value;
-            currentPage = 1;
+            currentPage = 1; // Chỉ nhảy về 1 khi đổi bộ lọc
             renderUserList();
         });
     }
