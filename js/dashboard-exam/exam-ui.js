@@ -54,10 +54,19 @@ export function renderExams() {
 
         const isUserVip = State.currentUserData && State.currentUserData.isVip === true;
 
-        const groups = [
-            { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
-            { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && ((State.completedExams[exam.id].score / (State.completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) },
-            
+        // Tạo mảng groups động dựa trên Tab hiện tại
+        let groups = [];
+        
+        // CHỈ HIỂN THỊ ĐỀ HOT VÀ ĐỀ CẦN ÔN TẬP KHI Ở TAB "TẤT CẢ"
+        if (State.currentTechnique === 'all') {
+            groups.push(
+                { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
+                { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && ((State.completedExams[exam.id].score / (State.completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) }
+            );
+        }
+
+        // Bổ sung các nhóm kỹ thuật còn lại
+        groups.push(
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Trung bình') },
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Khó') },
@@ -73,7 +82,7 @@ export function renderExams() {
             { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Dễ') },
             { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Trung bình') },
             { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Khó') }
-        ];
+        );
 
         let currentMainCategoryTracker = null;
 
@@ -149,6 +158,7 @@ export function renderExams() {
                 `;
 
                 const descriptionHtml = `<div style="font-size: 0.85rem; color: #334155; margin-bottom: 15px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; background: #eff6ff; padding: 10px 12px; border-radius: 8px; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.05);" title="${exam.description || 'Chưa có mô tả chi tiết'}">${exam.description || '<i style="opacity: 0.7;">Đề thi này chưa có mô tả chi tiết.</i>'}</div>`;
+
                 let actionAreaHtml = '';
                 if (isExamVip && !isUserVip) {
                     actionAreaHtml = `
