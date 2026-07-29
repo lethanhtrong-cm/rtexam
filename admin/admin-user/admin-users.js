@@ -6,6 +6,7 @@ import { db, showToast } from '../admin-core.js';
 import { 
     collection, onSnapshot, doc, updateDoc, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // IMPORT CÁC MODULE ĐÃ ĐƯỢC PHÂN TÁCH (Cùng thư mục admin-user)
 import { getCostBadgeHtml } from './admin-billing.js';
@@ -83,6 +84,10 @@ export async function loadUserList(forceRefresh = false) {
         const snapshots = await Promise.all(promises);
         const usersSnap = snapshots[0];
         
+        // Trích xuất Email Admin hiện tại
+        const auth = getAuth();
+        const currentAdminEmail = auth.currentUser ? auth.currentUser.email : null;
+
         if (resultsIndex !== -1) {
             globalResultsStats = {};
             snapshots[resultsIndex].forEach(docSnap => {
@@ -116,12 +121,19 @@ export async function loadUserList(forceRefresh = false) {
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
             
-            const isOnline = (user.isOnline === true || user.isOnline === "true"); 
+            // Xử lý logic Đang Trực Tuyến và Admin
+            let isOnline = false;
+            if (user.isOnline === true || user.isOnline === "true" || user.isOnline === 1) {
+                isOnline = true;
+            }
+            if (currentAdminEmail && email === currentAdminEmail) {
+                isOnline = true;
+            }
+
             const totalTokensUsed = user.totalTokensUsed || 0;
             const examStatus = user.examStatus || 'none'; 
-            
-            // Sửa lỗi: File bài thi (quiz.js) chưa đẩy lệnh isOnline=true lên Database.
-            // Do đó ta đảo logic: Nếu Database ghi nhận đang thi -> Tự động ép Online trên giao diện Admin.
+
+            // Logic đảo: Nếu đang thi thì chắc chắn là Online
             if (examStatus === 'testing') {
                 isOnline = true;
             }
@@ -209,7 +221,6 @@ function injectTableHeadersAndToolbar() {
 
     const filterSelect = document.getElementById('filterSelect');
     
-    // Tự động chèn thêm lựa chọn "Đang trực tuyến" vào bộ lọc nếu chưa có
     if (filterSelect && !filterSelect.querySelector('option[value="online"]')) {
         const onlineOption = document.createElement('option');
         onlineOption.value = 'online';
@@ -303,11 +314,16 @@ export function renderUserList() {
     const filteredUsers = sortedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
         
-        // Cập nhật điều kiện lọc cho cả trạng thái testing và online
-        const matchStatus = currentFilterStatus === "all" || 
-                            (currentFilterStatus === "testing" ? user.examStatus === "testing" : 
-                            (currentFilterStatus === "online" ? user.isOnline === true : 
-                            user.statusKey === currentFilterStatus));
+        let matchStatus = false;
+        if (currentFilterStatus === "all") {
+            matchStatus = true;
+        } else if (currentFilterStatus === "testing") {
+            matchStatus = (user.examStatus === "testing");
+        } else if (currentFilterStatus === "online") {
+            matchStatus = (user.isOnline === true);
+        } else {
+            matchStatus = (user.statusKey === currentFilterStatus);
+        }
                             
         return matchSearch && matchStatus;
     });
