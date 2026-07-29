@@ -4,14 +4,14 @@
 </div>
 <nav class="sidebar-menu">
 
-    <!-- MENU DASHBOARD MỚI THÊM VÀO TRÊN CÙNG -->
+    <!-- Bảng Điều Khiển không còn bật mặc định -->
     <div class="menu-group">
-        <button class="menu-parent open">
+        <button class="menu-parent">
             <span class="parent-title">📊 Bảng Điều Khiển</span>
             <span class="arrow-icon">▼</span>
         </button>
-        <div class="submenu show">
-            <button class="menu-item active" data-target="tab-dashboard" data-title="Thống Kê Tổng Quan Hệ Thống">
+        <div class="submenu">
+            <button class="menu-item" data-target="tab-dashboard" data-title="Thống Kê Tổng Quan Hệ Thống">
                 📈 Tổng quan Thống kê
             </button>
         </div>
@@ -41,13 +41,14 @@
         </div>
     </div>
 
+    <!-- Nhóm Quản Lý Người Dùng được bật và mở (active, open, show) mặc định -->
     <div class="menu-group">
-        <button class="menu-parent">
+        <button class="menu-parent open">
             <span class="parent-title">👥 Quản Lý Người Dùng</span>
             <span class="arrow-icon">▼</span>
         </button>
-        <div class="submenu">
-            <button class="menu-item" data-target="tab-user-list" data-title="Danh Sách Thành Viên & Cấp Quyền VIP">
+        <div class="submenu show">
+            <button class="menu-item active" data-target="tab-user-list" data-title="Danh Sách Thành Viên & Cấp Quyền VIP">
                 📄 Danh sách người dùng
             </button>
         </div>
