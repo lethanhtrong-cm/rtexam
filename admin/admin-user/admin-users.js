@@ -131,11 +131,12 @@ export async function loadUserList(forceRefresh = false) {
             }
 
             const totalTokensUsed = user.totalTokensUsed || 0;
-            const examStatus = user.examStatus || 'none'; 
+            let examStatus = user.examStatus || 'none'; 
 
-            // Logic đảo: Nếu đang thi thì chắc chắn là Online
-            if (examStatus === 'testing') {
-                isOnline = true;
+            // Ràng buộc chặt chẽ (Chống kẹt): Trạng thái Đang thi CHỈ CÓ HIỆU LỰC khi thực sự Online
+            // Nếu người dùng tắt ngang tab/rớt mạng (isOnline = false) -> Xóa huy hiệu Đang thi trên Admin
+            if (!isOnline) {
+                examStatus = 'none';
             }
 
             const rStats = globalResultsStats[email] || { totalScore: 0, count: 0 };
