@@ -7,7 +7,6 @@ import {
     collection, onSnapshot, doc, updateDoc, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// IMPORT CÁC MODULE ĐÃ ĐƯỢC PHÂN TÁCH (Cùng thư mục admin-user)
 import { getCostBadgeHtml } from './admin-billing.js';
 import { handleViewHistory } from './admin-history.js';
 import { openNotificationModal, sendNotification } from './admin-users-notify.js';
@@ -18,8 +17,13 @@ let currentFilterStatus = "all";
 let currentSortMethod = "newest"; // Tiêu chí sắp xếp mặc định
 
 let isUserListLoaded = false; 
+// Cờ Cache cho 2 bảng phụ
 let isResultsLoaded = false; 
-let globalUserStats = {}; // Lưu trữ điểm TB và XP trong RAM (Tiết kiệm Read)
+let isLeaderboardLoaded = false; 
+
+// Lưu trữ dữ liệu thống kê trong RAM để ghép nối
+let globalResultsStats = {}; // Lưu Điểm TB
+let globalLeaderboardStats = {}; // Lưu XP
 
 let currentPage = 1;
 const itemsPerPage = 20;
@@ -52,43 +56,60 @@ export async function loadUserList(forceRefresh = false) {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
 
-    // Tận dụng Cache 100% nếu không ép tải lại
     if (!forceRefresh && isUserListLoaded) {
         renderUserList();
         return;
     }
 
     if (!isUserListLoaded) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading-text">⏳ Đang tải và phân tích dữ liệu học viên...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="loading-text">⏳ Đang tải và phân tích dữ liệu học viên (Tối ưu Quota)...</td></tr>';
     }
 
     try {
-        // TẢI SONG SONG USERS VÀ RESULTS (Chỉ tải Results nếu chưa có hoặc ép làm mới để tối ưu Quota)
+        // 1. TẢI SONG SONG CÁC BẢNG (Tiết kiệm Request bằng Promise.all)
         let promises = [getDocs(collection(db, "users"))];
+        
+        let resultsIndex = -1;
+        let leaderboardIndex = -1;
+
         if (!isResultsLoaded || forceRefresh) {
             promises.push(getDocs(collection(db, "results")));
+            resultsIndex = promises.length - 1;
+        }
+        
+        if (!isLeaderboardLoaded || forceRefresh) {
+            promises.push(getDocs(collection(db, "users_leaderboard")));
+            leaderboardIndex = promises.length - 1;
         }
 
         const snapshots = await Promise.all(promises);
         const usersSnap = snapshots[0];
         
-        // Phân tích điểm và XP trên RAM (Không tốn thêm request)
-        if (snapshots[1]) {
-            globalUserStats = {};
-            snapshots[1].forEach(docSnap => {
+        // 2. PHÂN TÍCH ĐIỂM TRUNG BÌNH TỪ BẢNG RESULTS
+        if (resultsIndex !== -1) {
+            globalResultsStats = {};
+            snapshots[resultsIndex].forEach(docSnap => {
                 const data = docSnap.data();
                 const email = data.email;
                 if (!email) return;
                 
-                if (!globalUserStats[email]) globalUserStats[email] = { totalScore: 0, totalXp: 0, count: 0 };
-                
-                globalUserStats[email].totalScore += (parseFloat(data.score) || 0);
-                globalUserStats[email].totalXp += (parseFloat(data.xp) || 0); 
-                globalUserStats[email].count += 1;
+                if (!globalResultsStats[email]) globalResultsStats[email] = { totalScore: 0, count: 0 };
+                globalResultsStats[email].totalScore += (parseFloat(data.score) || 0);
+                globalResultsStats[email].count += 1;
             });
             isResultsLoaded = true;
         }
 
+        // 3. LẤY TỔNG XP TỪ BẢNG USERS_LEADERBOARD
+        if (leaderboardIndex !== -1) {
+            globalLeaderboardStats = {};
+            snapshots[leaderboardIndex].forEach(docSnap => {
+                globalLeaderboardStats[docSnap.id] = docSnap.data().totalXP || 0;
+            });
+            isLeaderboardLoaded = true;
+        }
+
+        // 4. GHÉP NỐI DỮ LIỆU CHUẨN BỊ RENDER
         cachedUsers = [];
         let totalUsersCount = 0;
         let totalVipsCount = 0;
@@ -104,15 +125,11 @@ export async function loadUserList(forceRefresh = false) {
             const totalTokensUsed = user.totalTokensUsed || 0;
             const examStatus = user.examStatus || 'none'; 
 
-            // Logic tính toán Điểm Trung Bình & XP cho từng user
-            const userStats = globalUserStats[email] || { totalScore: 0, totalXp: 0, count: 0 };
-            const computedAvgScore = userStats.count > 0 ? (userStats.totalScore / userStats.count) : 0;
-            
-            // Ưu tiên lấy XP từ user doc nếu có lưu thẳng trên DB, không thì tính tổng từ các bài làm
-            const finalAvgScore = user.avgScore !== undefined ? user.avgScore : computedAvgScore;
-            const finalXp = user.xp !== undefined ? user.xp : userStats.totalXp;
+            // Lấy Điểm TB (từ Map email) và XP (từ Map uid)
+            const rStats = globalResultsStats[email] || { totalScore: 0, count: 0 };
+            const finalAvgScore = rStats.count > 0 ? (rStats.totalScore / rStats.count) : 0;
+            const finalXp = globalLeaderboardStats[userId] || 0;
 
-            // Xử lý bù đắp ngày giờ
             let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp;
             if (!createdAtRaw) {
                 createdAtRaw = Date.now();
@@ -190,21 +207,20 @@ function injectTableHeadersAndToolbar() {
         if(ths.length > 4) ths[4].style.width = '35%';
     }
 
-    // TẠO ĐỘNG GIAO DIỆN BỘ LỌC SORT
     const filterSelect = document.getElementById('filterSelect');
     if (filterSelect && !document.getElementById('sortSelect')) {
         const sortSelect = document.createElement('select');
         sortSelect.id = 'sortSelect';
-        sortSelect.className = filterSelect.className; // Mượn style CSS của thẻ lọc trạng thái
+        sortSelect.className = filterSelect.className; 
         sortSelect.style.marginRight = '10px';
         sortSelect.innerHTML = `
-            <option value="newest">Ngày ĐK gần nhất</option>
-            <option value="avgScore">Điểm TB cao nhất</option>
-            <option value="xp">XP cao nhất</option>
+            <option value="newest">Sắp xếp: Ngày ĐK gần nhất</option>
+            <option value="avgScore">Sắp xếp: Điểm TB cao nhất</option>
+            <option value="xp">Sắp xếp: XP cao nhất</option>
         `;
         sortSelect.addEventListener('change', (e) => {
             currentSortMethod = e.target.value;
-            currentPage = 1; // Reset trang khi đổi kiểu xếp hạng
+            currentPage = 1; 
             renderUserList();
         });
         filterSelect.parentNode.insertBefore(sortSelect, filterSelect);
@@ -267,7 +283,6 @@ export function renderUserList() {
 
     let sortedUsers = [...cachedUsers];
     
-    // ÁP DỤNG THUẬT TOÁN SẮP XẾP THEO YÊU CẦU
     if (currentSortMethod === "newest") {
         sortedUsers.sort((a, b) => b.createdAtMs - a.createdAtMs);
     } else if (currentSortMethod === "avgScore") {
@@ -325,9 +340,8 @@ export function renderUserList() {
             ? `<span style="font-size: 11px; color: #d97706; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef3c7; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-pen-clip"></i> Đang thi</span>`
             : '';
 
-        // UI ĐIỂM TRUNG BÌNH & XP
         const scoreBadgeHtml = `<span style="font-size: 11px; color: #4338ca; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0e7ff; padding: 2px 6px; border-radius: 6px;" title="Điểm trung bình (ĐTB)"><i class="fa-solid fa-star"></i> ĐTB: ${user.avgScore.toFixed(2)}</span>`;
-        const xpBadgeHtml = `<span style="font-size: 11px; color: #a16207; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef08a; padding: 2px 6px; border-radius: 6px;" title="Kinh nghiệm"><i class="fa-solid fa-bolt"></i> XP: ${Math.round(user.xp)}</span>`;
+        const xpBadgeHtml = `<span style="font-size: 11px; color: #a16207; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef08a; padding: 2px 6px; border-radius: 6px;" title="Kinh nghiệm"><i class="fa-solid fa-bolt"></i> XP: ${Math.round(user.xp).toLocaleString()}</span>`;
 
         const hasPendingRequest = pendingVIPRequests.has(user.userId);
         const pendingBadge = hasPendingRequest 
