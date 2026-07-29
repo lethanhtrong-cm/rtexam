@@ -7,6 +7,7 @@ import {
     collection, onSnapshot, doc, updateDoc, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// IMPORT CÁC MODULE ĐÃ ĐƯỢC PHÂN TÁCH (Cùng thư mục admin-user)
 import { getCostBadgeHtml } from './admin-billing.js';
 import { handleViewHistory } from './admin-history.js';
 import { openNotificationModal, sendNotification } from './admin-users-notify.js';
@@ -72,6 +73,7 @@ export async function loadUserList(forceRefresh = false) {
             
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
+            const examStatus = user.examStatus || 'none'; // ĐỌC TRẠNG THÁI THI TỪ DB
 
             // Xử lý bù đắp ngày giờ (Fix lỗi acc cũ)
             let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp;
@@ -94,6 +96,7 @@ export async function loadUserList(forceRefresh = false) {
                 isVip: isVip,
                 isBanned: isBanned,
                 isOnline: isOnline,
+                examStatus: examStatus, // LƯU VÀO CACHE BỘ NHỚ TẠM
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
                 createdAtMs: createdAtMs, 
@@ -250,6 +253,11 @@ export function renderUserList() {
             ? `<span title="Đang trực tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-left: 8px; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></span>` 
             : `<span title="Ngoại tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #cbd5e1; border-radius: 50%; margin-left: 8px;"></span>`;
 
+        // HTML HIỂN THỊ TRẠNG THÁI ĐANG THI
+        const testingBadgeHtml = user.examStatus === 'testing'
+            ? `<span style="font-size: 11px; color: #d97706; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef3c7; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-pen-clip"></i> Đang thi</span>`
+            : '';
+
         const hasPendingRequest = pendingVIPRequests.has(user.userId);
         const pendingBadge = hasPendingRequest 
             ? `<span style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; margin-left: 8px; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); animation: pulse 2s infinite;">💸 Báo Đã CK</span>` 
@@ -321,7 +329,7 @@ export function renderUserList() {
                     </div>
                     <div>
                         <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
-                            ${user.email} ${onlineStatusHtml} ${pendingBadge} ${costBadgeHtml}
+                            ${user.email} ${onlineStatusHtml} ${testingBadgeHtml} ${pendingBadge} ${costBadgeHtml}
                         </div>
                         ${datesHtml}
                     </div>
