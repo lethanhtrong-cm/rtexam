@@ -118,11 +118,12 @@ export async function loadUserList(forceRefresh = false) {
             
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
-            let examStatus = user.examStatus || 'none'; 
+            const examStatus = user.examStatus || 'none'; 
             
-            // Ràng buộc logic: Trạng thái Đang thi chỉ có hiệu lực khi tài khoản Đang online
-            if (!isOnline) {
-                examStatus = 'none';
+            // Sửa lỗi: File bài thi (quiz.js) chưa đẩy lệnh isOnline=true lên Database.
+            // Do đó ta đảo logic: Nếu Database ghi nhận đang thi -> Tự động ép Online trên giao diện Admin.
+            if (examStatus === 'testing') {
+                isOnline = true;
             }
 
             const rStats = globalResultsStats[email] || { totalScore: 0, count: 0 };
