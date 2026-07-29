@@ -277,9 +277,8 @@ function initDOMListeners() {
             if (userDropdown) userDropdown.classList.remove('show');
             sessionStorage.removeItem('dashboard_user_rank');
             
-            // XÓA TRẠNG THÁI ONLINE VÀ CACHE ONLINE KHI ĐĂNG XUẤT
+            // CẬP NHẬT TRẠNG THÁI OFFLINE KHI CHỦ ĐỘNG ĐĂNG XUẤT
             if (auth.currentUser) {
-                sessionStorage.removeItem(`online_flag_${auth.currentUser.uid}`);
                 updateDoc(doc(db, "users", auth.currentUser.uid), { isOnline: false }).catch(() => {});
             }
             
@@ -682,19 +681,34 @@ async function executeAuthUI(user) {
     }
 }
 
+// =========================================================================
+// QUẢN LÝ TRẠNG THÁI ONLINE / OFFLINE REALTIME (CÁCH 2)
+// =========================================================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUserInstance = user; 
         
-        // TỐI ƯU LƯỢT GHI: Chỉ ghi trạng thái Online lên Firebase nếu phiên (session) này chưa ghi
-        if (!sessionStorage.getItem(`online_flag_${user.uid}`)) {
-            updateDoc(doc(db, "users", user.uid), { isOnline: true }).catch(() => {});
-            sessionStorage.setItem(`online_flag_${user.uid}`, 'true');
-        }
+        // 1. CẬP NHẬT ONLINE NGAY KHI RENDER / RELOAD TRANG
+        updateDoc(doc(db, "users", user.uid), { isOnline: true }).catch(() => {});
         
-        // SỰ KIỆN: Cập nhật Offline khi người dùng đóng trình duyệt hoặc tắt tab
+        // 2. TỰ ĐỘNG CHUYỂN OFFLINE KHI F5 / RELOAD / ĐÓNG TAB
         window.addEventListener('beforeunload', () => {
             updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
+        });
+
+        // 3. TỰ ĐỘNG CHUYỂN OFFLINE KHI MÁY TÍNH SLEEP / KHÓA MÀN HÌNH (Page Lifecycle)
+        document.addEventListener('freeze', () => {
+            updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
+        });
+
+        // 4. TỰ ĐỘNG CHUYỂN OFFLINE KHI MẤT KẾT NỐI MẠNG INTERNET
+        window.addEventListener('offline', () => {
+            updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
+        });
+
+        // 5. PHỤC HỒI ONLINE KHI MÁY TÍNH WAKE UP HOẶC CÓ MẠNG LẠI
+        window.addEventListener('online', () => {
+            updateDoc(doc(db, "users", user.uid), { isOnline: true }).catch(() => {});
         });
 
         if (isComponentsLoaded) {
