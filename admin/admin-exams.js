@@ -37,7 +37,7 @@ export async function loadExamList() {
                 level: data.level || "Trung bình",
                 createdAt: data.createdAt,
                 examName: data.examName || "",
-                description: data.description || "" // Lấy dữ liệu mô tả đề thi
+                description: data.description || "" // Lấy mô tả đề thi
             };
         });
 
@@ -73,7 +73,7 @@ export async function loadExamList() {
             cachedExams.push({
                 examId: examId, 
                 examName: config.examName,
-                description: config.description, // Đẩy vào mảng cache
+                description: config.description, // Ghi nhận mô tả vào Cache
                 count: count, 
                 isVip: config.isVip,
                 timeLimit: config.timeLimit, 
@@ -153,7 +153,7 @@ export function renderExamList() {
         }
         const feedbackBtnClass = exam.feedbackCount > 0 ? "btn-modern-action btn-view-feedback has-feedback" : "btn-modern-action btn-view-feedback";
 
-        // Mã hóa đoạn văn bản mô tả để truyền vào Dataset không bị gãy giao diện HTML
+        // Mã hóa mô tả để chèn vào dataset an toàn
         const safeDescription = encodeURIComponent(exam.description || "");
 
         const cardDiv = document.createElement('div');
@@ -282,6 +282,7 @@ function initFilterChangeListeners() {
     }
 }
 
+// Bổ sung thuộc tính description vào tham số
 function openEditPropertiesModal(examId, examName, technique, time, level, description) {
     currentEditingExamId = examId;
     const modal = document.getElementById('edit-properties-modal');
@@ -293,10 +294,10 @@ function openEditPropertiesModal(examId, examName, technique, time, level, descr
     document.getElementById('edit-select-time').value = time || "15";
     document.getElementById('edit-select-level').value = level || "Trung bình";
     
-    // Gắn giá trị Mô tả vào Textarea
+    // Nạp mô tả vào form
     const descInput = document.getElementById('edit-exam-description');
     if (descInput) descInput.value = description || "";
-
+    
     modal.style.display = "block";
 }
 
@@ -320,7 +321,7 @@ async function updateExamProperties() {
             isPublic: true 
         };
 
-        // Thu thập mô tả
+        // Lấy dữ liệu mô tả từ form
         const descInput = document.getElementById('edit-exam-description');
         if (descInput) {
             payload.description = descInput.value.trim();
@@ -551,7 +552,6 @@ async function publishExam() {
     const timeLimitValue = parseInt(document.getElementById('select-time').value, 10);
     const levelValue = document.getElementById('select-level').value;
 
-    // Truy xuất và lưu kèm mô tả (nếu được khai báo tại màn hình import)
     const descInput = document.getElementById('input-description');
     const descValue = descInput ? descInput.value.trim() : "";
 
@@ -575,7 +575,7 @@ async function publishExam() {
                 technique: techniqueValue,
                 timeLimit: timeLimitValue,
                 level: levelValue,
-                description: descValue, // Đẩy description lên Firestore
+                description: descValue, // Lưu thông tin description
                 isVip: false,
                 isPublic: true,
                 createdAt: Date.now()
@@ -590,11 +590,9 @@ async function publishExam() {
         const fileNameDisplay = document.getElementById('file-name-display');
         if (fileNameDisplay) fileNameDisplay.style.display = "none";
         
-        if (descInput) descInput.value = ""; // Xóa trắng khung description sau khi publish
+        if (descInput) descInput.value = "";
         
         renderPreview();
-        // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
-
     } catch (error) {
         alert("❌ Quá trình xuất bản thất bại. Chi tiết: " + error.message);
         publishBtn.disabled = false;
@@ -603,7 +601,6 @@ async function publishExam() {
 }
 
 document.addEventListener('componentsLoaded', () => {
-    // THÊM TÍNH NĂNG REAL-TIME
     onSnapshot(collection(db, "exams"), () => {
         loadExamList();
     });
@@ -641,12 +638,11 @@ document.addEventListener('componentsLoaded', () => {
             const editPropsBtn = e.target.closest('.btn-edit-properties');
             if (editPropsBtn) {
                 const dataset = editPropsBtn.dataset;
-                // Giải mã description trước khi đưa vào modal
+                // Giải mã thuộc tính mô tả khi đọc từ dataset
                 const description = decodeURIComponent(dataset.description || ""); 
                 return openEditPropertiesModal(dataset.examid, dataset.examname, dataset.technique, dataset.time, dataset.level, description);
             }
             
-            // Lắng nghe sự kiện click mở tab Trình Sửa Nội Dung Đề
             const editContentBtn = e.target.closest('.btn-edit-content');
             if (editContentBtn) {
                 const examId = editContentBtn.dataset.examid;
