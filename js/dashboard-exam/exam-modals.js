@@ -1,4 +1,4 @@
-import { auth, db, safeRedirect } from "./dashboard-core.js";
+import { auth, db, safeRedirect } from "../dashboard-core.js";
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, getDocs, query, where, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
