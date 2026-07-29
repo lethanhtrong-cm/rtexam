@@ -6,42 +6,69 @@ import {
 let timeChartInstance = null;
 let levelChartInstance = null;
 let techChartInstance = null;
-let isDashboardStatsLoaded = false; // CỜ CACHE DỮ LIỆU ĐỂ CHỐNG SPAM READS
+let isDashboardStatsLoaded = false; // CỜ CACHE CHỐNG SPAM DỮ LIỆU TỔNG
 
-export function initDashboardRealtime() {
-    // Hàm đếm này dùng getCountFromServer (rất rẻ: 1 lượt read / 1000 users) nên được phép gọi khi chuyển tab
+// --- CỜ CACHE CHO ĐẾM SỐ LƯỢNG REALTIME ---
+let isLiveCountsLoaded = false;
+let cachedOnlineCount = 0;
+let cachedTestingCount = 0;
+
+export function initDashboardRealtime(forceRefresh = false) {
+    // NẾU KHÔNG ÉP LÀM MỚI VÀ ĐÃ CÓ DATA -> DÙNG CACHE, KHÔNG GỌI API FIREBASE
+    if (!forceRefresh && isLiveCountsLoaded) {
+        const onlineEl = document.getElementById('dash-online-users');
+        const testingEl = document.getElementById('dash-testing-users');
+        if (onlineEl) onlineEl.innerText = cachedOnlineCount;
+        if (testingEl) testingEl.innerText = cachedTestingCount;
+        return;
+    }
+
     const fetchLiveCounts = async () => {
         try {
             const usersRef = collection(db, "users");
+            
+            // --- ĐẾM SỐ NGƯỜI ĐANG THI ---
             const qTesting = query(usersRef, where("examStatus", "==", "testing"));
             const snapTesting = await getCountFromServer(qTesting);
-            const testingCount = snapTesting.data().count;
+            cachedTestingCount = snapTesting.data().count;
 
+            // --- ĐẾM SỐ NGƯỜI ONLINE ---
             const qOnline = query(usersRef, where("isOnline", "==", true));
             const snapOnline = await getCountFromServer(qOnline);
-            const onlineCount = snapOnline.data().count + 1; 
+            cachedOnlineCount = snapOnline.data().count + 1; // Mặc định cộng 1 cho Admin
 
+            // In dữ liệu ra giao diện
             const onlineEl = document.getElementById('dash-online-users');
             const testingEl = document.getElementById('dash-testing-users');
             
-            if (onlineEl) onlineEl.innerText = onlineCount;
-            if (testingEl) testingEl.innerText = testingCount;
+            if (onlineEl) onlineEl.innerText = cachedOnlineCount;
+            if (testingEl) testingEl.innerText = cachedTestingCount;
+            
+            isLiveCountsLoaded = true; // LƯU CỜ THÀNH CÔNG ĐỂ TÁI SỬ DỤNG LẦN SAU
 
         } catch (error) {
             console.error("Lỗi khi đếm dữ liệu từ server:", error);
+            isLiveCountsLoaded = false;
+            
+            // Hiển thị cảnh báo trực quan khi bị Firebase chặn (Quota/Rate Limit)
             if (error.message && (error.message.includes('Quota') || error.message.includes('resource-exhausted') || error.code === 'resource-exhausted')) {
                 const onlineEl = document.getElementById('dash-online-users');
                 const testingEl = document.getElementById('dash-testing-users');
-                if (onlineEl) onlineEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
-                if (testingEl) testingEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
+                
+                if (onlineEl) {
+                    onlineEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
+                }
+                if (testingEl) {
+                    testingEl.innerHTML = `<span style="font-size: 13px; color: #ef4444; font-weight: 700;"><i class="fa-solid fa-triangle-exclamation"></i> Hết hạn mức</span>`;
+                }
             }
         }
     };
+
     fetchLiveCounts();
 }
 
 export async function loadDashboardStats(forceRefresh = false) {
-    // NẾU KHÔNG ÉP LÀM MỚI VÀ DỮ LIỆU ĐÃ TẢI RỒI -> DÙNG CACHE, KHÔNG ĐỌC FIREBASE
     if (!forceRefresh && isDashboardStatsLoaded) return;
 
     try {
@@ -65,6 +92,7 @@ export async function loadDashboardStats(forceRefresh = false) {
 
         resultsSnap.forEach(docSnap => {
             const data = docSnap.data();
+            
             let examDate = null;
             if (data.timestamp) {
                 if (typeof data.timestamp.toDate === 'function') {
@@ -85,6 +113,7 @@ export async function loadDashboardStats(forceRefresh = false) {
             }
 
             const eCode = data.examId || data.examCode || data.quizId;
+            
             if (eCode && examsMap[eCode]) {
                 const config = examsMap[eCode];
                 if (timeStats[config.timeLimit] !== undefined) timeStats[config.timeLimit]++;
@@ -99,7 +128,7 @@ export async function loadDashboardStats(forceRefresh = false) {
         document.getElementById('dash-year-users').innerText = countYear;
 
         renderCharts(timeStats, levelStats, techStats);
-        isDashboardStatsLoaded = true; // Lưu cờ đã tải xong
+        isDashboardStatsLoaded = true; 
 
     } catch (error) {
         console.error("Lỗi khi tải dữ liệu Dashboard:", error);
@@ -175,16 +204,18 @@ function renderCharts(timeStats, levelStats, techStats) {
 }
 
 document.addEventListener('componentsLoaded', () => {
+    // Lần đầu mở trang: Gọi hàm để đọc từ Firebase (Load thực tế)
     initDashboardRealtime();
     loadDashboardStats();
     
+    // Tải lại dữ liệu đếm mỗi khi Admin bấm chuyển lại tab Dashboard
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             const target = item.getAttribute('data-target');
             if (target === 'tab-dashboard') {
-                loadDashboardStats(); // Mặc định false -> Tận dụng Cache
-                initDashboardRealtime();
+                loadDashboardStats(false); // Truỳn false để tái sử dụng CACHE
+                initDashboardRealtime(false); // Truỳn false để tái sử dụng CACHE, chống lỗi 429
             }
         });
     });
