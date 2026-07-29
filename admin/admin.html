@@ -9,15 +9,95 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <link rel="stylesheet" href="./css/admin.css">
+
+    <!-- BỔ SUNG: KHỐI CSS TỐI ƯU HÓA GIAO DIỆN MOBILE -->
+    <style id="mobile-admin-optimization">
+        /* Cấu hình cơ bản cho nút Menu Mobile và Lớp phủ */
+        #mobile-menu-btn {
+            display: none; /* Mặc định ẩn trên Desktop */
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            color: #1e293b;
+            cursor: pointer;
+            margin-right: 15px;
+            padding: 5px;
+        }
+        
+        #mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9998;
+            backdrop-filter: blur(2px);
+        }
+        #mobile-overlay.active { display: block; }
+
+        /* Tablet (Nhỏ hơn 992px) */
+        @media (max-width: 992px) {
+            .stats-container { grid-template-columns: repeat(2, 1fr) !important; }
+            .content-section > div[style*="grid-template-columns: repeat(3, 1fr)"] { grid-template-columns: 1fr !important; }
+        }
+
+        /* Mobile (Nhỏ hơn 768px) */
+        @media (max-width: 768px) {
+            /* Sidebar trượt ngang */
+            #mobile-menu-btn { display: inline-block; }
+            #sidebar-container { 
+                position: fixed; 
+                left: -300px; 
+                top: 0; 
+                height: 100vh; 
+                z-index: 9999; 
+                transition: left 0.3s ease; 
+                box-shadow: 4px 0 15px rgba(0,0,0,0.2); 
+                width: 260px; 
+                background: #0f172a; 
+            }
+            #sidebar-container.mobile-open { left: 0; }
+            
+            /* Bố cục Main & Topbar */
+            .main-wrapper { margin-left: 0 !important; width: 100% !important; }
+            .topbar { padding: 15px !important; }
+            #topbar-title { font-size: 1.1rem !important; }
+            .admin-profile { display: none !important; } /* Ẩn trạng thái "Đang hoạt động" để rộng chỗ */
+            
+            /* Dàn lại các khối thông tin thành 1 cột */
+            .stats-container { grid-template-columns: 1fr !important; }
+            .content-section > div[style*="display: flex; gap: 25px"] { flex-direction: column !important; }
+            .metadata-row { flex-direction: column !important; gap: 15px !important; }
+            .metadata-field { width: 100% !important; margin-bottom: 0 !important; }
+            
+            /* Bộ lọc & Tìm kiếm */
+            .filter-flex-row { flex-direction: column !important; gap: 15px !important; }
+            .filter-col-50 { width: 100% !important; }
+            .toolbar-user-modern { flex-direction: column; align-items: stretch; gap: 10px; }
+            
+            /* Bảng dữ liệu (Hỗ trợ cuộn ngang để không vỡ layout) */
+            .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; padding-bottom: 10px; }
+            .admin-table { min-width: 650px; } 
+            
+            /* Thu gọn Pop-up Modals */
+            .custom-modal-content { width: 95% !important; margin: 10% auto !important; padding: 15px !important; }
+        }
+    </style>
 </head>
 <body>
+
+    <!-- BỔ SUNG: Lớp phủ đen khi mở menu trên mobile -->
+    <div id="mobile-overlay"></div>
 
     <aside class="sidebar" id="sidebar-container"></aside>
 
     <main class="main-wrapper">
         <header class="topbar">
-            <!-- Tiêu đề mặc định hiển thị tab Quản lý người dùng -->
-            <h2 id="topbar-title">Danh Sách Thành Viên & Cấp Quyền VIP</h2>
+            <!-- BỔ SUNG: Vùng chứa nút Hamburger Menu và Tiêu đề -->
+            <div style="display: flex; align-items: center;">
+                <button id="mobile-menu-btn" title="Mở menu điều hướng"><i class="fa-solid fa-bars"></i></button>
+                <!-- Tiêu đề mặc định hiển thị tab Quản lý người dùng -->
+                <h2 id="topbar-title" style="margin: 0;">Danh Sách Thành Viên & Cấp Quyền VIP</h2>
+            </div>
             <div class="admin-profile">🟢 Đang hoạt động</div>
         </header>
 
@@ -384,6 +464,34 @@
         </div>
 
     </div>
+
+    <!-- BỔ SUNG: Khối Script điều khiển logic Toggle Sidebar Mobile -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            const sidebar = document.getElementById('sidebar-container');
+            const overlay = document.getElementById('mobile-overlay');
+
+            // Hàm Mở/Đóng Sidebar trượt ngang
+            function toggleMobileMenu() {
+                if (sidebar) sidebar.classList.toggle('mobile-open');
+                if (overlay) overlay.classList.toggle('active');
+            }
+
+            if (menuBtn) menuBtn.addEventListener('click', toggleMobileMenu);
+            if (overlay) overlay.addEventListener('click', toggleMobileMenu);
+
+            // Tự động thu gọn Sidebar lại nếu chọn một Menu Item (Hữu ích khi dùng Mobile)
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 768) {
+                    if (e.target.closest('.menu-item') || e.target.closest('#btnLogout')) {
+                        if (sidebar) sidebar.classList.remove('mobile-open');
+                        if (overlay) overlay.classList.remove('active');
+                    }
+                }
+            });
+        });
+    </script>
 
     <script type="module" src="./admin-core.js"></script>
     <script type="module" src="./admin-exams.js"></script>
