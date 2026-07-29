@@ -24,6 +24,7 @@
                 <div id="tab-vip" class="tab-pane"></div>
             </div>
             
+            <!-- Thanh Sticky Rank đã được ẩn theo logic thiết kế mới của Bảng xếp hạng -->
             <div class="sticky-user-rank" id="stickyUserRank" style="display: none;">
                 <p><i class="fa-solid fa-user-astronaut"></i> Thành tích của bạn:</p>
                 <div id="stickyUserStats">Đang tải...</div>
@@ -35,6 +36,7 @@
 
     <div id="modals-container"></div>
 
+    <!-- Modal: Vào phòng thi -->
     <div id="room-options-modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
         <div style="background-color: #ffffff; width: 90%; max-width: 420px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden; transform: scale(0.95); transition: transform 0.2s;">
             <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc;">
@@ -66,6 +68,7 @@
         </div>
     </div>
 
+    <!-- Modal: Phản hồi từ Admin -->
     <div id="user-admin-reply-modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px);">
         <div style="background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
             <h3 style="margin-top: 0; color: #10b981; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
@@ -82,9 +85,12 @@
         </div>
     </div>
 
+    <!-- Hệ thống Script Modular -->
     <script src="./js/html-loader.js"></script>
     <script type="module" src="./js/dashboard-core.js"></script>
-    <script type="module" src="./js/dashboard-exams.js"></script>
+    
+    <!-- Cụm Module Chức Năng (Bao gồm File tổng dashboard-exams.js đã được phân tách) -->
+    <script type="module" src="./js/dashboard-exam/dashboard-exams.js"></script>
     <script type="module" src="./js/dashboard-profile.js"></script>
     <script type="module" src="./js/dashboard-history.js"></script>
     <script type="module" src="./js/leaderboard.js"></script>
