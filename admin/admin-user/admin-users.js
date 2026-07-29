@@ -166,7 +166,6 @@ export async function loadUserList(forceRefresh = false) {
         selectedUserIds.clear();
         
         injectTableHeadersAndToolbar(); 
-        // Tuyệt đối không gán currentPage = 1 ở đây để giữ trang hiện tại khi Cập nhật dữ liệu
         renderUserList();
         
     } catch (error) {
@@ -203,6 +202,15 @@ function injectTableHeadersAndToolbar() {
     }
 
     const filterSelect = document.getElementById('filterSelect');
+    
+    // Tự động chèn thêm lựa chọn "Đang trực tuyến" vào bộ lọc nếu chưa có
+    if (filterSelect && !filterSelect.querySelector('option[value="online"]')) {
+        const onlineOption = document.createElement('option');
+        onlineOption.value = 'online';
+        onlineOption.innerText = 'Đang trực tuyến';
+        filterSelect.appendChild(onlineOption);
+    }
+
     if (filterSelect && !document.getElementById('sortSelect')) {
         const sortSelect = document.createElement('select');
         sortSelect.id = 'sortSelect';
@@ -215,7 +223,7 @@ function injectTableHeadersAndToolbar() {
         `;
         sortSelect.addEventListener('change', (e) => {
             currentSortMethod = e.target.value;
-            currentPage = 1; // Đổi cách sắp xếp thì mới về trang 1
+            currentPage = 1; 
             renderUserList();
         });
         filterSelect.parentNode.insertBefore(sortSelect, filterSelect);
@@ -288,7 +296,13 @@ export function renderUserList() {
 
     const filteredUsers = sortedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
-        const matchStatus = currentFilterStatus === "all" || (currentFilterStatus === "testing" ? user.examStatus === "testing" : user.statusKey === currentFilterStatus);
+        
+        // Cập nhật điều kiện lọc cho cả trạng thái testing và online
+        const matchStatus = currentFilterStatus === "all" || 
+                            (currentFilterStatus === "testing" ? user.examStatus === "testing" : 
+                            (currentFilterStatus === "online" ? user.isOnline === true : 
+                            user.statusKey === currentFilterStatus));
+                            
         return matchSearch && matchStatus;
     });
 
@@ -305,7 +319,6 @@ export function renderUserList() {
     const totalItems = filteredUsers.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     
-    // Bảo vệ trang hiện tại: Không để trang lớn hơn tổng số trang thực tế
     if (currentPage < 1) currentPage = 1;
     if (currentPage > totalPages) currentPage = totalPages;
 
@@ -504,7 +517,6 @@ async function handleToggleVip(userId, currentVipStatus) {
         }
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
         
-        // Tối ưu Quota: Cập nhật RAM nội bộ
         const u = cachedUsers.find(user => user.userId === userId);
         if (u) {
             u.isVip = newVipStatus;
@@ -518,7 +530,6 @@ async function handleToggleVip(userId, currentVipStatus) {
             }
         }
         
-        // Ghi chú: Gọi renderUserList tự động dùng lại biến currentPage hiện tại, KHÔNG nhảy về trang 1
         renderUserList(); 
         
     } catch (error) {
@@ -537,14 +548,12 @@ async function handleToggleBan(userId, currentBannedStatus) {
         await updateDoc(userRef, { isBanned: newBannedStatus });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
         
-        // Tối ưu Quota: Cập nhật RAM nội bộ
         const u = cachedUsers.find(user => user.userId === userId);
         if (u) {
             u.isBanned = newBannedStatus;
             u.statusKey = newBannedStatus ? 'banned' : (u.isVip ? 'vip' : 'normal');
         }
         
-        // Ghi chú: Giữ nguyên trang hiện tại, KHÔNG nhảy về trang 1
         renderUserList(); 
         
     } catch (error) {
@@ -602,7 +611,6 @@ async function handleBulkAction(actionType) {
         await Promise.all(promises);
         showToast(`Đã thực thi thao tác thành công trên ${count} tài khoản!`, "success");
         
-        // Tối ưu Quota: Cập nhật RAM nội bộ
         selectedUserIds.forEach(id => {
             const u = cachedUsers.find(user => user.userId === id);
             if (!u) return;
@@ -625,8 +633,6 @@ async function handleBulkAction(actionType) {
         });
         
         selectedUserIds.clear();
-        
-        // Ghi chú: Giữ nguyên trang hiện tại, KHÔNG nhảy về trang 1
         renderUserList(); 
     } catch(err) {
         console.error("Lỗi bulk actions:", err);
@@ -652,7 +658,7 @@ document.addEventListener('componentsLoaded', () => {
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             currentSearchQuery = e.target.value.trim().toLowerCase();
-            currentPage = 1; // Chỉ nhảy về 1 khi tìm kiếm thủ công
+            currentPage = 1; 
             renderUserList(); 
         });
     }
@@ -661,7 +667,7 @@ document.addEventListener('componentsLoaded', () => {
     if (filterSelect) {
         filterSelect.addEventListener('change', (e) => {
             currentFilterStatus = e.target.value;
-            currentPage = 1; // Chỉ nhảy về 1 khi đổi bộ lọc
+            currentPage = 1; 
             renderUserList();
         });
     }
