@@ -118,7 +118,12 @@ export async function loadUserList(forceRefresh = false) {
             
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
-            const examStatus = user.examStatus || 'none'; 
+            let examStatus = user.examStatus || 'none'; 
+            
+            // Ràng buộc logic: Trạng thái Đang thi chỉ có hiệu lực khi tài khoản Đang online
+            if (!isOnline) {
+                examStatus = 'none';
+            }
 
             const rStats = globalResultsStats[email] || { totalScore: 0, count: 0 };
             const finalAvgScore = rStats.count > 0 ? (rStats.totalScore / rStats.count) : 0;
