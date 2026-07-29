@@ -99,6 +99,7 @@ export async function loadAggregatedExamData() {
                         examMap[eId].attemptCount = conf.attemptCount || 0;
                         examMap[eId].technique = conf.technique || "Hỗn hợp";
                         examMap[eId].level = conf.level || "Trung bình";
+                        examMap[eId].description = conf.description || "";
                         
                         let parsedTime = 0;
                         const rawTime = conf.createdAt || conf.timestamp; 
