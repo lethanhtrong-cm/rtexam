@@ -41,8 +41,23 @@ async function fetchHistory(email) {
 
     if (!historyTableBody) return; 
 
-    // --- TỰ ĐỘNG CHÈN NÚT "CẬP NHẬT" NẾU CHƯA CÓ ---
+    // --- FIX GIAO DIỆN BẢNG VÀ CHÈN CỘT STT ---
     const tableElement = historyTableBody.closest('table');
+    if (tableElement) {
+        tableElement.style.width = '100%'; // Ép bảng trải dài full 100% trang
+        
+        const theadTr = tableElement.querySelector('thead tr');
+        if (theadTr && !theadTr.dataset.hasStt) {
+            const th = document.createElement('th');
+            th.innerText = 'STT';
+            th.style.width = '5%';
+            th.style.textAlign = 'center';
+            theadTr.insertBefore(th, theadTr.firstChild);
+            theadTr.dataset.hasStt = "true"; // Đánh dấu để không chèn đúp
+        }
+    }
+
+    // --- TỰ ĐỘNG CHÈN NÚT "CẬP NHẬT" NẾU CHƯA CÓ ---
     if (tableElement && !document.getElementById('btnRefreshHistoryWrapper')) {
         const wrapper = document.createElement('div');
         wrapper.id = 'btnRefreshHistoryWrapper';
@@ -93,7 +108,7 @@ async function fetchHistory(email) {
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>';
+                historyTableBody.innerHTML = '<tr><td colspan="7" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>';
                 if (statCompletedExams) statCompletedExams.textContent = "0";
                 if (statAvgScore) statAvgScore.textContent = "0.0";
                 
@@ -128,7 +143,7 @@ async function fetchHistory(email) {
         }
 
         if (resultsArray.length === 0) {
-            historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>';
+            historyTableBody.innerHTML = '<tr><td colspan="7" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>';
             if (statCompletedExams) statCompletedExams.textContent = "0";
             if (statAvgScore) statAvgScore.textContent = "0.0";
             return;
@@ -160,7 +175,7 @@ async function fetchHistory(email) {
         
         historyTableBody.innerHTML = ""; 
         
-        top10Results.forEach((data) => {
+        top10Results.forEach((data, index) => {
             const tr = document.createElement("tr");
             const quizId = data.examId || data.examCode || "Không rõ";
             
@@ -188,7 +203,9 @@ async function fetchHistory(email) {
                 submitTime = d.toLocaleString('vi-VN'); 
             }
 
+            // Chèn ô STT lên đầu tiên
             tr.innerHTML = `
+                <td style="text-align: center; font-weight: bold; color: #94a3b8;">${index + 1}</td>
                 <td><strong style="color: var(--text-main); font-size: 1.05rem;">${quizId}</strong> ${badgeHtml}</td>
                 <td><i class="fa-regular fa-clock" style="color: #9ca3af; margin-right: 5px;"></i> ${timeSpentStr}</td>
                 <td style="color: #6b7280;">${submitTime}</td>
@@ -211,7 +228,7 @@ async function fetchHistory(email) {
     } catch (error) {
         console.error("Lỗi khi tải bảng lịch sử:", error);
         if (historyTableBody) {
-            historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text" style="color: var(--danger-red);">Lỗi khi tải dữ liệu lịch sử. Vui lòng tải lại trang!</td></tr>';
+            historyTableBody.innerHTML = '<tr><td colspan="7" class="loading-text" style="color: var(--danger-red);">Lỗi khi tải dữ liệu lịch sử. Vui lòng tải lại trang!</td></tr>';
         }
     }
 }
