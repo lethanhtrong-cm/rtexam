@@ -16,18 +16,24 @@
     .podium-step:hover { transform: translateY(-6px); }
     .podium-avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 6px 15px rgba(0,0,0,0.08); margin-bottom: 12px; background: #fff; z-index: 2; }
     .crown-icon { position: absolute; top: -30px; font-size: 2.3rem; color: #fbbf24; filter: drop-shadow(0 4px 8px rgba(251, 191, 36, 0.4)); animation: floatCrown 2.5s infinite ease-in-out; z-index: 3;}
-    .podium-name { font-weight: 700; font-size: 0.92rem; color: #1e293b; text-align: center; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+    
+    /* Đã Fix lỗi cắt tên: thêm flex-shrink, line-height và padding-bottom */
+    .podium-name { font-weight: 700; font-size: 0.92rem; color: #1e293b; text-align: center; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; flex-shrink: 0; line-height: 1.4; padding-bottom: 2px; }
+    
     .podium-xp { font-size: 0.82rem; color: #64748b; font-weight: 700; margin-bottom: 15px; background: #e2e8f0; padding: 3px 10px; border-radius: 10px;}
     .podium-rank-box { width: 100%; text-align: center; padding: 10px 0; font-size: 1.1rem; font-weight: 800; color: white; margin-top: auto; border-radius: 0; letter-spacing: 0.5px;}
     
-    .step-1 { height: 250px; z-index: 3; border: 2px solid #fbbf24; border-bottom: none; background: linear-gradient(180deg, #fffdf4 0%, #fef3c7 100%); }
+    /* Đã nâng height để không ép text */
+    .step-1 { height: 260px; z-index: 3; border: 2px solid #fbbf24; border-bottom: none; background: linear-gradient(180deg, #fffdf4 0%, #fef3c7 100%); }
     .step-1 .podium-rank-box { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
     .step-1 .podium-avatar { border-color: #fbbf24; width: 88px; height: 88px; margin-bottom: 12px;}
     
-    .step-2 { height: 210px; z-index: 2; border: 2px solid #cbd5e1; border-bottom: none; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); }
-    .step-2 .podium-rank-box { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); }
+    /* Đã sửa màu Top 2 thành Bạc Sáng, tăng độ tương phản và chiều cao */
+    .step-2 { height: 220px; z-index: 2; border: 2px solid #94a3b8; border-bottom: none; background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%); }
+    .step-2 .podium-rank-box { background: linear-gradient(135deg, #94a3b8 0%, #475569 100%); text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
     
-    .step-3 { height: 180px; z-index: 1; border: 2px solid #fcd34d; border-bottom: none; background: linear-gradient(180deg, #fffbeb 0%, #fef9c3 100%); }
+    /* Đã nâng height bục Top 3 để không cắt chữ */
+    .step-3 { height: 195px; z-index: 1; border: 2px solid #fcd34d; border-bottom: none; background: linear-gradient(180deg, #fffbeb 0%, #fef9c3 100%); }
     .step-3 .podium-rank-box { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
 
     /* THÀNH TÍCH CÁ NHÂN GỌN GÀNG, THANH THOÁT */
@@ -70,7 +76,10 @@
         
         .podium-container { gap: 6px; align-items: flex-end; padding-top: 25px; margin-bottom: 20px;}
         .podium-step { width: 32%; padding: 15px 4px 0; border-width: 1px; border-radius: 14px 14px 0 0;}
-        .step-1 { height: 190px; }  .step-2 { height: 160px; }  .step-3 { height: 135px; }
+        
+        /* Cập nhật lại height trên mobile để tương thích việc chống cắt chữ */
+        .step-1 { height: 210px; }  .step-2 { height: 175px; }  .step-3 { height: 155px; }
+        
         .podium-avatar { width: 44px; height: 44px; border-width: 2px; margin-bottom: 8px; }
         .step-1 .podium-avatar { width: 56px; height: 56px; margin-bottom: 8px;}
         .crown-icon { font-size: 1.4rem; top: -18px; }
