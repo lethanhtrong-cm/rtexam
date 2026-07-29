@@ -230,7 +230,8 @@ async function initExamState() {
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
-            await updateDoc(userRef, { examStatus: 'testing' });
+            // Sửa lỗi: Đẩy kèm trạng thái isOnline = true để đồng bộ với Admin
+            await updateDoc(userRef, { examStatus: 'testing', isOnline: true });
         } catch (err) {}
     }
 
