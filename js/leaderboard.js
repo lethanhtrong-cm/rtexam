@@ -13,7 +13,7 @@ function getTierBadge(xp) {
     if (xp < 1000) return `<span class="tier-badge tier-rookie" title="Tân binh"><i class="fa-solid fa-seedling"></i> Tân binh</span>`;
     if (xp < 3000) return `<span class="tier-badge tier-pro" title="Chuyên gia"><i class="fa-solid fa-medal"></i> Chuyên gia</span>`;
     if (xp < 10000) return `<span class="tier-badge tier-master" title="Cao thủ"><i class="fa-solid fa-star"></i> Cao thủ</span>`;
-    return `<span class="tier-badge tier-grandmaster" title="Đại cao thủ"><i class="fa-solid fa-gem"></i> Đại cao thủ</span>`;
+    return `<span class="tier-badge tier-grandmaster" title="Thách đấu"><i class="fa-solid fa-gem"></i> Thách đấu</span>`;
 }
 
 // HÀM HELPER: Cập nhật dòng "Last Updated"
