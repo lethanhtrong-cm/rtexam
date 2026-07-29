@@ -210,7 +210,7 @@ export function renderUserList() {
 
     const filteredUsers = sortedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
-        const matchStatus = currentFilterStatus === "all" || user.statusKey === currentFilterStatus;
+        const matchStatus = currentFilterStatus === "all" || (currentFilterStatus === "testing" ? user.examStatus === "testing" : user.statusKey === currentFilterStatus);
         return matchSearch && matchStatus;
     });
 
