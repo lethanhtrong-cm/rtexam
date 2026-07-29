@@ -100,7 +100,6 @@
                                 <button class="pill-btn" data-time="45">45 phút</button>
                             </div>
                         </div>
-<!-- CHÈN ĐOẠN NÀY VÀO TRONG filter-flex-row -->
                         <div class="filter-col-50">
                             <span class="filter-label-text">Sắp xếp theo:</span>
                             <select id="examSortSelect" style="padding: 8px 15px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 13.5px; font-weight: 600; color: #475569; background-color: #f1f5f9; outline: none; cursor: pointer; max-width: 250px; transition: 0.2s;">
@@ -190,6 +189,12 @@
                         </div>
                     </div>
 
+                    <!-- TRƯỜNG NHẬP MÔ TẢ ĐỀ THI Ở BƯỚC IMPORT -->
+                    <div class="metadata-field" style="margin-top: 15px; margin-bottom: 20px;">
+                        <label for="input-description" style="font-weight: 600; margin-bottom: 8px; display: block; color: #475569;">📝 Mô tả đề thi (Tùy chọn):</label>
+                        <textarea id="input-description" rows="3" placeholder="Nhập mô tả ngắn gọn về nội dung hoặc mục tiêu của đề thi để học viên nắm thông tin trước khi làm bài..." style="width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
+                    </div>
+
                     <div style="display: flex; justify-content: flex-end;">
                         <button id="btn-publish" class="btn btn-publish" disabled>🔒 Xác Nhận & Publish Lên Hệ Thống</button>
                     </div>
@@ -210,7 +215,6 @@
                             <div class="number" id="totalVipUsers">0</div>
                         </div>
                     </div>
-                    <!-- Đã xóa block "Đang trực tuyến" tại vị trí này -->
                 </div>
 
                 <div class="toolbar-user-modern">
@@ -309,7 +313,86 @@
         </div>
     </main>
 
-    <div id="modals-container"></div>
+    <!-- KHU VỰC CHỨA CÁC MODAL HIỂN THỊ DỮ LIỆU ĐỘNG -->
+    <div id="modals-container">
+        
+        <!-- MODAL: SỬA THUỘC TÍNH ĐỀ THI -->
+        <div id="edit-properties-modal" class="custom-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+            <div class="custom-modal-content" style="background: #fff; width: 100%; max-width: 550px; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h3 style="margin: 0; color: #1e293b;"><i class="fa-solid fa-gear"></i> Sửa Thuộc Tính: <span id="edit-modal-exam-id" style="color: #3b82f6;"></span></h3>
+                    <button id="closeEditPropertiesModal" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div class="metadata-field" style="margin-bottom: 15px;">
+                    <label for="edit-exam-name" style="font-weight: 600; margin-bottom: 8px; display: block; color: #475569;">🏷️ Tên đề thi:</label>
+                    <input type="text" id="edit-exam-name" style="width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.95rem;" placeholder="Nhập tên đề thi...">
+                </div>
+
+                <div class="metadata-row" style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div class="metadata-field" style="flex: 1;">
+                        <label for="edit-select-technique" style="font-weight: 600; margin-bottom: 8px; display: block; color: #475569;">🩻 Chuyên khoa:</label>
+                        <select id="edit-select-technique" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.95rem;">
+                            <option value="MRI">MRI</option>
+                            <option value="CT">CT</option>
+                            <option value="X quang">X quang</option>
+                            <option value="Hỗn hợp">Hỗn hợp</option>
+                        </select>
+                    </div>
+                    <div class="metadata-field" style="flex: 1;">
+                        <label for="edit-select-time" style="font-weight: 600; margin-bottom: 8px; display: block; color: #475569;">⏱️ Thời gian:</label>
+                        <select id="edit-select-time" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.95rem;">
+                            <option value="15">15 phút</option>
+                            <option value="30">30 phút</option>
+                            <option value="45">45 phút</option>
+                        </select>
+                    </div>
+                    <div class="metadata-field" style="flex: 1;">
+                        <label for="edit-select-level" style="font-weight: 600; margin-bottom: 8px; display: block; color: #475569;">📈 Cấp độ:</label>
+                        <select id="edit-select-level" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.95rem;">
+                            <option value="Dễ">Dễ</option>
+                            <option value="Trung bình">Trung bình</option>
+                            <option value="Khó">Khó</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- TRƯỜNG MÔ TẢ TRONG MODAL SỬA THUỘC TÍNH ĐỀ CŨ -->
+                <div class="metadata-field" style="margin-bottom: 25px;">
+                    <label for="edit-exam-description" style="font-weight: 600; margin-bottom: 8px; display: block; color: #475569;">📝 Mô tả đề thi (Tùy chọn):</label>
+                    <textarea id="edit-exam-description" rows="3" placeholder="Nhập mô tả ngắn gọn về nội dung hoặc mục tiêu của đề thi..." style="width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button id="btn-save-properties" class="btn-modern-action" style="background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: 0.2s;">💾 Lưu Thay Đổi</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: XEM ĐÁNH GIÁ (FEEDBACK) -->
+        <div id="feedback-modal" class="custom-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+            <div class="custom-modal-content" style="background: #fff; width: 100%; max-width: 700px; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h3 style="margin: 0; color: #1e293b;"><i class="fa-solid fa-star" style="color: #f59e0b;"></i> Đánh Giá Của Học Viên: <span id="modal-exam-id" style="color: #3b82f6;"></span></h3>
+                    <button id="closeFeedbackModal" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th width="25%">Người Đánh Giá</th>
+                                <th width="15%" class="text-center">Số Sao</th>
+                                <th width="40%">Nội Dung</th>
+                                <th width="20%" class="text-center">Thời Gian</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feedback-list-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
 
     <script type="module" src="./admin-core.js"></script>
     <script type="module" src="./admin-exams.js"></script>
