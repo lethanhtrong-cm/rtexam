@@ -55,7 +55,10 @@ export async function loadUserList(forceRefresh = false) {
         return;
     }
 
-    tbody.innerHTML = '<tr><td colspan="5" class="loading-text">⏳ Đang tải dữ liệu học viên...</td></tr>';
+    // Không làm trắng bảng nếu đang forceRefresh để tránh giật UI, chỉ đổi text nếu load lần đầu
+    if (!isUserListLoaded) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading-text">⏳ Đang tải dữ liệu học viên...</td></tr>';
+    }
 
     try {
         const snapshot = await getDocs(collection(db, "users"));
@@ -73,7 +76,7 @@ export async function loadUserList(forceRefresh = false) {
             
             const isOnline = (user.isOnline === true || user.isOnline === "true"); 
             const totalTokensUsed = user.totalTokensUsed || 0;
-            const examStatus = user.examStatus || 'none'; // ĐỌC TRẠNG THÁI THI TỪ DB
+            const examStatus = user.examStatus || 'none'; 
 
             // Xử lý bù đắp ngày giờ (Fix lỗi acc cũ)
             let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp;
@@ -96,7 +99,7 @@ export async function loadUserList(forceRefresh = false) {
                 isVip: isVip,
                 isBanned: isBanned,
                 isOnline: isOnline,
-                examStatus: examStatus, // LƯU VÀO CACHE BỘ NHỚ TẠM
+                examStatus: examStatus,
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
                 createdAtMs: createdAtMs, 
@@ -114,10 +117,11 @@ export async function loadUserList(forceRefresh = false) {
 
         isUserListLoaded = true; // Lưu cờ thành công
         selectedUserIds.clear();
-        currentPage = 1;
-        injectTableHeadersAndToolbar(); 
+        // Không reset currentPage = 1 ở đây để giữ nguyên trang hiện tại khi bấm Cập nhật
         
+        injectTableHeadersAndToolbar(); 
         renderUserList();
+        
     } catch (error) {
         console.error("Lỗi kết nối Firestore khi tải danh sách người dùng:", error);
         isUserListLoaded = false;
@@ -210,6 +214,7 @@ export function renderUserList() {
 
     const filteredUsers = sortedUsers.filter(user => {
         const matchSearch = !currentSearchQuery || user.email.toLowerCase().includes(currentSearchQuery);
+        // Bắt điều kiện currentFilterStatus tương thích với trạng thái testing
         const matchStatus = currentFilterStatus === "all" || (currentFilterStatus === "testing" ? user.examStatus === "testing" : user.statusKey === currentFilterStatus);
         return matchSearch && matchStatus;
     });
@@ -253,7 +258,6 @@ export function renderUserList() {
             ? `<span title="Đang trực tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-left: 8px; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></span>` 
             : `<span title="Ngoại tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #cbd5e1; border-radius: 50%; margin-left: 8px;"></span>`;
 
-        // HTML HIỂN THỊ TRẠNG THÁI ĐANG THI
         const testingBadgeHtml = user.examStatus === 'testing'
             ? `<span style="font-size: 11px; color: #d97706; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef3c7; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-pen-clip"></i> Đang thi</span>`
             : '';
@@ -421,7 +425,7 @@ async function handleToggleVip(userId, currentVipStatus) {
             });
         }
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
-        loadUserList(true); // GỌI API LÀM MỚI KHI THAY ĐỔI
+        loadUserList(true); 
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
@@ -437,7 +441,7 @@ async function handleToggleBan(userId, currentBannedStatus) {
         const newBannedStatus = !currentBannedStatus;
         await updateDoc(userRef, { isBanned: newBannedStatus });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
-        loadUserList(true); // GỌI API LÀM MỚI KHI THAY ĐỔI
+        loadUserList(true); 
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
         showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
@@ -493,7 +497,7 @@ async function handleBulkAction(actionType) {
         await Promise.all(promises);
         showToast(`Đã thực thi thao tác thành công trên ${count} tài khoản!`, "success");
         selectedUserIds.clear();
-        loadUserList(true); // GỌI API LÀM MỚI KHI THAY ĐỔI HÀNG LOẠT
+        loadUserList(true); 
     } catch(err) {
         console.error("Lỗi bulk actions:", err);
         showToast("Lỗi khi thực thi hàng loạt", "error");
@@ -509,7 +513,7 @@ document.addEventListener('componentsLoaded', () => {
         item.addEventListener('click', (e) => {
             const target = item.getAttribute('data-target');
             if (target === 'tab-users') {
-                loadUserList(false); // CHỈ VẼ UI TỪ CACHE, KHÔNG ĐỌC DB KHI CHUYỂN TAB
+                loadUserList(false); 
             }
         });
     });
@@ -533,16 +537,37 @@ document.addEventListener('componentsLoaded', () => {
     }
 
     const toolbar = document.querySelector('.toolbar-user-modern');
-    if (toolbar && !document.getElementById('btnNotifyAll')) {
-        const notifyAllBtn = document.createElement('button');
-        notifyAllBtn.id = 'btnNotifyAll';
-        notifyAllBtn.className = 'btn-modern-action';
-        notifyAllBtn.style.cssText = 'background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);';
-        notifyAllBtn.innerHTML = '<i class="fa-solid fa-bell-ring"></i> Gửi TB Toàn Hệ Thống';
-        notifyAllBtn.onmouseover = () => notifyAllBtn.style.transform = 'translateY(-2px)';
-        notifyAllBtn.onmouseout = () => notifyAllBtn.style.transform = 'translateY(0)';
-        notifyAllBtn.onclick = () => openNotificationModal('ALL');
-        toolbar.appendChild(notifyAllBtn);
+    if (toolbar) {
+        // Tích hợp Nút Cập nhật thủ công không reset trạng thái bộ lọc
+        if (!document.getElementById('btnRefreshUsers')) {
+            const refreshBtn = document.createElement('button');
+            refreshBtn.id = 'btnRefreshUsers';
+            refreshBtn.className = 'btn-modern-action';
+            refreshBtn.style.cssText = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); margin-right: 10px;';
+            refreshBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Cập Nhật';
+            refreshBtn.onmouseover = () => refreshBtn.style.transform = 'translateY(-2px)';
+            refreshBtn.onmouseout = () => refreshBtn.style.transform = 'translateY(0)';
+            refreshBtn.onclick = async () => {
+                refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
+                refreshBtn.disabled = true;
+                await loadUserList(true); // Ép Firebase fetch data mới
+                refreshBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Cập Nhật';
+                refreshBtn.disabled = false;
+            };
+            toolbar.appendChild(refreshBtn);
+        }
+
+        if (!document.getElementById('btnNotifyAll')) {
+            const notifyAllBtn = document.createElement('button');
+            notifyAllBtn.id = 'btnNotifyAll';
+            notifyAllBtn.className = 'btn-modern-action';
+            notifyAllBtn.style.cssText = 'background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);';
+            notifyAllBtn.innerHTML = '<i class="fa-solid fa-bell-ring"></i> Gửi TB Toàn Hệ Thống';
+            notifyAllBtn.onmouseover = () => notifyAllBtn.style.transform = 'translateY(-2px)';
+            notifyAllBtn.onmouseout = () => notifyAllBtn.style.transform = 'translateY(0)';
+            notifyAllBtn.onclick = () => openNotificationModal('ALL');
+            toolbar.appendChild(notifyAllBtn);
+        }
     }
 
     const usersBody = document.getElementById('usersTableBody');
