@@ -675,6 +675,17 @@ async function executeAuthUI(user) {
     initNotificationListener(user);
     initPaymentStatusListener(user); 
     
+    // TÍNH NĂNG MỚI: Truy vấn điểm XP và hiển thị ra thẻ Card
+    try {
+        const xpDoc = await getDoc(doc(db, "users_leaderboard", user.uid));
+        const statTotalXP = document.getElementById("statTotalXP");
+        if (statTotalXP) {
+            statTotalXP.textContent = xpDoc.exists() ? (xpDoc.data().totalXP || 0).toLocaleString('vi-VN') : "0";
+        }
+    } catch(e) {
+        console.error("Lỗi tải XP:", e);
+    }
+
     if (currentUserData) {
         const authReadyEvent = new CustomEvent("authReady", { detail: { user, currentUserData } });
         document.dispatchEvent(authReadyEvent);
