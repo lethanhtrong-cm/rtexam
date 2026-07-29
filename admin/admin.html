@@ -16,13 +16,15 @@
 
     <main class="main-wrapper">
         <header class="topbar">
-            <h2 id="topbar-title">Thống Kê Tổng Quan Hệ Thống</h2>
+            <!-- Tiêu đề mặc định hiển thị tab Quản lý người dùng -->
+            <h2 id="topbar-title">Danh Sách Thành Viên & Cấp Quyền VIP</h2>
             <div class="admin-profile">🟢 Đang hoạt động</div>
         </header>
 
         <div class="content-container">
             
-            <section id="tab-dashboard" class="content-section active">
+            <!-- Gỡ bỏ class active ở tab này -->
+            <section id="tab-dashboard" class="content-section">
                 <h2 style="font-size: 1.25rem; color: #1e293b; margin-bottom: 15px;">📅 Số Lượt Đã Thi Tích Lũy</h2>
                 <div class="stats-container" style="margin-bottom: 30px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
                     <div class="stat-card" style="border-left: 5px solid #10b981; padding: 15px;">
@@ -193,7 +195,8 @@
                 </div>
             </section>
 
-            <section id="tab-user-list" class="content-section">
+            <!-- Set thẻ Quản lý người dùng lên active mặc định -->
+            <section id="tab-user-list" class="content-section active">
                 <div class="stats-container">
                     <div class="stat-card total-users">
                         <div class="stat-info">
