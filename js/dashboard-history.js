@@ -61,8 +61,9 @@ async function fetchHistory(email) {
     if (tableElement && !document.getElementById('btnRefreshHistoryWrapper')) {
         const wrapper = document.createElement('div');
         wrapper.id = 'btnRefreshHistoryWrapper';
-        wrapper.style = 'display: flex; justify-content: flex-end; margin-bottom: 15px;';
+        wrapper.style = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;';
         wrapper.innerHTML = `
+            <span style="color: #64748b; font-size: 0.95rem; font-style: italic;"><i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i>* Chỉ thể hiện danh sách 10 lần thi gần nhất</span>
             <button id="btnRefreshHistory" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16,185,129,0.2);">
                 <i class="fa-solid fa-rotate-right"></i> Cập nhật dữ liệu
             </button>
