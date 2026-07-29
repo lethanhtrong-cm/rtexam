@@ -1,7 +1,7 @@
 import { auth, db } from "./dashboard-core.js"; // Nhớ cập nhật đường dẫn import nếu bạn để file trong thư mục con
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Biến toàn cục để quản lý dữ liệu phân trang
+// Biến toàn cục để quản lý dữ liệu phân trang (Giới hạn Top 20)
 let globalTopUsers = [];
 let currentPage = 1;
 const itemsPerPage = 10;
@@ -14,7 +14,7 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 document.addEventListener('authReady', async (e) => {
     const user = e.detail ? e.detail.user : auth.currentUser;
     if (user) {
-        // KIỂM TRA HÀNH ĐỘNG RELOAD (F5) - Làm mới cache nếu tải lại trang
+        // KIỂM TRA HÀNH ĐỘNG RELOAD (F5) - Xóa cache khi tải lại trang
         const navEntries = performance.getEntriesByType("navigation");
         if (navEntries.length > 0 && navEntries[0].type === "reload") {
             sessionStorage.removeItem('leaderboardCache');
@@ -23,6 +23,7 @@ document.addEventListener('authReady', async (e) => {
 
         await initLeaderboard(user);
         await updateUserDashboardRank(user); // Cập nhật thứ hạng vào Quick Stats
+        setupRefreshButton(user);
     }
 });
 
@@ -31,25 +32,48 @@ document.addEventListener('ComponentsLoaded', async () => {
     const user = auth.currentUser;
     if (user) {
         await updateUserDashboardRank(user);
+        setupRefreshButton(user);
     }
 });
+
+// Thiết lập sự kiện cho nút "Cập nhật" thủ công
+function setupRefreshButton(currentUser) {
+    const refreshBtn = document.getElementById('btnRefreshLeaderboard');
+    if (refreshBtn && !refreshBtn.dataset.listenerAttached) {
+        refreshBtn.dataset.listenerAttached = "true";
+        refreshBtn.addEventListener('click', async () => {
+            // Xóa toàn bộ cache liên quan đến leaderboard để ép tải mới từ Firestore
+            sessionStorage.removeItem('leaderboardCache');
+            sessionStorage.removeItem(`userRankCache_${currentUser.uid}`);
+            
+            refreshBtn.style.opacity = "0.7";
+            refreshBtn.innerText = "Đang cập nhật...";
+            
+            await initLeaderboard(currentUser);
+            await updateUserDashboardRank(currentUser);
+            
+            setTimeout(() => {
+                refreshBtn.style.opacity = "1";
+                refreshBtn.innerHTML = `<i class="fa-solid fa-rotate"></i> Cập nhật`;
+            }, 400);
+        });
+    }
+}
 
 // Cập nhật thứ hạng của User vào Dashboard Thống kê nhanh (Có áp dụng Cache)
 export async function updateUserDashboardRank(currentUser) {
     const statElement = document.getElementById('statAccountStatus');
-    // Chặn gọi DB nếu đã in kết quả thành công
     if (!statElement || statElement.innerHTML.includes('Hạng')) return;
 
     try {
         const cacheKey = `userRankCache_${currentUser.uid}`;
         const cachedData = sessionStorage.getItem(cacheKey);
         
-        // Dùng cache nếu còn thời hạn
         if (cachedData) {
             const parsed = JSON.parse(cachedData);
             if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
                 statElement.innerHTML = `Hạng ${parsed.rank}`;
-                return; // Kết thúc, tốn 0 lượt Read
+                return; 
             }
         }
 
@@ -72,12 +96,9 @@ export async function updateUserDashboardRank(currentUser) {
         const actualRank = countHigher + 1;
         
         statElement.innerHTML = `Hạng ${actualRank}`;
-        
-        // Lưu lại cache
         sessionStorage.setItem(cacheKey, JSON.stringify({ rank: actualRank, timestamp: Date.now() }));
     } catch (error) {
         console.error("Lỗi khi cập nhật thứ hạng Dashboard:", error);
-        // Giữ nguyên kết quả đúng từ hàm initLeaderboard, không ghi đè lỗi ra UI
     }
 }
 
@@ -102,12 +123,12 @@ async function initLeaderboard(currentUser) {
             }
         }
 
-        // TẢI TỪ FIREBASE NẾU KHÔNG CÓ CACHE (Tiêu tốn ~103 Reads)
+        // TẢI TỪ FIREBASE NẾU KHÔNG CÓ CACHE (Giới hạn tối đa Top 20)
         if (!useCache) {
             const q = query(
                 collection(db, "users_leaderboard"), 
                 orderBy("totalXP", "desc"), 
-                limit(103) 
+                limit(20) 
             );
             const querySnapshot = await getDocs(q);
 
@@ -116,11 +137,10 @@ async function initLeaderboard(currentUser) {
                 globalTopUsers.push({ id: docSnap.id, ...docSnap.data() });
             });
 
-            // Ghi vào bộ nhớ đệm
             sessionStorage.setItem(cacheKey, JSON.stringify({ data: globalTopUsers, timestamp: Date.now() }));
         }
 
-        // Tách dữ liệu Top 3 và Danh sách còn lại
+        // Tách dữ liệu Top 3 và Danh sách còn lại (từ vị trí 4 đến hết Top 20)
         const top3 = globalTopUsers.slice(0, 3);
         const restUsersList = globalTopUsers.slice(3);
 
@@ -159,7 +179,6 @@ async function initLeaderboard(currentUser) {
         const statElement = document.getElementById('statAccountStatus'); 
         
         if (currentUserDataIndex !== -1) {
-            // Nằm trong Top 100
             const currentRank = currentUserDataIndex + 1;
             const currentXP = globalTopUsers[currentUserDataIndex].totalXP || 0;
             cRankStats.innerHTML = `
@@ -168,7 +187,6 @@ async function initLeaderboard(currentUser) {
             `;
             if(statElement) statElement.innerHTML = `Hạng ${currentRank}`; 
         } else {
-            // Ngoài Top 100 - Bắt buộc đọc thêm 1 lượt DB để lấy điểm cá nhân (nếu chưa có cache)
             let currentXP = 0;
             const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
@@ -178,13 +196,13 @@ async function initLeaderboard(currentUser) {
             
             cRankStats.innerHTML = `
                 <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
-                <span class="rank-badge out-of-rank">Ngoài Top 100</span>
+                <span class="rank-badge out-of-rank">Ngoài Top 20</span>
             `;
-            if(statElement) statElement.innerHTML = `Ngoài Top 100`; 
+            if(statElement) statElement.innerHTML = `Ngoài Top 20`; 
         }
 
         // ==========================
-        // THIẾT LẬP PHÂN TRANG DANH SÁCH (10 người / trang)
+        // THIẾT LẬP PHÂN TRANG DANH SÁCH (10 người / trang, tổng 2 trang)
         // ==========================
         currentPage = 1;
         setupPaginationControls(restUsersList);
@@ -215,7 +233,7 @@ function setupPaginationControls(restUsersList) {
     });
 
     newBtnNext.addEventListener('click', () => {
-        const maxPage = Math.ceil(restUsersList.length / itemsPerPage);
+        const maxPage = Math.ceil(restUsersList.length / itemsPerPage) || 1;
         if (currentPage < maxPage) {
             currentPage++;
             renderLeaderboardPage(restUsersList, currentPage);
