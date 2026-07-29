@@ -11,6 +11,11 @@ window.safeRedirect = safeRedirect;
 // =========================================================================
 document.addEventListener("authReady", (e) => {
     userEmail = e.detail.user.email;
+    // BẮT SỰ KIỆN F5 RELOAD ĐỂ LÀM MỚI CACHE
+    const navEntries = performance.getEntriesByType("navigation");
+    if (navEntries.length > 0 && navEntries[0].type === "reload") {
+        sessionStorage.removeItem(`historyCache_${userEmail}`);
+    }
 });
 
 document.addEventListener("examsReady", async (e) => {
@@ -30,47 +35,106 @@ document.addEventListener("examsReady", async (e) => {
 // 2. TẢI DỮ LIỆU LỊCH SỬ LÀM BÀI & CẬP NHẬT GIAO DIỆN
 // =========================================================================
 async function fetchHistory(email) {
-    // ĐƯA CÁC BIẾN DOM VÀO TRONG HÀM ĐỂ TRÁNH LỖI NULL KHI CHƯA LOAD XONG HTML
     const historyTableBody = document.getElementById("historyTableBody");
     const statCompletedExams = document.getElementById("statCompletedExams");
     const statAvgScore = document.getElementById("statAvgScore");
 
-    if (!historyTableBody) return; // Thoát nếu giao diện chưa sẵn sàng
+    if (!historyTableBody) return; 
+
+    // --- TỰ ĐỘNG CHÈN NÚT "CẬP NHẬT" NẾU CHƯA CÓ ---
+    const tableElement = historyTableBody.closest('table');
+    if (tableElement && !document.getElementById('btnRefreshHistoryWrapper')) {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'btnRefreshHistoryWrapper';
+        wrapper.style = 'display: flex; justify-content: flex-end; margin-bottom: 15px;';
+        wrapper.innerHTML = `
+            <button id="btnRefreshHistory" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16,185,129,0.2);">
+                <i class="fa-solid fa-rotate-right"></i> Cập nhật dữ liệu
+            </button>
+        `;
+        tableElement.parentNode.insertBefore(wrapper, tableElement);
+
+        // Bắt sự kiện bấm nút Cập nhật
+        document.getElementById('btnRefreshHistory').addEventListener('click', async () => {
+            const btn = document.getElementById('btnRefreshHistory');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
+            btn.disabled = true;
+            
+            if (userEmail) {
+                sessionStorage.removeItem(`historyCache_${userEmail}`);
+                await fetchHistory(userEmail);
+            }
+            
+            btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Cập nhật dữ liệu';
+            btn.disabled = false;
+        });
+    }
 
     try {
-        const resultsRef = collection(db, "results");
-        const q = query(resultsRef, where("email", "==", email));
-        const querySnapshot = await getDocs(q);
+        const cacheKey = `historyCache_${email}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        
+        let resultsArray = [];
+        let firstAttempts = {};
+        let useCache = false;
 
-        if (querySnapshot.empty) {
+        // BƯỚC 2.1: KIỂM TRA BỘ NHỚ ĐỆM (CACHE VÔ HẠN - CHỈ TẢI KHI BẤM NÚT HOẶC F5)
+        if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            resultsArray = parsed.resultsArray;
+            firstAttempts = parsed.firstAttempts;
+            useCache = true;
+        }
+
+        // BƯỚC 2.2: TẢI TỪ FIREBASE NẾU KHÔNG CÓ CACHE
+        if (!useCache) {
+            const resultsRef = collection(db, "results");
+            const q = query(resultsRef, where("email", "==", email));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>';
+                if (statCompletedExams) statCompletedExams.textContent = "0";
+                if (statAvgScore) statAvgScore.textContent = "0.0";
+                
+                sessionStorage.setItem(cacheKey, JSON.stringify({ resultsArray: [], firstAttempts: {}, timestamp: Date.now() }));
+                return;
+            }
+
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                
+                // Chuẩn hóa timestamp
+                const safeTimestamp = data.timestamp && typeof data.timestamp.toMillis === 'function' 
+                    ? data.timestamp.toMillis() 
+                    : new Date(data.timestamp || data.submittedAt || 0).getTime();
+                
+                data.timestamp = safeTimestamp;
+
+                resultsArray.push({ id: doc.id, ...data });
+                
+                const examId = data.examId || data.examCode || "Unknown";
+
+                if (!firstAttempts[examId] || safeTimestamp < firstAttempts[examId].timestamp) {
+                    firstAttempts[examId] = {
+                        score: data.score !== undefined ? parseFloat(data.score) : 0,
+                        totalQuestions: data.totalQuestions || data.total || 1,
+                        timestamp: safeTimestamp
+                    };
+                }
+            });
+
+            sessionStorage.setItem(cacheKey, JSON.stringify({ resultsArray, firstAttempts, timestamp: Date.now() }));
+        }
+
+        if (resultsArray.length === 0) {
             historyTableBody.innerHTML = '<tr><td colspan="6" class="loading-text">Bạn chưa hoàn thành bài thi nào.</td></tr>';
             if (statCompletedExams) statCompletedExams.textContent = "0";
             if (statAvgScore) statAvgScore.textContent = "0.0";
             return;
         }
 
-        const resultsArray = [];
-        const firstAttempts = {}; 
-
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            resultsArray.push({ id: doc.id, ...data });
-            
-            const examId = data.examId || data.examCode || "Unknown";
-            const ts = data.timestamp && typeof data.timestamp.toMillis === 'function' 
-                ? data.timestamp.toMillis() 
-                : new Date(data.timestamp || data.submittedAt || 0).getTime();
-
-            if (!firstAttempts[examId] || ts < firstAttempts[examId].timestamp) {
-                firstAttempts[examId] = {
-                    score: data.score !== undefined ? parseFloat(data.score) : 0,
-                    totalQuestions: data.totalQuestions || data.total || 1,
-                    timestamp: ts
-                };
-            }
-        });
-
-        // --- TÍNH TOÁN QUICK STATS ---
+        // --- TÍNH TOÁN QUICK STATS (Dựa trên tổng dữ liệu để con số luôn đúng) ---
         let totalScoreSum = 0;
         const uniqueExamsCount = Object.keys(firstAttempts).length;
 
@@ -85,16 +149,18 @@ async function fetchHistory(email) {
         if (statCompletedExams) statCompletedExams.textContent = uniqueExamsCount;
         if (statAvgScore) statAvgScore.textContent = averageScoreResult;
 
-        // --- SẮP XẾP VÀ RENDER BẢNG ---
+        // --- SẮP XẾP VÀ CHỈ LẤY 10 BẢN GHI MỚI NHẤT ĐỂ RENDER ---
         resultsArray.sort((a, b) => {
-            const dateA = a.timestamp && typeof a.timestamp.toDate === 'function' ? a.timestamp.toDate() : new Date(a.timestamp || a.submittedAt || 0);
-            const dateB = b.timestamp && typeof b.timestamp.toDate === 'function' ? b.timestamp.toDate() : new Date(b.timestamp || b.submittedAt || 0);
+            const dateA = new Date(a.timestamp || a.submittedAt || 0);
+            const dateB = new Date(b.timestamp || b.submittedAt || 0);
             return dateB - dateA;
         });
 
+        const top10Results = resultsArray.slice(0, 10); // Cắt lấy đúng 10 dòng
+        
         historyTableBody.innerHTML = ""; 
         
-        resultsArray.forEach((data) => {
+        top10Results.forEach((data) => {
             const tr = document.createElement("tr");
             const quizId = data.examId || data.examCode || "Không rõ";
             
@@ -118,7 +184,7 @@ async function fetchHistory(email) {
             
             let submitTime = "Không xác định";
             if (data.timestamp || data.submittedAt) {
-                const d = data.timestamp && typeof data.timestamp.toDate === 'function' ? data.timestamp.toDate() : new Date(data.timestamp || data.submittedAt);
+                const d = new Date(data.timestamp || data.submittedAt);
                 submitTime = d.toLocaleString('vi-VN'); 
             }
 
@@ -151,7 +217,7 @@ async function fetchHistory(email) {
 }
 
 // =========================================================================
-// 3. SỰ KIỆN XÓA BẢN GHI LỊCH SỬ THI (CHỜ LOAD XONG GIAO DIỆN)
+// 3. SỰ KIỆN XÓA BẢN GHI LỊCH SỬ THI
 // =========================================================================
 document.addEventListener('ComponentsLoaded', () => {
     const historyTableBody = document.getElementById("historyTableBody");
@@ -169,8 +235,8 @@ document.addEventListener('ComponentsLoaded', () => {
                     try {
                         await deleteDoc(doc(db, "results", docId));
                         
-                        // Cập nhật lại giao diện sau khi xóa
                         if (userEmail) {
+                            sessionStorage.removeItem(`historyCache_${userEmail}`);
                             await fetchHistory(userEmail);
                         }
                     } catch (error) {
