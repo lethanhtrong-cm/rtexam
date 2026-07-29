@@ -1,20 +1,41 @@
-import { auth, db } from "./dashboard-core.js"; // Nhớ cập nhật đường dẫn import nếu bạn để file trong thư mục con
+import { auth, db } from "./dashboard-core.js"; 
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Biến toàn cục để quản lý dữ liệu phân trang (Giới hạn Top 20)
 let globalTopUsers = [];
 let currentPage = 1;
 const itemsPerPage = 10;
 let currentUserDataIndex = -1;
 
-// Hằng số định nghĩa thời gian sống của Cache bảng xếp hạng: 15 PHÚT
 const CACHE_TTL_MS = 15 * 60 * 1000; 
 
-// Lắng nghe sự kiện authReady từ hệ thống cốt lõi
+// HÀM HELPER: Xác định cấp bậc dựa trên điểm XP
+function getTierBadge(xp) {
+    if (xp < 1000) return `<span class="tier-badge tier-rookie" title="Tân binh"><i class="fa-solid fa-seedling"></i> Tân binh</span>`;
+    if (xp < 3000) return `<span class="tier-badge tier-pro" title="Chuyên gia"><i class="fa-solid fa-medal"></i> Chuyên gia</span>`;
+    if (xp < 10000) return `<span class="tier-badge tier-master" title="Cao thủ"><i class="fa-solid fa-star"></i> Cao thủ</span>`;
+    return `<span class="tier-badge tier-grandmaster" title="Đại cao thủ"><i class="fa-solid fa-gem"></i> Đại cao thủ</span>`;
+}
+
+// HÀM HELPER: Cập nhật dòng "Last Updated"
+function updateLastUpdatedText(timestamp) {
+    const textElement = document.getElementById('lastUpdatedText');
+    if (!textElement) return;
+    if (!timestamp) {
+        textElement.innerHTML = '<i class="fa-regular fa-clock"></i> Chưa có dữ liệu';
+        return;
+    }
+    const diffMs = Date.now() - timestamp;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) {
+        textElement.innerHTML = '<i class="fa-regular fa-clock"></i> Vừa cập nhật xong';
+    } else {
+        textElement.innerHTML = `<i class="fa-regular fa-clock"></i> Cập nhật: ${diffMins} phút trước`;
+    }
+}
+
 document.addEventListener('authReady', async (e) => {
     const user = e.detail ? e.detail.user : auth.currentUser;
     if (user) {
-        // KIỂM TRA HÀNH ĐỘNG RELOAD (F5) - Xóa cache khi tải lại trang
         const navEntries = performance.getEntriesByType("navigation");
         if (navEntries.length > 0 && navEntries[0].type === "reload") {
             sessionStorage.removeItem('leaderboardCache');
@@ -22,32 +43,33 @@ document.addEventListener('authReady', async (e) => {
         }
 
         await initLeaderboard(user);
-        await updateUserDashboardRank(user); // Cập nhật thứ hạng vào Quick Stats
-        setupRefreshButton(user);
+        await updateUserDashboardRank(user); 
+        setupControlListeners(user);
     }
 });
 
-// Lắng nghe sự kiện load component để tránh lỗi DOM chưa render kịp
 document.addEventListener('ComponentsLoaded', async () => {
     const user = auth.currentUser;
     if (user) {
         await updateUserDashboardRank(user);
-        setupRefreshButton(user);
+        setupControlListeners(user);
     }
 });
 
-// Thiết lập sự kiện cho nút "Cập nhật" thủ công
-function setupRefreshButton(currentUser) {
+// THIẾT LẬP SỰ KIỆN CHO NÚT CẬP NHẬT VÀ BỘ LỌC
+function setupControlListeners(currentUser) {
     const refreshBtn = document.getElementById('btnRefreshLeaderboard');
     if (refreshBtn && !refreshBtn.dataset.listenerAttached) {
         refreshBtn.dataset.listenerAttached = "true";
         refreshBtn.addEventListener('click', async () => {
-            // Xóa toàn bộ cache liên quan đến leaderboard để ép tải mới từ Firestore
             sessionStorage.removeItem('leaderboardCache');
             sessionStorage.removeItem(`userRankCache_${currentUser.uid}`);
             
             refreshBtn.style.opacity = "0.7";
-            refreshBtn.innerText = "Đang cập nhật...";
+            refreshBtn.innerText = "Đang lấy...";
+            
+            const textElement = document.getElementById('lastUpdatedText');
+            if(textElement) textElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đồng bộ...';
             
             await initLeaderboard(currentUser);
             await updateUserDashboardRank(currentUser);
@@ -58,9 +80,19 @@ function setupRefreshButton(currentUser) {
             }, 400);
         });
     }
+
+    const filterEl = document.getElementById('leaderboardFilter');
+    if (filterEl && !filterEl.dataset.listenerAttached) {
+        filterEl.dataset.listenerAttached = "true";
+        filterEl.addEventListener('change', (e) => {
+            if (e.target.value !== 'all') {
+                alert('Tính năng lọc thời gian đang được nâng cấp để tiết kiệm băng thông. Vui lòng sử dụng bộ lọc "Tổng thời gian" trong lúc chờ đợi nhé!');
+                e.target.value = 'all'; 
+            }
+        });
+    }
 }
 
-// Cập nhật thứ hạng của User vào Dashboard Thống kê nhanh (Có áp dụng Cache)
 export async function updateUserDashboardRank(currentUser) {
     const statElement = document.getElementById('statAccountStatus');
     if (!statElement || statElement.innerHTML.includes('Hạng')) return;
@@ -105,7 +137,6 @@ export async function updateUserDashboardRank(currentUser) {
 async function initLeaderboard(currentUser) {
     const podiumContainer = document.getElementById('leaderboardPodium');
     const cRankStats = document.getElementById('cRankStats');
-
     const oldSticky = document.getElementById('stickyUserRank');
     if (oldSticky) oldSticky.style.display = 'none';
 
@@ -113,40 +144,34 @@ async function initLeaderboard(currentUser) {
         const cacheKey = 'leaderboardCache';
         const cachedData = sessionStorage.getItem(cacheKey);
         let useCache = false;
+        let cacheTimestamp = null;
 
-        // KIỂM TRA BỘ NHỚ ĐỆM (CACHE)
         if (cachedData) {
             const parsed = JSON.parse(cachedData);
             if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
                 globalTopUsers = parsed.data;
+                cacheTimestamp = parsed.timestamp;
                 useCache = true;
             }
         }
 
-        // TẢI TỪ FIREBASE NẾU KHÔNG CÓ CACHE (Giới hạn tối đa Top 20)
         if (!useCache) {
-            const q = query(
-                collection(db, "users_leaderboard"), 
-                orderBy("totalXP", "desc"), 
-                limit(20) 
-            );
+            const q = query(collection(db, "users_leaderboard"), orderBy("totalXP", "desc"), limit(20));
             const querySnapshot = await getDocs(q);
 
             globalTopUsers = [];
             querySnapshot.forEach(docSnap => {
                 globalTopUsers.push({ id: docSnap.id, ...docSnap.data() });
             });
-
-            sessionStorage.setItem(cacheKey, JSON.stringify({ data: globalTopUsers, timestamp: Date.now() }));
+            cacheTimestamp = Date.now();
+            sessionStorage.setItem(cacheKey, JSON.stringify({ data: globalTopUsers, timestamp: cacheTimestamp }));
         }
 
-        // Tách dữ liệu Top 3 và Danh sách còn lại (từ vị trí 4 đến hết Top 20)
+        updateLastUpdatedText(cacheTimestamp);
+
         const top3 = globalTopUsers.slice(0, 3);
         const restUsersList = globalTopUsers.slice(3);
 
-        // ==========================
-        // RENDER BỤC VINH QUANG (TOP 3)
-        // ==========================
         podiumContainer.innerHTML = '';
         if (top3.length === 0) {
             podiumContainer.innerHTML = '<p style="color: #64748b; padding: 20px;">Chưa có dữ liệu xếp hạng.</p>';
@@ -164,7 +189,10 @@ async function initLeaderboard(currentUser) {
                     <div class="podium-step ${user.class}">
                         ${crown}
                         <img src="${avatar}" alt="Avatar" class="podium-avatar">
-                        <div class="podium-name">${user.displayName || 'Học viên ẩn danh'}</div>
+                        <div class="podium-name">
+                            ${user.displayName || 'Học viên ẩn danh'}
+                            <span style="margin-top:2px;">${getTierBadge(user.totalXP || 0)}</span>
+                        </div>
                         <div class="podium-xp">${(user.totalXP || 0).toLocaleString()} XP</div>
                         <div class="podium-rank-box">TOP ${user.rank}</div>
                     </div>
@@ -172,9 +200,6 @@ async function initLeaderboard(currentUser) {
             });
         }
 
-        // ==========================
-        // RENDER THÀNH TÍCH CÁ NHÂN GỌN GÀNG
-        // ==========================
         currentUserDataIndex = globalTopUsers.findIndex(u => u.id === currentUser.uid);
         const statElement = document.getElementById('statAccountStatus'); 
         
@@ -201,9 +226,6 @@ async function initLeaderboard(currentUser) {
             if(statElement) statElement.innerHTML = `Ngoài Top 20`; 
         }
 
-        // ==========================
-        // THIẾT LẬP PHÂN TRANG DANH SÁCH (10 người / trang, tổng 2 trang)
-        // ==========================
         currentPage = 1;
         setupPaginationControls(restUsersList);
 
@@ -261,12 +283,18 @@ function renderLeaderboardPage(restUsersList, page) {
             const actualRank = startIndex + index + 4; 
             const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=e2e8f0&color=334155`;
             
+            // Xử lý logic Animation trễ dần (Staggered Animation)
+            const animationDelay = index * 0.08; 
+            
             tableBody.innerHTML += `
-                <div class="leaderboard-row">
+                <div class="leaderboard-row animate-fade-in" style="animation-delay: ${animationDelay}s">
                     <div class="row-rank">#${actualRank}</div>
                     <div class="row-info">
                         <img src="${avatar}" alt="Avatar" class="row-avatar">
-                        <div class="row-name">${user.displayName || 'Học viên ẩn danh'}</div>
+                        <div class="row-name">
+                            ${user.displayName || 'Học viên ẩn danh'}
+                            ${getTierBadge(user.totalXP || 0)}
+                        </div>
                     </div>
                     <div class="row-xp">${(user.totalXP || 0).toLocaleString()} XP</div>
                 </div>
