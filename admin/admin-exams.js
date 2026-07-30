@@ -13,86 +13,123 @@ let cachedExams = [];
 let draftData = [];
 let currentEditingExamId = "";
 
-export async function loadExamList() {
-    const container = document.getElementById('exam-list-body');
-    if (!container) return;
+// THÊM MỚI: Biến lưu trữ State cục bộ cho Real-time
+let rawExams = [];
+let rawQuestions = [];
+let rawFeedbacks = [];
+let loadedStatus = { exams: false, questions: false, feedbacks: false };
+let listenersInitialized = false;
+
+// =========================================================================
+// HÀM KHỞI TẠO LẮNG NGHE REAL-TIME (TỐI ƯU QUOTA)
+// =========================================================================
+export function loadExamList() {
+    // Đảm bảo chỉ khởi tạo listener 1 lần duy nhất để chống tràn bộ nhớ
+    if (listenersInitialized) return;
+    listenersInitialized = true;
     
-    container.innerHTML = '<div class="loading-text">⏳ Đang kết nối dữ liệu và đồng bộ từ Firestore...</div>';
+    const container = document.getElementById('exam-list-body');
+    if (container) container.innerHTML = '<div class="loading-text">⏳ Đang thiết lập kết nối thời gian thực (Real-time) để tối ưu Quota...</div>';
 
-    try {
-        const [questionsSnapshot, examsSnapshot, feedbacksSnapshot] = await Promise.all([
-            getDocs(collection(db, "questions")),
-            getDocs(collection(db, "exams")),
-            getDocs(collection(db, "feedbacks"))
-        ]);
-        
-        const examDataMap = {};
-        examsSnapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            examDataMap[docSnap.id] = {
-                isVip: data.isVip || false,
-                timeLimit: data.timeLimit !== undefined ? data.timeLimit : 15,
-                attemptCount: data.attemptCount || 0,
-                technique: data.technique || "Hỗn hợp",
-                level: data.level || "Trung bình",
-                createdAt: data.createdAt,
-                examName: data.examName || "",
-                description: data.description || "" // Lấy mô tả đề thi
-            };
-        });
+    // 1. Lắng nghe thay đổi Cấu hình đề thi
+    onSnapshot(collection(db, "exams"), (snapshot) => {
+        rawExams = snapshot.docs;
+        loadedStatus.exams = true;
+        processAndRender();
+    }, (error) => handleLoadError(error));
 
-        const feedbackCounts = {};
-        const feedbackStars = {};
-        if (feedbacksSnapshot) {
-            feedbacksSnapshot.forEach(docSnap => {
-                const fb = docSnap.data();
-                if (fb.examId) {
-                    feedbackCounts[fb.examId] = (feedbackCounts[fb.examId] || 0) + 1;
-                    feedbackStars[fb.examId] = (feedbackStars[fb.examId] || 0) + (fb.rating || 5);
-                }
-            });
-        }
+    // 2. Lắng nghe thay đổi Câu hỏi (Tự động nhận đề mới từ Google Sheet)
+    onSnapshot(collection(db, "questions"), (snapshot) => {
+        rawQuestions = snapshot.docs;
+        loadedStatus.questions = true;
+        processAndRender();
+    }, (error) => handleLoadError(error));
 
-        const examGroups = {}; 
-        questionsSnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const examId = data.examId || "Chưa phân loại"; 
-            if (!examGroups[examId]) examGroups[examId] = 0;
-            examGroups[examId]++; 
-        });
-
-        cachedExams = [];
-        for (const examId in examGroups) {
-            const count = examGroups[examId];
-            const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "", description: "" };
-
-            const fCount = feedbackCounts[examId] || 0;
-            const fStars = feedbackStars[examId] || 0;
-            const avgRating = fCount > 0 ? (fStars / fCount) : 0; 
-
-            cachedExams.push({
-                examId: examId, 
-                examName: config.examName,
-                description: config.description, // Ghi nhận mô tả vào Cache
-                count: count, 
-                isVip: config.isVip,
-                timeLimit: config.timeLimit, 
-                attemptCount: config.attemptCount,
-                technique: config.technique, 
-                level: config.level,
-                createdAt: config.createdAt || 0,
-                feedbackCount: fCount,
-                rating: avgRating 
-            });
-        }
-
-        renderExamList();
-    } catch (error) {
-        console.error("Lỗi khi tải danh sách đề thi:", error);
-        container.innerHTML = `<div class="empty-message" style="color: red;">❌ Không thể kết nối Cloud Firestore để đồng bộ dữ liệu.</div>`;
-    }
+    // 3. Lắng nghe thay đổi Đánh giá
+    onSnapshot(collection(db, "feedbacks"), (snapshot) => {
+        rawFeedbacks = snapshot.docs;
+        loadedStatus.feedbacks = true;
+        processAndRender();
+    }, (error) => handleLoadError(error));
 }
 
+function handleLoadError(error) {
+    console.error("Lỗi khi tải danh sách đề thi:", error);
+    const container = document.getElementById('exam-list-body');
+    if (container) container.innerHTML = `<div class="empty-message" style="color: red;">❌ Không thể kết nối Cloud Firestore để đồng bộ dữ liệu.</div>`;
+}
+
+// =========================================================================
+// HÀM XỬ LÝ DỮ LIỆU SAU KHI FIRESTORE TRẢ VỀ (CACHE & MAP)
+// =========================================================================
+function processAndRender() {
+    // Chỉ render khi cả 3 luồng dữ liệu đều đã tải xong lần đầu
+    if (!loadedStatus.exams || !loadedStatus.questions || !loadedStatus.feedbacks) return;
+
+    const examDataMap = {};
+    rawExams.forEach(docSnap => {
+        const data = docSnap.data();
+        examDataMap[docSnap.id] = {
+            isVip: data.isVip || false,
+            timeLimit: data.timeLimit !== undefined ? data.timeLimit : 15,
+            attemptCount: data.attemptCount || 0,
+            technique: data.technique || "Hỗn hợp",
+            level: data.level || "Trung bình",
+            createdAt: data.createdAt,
+            examName: data.examName || "",
+            description: data.description || ""
+        };
+    });
+
+    const feedbackCounts = {};
+    const feedbackStars = {};
+    rawFeedbacks.forEach(docSnap => {
+        const fb = docSnap.data();
+        if (fb.examId) {
+            feedbackCounts[fb.examId] = (feedbackCounts[fb.examId] || 0) + 1;
+            feedbackStars[fb.examId] = (feedbackStars[fb.examId] || 0) + (fb.rating || 5);
+        }
+    });
+
+    const examGroups = {}; 
+    rawQuestions.forEach((docSnap) => {
+        const data = docSnap.data();
+        const examId = data.examId || "Chưa phân loại"; 
+        if (!examGroups[examId]) examGroups[examId] = 0;
+        examGroups[examId]++; 
+    });
+
+    cachedExams = [];
+    for (const examId in examGroups) {
+        const count = examGroups[examId];
+        const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "", description: "" };
+
+        const fCount = feedbackCounts[examId] || 0;
+        const fStars = feedbackStars[examId] || 0;
+        const avgRating = fCount > 0 ? (fStars / fCount) : 0; 
+
+        cachedExams.push({
+            examId: examId, 
+            examName: config.examName,
+            description: config.description, 
+            count: count, 
+            isVip: config.isVip,
+            timeLimit: config.timeLimit, 
+            attemptCount: config.attemptCount,
+            technique: config.technique, 
+            level: config.level,
+            createdAt: config.createdAt || 0,
+            feedbackCount: fCount,
+            rating: avgRating 
+        });
+    }
+
+    renderExamList();
+}
+
+// =========================================================================
+// HÀM HIỂN THỊ DANH SÁCH RA MÀN HÌNH THEO BỘ LỌC
+// =========================================================================
 export function renderExamList() {
     const container = document.getElementById('exam-list-body');
     if (!container) return;
@@ -282,7 +319,6 @@ function initFilterChangeListeners() {
     }
 }
 
-// Bổ sung thuộc tính description vào tham số
 function openEditPropertiesModal(examId, examName, technique, time, level, description) {
     currentEditingExamId = examId;
     const modal = document.getElementById('edit-properties-modal');
@@ -294,7 +330,6 @@ function openEditPropertiesModal(examId, examName, technique, time, level, descr
     document.getElementById('edit-select-time').value = time || "15";
     document.getElementById('edit-select-level').value = level || "Trung bình";
     
-    // Nạp mô tả vào form
     const descInput = document.getElementById('edit-exam-description');
     if (descInput) descInput.value = description || "";
     
@@ -321,7 +356,6 @@ async function updateExamProperties() {
             isPublic: true 
         };
 
-        // Lấy dữ liệu mô tả từ form
         const descInput = document.getElementById('edit-exam-description');
         if (descInput) {
             payload.description = descInput.value.trim();
@@ -335,7 +369,6 @@ async function updateExamProperties() {
         
         showToast(`Cập nhật thuộc tính đề "${currentEditingExamId}" thành công!`, "success");
         if (modal) modal.style.display = "none";
-        // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
     } catch (error) {
         showToast("Không thể lưu thay đổi thuộc tính đề", "error");
     } finally {
@@ -360,7 +393,6 @@ async function toggleExamVip(examId, currentVipState) {
         
         await setDoc(docRef, payload, { merge: true });
         showToast(`Cập nhật trạng thái VIP đề "${examId}" thành công!`, "success");
-        // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
     } catch (error) { showToast("Lỗi thay đổi quyền VIP", "error"); }
 }
 
@@ -381,7 +413,6 @@ async function deleteExam(examId, buttonElement) {
         const deletePromises = querySnapshot.docs.map(docSnap => deleteDoc(doc(db, "questions", docSnap.id)));
         await Promise.all(deletePromises);
         showToast(`Đã xóa sạch thành công ${deletePromises.length} câu hỏi của đề "${examId}"!`, "success");
-        // Bỏ gọi loadExamList() vì onSnapshot đã tự động lắng nghe
     } catch (error) {
         showToast("Lỗi hệ thống khi thực thi lệnh xóa", "error");
         buttonElement.innerHTML = originalText;
@@ -575,7 +606,7 @@ async function publishExam() {
                 technique: techniqueValue,
                 timeLimit: timeLimitValue,
                 level: levelValue,
-                description: descValue, // Lưu thông tin description
+                description: descValue, 
                 isVip: false,
                 isPublic: true,
                 createdAt: Date.now()
@@ -601,9 +632,8 @@ async function publishExam() {
 }
 
 document.addEventListener('componentsLoaded', () => {
-    onSnapshot(collection(db, "exams"), () => {
-        loadExamList();
-    });
+    // KHỞI ĐỘNG CHUỖI LẮNG NGHE REAL-TIME THAY VÌ ON-SNAPSHOT LỒNG NHAU CŨ
+    loadExamList();
     
     handleExcelRead();
     initFilterChangeListeners(); 
@@ -638,7 +668,6 @@ document.addEventListener('componentsLoaded', () => {
             const editPropsBtn = e.target.closest('.btn-edit-properties');
             if (editPropsBtn) {
                 const dataset = editPropsBtn.dataset;
-                // Giải mã thuộc tính mô tả khi đọc từ dataset
                 const description = decodeURIComponent(dataset.description || ""); 
                 return openEditPropertiesModal(dataset.examid, dataset.examname, dataset.technique, dataset.time, dataset.level, description);
             }
