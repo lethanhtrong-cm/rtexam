@@ -378,14 +378,35 @@ async function executeSubmit() {
     let isRetake = false;
     let isNewRecord = false;
     let totalRawXP = 0;
+    
+    // Biến xử lý Điểm danh ngày mới (Daily Attendance)
+    let attendanceBonus = 0;
+    let isDailyFirst = false;
+    const todayStr = new Date().toLocaleDateString('en-CA'); // Định dạng YYYY-MM-DD
 
     try {
         const resultsRef = collection(db, "results");
         const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId));
         const resultSnapshot = await getDocs(qResult);
         
+        // KIỂM TRA ĐIỂM DANH: Đọc dữ liệu Leaderboard
+        const leaderboardRef = doc(db, "users_leaderboard", currentUser.uid);
+        const lbSnap = await getDoc(leaderboardRef);
+        
+        if (lbSnap.exists()) {
+            if (lbSnap.data().lastAttendanceDate !== todayStr) {
+                isDailyFirst = true; // Khác ngày lưu trữ -> Đánh dấu là làm bài lần đầu trong ngày
+            }
+        } else {
+            isDailyFirst = true; // Tài khoản mới hoàn toàn
+        }
+        
+        // Nếu là bài đầu tiên trong ngày, tặng thưởng cố định 20 XP
+        if (isDailyFirst) {
+            attendanceBonus = 20;
+        }
+
         if (finalTotal > 0) {
-            
             let wrongOrEmptyCount = finalTotal - finalCorrectCount;
 
             // 1. Tính điểm cơ bản & Phạt điểm (10 điểm đúng, -2 điểm sai/bỏ trống)
@@ -406,11 +427,6 @@ async function executeSubmit() {
             let speedBonus = 0;
 
             if (accuracyRate === 1) {
-                perfectBonus = 100; // Flat Bonus cực lớn cho 100%
-                
-                // Thưởng tốc độ tỉ lệ thuận với thời gian còn lại (Tối đa nhận 50 XP)
-                speedBonus = Math.round((timeRemaining / examDuration) * 50);
-            }if (accuracyRate === 1) {
                 perfectBonus = 100; // Flat Bonus cực lớn cho 100%
                 
                 // Thưởng tốc độ tỉ lệ thuận với thời gian còn lại (Tối đa nhận 50 XP)
@@ -447,20 +463,29 @@ async function executeSubmit() {
                 }
             }
 
-            // 6. Cập nhật Leaderboard (Hỗ trợ cấu trúc DB bộ lọc Tháng/Tuần)
-            if (gainedXP > 0) {
-                const leaderboardRef = doc(db, "users_leaderboard", currentUser.uid);
+            // 6. Cập nhật Leaderboard Gồm cả Điểm thi + Điểm danh
+            const totalAddedXP = gainedXP + attendanceBonus;
+            
+            if (totalAddedXP > 0) {
                 const monthKey = getCurrentMonthKey();
                 const weekKey = getCurrentWeekKey();
 
-                await setDoc(leaderboardRef, {
+                let updatePayload = {
                     displayName: currentUser.displayName || currentUser.email.split('@')[0],
                     email: currentUser.email,
                     photoURL: currentUser.photoURL || "",
-                    totalXP: increment(gainedXP),
-                    [monthKey]: increment(gainedXP),
-                    [weekKey]: increment(gainedXP)
-                }, { merge: true });
+                    totalXP: increment(totalAddedXP),
+                    [monthKey]: increment(totalAddedXP),
+                    [weekKey]: increment(totalAddedXP)
+                };
+                
+                // Ghi nhận mốc điểm danh ngày mới
+                if (isDailyFirst) {
+                    updatePayload.lastAttendanceDate = todayStr;
+                    xpMessage += ` (+20 XP Điểm danh ngày mới!)`;
+                }
+
+                await setDoc(leaderboardRef, updatePayload, { merge: true });
                 showToast(xpMessage);
             }
         }
@@ -494,9 +519,10 @@ async function executeSubmit() {
         const examDocRef = doc(db, "exams", currentExamId);
         await setDoc(examDocRef, { attemptCount: increment(1) }, { merge: true });
         
-        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord);
+        // Cập nhật tham số cuối cùng để hiển thị trên Modal
+        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
     } catch (error) {
-        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord);
+        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
     }
 }
 
@@ -708,7 +734,8 @@ function resetFeedbackUI() {
     btn.innerText = "Gửi Đánh Giá"; btn.disabled = false;
 }
 
-function showResultModal(correctCount, total, score, xp = 0, isRetake = false, isNewRecord = false) {
+// Cập nhật tham số nhận thêm khoản attendanceBonus (Điểm danh)
+function showResultModal(correctCount, total, score, xp = 0, isRetake = false, isNewRecord = false, attendanceBonus = 0) {
     const modal = document.getElementById('result-modal');
     document.getElementById('modal-score-text').innerText = score;
     document.getElementById('modal-correct-text').innerText = `${correctCount}/${total}`;
@@ -717,7 +744,7 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
     const scoreCircle = document.getElementById('modal-score-circle');
     scoreCircle.style.background = `conic-gradient(#10b981 ${percentage}%, #d1fae5 ${percentage}%)`;
 
-    // CẬP NHẬT GIAO DIỆN XP ĐỂ PHÙ HỢP VỚI LOGIC CHỐNG FARM ĐIỂM
+    // CẬP NHẬT GIAO DIỆN XP KÈM THÔNG BÁO ĐIỂM DANH
     let xpDisplay = document.getElementById('modal-xp-display');
     if (!xpDisplay) {
         xpDisplay = document.createElement('div');
@@ -731,20 +758,24 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
     
     xpDisplay.style.display = 'inline-block';
     
+    // Tổng số XP học viên nhìn thấy
+    let totalXPShow = xp + attendanceBonus;
+    let attText = attendanceBonus > 0 ? " + Điểm danh" : "";
+    
     if (!isRetake) {
-        // Lần thi đầu tiên
-        xpDisplay.innerHTML = `🌟 +${xp} XP`;
+        // Lần thi đầu tiên của đề thi này
+        xpDisplay.innerHTML = `🌟 +${totalXPShow} XP${attendanceBonus > 0 ? ' (Gồm Điểm danh)' : ''}`;
         xpDisplay.style.color = "#ea580c";
         xpDisplay.style.background = "#ffedd5";
     } else {
         // Thi lại (Chế độ ôn tập)
         if (isNewRecord && xp > 0) {
-            xpDisplay.innerHTML = `🔥 +${xp} XP (Vượt kỷ lục)`;
+            xpDisplay.innerHTML = `🔥 +${totalXPShow} XP (Vượt kỷ lục${attText})`;
             xpDisplay.style.color = "#ea580c";
             xpDisplay.style.background = "#ffedd5";
         } else {
-            // Chỉ nhận điểm chuyên cần (+5)
-            xpDisplay.innerHTML = `💡 +${xp} XP (Chuyên cần)`;
+            // Không phá kỷ lục
+            xpDisplay.innerHTML = `💡 +${totalXPShow} XP (Chuyên cần${attText})`;
             xpDisplay.style.color = "#059669"; 
             xpDisplay.style.background = "#d1fae5";
         }
