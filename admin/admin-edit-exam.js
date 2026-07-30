@@ -1,14 +1,14 @@
 import { db } from './admin-core.js';
-import { collection, query, where, getDocs, doc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// BỔ SUNG: Import thêm hàm deleteDoc
+import { collection, query, where, getDocs, doc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentExamId = urlParams.get('examId');
 
 let loadedQuestions = [];
-let quillInstances = {}; // Lưu trữ instance của Quill Editor
+let quillInstances = {}; 
 let autoSaveInterval = null;
 
-// Cấu hình thanh công cụ Quill (Hỗ trợ hình ảnh & công thức)
 const quillToolbarOptions = [
     ['bold', 'italic', 'underline', 'strike'],
     [{ 'list': 'ordered'}, { 'list': 'bullet' }],
@@ -41,7 +41,6 @@ async function fetchQuestions() {
             loadedQuestions.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        // Hỗ trợ Order (Sắp xếp)
         loadedQuestions.sort((a, b) => (a.order || 0) - (b.order || 0));
 
         if (loadedQuestions.length === 0) {
@@ -49,7 +48,6 @@ async function fetchQuestions() {
             return;
         }
 
-        // Kiểm tra Draft trong LocalStorage
         checkAndLoadDraft();
 
     } catch (error) {
@@ -63,7 +61,6 @@ function checkAndLoadDraft() {
     if (draftStr) {
         try {
             const draftObj = JSON.parse(draftStr);
-            // Nếu draft tồn tại, hỏi Admin có muốn khôi phục không
             if (confirm(`Phát hiện bản nháp chưa lưu lúc ${new Date(draftObj.time).toLocaleTimeString('vi-VN')}. Bạn có muốn khôi phục tiếp tục chỉnh sửa không?`)) {
                 loadedQuestions = draftObj.data;
                 showToast("Đã khôi phục dữ liệu từ bản nháp nội bộ.");
@@ -92,9 +89,13 @@ function renderEditor() {
         const options = q.options || ["", "", "", ""];
         const correctAns = q.correctAnswer !== undefined ? q.correctAnswer : 0;
 
+        // BỔ SUNG: Nút Xóa câu hỏi vào phần Header của thẻ
         card.innerHTML = `
             <div class="question-header">
                 <h3><i class="fa-solid fa-grip-vertical drag-handle" title="Kéo để di chuyển"></i> Câu hỏi ${index + 1}</h3>
+                <button onclick="deleteQuestion('${q.id}')" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 5px;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
+                    <i class="fa-solid fa-trash-can"></i> Xóa câu hỏi
+                </button>
             </div>
             
             <div class="form-group">
@@ -128,21 +129,18 @@ function renderEditor() {
         `;
         container.appendChild(card);
 
-        // Khởi tạo Quill Editor cho Text và Explanation
         const quillText = new Quill(`#q-text-${q.id}`, { theme: 'snow', modules: { toolbar: quillToolbarOptions } });
         const quillExplain = new Quill(`#q-explain-${q.id}`, { theme: 'snow', modules: { toolbar: quillToolbarOptions } });
         
         quillInstances[q.id] = { text: quillText, explain: quillExplain };
     });
 
-    // Kích hoạt tính năng Kéo Thả (Sortable.js)
     Sortable.create(container, {
         handle: '.drag-handle',
         animation: 150,
         ghostClass: 'sortable-ghost',
         dragClass: 'sortable-drag',
         onEnd: function () {
-            // Cập nhật lại số thứ tự câu hỏi hiển thị
             const cards = document.querySelectorAll('.question-card');
             cards.forEach((card, idx) => {
                 const header = card.querySelector('h3');
@@ -154,7 +152,28 @@ function renderEditor() {
     });
 }
 
-// Cập nhật CSS xanh viền (Highlight) khi click chọn đáp án đúng
+// BỔ SUNG: Logic Xóa câu hỏi an toàn (Không làm mất dữ liệu nháp của các câu khác)
+window.deleteQuestion = async function(docId) {
+    if (!confirm("CẢNH BÁO: Bạn có chắc chắn muốn xóa vĩnh viễn câu hỏi này khỏi CSDL không? Hành động này không thể hoàn tác.")) return;
+    
+    // Lưu lại state hiện tại của các câu hỏi khác đang gõ dở để tránh mất dữ liệu khi re-render
+    const currentState = getCurrentEditorState();
+    
+    try {
+        await deleteDoc(doc(db, "questions", docId));
+        
+        // Lọc bỏ câu vừa xóa và cập nhật mảng loadedQuestions
+        loadedQuestions = currentState.filter(q => q.id !== docId);
+        
+        renderEditor(); // Render lại giao diện và tự động đánh lại số thứ tự
+        triggerAutoSave();
+        showToast("Đã xóa câu hỏi thành công khỏi hệ thống!");
+    } catch (error) {
+        console.error("Lỗi xóa câu hỏi:", error);
+        showToast("Lỗi hệ thống khi xóa câu hỏi", true);
+    }
+};
+
 window.updateOptionHighlight = function(radioElem) {
     const parentGrid = radioElem.closest('.options-grid');
     parentGrid.querySelectorAll('.option-item').forEach(item => item.classList.remove('correct'));
@@ -175,7 +194,6 @@ function getCurrentEditorState() {
         let correctAnswer = 0;
         card.querySelectorAll(`input[name="correct_${docId}"]`).forEach(r => { if(r.checked) correctAnswer = parseInt(r.value); });
 
-        // Bảo lưu các ID và thêm thuộc tính Order
         currentState.push({ id: docId, examId: currentExamId, text, explanation, options, correctAnswer, order: index });
     });
     return currentState;
@@ -191,7 +209,7 @@ function triggerAutoSave() {
 
 function initAutoSave() {
     if (autoSaveInterval) clearInterval(autoSaveInterval);
-    autoSaveInterval = setInterval(triggerAutoSave, 30000); // 30s lưu 1 lần
+    autoSaveInterval = setInterval(triggerAutoSave, 30000); 
 }
 
 // =================== XỬ LÝ LƯU GỐC & DIFFING ===================
@@ -209,7 +227,6 @@ document.getElementById('btn-save-all').addEventListener('click', async () => {
         const oldQ = loadedQuestions.find(q => q.id === newQ.id);
         if (oldQ) {
             let diffs = [];
-            // Bắt DIFF Text
             if (oldQ.text !== newQ.text) {
                 diffs.push({ field: "Nội dung câu hỏi", old: oldQ.text, new: newQ.text });
             }
@@ -247,17 +264,15 @@ document.getElementById('btn-save-all').addEventListener('click', async () => {
     try {
         await Promise.all(updatePromises);
         
-        // NẾU CÓ THAY ĐỔI, GHI LẠI TOÀN BỘ SNAPSHOT VÀ LỊCH SỬ DIFF
         if (changesLog.length > 0) {
             await addDoc(collection(db, "exam_history"), {
                 examId: currentExamId,
                 timestamp: Date.now(),
                 changes: changesLog,
-                snapshot: loadedQuestions // Chìa khóa để tính năng Rollback hoạt động
+                snapshot: loadedQuestions 
             });
         }
 
-        // Cập nhật lại state tĩnh và Xóa Draft
         loadedQuestions = newState;
         localStorage.removeItem(`draft_${currentExamId}`);
         document.getElementById('draft-status').style.display = 'none';
@@ -298,14 +313,11 @@ document.getElementById('btn-view-history').addEventListener('click', async () =
         historyData.forEach((item) => {
             const timeStr = new Date(item.timestamp).toLocaleString('vi-VN');
             
-            // Xây dựng giao diện Diff Before/After CÓ TÍNH TƯƠNG THÍCH NGƯỢC
             let diffHtml = '';
             (item.changes || []).forEach(changeObj => {
                 if (typeof changeObj === 'string') {
-                    // Cấu trúc dữ liệu cũ (chỉ lưu text)
                     diffHtml += `<div class="diff-block" style="padding: 10px 15px; font-size: 13.5px; color: #475569; background: white;">${changeObj}</div>`;
                 } else if (changeObj && changeObj.diffs) {
-                    // Cấu trúc dữ liệu mới (Diff chuyên sâu)
                     diffHtml += `<div class="diff-block">
                                     <div class="diff-title">Câu ${changeObj.questionIndex}: Đã thay đổi</div>`;
                     changeObj.diffs.forEach(diff => {
@@ -319,7 +331,6 @@ document.getElementById('btn-view-history').addEventListener('click', async () =
                 }
             });
             
-            // Chỉ hiển thị nút Rollback nếu bản ghi có chứa thuộc tính snapshot (dữ liệu mới)
             const rollbackBtnHtml = item.snapshot ? `
                 <button class="btn-rollback" data-hid="${item.docId}">
                     <i class="fa-solid fa-rotate-left"></i> Khôi phục phiên bản này
@@ -341,7 +352,6 @@ document.getElementById('btn-view-history').addEventListener('click', async () =
         
         container.innerHTML = html;
 
-        // Bắt sự kiện Rollback
         document.querySelectorAll('.btn-rollback').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const hid = this.getAttribute('data-hid');
@@ -355,7 +365,6 @@ document.getElementById('btn-view-history').addEventListener('click', async () =
 
                 try {
                     const rollbackPromises = [];
-                    // Trích xuất mảng snapshot từ bản ghi lịch sử
                     const snapshotData = targetHistory.snapshot;
                     
                     snapshotData.forEach(sq => {
@@ -371,7 +380,7 @@ document.getElementById('btn-view-history').addEventListener('click', async () =
 
                     await Promise.all(rollbackPromises);
                     showToast("Khôi phục dữ liệu thành công! Đang tải lại trang...");
-                    setTimeout(() => location.reload(), 1500); // F5 lại để editor ăn data mới
+                    setTimeout(() => location.reload(), 1500); 
                 } catch (err) {
                     console.error("Lỗi rollback:", err);
                     showToast("Lỗi khôi phục dữ liệu. Vui lòng thử lại.", true);
@@ -391,5 +400,4 @@ document.getElementById('close-history-modal').addEventListener('click', () => {
     document.getElementById('history-modal').style.display = 'none';
 });
 
-// Khởi chạy
 document.addEventListener('DOMContentLoaded', fetchQuestions);
