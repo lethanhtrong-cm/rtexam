@@ -202,13 +202,12 @@ function injectTableHeadersAndToolbar() {
     const table = document.querySelector('#usersTableBody').closest('table');
     const theadTr = table.querySelector('thead tr');
     
-    // Tiêm Style Tối ưu Bố cục Nút và lấp đầy khoảng trống cho Mobile
+    // TIÊM CSS TỐI ƯU CARD (ĐÃ FIX LỖI NÚT LẸM)
     if (!document.getElementById('mobile-user-row-style')) {
         const style = document.createElement('style');
         style.id = 'mobile-user-row-style';
         style.innerHTML = `
             @media (max-width: 768px) {
-                /* Ép bảng thành dạng Card */
                 #tab-user-list .admin-table { min-width: 100% !important; display: block; border: none; }
                 #tab-user-list .admin-table thead { display: none; }
                 #tab-user-list .admin-table tbody { display: block; width: 100%; }
@@ -226,29 +225,26 @@ function injectTableHeadersAndToolbar() {
                 
                 .user-row td { display: block; border: none !important; padding: 0 !important; text-align: left !important; }
                 
-                /* TẬN DỤNG CỘT TRÁI: Gộp Checkbox + STT + Avatar + Trạng thái */
-                .user-row td:nth-child(1) { width: 55px; padding-top: 5px !important; }
-                .mobile-left-data { display: flex !important; } /* Hiện dữ liệu cột trái */
+                /* TẬN DỤNG CỘT TRÁI */
+                .user-row td:nth-child(1) { width: 65px; padding-top: 5px !important; flex-shrink: 0; }
+                .mobile-left-data { display: flex !important; flex-direction: column; align-items: center; gap: 8px; margin-top: 8px; } 
                 
                 /* ẨN CÁC CỘT THỪA CỦA DESKTOP */
                 .desktop-only-cell, .desktop-status-td, .desktop-action-td { display: none !important; }
-                .user-row td:nth-child(2), .user-row td:nth-child(4), .user-row td:nth-child(5) { display: none !important; }
                 
                 /* CỘT THÔNG TIN CHÍNH BÊN PHẢI */
-                .user-row td:nth-child(3) { width: calc(100% - 55px); padding-left: 12px !important; }
+                .user-row td:nth-child(3) { flex: 1; min-width: 0; padding-left: 10px !important; }
                 
-                /* THANH HÀNH ĐỘNG DẠNG LƯỚI FULL CHIỀU NGANG ĐÁY CARD */
-                .mobile-action-bar { 
-                    display: flex !important; 
-                    flex-wrap: wrap; 
-                    gap: 8px; 
-                    margin-top: 15px; 
-                    padding-top: 15px; 
-                    border-top: 1px dashed #cbd5e1; 
-                    width: calc(100% + 55px); /* Kéo dãn ra full thẻ card */
-                    margin-left: -55px;
+                /* HÀNG NÚT BẤM ĐỘC LẬP TỰ ĐỘNG FULL WIDTH (FIX LỖI LẸM) */
+                .mobile-action-row {
+                    display: block !important;
+                    width: 100%;
+                    margin-top: 15px;
+                    padding-top: 15px !important;
+                    border-top: 1px dashed #cbd5e1 !important;
                 }
-                .mobile-action-bar button { 
+                .mobile-action-row div { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+                .mobile-action-row button { 
                     flex: 1; 
                     min-width: 45%; 
                     justify-content: center; 
@@ -497,13 +493,11 @@ export function renderUserList() {
         tr.onmouseover = () => tr.style.backgroundColor = hasPendingRequest ? '#ffe4e6' : '#f8fafc';
         tr.onmouseout = () => tr.style.backgroundColor = hasPendingRequest ? '#fff1f2' : 'transparent';
         
-        // Tích hợp Layout thông minh cho cả Desktop và Mobile
         tr.innerHTML = `
             <td class="text-center" style="vertical-align: top;">
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
                     <input type="checkbox" class="user-row-checkbox" data-id="${user.userId}" data-email="${user.email}" ${isChecked} style="cursor:pointer; transform: scale(1.2);">
                     
-                    <!-- Dữ liệu tận dụng khoảng trống trên Mobile (Mặc định ẩn trên Desktop) -->
                     <div class="mobile-left-data" style="display: none; flex-direction: column; align-items: center; gap: 8px;">
                         <span style="font-weight: 700; color: #94a3b8; font-size: 13px;">#${currentStt}</span>
                         <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; width: 35px; height: 35px; font-size: 16px;">
@@ -516,9 +510,8 @@ export function renderUserList() {
             
             <td class="text-center desktop-only-cell" style="font-weight: 600; color: #64748b;">${currentStt}</td>
             
-            <td style="width: 100%;">
+            <td>
                 <div class="user-email-cell" style="display: flex; align-items: flex-start; width: 100%;">
-                    <!-- Avatar Desktop -->
                     <div class="user-avatar-placeholder desktop-only-cell" style="background-color: ${getAvatarColor(firstLetter)}; margin-top: 5px; flex-shrink: 0;">
                         ${firstLetter}
                     </div>
@@ -530,11 +523,6 @@ export function renderUserList() {
                         ${datesHtml}
                     </div>
                 </div>
-                
-                <!-- Thanh Hành động nén (Chỉ hiện trên Mobile) -->
-                <div class="mobile-action-bar" style="display: none;">
-                    ${actionButtonsHtml}
-                </div>
             </td>
             
             <td class="text-center desktop-status-td">
@@ -542,6 +530,13 @@ export function renderUserList() {
             </td>
             <td class="text-center desktop-action-td">
                 <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
+                    ${actionButtonsHtml}
+                </div>
+            </td>
+
+            <!-- CỘT CHỨA NÚT DÀNH RIÊNG CHO MOBILE (KHẮC PHỤC TRIỆT ĐỂ LỖI LẸM VIỀN) -->
+            <td class="mobile-action-row" style="display: none;">
+                <div>
                     ${actionButtonsHtml}
                 </div>
             </td>
