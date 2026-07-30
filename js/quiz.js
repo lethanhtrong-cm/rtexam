@@ -480,9 +480,11 @@ async function executeSubmit() {
         const examDocRef = doc(db, "exams", currentExamId);
         await setDoc(examDocRef, { attemptCount: increment(1) }, { merge: true });
         
-        showResultModal(finalCorrectCount, finalTotal, finalScore);
+        // Truyền thêm gainedXP vào hàm hiển thị Modal
+        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP);
     } catch (error) {
-        showResultModal(finalCorrectCount, finalTotal, finalScore);
+        // Truyền thêm gainedXP vào hàm hiển thị Modal ngay cả khi lỗi lưu kết quả
+        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP);
     }
 }
 
@@ -697,13 +699,36 @@ function resetFeedbackUI() {
     btn.innerText = "Gửi Đánh Giá"; btn.disabled = false;
 }
 
-function showResultModal(correctCount, total, score) {
+function showResultModal(correctCount, total, score, xp = 0) {
     const modal = document.getElementById('result-modal');
     document.getElementById('modal-score-text').innerText = score;
     document.getElementById('modal-correct-text').innerText = `${correctCount}/${total}`;
     
     const percentage = (correctCount / total) * 100;
-    document.getElementById('modal-score-circle').style.background = `conic-gradient(#10b981 ${percentage}%, #d1fae5 ${percentage}%)`;
+    const scoreCircle = document.getElementById('modal-score-circle');
+    scoreCircle.style.background = `conic-gradient(#10b981 ${percentage}%, #d1fae5 ${percentage}%)`;
+
+    // TÍNH NĂNG MỚI: Hiển thị XP ngay trên bảng điểm
+    let xpDisplay = document.getElementById('modal-xp-display');
+    if (!xpDisplay) {
+        // Tạo thẻ hiển thị XP nếu chưa tồn tại
+        xpDisplay = document.createElement('div');
+        xpDisplay.id = 'modal-xp-display';
+        xpDisplay.style.cssText = "margin-top: 15px; font-weight: bold; color: #ea580c; font-size: 1.1rem; background: #ffedd5; padding: 5px 15px; border-radius: 20px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.05);";
+        
+        // Chèn ngay bên dưới vòng tròn điểm số
+        if (scoreCircle && scoreCircle.parentNode) {
+            scoreCircle.parentNode.insertBefore(xpDisplay, scoreCircle.nextSibling);
+        }
+    }
+    
+    // Nếu có XP thì hiển thị, không thì ẩn đi
+    if (xp > 0) {
+        xpDisplay.innerHTML = `🌟 +${xp} XP`;
+        xpDisplay.style.display = 'inline-block';
+    } else {
+        xpDisplay.style.display = 'none';
+    }
 
     resetFeedbackUI(); 
     modal.classList.add('active');
