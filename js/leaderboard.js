@@ -1,308 +1,235 @@
-import { auth, db } from "./dashboard-core.js"; 
-import { collection, query, orderBy, limit, getDocs, doc, getDoc, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-let globalTopUsers = [];
-let currentPage = 1;
-const itemsPerPage = 10;
-let currentUserDataIndex = -1;
-
-const CACHE_TTL_MS = 15 * 60 * 1000; 
-
-// HÀM HELPER: Xác định cấp bậc dựa trên điểm XP
-function getTierBadge(xp) {
-    if (xp < 1000) return `<span class="tier-badge tier-rookie" title="Tân binh"><i class="fa-solid fa-seedling"></i> Tân binh</span>`;
-    if (xp < 3000) return `<span class="tier-badge tier-pro" title="Chuyên gia"><i class="fa-solid fa-medal"></i> Chuyên gia</span>`;
-    if (xp < 10000) return `<span class="tier-badge tier-master" title="Cao thủ"><i class="fa-solid fa-star"></i> Cao thủ</span>`;
-    return `<span class="tier-badge tier-grandmaster" title="Thách đấu"><i class="fa-solid fa-gem"></i> Thách đấu</span>`;
-}
-
-// HÀM HELPER: Cập nhật dòng "Last Updated"
-function updateLastUpdatedText(timestamp) {
-    const textElement = document.getElementById('lastUpdatedText');
-    if (!textElement) return;
-    if (!timestamp) {
-        textElement.innerHTML = '<i class="fa-regular fa-clock"></i> Chưa có dữ liệu';
-        return;
-    }
-    const diffMs = Date.now() - timestamp;
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) {
-        textElement.innerHTML = '<i class="fa-regular fa-clock"></i> Vừa cập nhật xong';
-    } else {
-        textElement.innerHTML = `<i class="fa-regular fa-clock"></i> Cập nhật: ${diffMins} phút trước`;
-    }
-}
-
-document.addEventListener('authReady', async (e) => {
-    const user = e.detail ? e.detail.user : auth.currentUser;
-    if (user) {
-        const navEntries = performance.getEntriesByType("navigation");
-        if (navEntries.length > 0 && navEntries[0].type === "reload") {
-            sessionStorage.removeItem('leaderboardCache');
-            sessionStorage.removeItem(`userRankCache_${user.uid}`);
-        }
-
-        await initLeaderboard(user);
-        await updateUserDashboardRank(user); 
-        setupControlListeners(user);
-    }
-});
-
-document.addEventListener('ComponentsLoaded', async () => {
-    const user = auth.currentUser;
-    if (user) {
-        await updateUserDashboardRank(user);
-        setupControlListeners(user);
-    }
-});
-
-// THIẾT LẬP SỰ KIỆN CHO NÚT CẬP NHẬT VÀ BỘ LỌC
-function setupControlListeners(currentUser) {
-    const refreshBtn = document.getElementById('btnRefreshLeaderboard');
-    if (refreshBtn && !refreshBtn.dataset.listenerAttached) {
-        refreshBtn.dataset.listenerAttached = "true";
-        refreshBtn.addEventListener('click', async () => {
-            sessionStorage.removeItem('leaderboardCache');
-            sessionStorage.removeItem(`userRankCache_${currentUser.uid}`);
-            
-            refreshBtn.style.opacity = "0.7";
-            refreshBtn.innerText = "Đang lấy...";
-            
-            const textElement = document.getElementById('lastUpdatedText');
-            if(textElement) textElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đồng bộ...';
-            
-            await initLeaderboard(currentUser);
-            await updateUserDashboardRank(currentUser);
-            
-            setTimeout(() => {
-                refreshBtn.style.opacity = "1";
-                refreshBtn.innerHTML = `<i class="fa-solid fa-rotate"></i> Cập nhật`;
-            }, 400);
-        });
-    }
-
-    const filterEl = document.getElementById('leaderboardFilter');
-    if (filterEl && !filterEl.dataset.listenerAttached) {
-        filterEl.dataset.listenerAttached = "true";
-        filterEl.addEventListener('change', (e) => {
-            if (e.target.value !== 'all') {
-                alert('Tính năng lọc thời gian đang được nâng cấp để tiết kiệm băng thông. Vui lòng sử dụng bộ lọc "Tổng thời gian" trong lúc chờ đợi nhé!');
-                e.target.value = 'all'; 
-            }
-        });
-    }
-}
-
-export async function updateUserDashboardRank(currentUser) {
-    const statElement = document.getElementById('statAccountStatus');
-    if (!statElement || statElement.innerHTML.includes('Hạng')) return;
-
-    try {
-        const cacheKey = `userRankCache_${currentUser.uid}`;
-        const cachedData = sessionStorage.getItem(cacheKey);
-        
-        if (cachedData) {
-            const parsed = JSON.parse(cachedData);
-            if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
-                statElement.innerHTML = `Hạng ${parsed.rank}`;
-                return; 
-            }
-        }
-
-        const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        if (!userDocSnap.exists()) {
-            statElement.innerHTML = 'Chưa xếp hạng';
-            return;
-        }
-
-        const currentXP = userDocSnap.data().totalXP || 0;
-        const higherXpQuery = query(
-            collection(db, "users_leaderboard"),
-            where("totalXP", ">", currentXP)
-        );
-        
-        const snapshot = await getCountFromServer(higherXpQuery);
-        const countHigher = snapshot.data().count;
-        const actualRank = countHigher + 1;
-        
-        statElement.innerHTML = `Hạng ${actualRank}`;
-        sessionStorage.setItem(cacheKey, JSON.stringify({ rank: actualRank, timestamp: Date.now() }));
-    } catch (error) {
-        console.error("Lỗi khi cập nhật thứ hạng Dashboard:", error);
-    }
-}
-
-async function initLeaderboard(currentUser) {
-    const podiumContainer = document.getElementById('leaderboardPodium');
-    const cRankStats = document.getElementById('cRankStats');
-    const oldSticky = document.getElementById('stickyUserRank');
-    if (oldSticky) oldSticky.style.display = 'none';
-
-    try {
-        const cacheKey = 'leaderboardCache';
-        const cachedData = sessionStorage.getItem(cacheKey);
-        let useCache = false;
-        let cacheTimestamp = null;
-
-        if (cachedData) {
-            const parsed = JSON.parse(cachedData);
-            if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
-                globalTopUsers = parsed.data;
-                cacheTimestamp = parsed.timestamp;
-                useCache = true;
-            }
-        }
-
-        if (!useCache) {
-            const q = query(collection(db, "users_leaderboard"), orderBy("totalXP", "desc"), limit(20));
-            const querySnapshot = await getDocs(q);
-
-            globalTopUsers = [];
-            querySnapshot.forEach(docSnap => {
-                globalTopUsers.push({ id: docSnap.id, ...docSnap.data() });
-            });
-            cacheTimestamp = Date.now();
-            sessionStorage.setItem(cacheKey, JSON.stringify({ data: globalTopUsers, timestamp: cacheTimestamp }));
-        }
-
-        updateLastUpdatedText(cacheTimestamp);
-
-        const top3 = globalTopUsers.slice(0, 3);
-        const restUsersList = globalTopUsers.slice(3);
-
-        podiumContainer.innerHTML = '';
-        if (top3.length === 0) {
-            podiumContainer.innerHTML = '<p style="color: #64748b; padding: 20px;">Chưa có dữ liệu xếp hạng.</p>';
-        } else {
-            const displayOrder = [];
-            if (top3[1]) displayOrder.push({ ...top3[1], rank: 2, class: 'step-2' });
-            if (top3[0]) displayOrder.push({ ...top3[0], rank: 1, class: 'step-1' });
-            if (top3[2]) displayOrder.push({ ...top3[2], rank: 3, class: 'step-3' });
-
-            displayOrder.forEach(user => {
-                const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=random&color=fff`;
-                const crown = user.rank === 1 ? '<i class="fa-solid fa-crown crown-icon"></i>' : '';
-                
-                podiumContainer.innerHTML += `
-                    <div class="podium-step ${user.class}">
-                        ${crown}
-                        <img src="${avatar}" alt="Avatar" class="podium-avatar">
-                        <div class="podium-name">
-                            ${user.displayName || 'Học viên ẩn danh'}
-                            <span style="margin-top:2px;">${getTierBadge(user.totalXP || 0)}</span>
-                        </div>
-                        <div class="podium-xp">${(user.totalXP || 0).toLocaleString()} XP</div>
-                        <div class="podium-rank-box">TOP ${user.rank}</div>
-                    </div>
-                `;
-            });
-        }
-
-        currentUserDataIndex = globalTopUsers.findIndex(u => u.id === currentUser.uid);
-        const statElement = document.getElementById('statAccountStatus'); 
-        
-        if (currentUserDataIndex !== -1) {
-            const currentRank = currentUserDataIndex + 1;
-            const currentXP = globalTopUsers[currentUserDataIndex].totalXP || 0;
-            cRankStats.innerHTML = `
-                <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
-                <span class="rank-badge">Hạng: ${currentRank}</span>
-            `;
-            if(statElement) statElement.innerHTML = `Hạng ${currentRank}`; 
-        } else {
-            let currentXP = 0;
-            const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists()) {
-                currentXP = userDocSnap.data().totalXP || 0;
-            }
-            
-            cRankStats.innerHTML = `
-                <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
-                <span class="rank-badge out-of-rank">Ngoài Top 20</span>
-            `;
-            if(statElement) statElement.innerHTML = `Ngoài Top 20`; 
-        }
-
-        currentPage = 1;
-        setupPaginationControls(restUsersList);
-
-    } catch (error) {
-        console.error("Lỗi khi tải Bảng Xếp Hạng:", error);
-        podiumContainer.innerHTML = '<p style="color: #ef4444; padding: 20px;">Không thể tải dữ liệu xếp hạng lúc này.</p>';
-        document.getElementById('leaderboardTableBody').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Lỗi kết nối máy chủ.</div>';
-    }
-}
-
-function setupPaginationControls(restUsersList) {
-    const btnPrev = document.getElementById('btnPrevPage');
-    const btnNext = document.getElementById('btnNextPage');
-
-    renderLeaderboardPage(restUsersList, currentPage);
-
-    const newBtnPrev = btnPrev.cloneNode(true);
-    const newBtnNext = btnNext.cloneNode(true);
-    btnPrev.parentNode.replaceChild(newBtnPrev, btnPrev);
-    btnNext.parentNode.replaceChild(newBtnNext, btnNext);
-
-    newBtnPrev.addEventListener('click', () => {
-        if (currentPage > 1) {
-            currentPage--;
-            renderLeaderboardPage(restUsersList, currentPage);
-        }
-    });
-
-    newBtnNext.addEventListener('click', () => {
-        const maxPage = Math.ceil(restUsersList.length / itemsPerPage) || 1;
-        if (currentPage < maxPage) {
-            currentPage++;
-            renderLeaderboardPage(restUsersList, currentPage);
-        }
-    });
-}
-
-function renderLeaderboardPage(restUsersList, page) {
-    const tableBody = document.getElementById('leaderboardTableBody');
-    const pageIndicator = document.getElementById('pageIndicator');
-    const btnPrev = document.getElementById('btnPrevPage');
-    const btnNext = document.getElementById('btnNextPage');
-
-    const maxPage = Math.ceil(restUsersList.length / itemsPerPage) || 1;
-    const startIndex = (page - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const pageData = restUsersList.slice(startIndex, endIndex);
-
-    tableBody.innerHTML = '';
+<style>
+    /* CSS BẢNG XẾP HẠNG HIỆN ĐẠI, THANH THOÁT & TRANG TRỌNG */
+    .leaderboard-card { padding: 30px; background: #ffffff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
     
-    if (pageData.length === 0) {
-        tableBody.innerHTML = '<div style="text-align: center; color: #64748b; padding: 30px; font-size: 1rem; border: 1px dashed #cbd5e1; border-radius: 12px; margin-top: 10px;">Chưa có đủ dữ liệu học viên.</div>';
-    } else {
-        pageData.forEach((user, index) => {
-            const actualRank = startIndex + index + 4; 
-            const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=e2e8f0&color=334155`;
-            
-            // Xử lý logic Animation trễ dần (Staggered Animation)
-            const animationDelay = index * 0.08; 
-            
-            tableBody.innerHTML += `
-                <div class="leaderboard-row animate-fade-in" style="animation-delay: ${animationDelay}s">
-                    <div class="row-rank">#${actualRank}</div>
-                    <div class="row-info">
-                        <img src="${avatar}" alt="Avatar" class="row-avatar">
-                        <div class="row-name">
-                            ${user.displayName || 'Học viên ẩn danh'}
-                            ${getTierBadge(user.totalXP || 0)}
-                        </div>
-                    </div>
-                    <div class="row-xp">${(user.totalXP || 0).toLocaleString()} XP</div>
-                </div>
-            `;
-        });
-    }
+    /* GIAO DIỆN HEADER MỚI KÈM BỘ LỌC & THỜI GIAN CẬP NHẬT */
+    .leaderboard-header-wrapper { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #fef3c7; padding-bottom: 15px; margin-bottom: 20px; }
+    .leaderboard-header { color: #d97706; margin: 0; font-weight: 800; font-size: 1.3rem; display: flex; align-items: center; gap: 10px;}
+    
+    .controls-group { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .action-row { display: flex; gap: 10px; align-items: center; }
+    
+    .filter-select { padding: 7px 12px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; background: #f8fafc; color: #334155; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s ease;}
+    .filter-select:hover { border-color: #94a3b8; background: #f1f5f9; }
+    
+    .last-updated-text { font-size: 0.75rem; color: #64748b; font-style: italic; font-weight: 500; display: flex; align-items: center; gap: 4px;}
 
-    pageIndicator.innerText = `Trang ${page} / ${maxPage}`;
-    btnPrev.disabled = page === 1;
-    btnNext.disabled = page === maxPage;
-}
+    /* NÚT CẬP NHẬT THỦ CÔNG */
+    .refresh-leaderboard-btn { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border: none; color: #ffffff; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+    .refresh-leaderboard-btn:hover { background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4); color: #ffffff; }
+    .refresh-leaderboard-btn i { transition: transform 0.5s ease; }
+    .refresh-leaderboard-btn:active i { transform: rotate(180deg); }
+
+    /* HIỆU ỨNG ANIMATION XẾP TẦNG (STAGGERED FADE-IN) */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeInUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
+
+    /* HỆ THỐNG DANH HIỆU (TIER BADGES) */
+    .tier-badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; margin-left: 6px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .tier-rookie { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .tier-pro { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .tier-master { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .tier-grandmaster { background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8; }
+
+    /* BỤC VINH QUANG TOP 3 THANH THOÁT & TRANG TRỌNG (ĐÃ FIX LỖI THỌT KHUNG) */
+    .podium-container { display: flex; justify-content: center; align-items: flex-end; gap: 20px; margin-bottom: 30px; padding-top: 35px; }
+    .podium-step { position: relative; display: flex; flex-direction: column; align-items: center; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 18px 18px 0 0; padding: 22px 10px 0; width: 155px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .podium-step:hover { transform: translateY(-6px); }
+    .podium-avatar { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 6px 15px rgba(0,0,0,0.08); margin-bottom: 12px; background: #fff; z-index: 2; }
+    .crown-icon { position: absolute; top: -30px; font-size: 2.3rem; color: #fbbf24; filter: drop-shadow(0 4px 8px rgba(251, 191, 36, 0.4)); animation: floatCrown 2.5s infinite ease-in-out; z-index: 3;}
+    
+    .podium-name { font-weight: 700; font-size: 0.92rem; color: #1e293b; text-align: center; margin-bottom: 8px; white-space: normal; line-height: 1.4; padding-bottom: 2px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    
+    .podium-xp { font-size: 0.85rem; color: #64748b; font-weight: 800; margin-bottom: 15px; background: #e2e8f0; padding: 4px 12px; border-radius: 10px;}
+    .podium-rank-box { width: 100%; text-align: center; padding: 10px 0; font-size: 1.1rem; font-weight: 800; color: white; margin-top: auto; border-radius: 0; letter-spacing: 0.5px;}
+    
+    /* Tăng Height thêm 15px để bù đắp nội dung Danh hiệu */
+    .step-1 { height: 280px; z-index: 3; border: 2px solid #fbbf24; border-bottom: none; background: linear-gradient(180deg, #fffdf4 0%, #fef3c7 100%); }
+    .step-1 .podium-rank-box { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    .step-1 .podium-avatar { border-color: #fbbf24; width: 88px; height: 88px; margin-bottom: 12px;}
+    
+    .step-2 { height: 240px; z-index: 2; border: 2px solid #93c5fd; border-bottom: none; background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%); }
+    .step-2 .podium-rank-box { background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: inset 0 2px 4px rgba(255,255,255,0.2); }
+    
+    .step-3 { height: 215px; z-index: 1; border: 2px solid #fdba74; border-bottom: none; background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%); }
+    .step-3 .podium-rank-box { background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%); text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+    /* THÀNH TÍCH CÁ NHÂN & NÚT SHARE */
+    .compact-personal-rank { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); color: white; padding: 16px 24px; border-radius: 14px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(29, 78, 216, 0.2); }
+    .c-rank-info { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.05rem; }
+    .c-rank-actions { display: flex; align-items: center; gap: 15px; }
+    .c-rank-stats { display: flex; align-items: center; gap: 15px; }
+    .xp-badge { font-size: 0.95rem; }
+    .xp-badge b { color: #fbbf24; font-size: 1.1rem; }
+    .rank-badge { background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 20px; font-weight: 800; font-size: 0.95rem; backdrop-filter: blur(4px);}
+    .out-of-rank { background: rgba(255,255,255,0.1); color: #cbd5e1; }
+    
+    .share-btn-compact { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: white; padding: 6px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.95rem; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: all 0.2s; }
+    .share-btn-compact:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.2); }
+
+    /* DANH SÁCH TOP PHÂN TRANG */
+    .modern-leaderboard-list { display: flex; flex-direction: column; gap: 10px; min-height: 360px; }
+    .leaderboard-row { display: flex; align-items: center; padding: 12px 22px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; transition: all 0.2s ease; cursor: default;}
+    .leaderboard-row:hover { transform: translateX(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); border-color: #cbd5e1; background: #f8fafc; }
+    .row-rank { font-size: 1.15rem; font-weight: 800; color: #64748b; width: 60px; flex-shrink: 0; }
+    .row-info { display: flex; align-items: center; gap: 16px; flex: 1; overflow: hidden; }
+    .row-avatar { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid #f1f5f9; background: #e2e8f0; }
+    .row-name { font-weight: 700; color: #1e293b; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; }
+    .row-xp { font-weight: 800; color: #0284c7; font-size: 1.05rem; flex-shrink: 0; background: #f0f9ff; padding: 6px 14px; border-radius: 10px; border: 1px solid #bae6fd; }
+
+    /* NÚT PHÂN TRANG */
+    .pagination-container { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 25px; }
+    .page-btn { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+    .page-btn:hover:not(:disabled) { background: #e2e8f0; color: #0f172a; border-color: #94a3b8; }
+    .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .page-indicator { font-weight: 600; color: #475569; font-size: 0.95rem; }
+    #stickyUserRank { display: none !important; }
+
+    /* MODAL CHIA SẺ THÀNH TÍCH (UI XỊN XÒ) */
+    .share-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s ease; backdrop-filter: blur(5px); }
+    .share-modal-overlay.active { opacity: 1; visibility: visible; }
+    .share-modal-content { background: #fff; border-radius: 20px; width: 90%; max-width: 360px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transform: scale(0.9); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .share-modal-overlay.active .share-modal-content { transform: scale(1); }
+    
+    .share-card { padding: 30px 20px 20px; text-align: center; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: white; position: relative; }
+    .share-close-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+    .share-close-btn:hover { background: rgba(255,255,255,0.4); }
+    .share-avatar { width: 85px; height: 85px; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin-bottom: 12px; }
+    .share-name { font-size: 1.3rem; font-weight: 800; margin-bottom: 5px; }
+    .share-stats { display: flex; justify-content: center; gap: 15px; margin-top: 18px; }
+    .share-stat-item { background: rgba(255,255,255,0.15); padding: 10px 15px; border-radius: 12px; min-width: 90px; }
+    .share-stat-label { font-size: 0.75rem; opacity: 0.85; margin-bottom: 4px; letter-spacing: 0.5px;}
+    .share-stat-val { font-size: 1.2rem; font-weight: 800; color: #fcd34d; }
+    
+    .share-qr-section { padding: 25px 20px; background: #fff; color: #1e293b; text-align: center; }
+    .share-qr-img { width: 110px; height: 110px; margin: 0 auto 12px; border: 1px solid #e2e8f0; padding: 6px; border-radius: 12px; background: #fff;}
+    .share-qr-desc { font-size: 0.9rem; color: #64748b; font-weight: 600; margin-bottom: 20px;}
+    
+    .share-action-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 12px; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+    .share-action-btn:hover { background: #1d4ed8; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4); }
+
+    /* TỐI ƯU MOBILE RESPONSIVE */
+    @media (max-width: 768px) {
+        .leaderboard-card { padding: 15px; border-radius: 14px; }
+        .leaderboard-header-wrapper { flex-direction: column; align-items: flex-start; gap: 15px; padding-bottom: 12px;}
+        .controls-group { width: 100%; align-items: center; }
+        .action-row { width: 100%; justify-content: space-between; }
+        .filter-select { flex: 1; text-align: center; font-size: 0.85rem;}
+        .refresh-leaderboard-btn { flex: 1; justify-content: center; font-size: 0.85rem; padding: 8px;}
+        .tier-badge { font-size: 0.65rem; padding: 2px 5px; margin-left: 4px;}
+        
+        .podium-container { gap: 6px; align-items: flex-end; padding-top: 25px; margin-bottom: 20px;}
+        .podium-step { width: 32%; padding: 15px 4px 0; border-width: 1px; border-radius: 14px 14px 0 0;}
+        .step-1 { height: 230px; }  .step-2 { height: 195px; }  .step-3 { height: 175px; }
+        .podium-avatar { width: 44px; height: 44px; border-width: 2px; margin-bottom: 8px; }
+        .step-1 .podium-avatar { width: 56px; height: 56px; margin-bottom: 8px;}
+        .crown-icon { font-size: 1.4rem; top: -18px; }
+        .podium-name { font-size: 0.75rem; margin-bottom: 6px; gap: 3px;}
+        .podium-xp { font-size: 0.72rem; padding: 2px 6px; margin-bottom: 8px; font-weight: 700;}
+        .podium-rank-box { font-size: 0.9rem; padding: 6px 0; }
+        
+        .compact-personal-rank { flex-direction: column; gap: 10px; padding: 14px; text-align: center; }
+        .c-rank-actions { flex-direction: column; width: 100%; gap: 12px; }
+        .share-btn-compact { width: 100%; justify-content: center; padding: 8px; }
+        .c-rank-stats { width: 100%; justify-content: space-around; }
+        .xp-badge { font-size: 0.85rem; } .xp-badge b { font-size: 1rem; }
+        .rank-badge { font-size: 0.85rem; padding: 4px 10px; }
+
+        .modern-leaderboard-list { gap: 8px; min-height: 250px; }
+        .leaderboard-row { padding: 10px 12px; border-radius: 10px; }
+        .row-rank { width: 35px; font-size: 1rem; }
+        .row-info { gap: 12px; }
+        .row-avatar { width: 38px; height: 38px; border-width: 1px;}
+        .row-name { font-size: 0.88rem; flex-wrap: wrap;}
+        .row-xp { font-size: 0.9rem; padding: 4px 10px; }
+    }
+</style>
+
+<div class="card leaderboard-card">
+    <div class="leaderboard-header-wrapper">
+        <h3 class="leaderboard-header"><i class="fa-solid fa-trophy"></i> Bảng Xếp Hạng Vinh Quang</h3>
+        <div class="controls-group">
+            <div class="action-row">
+                <select id="leaderboardFilter" class="filter-select">
+                    <option value="all">Tổng thời gian</option>
+                    <option value="month">Tháng này</option>
+                    <option value="week">Tuần này</option>
+                </select>
+                <button id="btnRefreshLeaderboard" class="refresh-leaderboard-btn" title="Cập nhật lại bảng xếp hạng">
+                    <i class="fa-solid fa-rotate"></i> Cập nhật
+                </button>
+            </div>
+            <span id="lastUpdatedText" class="last-updated-text"><i class="fa-regular fa-clock"></i> Đang tải...</span>
+        </div>
+    </div>
+    
+    <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; padding: 12px 18px; border-radius: 10px; margin-bottom: 20px; font-size: 0.92rem; color: #0369a1; display: flex; align-items: flex-start; gap: 10px; line-height: 1.5;">
+        <i class="fa-solid fa-circle-info" style="margin-top: 3px; font-size: 1.1rem;"></i>
+        <div>
+            <b>Hệ thống Danh hiệu (Cấp bậc):</b> Tích lũy XP để nâng cấp danh hiệu.<br>
+            • Tân binh (< 1K) • Chuyên gia (1K - 3K) • Cao thủ (3K - 10K) • Thách đấu (> 10K).<br>
+            <i>Hiển thị Top 20 học viên xuất sắc nhất hệ thống!</i>
+        </div>
+    </div>
+
+    <!-- Bục TOP 3 -->
+    <div class="podium-container" id="leaderboardPodium"></div>
+
+    <!-- KHỐI THÀNH TÍCH CÁ NHÂN CÓ NÚT KHOE THÀNH TÍCH -->
+    <div id="compactUserRankContainer" class="compact-personal-rank">
+        <div class="c-rank-info">
+            <i class="fa-solid fa-user-astronaut"></i>
+            <span id="cRankText">Thành tích của bạn:</span>
+        </div>
+        <div class="c-rank-actions">
+            <div class="c-rank-stats" id="cRankStats">
+                <span class="xp-badge">Đang tải...</span>
+            </div>
+            <button id="btnOpenShare" class="share-btn-compact" style="display: none;">
+                <i class="fa-solid fa-share-nodes"></i> Khoe thành tích
+            </button>
+        </div>
+    </div>
+    
+    <!-- Danh sách TOP PHÂN TRANG -->
+    <div class="modern-leaderboard-list" id="leaderboardTableBody"></div>
+
+    <!-- Nút Phân trang -->
+    <div class="pagination-container" id="leaderboardPagination">
+        <button id="btnPrevPage" class="page-btn" disabled><i class="fa-solid fa-chevron-left"></i> Trước</button>
+        <span id="pageIndicator" class="page-indicator">Trang 1 / 2</span>
+        <button id="btnNextPage" class="page-btn">Sau <i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+</div>
+
+<!-- MODAL CHIA SẺ THÀNH TÍCH (UI ẨN) -->
+<div id="shareAchievementModal" class="share-modal-overlay">
+    <div class="share-modal-content">
+        <div class="share-card">
+            <button id="closeShareModal" class="share-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <img id="shareAvatar" src="" alt="Avatar" class="share-avatar">
+            <div id="shareName" class="share-name">Người dùng</div>
+            <div id="shareTier" style="margin-bottom: 5px;"></div>
+            <div class="share-stats">
+                <div class="share-stat-item">
+                    <div class="share-stat-label">XẾP HẠNG</div>
+                    <div id="shareRank" class="share-stat-val">#0</div>
+                </div>
+                <div class="share-stat-item">
+                    <div class="share-stat-label">TỔNG XP</div>
+                    <div id="shareXp" class="share-stat-val">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="share-qr-section">
+            <img id="shareQrCode" src="" alt="QR Code Website" class="share-qr-img">
+            <div class="share-qr-desc">Quét mã QR để tham gia ngay!</div>
+            <button id="btnNativeShare" class="share-action-btn">
+                <i class="fa-solid fa-share-from-square"></i> Chia sẻ ngay
+            </button>
+        </div>
+    </div>
+</div>
