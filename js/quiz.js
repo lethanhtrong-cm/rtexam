@@ -230,7 +230,6 @@ async function initExamState() {
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
-            // Sửa lỗi: Đẩy kèm trạng thái isOnline = true để đồng bộ với Admin
             await updateDoc(userRef, { examStatus: 'testing', isOnline: true });
         } catch (err) {}
     }
@@ -335,6 +334,24 @@ function updateTimerDisplay() {
     }
 }
 
+// =========================================================================
+// HÀM HELPER HỖ TRỢ BỘ LỌC THỜI GIAN DB
+// =========================================================================
+function getCurrentMonthKey() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `xp_${year}_${month}`;
+}
+
+function getCurrentWeekKey() {
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), 0, 1);
+    const days = Math.floor((now - startDate) / (24 * 60 * 60 * 1000));
+    const weekNumber = Math.ceil((now.getDay() + 1 + days) / 7);
+    return `xp_${now.getFullYear()}_W${weekNumber.toString().padStart(2, '0')}`;
+}
+
 async function executeSubmit() {
     stopTimer(); 
     isSubmitted = true; 
@@ -355,11 +372,12 @@ async function executeSubmit() {
 
     finalScore = Math.round(((finalCorrectCount / finalTotal) * 10) * 100) / 100; 
 
-    // Lô-gic tính điểm XP nâng cao (Đã cập nhật Streak, Speed & Retake Bonus)
+    // Biến toàn cục dùng cho XP Logic
     let gainedXP = 0;
     let xpMessage = "";
-    let isRetake = false; // Biến kiểm tra ôn tập
-    let isNewRecord = false; // Biến kiểm tra vượt kỷ lục
+    let isRetake = false;
+    let isNewRecord = false;
+    let totalRawXP = 0;
 
     try {
         const resultsRef = collection(db, "results");
@@ -368,90 +386,76 @@ async function executeSubmit() {
         
         if (finalTotal > 0) {
             
-            // Tính chuỗi đúng liên tiếp (Max Streak)
-            let currentStreak = 0;
-            let maxStreak = 0;
-            questions.forEach((question, idx) => {
-                if (userAnswers[idx] === question.correctAnswer) {
-                    currentStreak++;
-                    if (currentStreak > maxStreak) maxStreak = currentStreak;
-                } else {
-                    currentStreak = 0;
-                }
-            });
+            let wrongOrEmptyCount = finalTotal - finalCorrectCount;
 
-            // 1. Tính Base XP
-            let baseXP = Math.round((finalCorrectCount / finalTotal) * 100);
+            // 1. Tính điểm cơ bản & Phạt điểm (10 điểm đúng, -2 điểm sai/bỏ trống)
+            let baseXP = (finalCorrectCount * 10) - (wrongOrEmptyCount * 2);
+            if (baseXP < 0) baseXP = 0; 
+            
             let accuracyRate = finalCorrectCount / finalTotal;
 
-            // 2. Tính các khoản Bonus
-            let speedBonus = 0;
-            let perfectBonus = 0;
-            let streakBonus = 0;
-            
-            // Xét thưởng tốc độ nếu độ chính xác đạt từ 80% trở lên
-            if (accuracyRate >= 0.8) {
-                speedBonus = Math.round((timeRemaining / examDuration) * 30 * accuracyRate);
-            }
-            
-            // Cố định +20 XP chỉ khi đạt điểm tuyệt đối 100%
-            if (accuracyRate === 1) {
-                perfectBonus = 20; 
-            }
-            
-            // Xét thưởng chuỗi câu đúng
-            if (maxStreak >= 10) {
-                streakBonus = 10;
-            } else if (maxStreak >= 5) {
-                streakBonus = 5;
-            }
-
-            // 3. Hệ số độ khó (Difficulty Multiplier)
+            // 2. Xét Ngưỡng kích hoạt hệ số 75%
             let difficultyMultiplier = 1.0;
-            if (currentDifficulty === 'hard') {
-                difficultyMultiplier = 1.5;
-            } else if (currentDifficulty === 'medium') {
-                difficultyMultiplier = 1.2;
-            } else if (currentDifficulty === 'easy') {
-                difficultyMultiplier = 1.0;
+            if (accuracyRate >= 0.75) {
+                if (currentDifficulty === 'hard') difficultyMultiplier = 1.5;
+                else if (currentDifficulty === 'medium') difficultyMultiplier = 1.2;
             }
 
-            // Tổng XP thô
-            let totalRawXP = Math.round((baseXP + perfectBonus + speedBonus + streakBonus) * difficultyMultiplier);
+            // 3. Thưởng hoàn thành trọn vẹn 100% & 4. Thưởng tốc độ
+            let perfectBonus = 0;
+            let speedBonus = 0;
 
-            // 4. Phân loại XP theo Lần đầu / Thi lại
+            if (accuracyRate === 1) {
+                perfectBonus = 100; // Flat Bonus cực lớn cho 100%
+                
+                if (timeSpent <= examDuration * 0.3) {
+                    speedBonus = 50;
+                }
+            }
+
+            // Tổng XP thô nhận được từ lần làm này
+            totalRawXP = Math.round((baseXP * difficultyMultiplier) + perfectBonus + speedBonus);
+            if (totalRawXP < 0) totalRawXP = 0;
+
+            // 5. Phân loại luồng xử lý: Làm lần đầu hay Ôn tập
             if (resultSnapshot.empty) {
                 gainedXP = totalRawXP;
                 xpMessage = `🎉 Xuất sắc! Bạn nhận được +${gainedXP} XP cho bài thi này!`;
             } else {
                 isRetake = true;
-                // Phân tích lịch sử thi: Lấy điểm số cao nhất đã từng đạt được
-                let previousBestScore = 0;
+                
+                // Quét điểm thô cao nhất trong lịch sử ôn tập đề này
+                let previousBestRawXP = 0;
                 resultSnapshot.forEach(doc => {
                     let data = doc.data();
-                    if (data.score && data.score > previousBestScore) {
-                        previousBestScore = data.score;
+                    if (data.earnedXP && data.earnedXP > previousBestRawXP) {
+                        previousBestRawXP = data.earnedXP;
                     }
                 });
                 
-                // Khuyến khích ôn tập: Nếu phá vỡ kỷ lục điểm của chính mình, thưởng 20% Base XP
-                if (finalScore > previousBestScore) {
+                if (totalRawXP > previousBestRawXP) {
                     isNewRecord = true;
-                    gainedXP = Math.round((baseXP * 0.2) * difficultyMultiplier);
-                    if (gainedXP > 0) {
-                        xpMessage = `🔥 Thi lại tiến bộ! Bạn nhận được +${gainedXP} XP khuyến khích!`;
-                    }
+                    gainedXP = totalRawXP - previousBestRawXP;
+                    xpMessage = `🔥 Kỷ lục mới! Bạn nhận thêm phần chênh lệch +${gainedXP} XP!`;
+                } else {
+                    gainedXP = 5; // Điểm chuyên cần
+                    xpMessage = `💡 Ôn tập tốt! Nhận +${gainedXP} XP điểm chuyên cần.`;
                 }
             }
 
-            // 5. Cập nhật Leaderboard nếu có XP
+            // 6. Cập nhật Leaderboard (Hỗ trợ cấu trúc DB bộ lọc Tháng/Tuần)
             if (gainedXP > 0) {
                 const leaderboardRef = doc(db, "users_leaderboard", currentUser.uid);
+                const monthKey = getCurrentMonthKey();
+                const weekKey = getCurrentWeekKey();
+
                 await setDoc(leaderboardRef, {
                     displayName: currentUser.displayName || currentUser.email.split('@')[0],
                     email: currentUser.email,
                     photoURL: currentUser.photoURL || "",
-                    totalXP: increment(gainedXP) 
+                    totalXP: increment(gainedXP),
+                    [monthKey]: increment(gainedXP),
+                    [weekKey]: increment(gainedXP)
                 }, { merge: true });
                 showToast(xpMessage);
             }
@@ -479,13 +483,13 @@ async function executeSubmit() {
         await addDoc(collection(db, "results"), {
             email: currentUser.email, examId: currentExamId, score: finalScore,
             correctCount: finalCorrectCount, totalQuestions: finalTotal,
+            earnedXP: totalRawXP, // BẮT BUỘC LƯU LẠI XP THÔ ĐỂ SO SÁNH VỚI CÁC LẦN ÔN TẬP SAU
             savedAnswers: userAnswers, timeSpent: timeSpent, timestamp: new Date().toISOString() 
         });
 
         const examDocRef = doc(db, "exams", currentExamId);
         await setDoc(examDocRef, { attemptCount: increment(1) }, { merge: true });
         
-        // Truyền trạng thái isRetake và isNewRecord vào modal
         showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord);
     } catch (error) {
         showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord);
@@ -709,7 +713,7 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
     const scoreCircle = document.getElementById('modal-score-circle');
     scoreCircle.style.background = `conic-gradient(#10b981 ${percentage}%, #d1fae5 ${percentage}%)`;
 
-    // TÍNH NĂNG MỚI: Hiển thị XP với giao diện động dựa trên trạng thái (Lần đầu / Ôn tập / Vượt kỷ lục)
+    // CẬP NHẬT GIAO DIỆN XP ĐỂ PHÙ HỢP VỚI LOGIC CHỐNG FARM ĐIỂM
     let xpDisplay = document.getElementById('modal-xp-display');
     if (!xpDisplay) {
         xpDisplay = document.createElement('div');
@@ -731,14 +735,14 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
     } else {
         // Thi lại (Chế độ ôn tập)
         if (isNewRecord && xp > 0) {
-            xpDisplay.innerHTML = `🔥 +${xp} XP (Khuyến khích)`;
+            xpDisplay.innerHTML = `🔥 +${xp} XP (Vượt kỷ lục)`;
             xpDisplay.style.color = "#ea580c";
             xpDisplay.style.background = "#ffedd5";
         } else {
-            // Không vượt kỷ lục, hoặc là chế độ ôn tập thông thường
-            xpDisplay.innerHTML = `🌟 +0 XP (Đã ôn tập)`;
-            xpDisplay.style.color = "#6b7280"; // Màu xám cho biết không cộng thêm điểm
-            xpDisplay.style.background = "#f3f4f6";
+            // Chỉ nhận điểm chuyên cần (+5)
+            xpDisplay.innerHTML = `💡 +${xp} XP (Chuyên cần)`;
+            xpDisplay.style.color = "#059669"; 
+            xpDisplay.style.background = "#d1fae5";
         }
     }
 
