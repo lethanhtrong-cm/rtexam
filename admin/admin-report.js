@@ -249,7 +249,7 @@ function renderReportsTable() {
         
         const deleteBtnHtml = `
             <button class="btn-delete-report report-action-item" data-id="${data.id}" style="background: #fff; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" title="Xóa báo cáo này">
-                <i class="fa-regular fa-trash-can"></i> <span style="margin-left:5px;" class="mobile-only-text">Xóa</span>
+                <i class="fa-solid fa-trash"></i> <span style="margin-left:5px; font-weight: 600;">Xóa</span>
             </button>
         `;
 
