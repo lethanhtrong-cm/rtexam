@@ -408,9 +408,13 @@ async function executeSubmit() {
             if (accuracyRate === 1) {
                 perfectBonus = 100; // Flat Bonus cực lớn cho 100%
                 
-                if (timeSpent <= examDuration * 0.3) {
-                    speedBonus = 50;
-                }
+                // Thưởng tốc độ tỉ lệ thuận với thời gian còn lại (Tối đa nhận 50 XP)
+                speedBonus = Math.round((timeRemaining / examDuration) * 50);
+            }if (accuracyRate === 1) {
+                perfectBonus = 100; // Flat Bonus cực lớn cho 100%
+                
+                // Thưởng tốc độ tỉ lệ thuận với thời gian còn lại (Tối đa nhận 50 XP)
+                speedBonus = Math.round((timeRemaining / examDuration) * 50);
             }
 
             // Tổng XP thô nhận được từ lần làm này
