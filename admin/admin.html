@@ -10,18 +10,27 @@
     
     <link rel="stylesheet" href="./css/admin.css">
 
-    <!-- BỔ SUNG: KHỐI CSS TỐI ƯU HÓA GIAO DIỆN MOBILE -->
+    <!-- BỔ SUNG: KHỐI CSS TỐI ƯU HÓA GIAO DIỆN MOBILE CHỐNG TRÀN -->
     <style id="mobile-admin-optimization">
-        /* Cấu hình cơ bản cho nút Menu Mobile và Lớp phủ */
+        /* Ép chuẩn box-sizing toàn trang để padding không làm tăng width */
+        * { box-sizing: border-box !important; }
+        
+        /* Ngăn chặn thanh cuộn ngang rác ở body */
+        html, body { max-width: 100vw; overflow-x: hidden; margin: 0; padding: 0; }
+
+        /* Cấu hình cơ bản cho nút Menu Mobile */
         #mobile-menu-btn {
             display: none; /* Mặc định ẩn trên Desktop */
-            background: transparent;
-            border: none;
-            font-size: 1.5rem;
-            color: #1e293b;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1.6rem;
+            color: #0f172a;
             cursor: pointer;
-            margin-right: 15px;
-            padding: 5px;
+            margin-right: 12px;
+            padding: 4px 10px;
+            line-height: 1;
+            flex-shrink: 0; /* Chống bị ép méo */
         }
         
         #mobile-overlay {
@@ -42,7 +51,6 @@
 
         /* Mobile (Nhỏ hơn 768px) */
         @media (max-width: 768px) {
-            /* Sidebar trượt ngang */
             #mobile-menu-btn { display: inline-block; }
             #sidebar-container { 
                 position: fixed; 
@@ -58,52 +66,65 @@
             #sidebar-container.mobile-open { left: 0; }
             
             /* Bố cục Main & Topbar */
-            .main-wrapper { margin-left: 0 !important; width: 100% !important; }
-            .topbar { padding: 15px !important; }
-            #topbar-title { font-size: 1.1rem !important; }
-            .admin-profile { display: none !important; } /* Ẩn trạng thái "Đang hoạt động" để rộng chỗ */
+            .main-wrapper { margin-left: 0 !important; width: 100vw !important; max-width: 100vw !important; overflow-x: hidden; }
+            .topbar { padding: 12px 15px !important; display: flex; justify-content: space-between; align-items: center; }
+            .topbar > div:first-child { width: 100%; }
+            #topbar-title { font-size: 1.1rem !important; white-space: normal; line-height: 1.3; margin: 0; }
+            .admin-profile { display: none !important; } 
             
             /* Dàn lại các khối thông tin thành 1 cột */
-            .stats-container { grid-template-columns: 1fr !important; }
-            .content-section > div[style*="display: flex; gap: 25px"] { flex-direction: column !important; }
-            .metadata-row { flex-direction: column !important; gap: 15px !important; }
+            .content-container { padding: 12px !important; width: 100%; overflow-x: hidden; }
+            .stats-container { grid-template-columns: 1fr !important; gap: 15px !important; margin-bottom: 20px !important; }
+            .stat-card { width: 100%; }
+            
+            .content-section > div[style*="display: flex; gap: 25px"] { flex-direction: column !important; gap: 15px !important; }
+            .metadata-row { flex-direction: column !important; gap: 12px !important; }
             .metadata-field { width: 100% !important; margin-bottom: 0 !important; }
             
-            /* Bộ lọc & Tìm kiếm */
-            .filter-flex-row { flex-direction: column !important; gap: 15px !important; }
+            /* Bộ lọc & Tìm kiếm tự co giãn */
+            .filter-flex-row { flex-direction: column !important; gap: 12px !important; }
             .filter-col-50 { width: 100% !important; }
-            .toolbar-user-modern { flex-direction: column; align-items: stretch; gap: 10px; }
+            .toolbar-user-modern { flex-direction: column; align-items: stretch; gap: 12px; width: 100%; }
+            .search-user-container, .select-user-filter { width: 100%; max-width: 100%; }
+            .search-wrapper-modern input { width: 100%; }
             
-            /* Bảng dữ liệu (Hỗ trợ cuộn ngang để không vỡ layout) */
-            .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; padding-bottom: 10px; }
-            .admin-table { min-width: 650px; } 
+            /* CHỐNG TRÀN BẢNG DỮ LIỆU */
+            .card { padding: 12px !important; margin-bottom: 15px !important; width: 100%; overflow: hidden; }
+            .table-container { 
+                width: 100%; 
+                max-width: 100%;
+                overflow-x: auto !important; 
+                -webkit-overflow-scrolling: touch; /* Hỗ trợ vuốt mượt trên iOS */
+                border-radius: 8px; 
+                border: 1px solid #e2e8f0; 
+                display: block; 
+            }
+            .admin-table { min-width: 700px; /* Ép bảng giữ form, thanh cuộn sẽ xuất hiện ở table-container */ }
             
             /* Thu gọn Pop-up Modals */
-            .custom-modal-content { width: 95% !important; margin: 10% auto !important; padding: 15px !important; }
+            .custom-modal-content { width: 95% !important; margin: 5% auto !important; padding: 15px !important; }
         }
     </style>
 </head>
 <body>
 
-    <!-- BỔ SUNG: Lớp phủ đen khi mở menu trên mobile -->
+    <!-- Lớp phủ đen khi mở menu trên mobile -->
     <div id="mobile-overlay"></div>
 
     <aside class="sidebar" id="sidebar-container"></aside>
 
     <main class="main-wrapper">
         <header class="topbar">
-            <!-- BỔ SUNG: Vùng chứa nút Hamburger Menu và Tiêu đề -->
-            <div style="display: flex; align-items: center;">
-                <button id="mobile-menu-btn" title="Mở menu điều hướng"><i class="fa-solid fa-bars"></i></button>
-                <!-- Tiêu đề mặc định hiển thị tab Quản lý người dùng -->
-                <h2 id="topbar-title" style="margin: 0;">Danh Sách Thành Viên & Cấp Quyền VIP</h2>
+            <!-- Vùng chứa nút Hamburger Menu và Tiêu đề có bảo vệ chống tràn -->
+            <div style="display: flex; align-items: center; max-width: 100%;">
+                <button id="mobile-menu-btn" title="Mở menu điều hướng">&#9776;</button>
+                <h2 id="topbar-title" style="margin: 0; overflow: hidden; text-overflow: ellipsis;">Danh Sách Thành Viên & Cấp Quyền VIP</h2>
             </div>
             <div class="admin-profile">🟢 Đang hoạt động</div>
         </header>
 
         <div class="content-container">
             
-            <!-- Gỡ bỏ class active ở tab này -->
             <section id="tab-dashboard" class="content-section">
                 <h2 style="font-size: 1.25rem; color: #1e293b; margin-bottom: 15px;">📅 Số Lượt Đã Thi Tích Lũy</h2>
                 <div class="stats-container" style="margin-bottom: 30px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
@@ -177,7 +198,7 @@
                         </div>
                         <div class="filter-col-50">
                             <span class="filter-label-text">Sắp xếp theo:</span>
-                            <select id="examSortSelect" style="padding: 8px 15px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 13.5px; font-weight: 600; color: #475569; background-color: #f1f5f9; outline: none; cursor: pointer; max-width: 250px; transition: 0.2s;">
+                            <select id="examSortSelect" style="padding: 8px 15px; border-radius: 20px; border: 1px solid #e2e8f0; font-size: 13.5px; font-weight: 600; color: #475569; background-color: #f1f5f9; outline: none; cursor: pointer; max-width: 100%; transition: 0.2s;">
                                 <option value="newest">Mới nhất đến cũ nhất</option>
                                 <option value="most_attempts">Số người thi nhiều nhất</option>
                                 <option value="most_feedbacks">Đánh giá nhiều nhất</option>
@@ -214,7 +235,7 @@
                     <h2 class="card-title"><span class="step-badge orange">3</span> &nbsp; Hàng Đợi Kiểm Tra Dữ Liệu Excel</h2>
                     <p class="card-description">Dữ liệu đọc tạm từ tệp Excel sẽ hiển thị ở đây. Hãy rà soát nội dung kỹ lưỡng trước khi thiết lập thuộc tính và xuất bản.</p>
                     
-                    <div class="table-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 30px;">
+                    <div class="table-container" style="max-height: 400px; margin-bottom: 30px;">
                         <table class="admin-table preview-table">
                             <thead>
                                 <tr>
@@ -236,8 +257,8 @@
                     </div>
 
                     <h2 class="card-title"><span class="step-badge">4</span> &nbsp; Thiết Lập Thuộc Tính & Xuất Bản</h2>
-                    <div class="metadata-row">
-                        <div class="metadata-field">
+                    <div class="metadata-row" style="display: flex; gap: 20px;">
+                        <div class="metadata-field" style="flex: 1;">
                             <label for="select-technique">🩻 Chuyên khoa / Kỹ thuật:</label>
                             <select id="select-technique">
                                 <option value="MRI">MRI</option>
@@ -246,7 +267,7 @@
                                 <option value="Hỗn hợp">Hỗn hợp</option>
                             </select>
                         </div>
-                        <div class="metadata-field">
+                        <div class="metadata-field" style="flex: 1;">
                             <label for="select-time">⏱️ Thời gian làm bài:</label>
                             <select id="select-time">
                                 <option value="15">15 phút</option>
@@ -254,7 +275,7 @@
                                 <option value="45">45 phút</option>
                             </select>
                         </div>
-                        <div class="metadata-field">
+                        <div class="metadata-field" style="flex: 1;">
                             <label for="select-level">📈 Cấp độ đề thi:</label>
                             <select id="select-level">
                                 <option value="Dễ">Dễ</option>
@@ -275,7 +296,7 @@
                 </div>
             </section>
 
-            <!-- Set thẻ Quản lý người dùng lên active mặc định -->
+            <!-- Thẻ Quản lý người dùng được set active mặc định -->
             <section id="tab-user-list" class="content-section active">
                 <div class="stats-container">
                     <div class="stat-card total-users">
@@ -336,7 +357,7 @@
                         </button>
                     </div>
 
-                    <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+                    <div class="table-container" style="max-height: 500px;">
                         <table class="admin-table">
                             <thead>
                                 <tr>
@@ -366,7 +387,7 @@
                         <span id="pendingReportCount" style="background: #fee2e2; color: #dc2626; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem;">0 chờ xử lý</span>
                     </div>
 
-                    <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+                    <div class="table-container" style="max-height: 500px;">
                         <table class="admin-table">
                             <thead>
                                 <tr>
@@ -465,14 +486,13 @@
 
     </div>
 
-    <!-- BỔ SUNG: Khối Script điều khiển logic Toggle Sidebar Mobile -->
+    <!-- Script điều khiển logic Toggle Sidebar Mobile -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const menuBtn = document.getElementById('mobile-menu-btn');
             const sidebar = document.getElementById('sidebar-container');
             const overlay = document.getElementById('mobile-overlay');
 
-            // Hàm Mở/Đóng Sidebar trượt ngang
             function toggleMobileMenu() {
                 if (sidebar) sidebar.classList.toggle('mobile-open');
                 if (overlay) overlay.classList.toggle('active');
@@ -481,7 +501,6 @@
             if (menuBtn) menuBtn.addEventListener('click', toggleMobileMenu);
             if (overlay) overlay.addEventListener('click', toggleMobileMenu);
 
-            // Tự động thu gọn Sidebar lại nếu chọn một Menu Item (Hữu ích khi dùng Mobile)
             document.addEventListener('click', (e) => {
                 if (window.innerWidth <= 768) {
                     if (e.target.closest('.menu-item') || e.target.closest('#btnLogout')) {
