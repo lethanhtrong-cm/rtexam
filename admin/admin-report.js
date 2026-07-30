@@ -4,218 +4,407 @@ import {
     collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, addDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// Biến lưu trữ dữ liệu State cục bộ để phục vụ Tìm kiếm & Lọc
+let cachedReports = [];
+let currentReportSearch = "";
+let currentReportFilter = "all";
+let currentReportData = null; // Chứa dữ liệu khi mở Modal Phản hồi
+
+// =========================================================================
+// HÀM TIÊM CSS TỐI ƯU GIAO DIỆN MOBILE
+// =========================================================================
+function injectReportMobileStyle() {
+    if (!document.getElementById('mobile-report-style')) {
+        const style = document.createElement('style');
+        style.id = 'mobile-report-style';
+        style.innerHTML = `
+            @media (max-width: 768px) {
+                /* Bẻ bảng thành dạng Card */
+                #tab-reports .admin-table { min-width: 100% !important; display: block; border: none; }
+                #tab-reports .admin-table thead { display: none; }
+                #tab-reports .admin-table tbody { display: block; width: 100%; }
+                
+                #adminReportList tr {
+                    display: flex !important;
+                    flex-direction: column;
+                    background: #fff;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 12px;
+                    margin-bottom: 15px;
+                    padding: 15px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                }
+                
+                /* Hiển thị Tên cột thông qua pseudo-element */
+                #adminReportList td { 
+                    display: flex; 
+                    flex-direction: column;
+                    align-items: flex-start; 
+                    border: none !important; 
+                    padding: 8px 0 !important; 
+                    text-align: left !important; 
+                }
+                
+                #adminReportList td::before {
+                    content: attr(data-label);
+                    font-weight: 700;
+                    color: #64748b;
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    margin-bottom: 6px;
+                    display: block;
+                }
+                
+                /* Tối ưu khối nút bấm bên dưới cùng của thẻ Card */
+                #adminReportList td:last-child {
+                    margin-top: 10px;
+                    padding-top: 15px !important;
+                    border-top: 1px dashed #cbd5e1 !important;
+                    align-items: stretch;
+                }
+                #adminReportList td:last-child::before { display: none; }
+                
+                #adminReportList td:last-child > div {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                    width: 100%;
+                }
+                
+                .report-action-item {
+                    flex: 1;
+                    min-width: 45%;
+                    justify-content: center;
+                    padding: 10px !important;
+                    font-size: 13px !important;
+                    text-align: center;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
 // =========================================================================
 // QUẢN LÝ BÁO CÁO LỖI CÂU HỎI (HỆ THỐNG ADMIN)
 // =========================================================================
 function initAdminReportListener() {
-    const reportListBody = document.getElementById('adminReportList');
-    const pendingCountBadge = document.getElementById('pendingReportCount');
-    
-    if (!reportListBody) return; 
+    injectReportMobileStyle(); // Kích hoạt CSS Mobile
 
+    const reportsSection = document.getElementById('tab-reports');
+    if (!reportsSection) return;
+
+    // 1. NHÚNG THANH CÔNG CỤ TÌM KIẾM VÀ LỌC (Đề xuất 1)
+    if (!document.getElementById('report-toolbar')) {
+        const toolbar = document.createElement('div');
+        toolbar.id = 'report-toolbar';
+        toolbar.className = 'toolbar-user-modern'; 
+        toolbar.style.cssText = 'display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: stretch;';
+        toolbar.innerHTML = `
+            <div class="search-user-container" style="flex: 1; min-width: 250px;">
+                <input type="text" id="reportSearchInput" class="search-user-input" style="width: 100%;" placeholder="🔍 Tìm theo Email hoặc Mã đề...">
+            </div>
+            <select id="reportFilterSelect" class="select-user-filter" style="min-width: 180px;">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pending">Chờ xử lý</option>
+                <option value="resolved">Đã xử lý</option>
+            </select>
+        `;
+        
+        const cardHeader = reportsSection.querySelector('.card > div:first-child');
+        if (cardHeader && cardHeader.nextElementSibling) {
+            cardHeader.parentNode.insertBefore(toolbar, cardHeader.nextElementSibling);
+        }
+
+        // Gắn sự kiện cho thanh tìm kiếm và lọc
+        document.getElementById('reportSearchInput').addEventListener('input', (e) => {
+            currentReportSearch = e.target.value.toLowerCase().trim();
+            renderReportsTable();
+        });
+        document.getElementById('reportFilterSelect').addEventListener('change', (e) => {
+            currentReportFilter = e.target.value;
+            renderReportsTable();
+        });
+    }
+
+    // 2. KHỞI TẠO NÚT GỬI PHẢN HỒI (Trong Modal - Khởi tạo 1 lần duy nhất)
+    const btnSendReply = document.getElementById('btnSendAdminReply');
+    if (btnSendReply && !btnSendReply.hasAttribute('data-initialized')) {
+        const newBtnSendReply = btnSendReply.cloneNode(true);
+        newBtnSendReply.setAttribute('data-initialized', 'true');
+        btnSendReply.parentNode.replaceChild(newBtnSendReply, btnSendReply);
+
+        newBtnSendReply.addEventListener('click', async function() {
+            const replyMessage = document.getElementById('adminReplyContent').value.trim();
+            if (!replyMessage) {
+                showToast("Vui lòng nhập nội dung phản hồi!", "error");
+                return;
+            }
+
+            if (!currentReportData) return;
+
+            this.innerHTML = "⏳ Đang gửi...";
+            this.disabled = true;
+
+            try {
+                await updateDoc(doc(db, "reported_questions", currentReportData.reportId), { 
+                    status: 'resolved' 
+                });
+
+                await addDoc(collection(db, "notifications"), {
+                    toEmail: currentReportData.toEmail,
+                    type: 'admin_reply',
+                    questionId: currentReportData.questionId,
+                    adminMessage: replyMessage,
+                    status: 'unread',
+                    timestamp: serverTimestamp()
+                });
+
+                showToast("Đã gửi phản hồi thành công!", "success");
+                document.getElementById('admin-reply-modal').style.display = 'none';
+            } catch (err) {
+                console.error("Lỗi khi gửi phản hồi:", err);
+                showToast("Có lỗi xảy ra khi gửi", "error");
+            } finally {
+                this.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Phản Hồi`;
+                this.disabled = false;
+            }
+        });
+    }
+
+    // 3. KẾT NỐI FIRESTORE REALTIME
     const reportsRef = collection(db, "reported_questions");
     const q = query(reportsRef, orderBy("timestamp", "desc"));
 
-    // Lắng nghe Realtime
     onSnapshot(q, (snapshot) => {
-        reportListBody.innerHTML = '';
+        cachedReports = [];
         let pendingCount = 0;
-
-        if (snapshot.empty) {
-            reportListBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-check-circle"></i> Tuyệt vời! Không có báo cáo lỗi nào cần xử lý.</td></tr>';
-            pendingCountBadge.textContent = `0 chờ xử lý`;
-            return;
-        }
 
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const reportId = docSnap.id;
-            
+            data.id = docSnap.id;
+            cachedReports.push(data);
             if (data.status === 'pending') pendingCount++;
+        });
 
-            // 1. Tách chuỗi thời gian và ngày tháng
-            let timeStr = 'N/A';
-            let dateStr = '';
-            if (data.timestamp) {
-                const d = data.timestamp.toDate();
-                timeStr = d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
-                dateStr = d.toLocaleDateString('vi-VN');
+        // Cập nhật thẻ Badge đếm số lượng tổng quan
+        const pendingCountBadge = document.getElementById('pendingReportCount');
+        if (pendingCountBadge) {
+            pendingCountBadge.textContent = `${pendingCount} chờ xử lý`;
+            if (pendingCount > 0) {
+                pendingCountBadge.style.background = '#fee2e2'; pendingCountBadge.style.color = '#dc2626';
+            } else {
+                pendingCountBadge.style.background = '#d1fae5'; pendingCountBadge.style.color = '#059669';
             }
-
-            // 2. Rút gọn text câu hỏi gốc
-            let shortQuestionText = data.questionText && data.questionText.length > 55 ? data.questionText.substring(0, 55) + '...' : (data.questionText || "N/A");
-            
-            // 3. Thiết kế lại Badge Lỗi: Bo góc tròn, nền pastel
-            let errorBadgeColor = data.errorType === 'Sai đáp án' ? 'background: #fef2f2; color: #ef4444; border: 1px solid #fca5a5;' : 
-                                  data.errorType === 'Lỗi chuyên môn' ? 'background: #fffbeb; color: #f59e0b; border: 1px solid #fcd34d;' : 
-                                  'background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe;';
-
-            const isResolved = data.status === 'resolved';
-            const rowOpacity = isResolved ? '0.65' : '1';
-            
-            // 4. Nút Hành động (Nút Xóa luôn hiện)
-            const deleteBtnHtml = `
-                <button class="btn-delete-report" data-id="${reportId}" style="background: #fff; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" title="Xóa báo cáo này">
-                    <i class="fa-regular fa-trash-can"></i>
-                </button>
-            `;
-
-            const actionButtons = isResolved 
-                ? `<div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                     <span style="color: #059669; font-weight: 600; font-size: 0.85rem; background: #d1fae5; padding: 5px 12px; border-radius: 20px; border: 1px solid #a7f3d0;"><i class="fa-solid fa-check"></i> Đã xử lý</span>
-                     ${deleteBtnHtml}
-                   </div>`
-                : `<div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <button class="btn-reply-report" data-id="${reportId}" data-email="${data.reportedBy}" data-qid="${data.questionId}" style="background: #3b82f6; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);">
-                        <i class="fa-solid fa-reply"></i> Phản hồi
-                    </button>
-                    ${deleteBtnHtml}
-                  </div>`;
-
-            // 5. Tạo dòng (Row) với hiệu ứng Hover màu nền
-            const tr = document.createElement('tr');
-            tr.style.opacity = rowOpacity;
-            tr.style.transition = "background 0.2s ease";
-            tr.onmouseover = function() { this.style.background = '#f8fafc'; }
-            tr.onmouseout = function() { this.style.background = 'transparent'; }
-
-            // 6. Cấu trúc HTML các cột
-            tr.innerHTML = `
-                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
-                    <div style="font-weight: 600; color: #475569; font-size: 0.9rem;">${timeStr}</div>
-                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">${dateStr}</div>
-                </td>
-                
-                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
-                    <div style="color: #3b82f6; font-weight: 500; font-size: 0.9rem;">${data.reportedBy}</div>
-                </td>
-                
-                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
-                    <span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid #e2e8f0;">${data.examId}</span>
-                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
-                        <span style="color: #64748b; font-family: monospace; font-size: 0.8rem;">${data.questionId}</span>
-                        <button class="btn-view-question" data-qid="${data.questionId}" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.2s;" title="Xem chi tiết câu hỏi">
-                            Xem
-                        </button>
-                    </div>
-                </td>
-                
-                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
-                    <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px; font-style: italic; border-left: 2px solid #cbd5e1; padding-left: 10px;">"${shortQuestionText}"</div>
-                    <span style="${errorBadgeColor} padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; margin-bottom: 6px;">${data.errorType}</span>
-                    <div style="color: #1e293b; font-size: 0.95rem; font-weight: 500; margin-top: 4px;">${data.description}</div>
-                </td>
-                
-                <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; text-align: center; vertical-align: top;">
-                    ${actionButtons}
-                </td>
-            `;
-            reportListBody.appendChild(tr);
-        });
-
-        // Cập nhật thẻ Badge đếm số lượng
-        pendingCountBadge.textContent = `${pendingCount} chờ xử lý`;
-        if (pendingCount > 0) {
-            pendingCountBadge.style.background = '#fee2e2'; pendingCountBadge.style.color = '#dc2626';
-        } else {
-            pendingCountBadge.style.background = '#d1fae5'; pendingCountBadge.style.color = '#059669';
         }
 
-        // ------------------ GẮN CÁC SỰ KIỆN NÚT ------------------
+        renderReportsTable();
+    });
+}
+
+// =========================================================================
+// HÀM RENDER DỮ LIỆU SAU KHI LỌC
+// =========================================================================
+function renderReportsTable() {
+    const reportListBody = document.getElementById('adminReportList');
+    if (!reportListBody) return;
+    
+    reportListBody.innerHTML = '';
+
+    // Áp dụng bộ lọc
+    const filteredReports = cachedReports.filter(report => {
+        const matchSearch = currentReportSearch === "" || 
+            (report.reportedBy && report.reportedBy.toLowerCase().includes(currentReportSearch)) || 
+            (report.examId && report.examId.toLowerCase().includes(currentReportSearch));
         
-        // 1. Nút Xem chi tiết câu hỏi
-        document.querySelectorAll('.btn-view-question').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const qId = this.getAttribute('data-qid');
-                fetchAndShowQuestionDetail(qId);
-            });
-        });
+        let matchFilter = true;
+        if (currentReportFilter === 'pending') matchFilter = report.status === 'pending';
+        if (currentReportFilter === 'resolved') matchFilter = report.status === 'resolved';
 
-        // 2. Nút Xóa Báo cáo
-        document.querySelectorAll('.btn-delete-report').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const rId = this.getAttribute('data-id');
-                if(confirm("Xóa báo cáo này vĩnh viễn?")) {
-                    try {
-                        await deleteDoc(doc(db, "reported_questions", rId));
-                        showToast("Đã xóa báo cáo!", "success");
-                    } catch (err) { 
-                        console.error("Lỗi xóa:", err); 
-                        showToast("Có lỗi xảy ra khi xóa", "error");
-                    }
-                }
-            });
-        });
+        return matchSearch && matchFilter;
+    });
 
-        // 3. Logic Mở Modal Phản hồi Báo Cáo
-        let currentReportData = null; 
-        document.querySelectorAll('.btn-reply-report').forEach(btn => {
-            btn.addEventListener('click', function() {
-                currentReportData = {
-                    reportId: this.getAttribute('data-id'),
-                    toEmail: this.getAttribute('data-email'),
-                    questionId: this.getAttribute('data-qid')
-                };
-                
-                const replyModal = document.getElementById('admin-reply-modal');
-                if(!replyModal) {
-                    showToast("Chưa tải được HTML của Modal Phản hồi!", "error");
-                    return;
-                }
-                
-                document.getElementById('reply-to-email').innerText = currentReportData.toEmail;
-                document.getElementById('reply-question-id').innerText = currentReportData.questionId;
-                document.getElementById('adminReplyContent').value = ""; // Xóa text cũ
-                replyModal.style.display = 'block';
-            });
-        });
+    if (filteredReports.length === 0) {
+        reportListBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #64748b; font-weight: 500;">Không có dữ liệu báo cáo nào khớp với tìm kiếm hiện tại.</td></tr>';
+        return;
+    }
 
-        // 4. Xử lý Nút Gửi Phản Hồi Trong Modal
-        const btnSendReply = document.getElementById('btnSendAdminReply');
-        if (btnSendReply) {
-            // Clone node để tránh gắn sự kiện dồn cục nhiều lần do onSnapshot
-            const newBtnSendReply = btnSendReply.cloneNode(true);
-            btnSendReply.parentNode.replaceChild(newBtnSendReply, btnSendReply);
-
-            newBtnSendReply.addEventListener('click', async function() {
-                const replyMessage = document.getElementById('adminReplyContent').value.trim();
-                if (!replyMessage) {
-                    showToast("Vui lòng nhập nội dung phản hồi!", "error");
-                    return;
-                }
-
-                if (!currentReportData) return;
-
-                this.innerHTML = "⏳ Đang gửi...";
-                this.disabled = true;
-
-                try {
-                    // Cập nhật Document trạng thái Resolved
-                    await updateDoc(doc(db, "reported_questions", currentReportData.reportId), { 
-                        status: 'resolved' 
-                    });
-
-                    // Ghi Document vào collection notifications
-                    await addDoc(collection(db, "notifications"), {
-                        toEmail: currentReportData.toEmail,
-                        type: 'admin_reply',
-                        questionId: currentReportData.questionId,
-                        adminMessage: replyMessage,
-                        status: 'unread',
-                        timestamp: serverTimestamp()
-                    });
-
-                    showToast("Đã gửi phản hồi thành công!", "success");
-                    document.getElementById('admin-reply-modal').style.display = 'none';
-                } catch (err) {
-                    console.error("Lỗi khi gửi phản hồi:", err);
-                    showToast("Có lỗi xảy ra khi gửi", "error");
-                } finally {
-                    this.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Gửi Phản Hồi`;
-                    this.disabled = false;
-                }
-            });
+    filteredReports.forEach((data) => {
+        let timeStr = 'N/A';
+        let dateStr = '';
+        if (data.timestamp) {
+            const d = (typeof data.timestamp.toDate === 'function') ? data.timestamp.toDate() : new Date(data.timestamp);
+            timeStr = d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            dateStr = d.toLocaleDateString('vi-VN');
         }
+
+        let shortQuestionText = data.questionText && data.questionText.length > 55 ? data.questionText.substring(0, 55) + '...' : (data.questionText || "N/A");
+        
+        let errorBadgeColor = data.errorType === 'Sai đáp án' ? 'background: #fef2f2; color: #ef4444; border: 1px solid #fca5a5;' : 
+                              data.errorType === 'Lỗi chuyên môn' ? 'background: #fffbeb; color: #f59e0b; border: 1px solid #fcd34d;' : 
+                              'background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe;';
+
+        const isResolved = data.status === 'resolved';
+        const rowOpacity = isResolved ? '0.65' : '1';
+        
+        const deleteBtnHtml = `
+            <button class="btn-delete-report report-action-item" data-id="${data.id}" style="background: #fff; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" title="Xóa báo cáo này">
+                <i class="fa-regular fa-trash-can"></i> <span style="margin-left:5px;" class="mobile-only-text">Xóa</span>
+            </button>
+        `;
+
+        // Chèn Nút Xử lý nhanh (Đề xuất 2)
+        const safeDescription = (data.description || "").replace(/"/g, '&quot;');
+        
+        const actionButtons = isResolved 
+            ? `<div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                 <span class="report-action-item" style="color: #059669; font-weight: 600; font-size: 0.85rem; background: #d1fae5; padding: 5px 12px; border-radius: 20px; border: 1px solid #a7f3d0; display:flex; align-items:center; justify-content:center; gap:5px;"><i class="fa-solid fa-check"></i> Đã xử lý</span>
+                 ${deleteBtnHtml}
+               </div>`
+            : `<div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <button class="btn-quick-resolve report-action-item" data-id="${data.id}" data-email="${data.reportedBy}" data-qid="${data.questionId}" style="background: #10b981; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);" title="Xử lý ngay và gửi thông báo mặc định">
+                    <i class="fa-solid fa-bolt"></i> Xử lý nhanh
+                </button>
+                <button class="btn-reply-report report-action-item" data-id="${data.id}" data-email="${data.reportedBy}" data-qid="${data.questionId}" data-desc="${safeDescription}" style="background: #3b82f6; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);">
+                    <i class="fa-solid fa-reply"></i> Phản hồi
+                </button>
+                ${deleteBtnHtml}
+              </div>`;
+
+        // 5. Tạo dòng (Row) với hiệu ứng Hover và Viền màu trạng thái (Đề xuất 4)
+        const tr = document.createElement('tr');
+        tr.style.opacity = rowOpacity;
+        tr.style.transition = "background 0.2s ease";
+        tr.style.borderLeft = isResolved ? "4px solid #10b981" : "4px solid #ef4444"; 
+        
+        tr.onmouseover = function() { this.style.background = '#f8fafc'; }
+        tr.onmouseout = function() { this.style.background = 'transparent'; }
+
+        tr.innerHTML = `
+            <td data-label="THỜI GIAN" style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
+                <div style="font-weight: 600; color: #475569; font-size: 0.9rem;">${timeStr}</div>
+                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">${dateStr}</div>
+            </td>
+            
+            <td data-label="NGƯỜI BÁO CÁO" style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
+                <div style="color: #3b82f6; font-weight: 500; font-size: 0.9rem; word-break: break-all;">${data.reportedBy}</div>
+            </td>
+            
+            <td data-label="MÃ ĐỀ / CÂU" style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
+                <span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid #e2e8f0;">${data.examId}</span>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                    <span style="color: #64748b; font-family: monospace; font-size: 0.8rem;">${data.questionId}</span>
+                    <button class="btn-view-question" data-qid="${data.questionId}" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.2s;" title="Xem chi tiết câu hỏi">
+                        Xem
+                    </button>
+                </div>
+            </td>
+            
+            <td data-label="NỘI DUNG LỖI" style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: top;">
+                <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px; font-style: italic; border-left: 2px solid #cbd5e1; padding-left: 10px;">"${shortQuestionText}"</div>
+                <span style="${errorBadgeColor} padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; margin-bottom: 6px;">${data.errorType}</span>
+                <div style="color: #1e293b; font-size: 0.95rem; font-weight: 500; margin-top: 4px;">${data.description}</div>
+            </td>
+            
+            <td style="padding: 20px 15px; border-bottom: 1px solid #f1f5f9; text-align: center; vertical-align: top;">
+                ${actionButtons}
+            </td>
+        `;
+        
+        const styleFix = document.createElement('style');
+        styleFix.innerHTML = `@media(min-width: 769px){ .mobile-only-text { display: none !important; } }`;
+        tr.appendChild(styleFix);
+
+        reportListBody.appendChild(tr);
+    });
+
+    bindRowEvents();
+}
+
+function bindRowEvents() {
+    // 1. Nút Xem chi tiết câu hỏi
+    document.querySelectorAll('.btn-view-question').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const qId = this.getAttribute('data-qid');
+            fetchAndShowQuestionDetail(qId);
+        });
+    });
+
+    // 2. Nút Xóa Báo cáo
+    document.querySelectorAll('.btn-delete-report').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const rId = this.getAttribute('data-id');
+            if(confirm("Xóa báo cáo này vĩnh viễn?")) {
+                try {
+                    await deleteDoc(doc(db, "reported_questions", rId));
+                    showToast("Đã xóa báo cáo!", "success");
+                } catch (err) { 
+                    console.error("Lỗi xóa:", err); 
+                    showToast("Có lỗi xảy ra khi xóa", "error");
+                }
+            }
+        });
+    });
+
+    // 3. Nút Xử lý nhanh (Đề xuất 2)
+    document.querySelectorAll('.btn-quick-resolve').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const rId = this.getAttribute('data-id');
+            const toEmail = this.getAttribute('data-email');
+            const qId = this.getAttribute('data-qid');
+            
+            this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>...';
+            this.disabled = true;
+
+            try {
+                await updateDoc(doc(db, "reported_questions", rId), { status: 'resolved' });
+                await addDoc(collection(db, "notifications"), {
+                    toEmail: toEmail,
+                    type: 'admin_reply',
+                    questionId: qId,
+                    adminMessage: "Cảm ơn bạn, hệ thống đã tiếp nhận và xử lý báo cáo lỗi của bạn thành công. Chúc bạn ôn tập tốt!",
+                    status: 'unread',
+                    timestamp: serverTimestamp()
+                });
+                showToast("Đã xử lý nhanh và gửi thông báo!", "success");
+            } catch (err) { 
+                console.error("Lỗi xử lý nhanh:", err); 
+                showToast("Có lỗi xảy ra khi xử lý nhanh", "error");
+                this.innerHTML = '<i class="fa-solid fa-bolt"></i> Xử lý nhanh';
+                this.disabled = false;
+            }
+        });
+    });
+
+    // 4. Mở Modal Phản hồi (Đề xuất 3 - Thêm Nhắc nhở Ngữ cảnh)
+    document.querySelectorAll('.btn-reply-report').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentReportData = {
+                reportId: this.getAttribute('data-id'),
+                toEmail: this.getAttribute('data-email'),
+                questionId: this.getAttribute('data-qid')
+            };
+            
+            const replyModal = document.getElementById('admin-reply-modal');
+            if(!replyModal) return;
+            
+            document.getElementById('reply-to-email').innerText = currentReportData.toEmail;
+            document.getElementById('reply-question-id').innerText = currentReportData.questionId;
+            document.getElementById('adminReplyContent').value = ""; 
+            
+            // Chèn ngữ cảnh lỗi vào khung Modal
+            let contextDiv = document.getElementById('reply-context-info');
+            if(!contextDiv) {
+                contextDiv = document.createElement('div');
+                contextDiv.id = 'reply-context-info';
+                contextDiv.style.cssText = 'background: #f8fafc; padding: 12px; border-left: 4px solid #3b82f6; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; color: #475569; font-style: italic; opacity: 0.9;';
+                const textarea = document.getElementById('adminReplyContent');
+                textarea.parentNode.insertBefore(contextDiv, textarea);
+            }
+            contextDiv.innerHTML = `<strong>Nội dung học viên báo cáo:</strong> "${this.getAttribute('data-desc')}"`;
+            
+            replyModal.style.display = 'block';
+        });
     });
 }
 
@@ -223,7 +412,6 @@ function initAdminReportListener() {
 // HÀM TRUY VẤN FIRESTORE ĐỔ DỮ LIỆU CÂU HỎI VÀO MODAL
 // =========================================================================
 async function fetchAndShowQuestionDetail(questionId) {
-    // Check Auth - Ngăn chặn Guest truy cập nội bộ
     if (!auth.currentUser) {
         alert("⛔ Lỗi bảo mật: Bạn cần đăng nhập quyền Admin để xem chi tiết câu hỏi.");
         return;
@@ -249,11 +437,9 @@ async function fetchAndShowQuestionDetail(questionId) {
         if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // Fallback Logic cho Nội dung
             const questionText = data.text || data.questionText || data.question || data.content || "Không có nội dung câu hỏi";
             document.getElementById('qd-text').innerText = questionText;
 
-            // Fallback Logic xử lý mảng Đáp án
             const optionsArray = data.options || data.answers || [];
             const domOptions = [
                 document.getElementById('qd-optA'),
