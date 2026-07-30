@@ -355,27 +355,52 @@ async function executeSubmit() {
 
     finalScore = Math.round(((finalCorrectCount / finalTotal) * 10) * 100) / 100; 
 
-    // Lô-gic tính điểm XP nâng cao
+    // Lô-gic tính điểm XP nâng cao (Đã cập nhật Streak, Speed & Retake Bonus)
     let gainedXP = 0;
+    let xpMessage = "";
     try {
         const resultsRef = collection(db, "results");
         const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId));
         const resultSnapshot = await getDocs(qResult);
         
-        if (resultSnapshot.empty && finalTotal > 0) {
+        if (finalTotal > 0) {
             
-            // 1. Tính Base XP (Dựa trên tỷ lệ hoàn thành, tối đa 100 điểm)
-            let baseXP = Math.round((finalCorrectCount / finalTotal) * 100);
+            // Tính chuỗi đúng liên tiếp (Max Streak)
+            let currentStreak = 0;
+            let maxStreak = 0;
+            questions.forEach((question, idx) => {
+                if (userAnswers[idx] === question.correctAnswer) {
+                    currentStreak++;
+                    if (currentStreak > maxStreak) maxStreak = currentStreak;
+                } else {
+                    currentStreak = 0;
+                }
+            });
 
-            // 2. Tính các khoản Bonus (Chỉ khi làm đúng 100% tất cả các câu)
+            // 1. Tính Base XP
+            let baseXP = Math.round((finalCorrectCount / finalTotal) * 100);
+            let accuracyRate = finalCorrectCount / finalTotal;
+
+            // 2. Tính các khoản Bonus
             let speedBonus = 0;
             let perfectBonus = 0;
+            let streakBonus = 0;
             
-            if (finalCorrectCount === finalTotal) {
-                perfectBonus = 20; // Đề xuất: Cố định +20 XP cho điểm tuyệt đối
-                
-                // Thưởng tốc độ: Còn càng nhiều thời gian, điểm thưởng càng cao (Tối đa 30 XP)
-                speedBonus = Math.round((timeRemaining / examDuration) * 30);
+            // Xét thưởng tốc độ nếu độ chính xác đạt từ 80% trở lên
+            if (accuracyRate >= 0.8) {
+                speedBonus = Math.round((timeRemaining / examDuration) * 30 * accuracyRate);
+            }
+            
+            // Cố định +20 XP chỉ khi đạt điểm tuyệt đối 100%
+            if (accuracyRate === 1) {
+                perfectBonus = 20; 
+            }
+            
+            // Xét thưởng chuỗi câu đúng
+            if (maxStreak >= 10) {
+                streakBonus = 10;
+            } else if (maxStreak >= 5) {
+                streakBonus = 5;
             }
 
             // 3. Hệ số độ khó (Difficulty Multiplier)
@@ -388,9 +413,33 @@ async function executeSubmit() {
                 difficultyMultiplier = 1.0;
             }
 
-            // 4. Tính Tổng Điểm Cuối Cùng
-            gainedXP = Math.round((baseXP + perfectBonus + speedBonus) * difficultyMultiplier);
+            // Tổng XP thô
+            let totalRawXP = Math.round((baseXP + perfectBonus + speedBonus + streakBonus) * difficultyMultiplier);
 
+            // 4. Phân loại XP theo Lần đầu / Thi lại
+            if (resultSnapshot.empty) {
+                gainedXP = totalRawXP;
+                xpMessage = `🎉 Xuất sắc! Bạn nhận được +${gainedXP} XP cho bài thi này!`;
+            } else {
+                // Phân tích lịch sử thi: Lấy điểm số cao nhất đã từng đạt được
+                let previousBestScore = 0;
+                resultSnapshot.forEach(doc => {
+                    let data = doc.data();
+                    if (data.score && data.score > previousBestScore) {
+                        previousBestScore = data.score;
+                    }
+                });
+                
+                // Khuyến khích ôn tập: Nếu phá vỡ kỷ lục điểm của chính mình, thưởng 20% Base XP
+                if (finalScore > previousBestScore) {
+                    gainedXP = Math.round((baseXP * 0.2) * difficultyMultiplier);
+                    if (gainedXP > 0) {
+                        xpMessage = `🔥 Thi lại tiến bộ! Bạn nhận được +${gainedXP} XP khuyến khích!`;
+                    }
+                }
+            }
+
+            // 5. Cập nhật Leaderboard nếu có XP
             if (gainedXP > 0) {
                 const leaderboardRef = doc(db, "users_leaderboard", currentUser.uid);
                 await setDoc(leaderboardRef, {
@@ -399,7 +448,7 @@ async function executeSubmit() {
                     photoURL: currentUser.photoURL || "",
                     totalXP: increment(gainedXP) 
                 }, { merge: true });
-                showToast(`🎉 Xuất sắc! Bạn nhận được +${gainedXP} XP cho bài thi này!`);
+                showToast(xpMessage);
             }
         }
     } catch (xpError) { console.error("Lỗi cập nhật XP:", xpError); }
