@@ -156,7 +156,8 @@ async function fetchHistory(email) {
 
         for (const examId in firstAttempts) {
             const attempt = firstAttempts[examId];
-            const scoreBase10 = (attempt.score / attempt.totalQuestions) * 10;
+            // Fix: Sử dụng trực tiếp attempt.score vì database đang lưu điểm hệ 10
+            const scoreBase10 = attempt.score; 
             totalScoreSum += scoreBase10;
         }
 
@@ -179,12 +180,16 @@ async function fetchHistory(email) {
         top10Results.forEach((data, index) => {
             const tr = document.createElement("tr");
             const quizId = data.examId || data.examCode || "Không rõ";
-            
-            const correctCount = data.score !== undefined ? data.score : 0;
             const totalQ = data.totalQuestions || data.total || 1;
             
-            let displayScore = (correctCount / totalQ) * 10;
+            // Fix: Lấy trực tiếp điểm hệ 10 từ data.score thay vì lấy làm số câu đúng
+            let displayScore = data.score !== undefined ? parseFloat(data.score) : 0;
             displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(2));
+            
+            // Tính số câu đúng: Ưu tiên dùng trường dữ liệu có sẵn, nếu không thì tính ngược từ điểm
+            let correctCount = data.correctAnswers !== undefined ? data.correctAnswers 
+                             : (data.correct !== undefined ? data.correct 
+                             : Math.round((displayScore / 10) * totalQ));
             
             const isVipExam = examVipMap[quizId] === true;
             const badgeHtml = isVipExam ? '<span style="background:linear-gradient(135deg, #FFD700 0%, #FDB931 100%);color:#856404;padding:4px 8px;border-radius:6px;font-size:0.7rem;font-weight:bold;margin-left:8px;box-shadow:0 2px 4px rgba(255,215,0,0.3);">PRO</span>' 
