@@ -134,7 +134,6 @@ export async function loadUserList(forceRefresh = false) {
             let examStatus = user.examStatus || 'none'; 
 
             // Ràng buộc chặt chẽ (Chống kẹt): Trạng thái Đang thi CHỈ CÓ HIỆU LỰC khi thực sự Online
-            // Nếu người dùng tắt ngang tab/rớt mạng (isOnline = false) -> Xóa huy hiệu Đang thi trên Admin
             if (!isOnline) {
                 examStatus = 'none';
             }
@@ -206,6 +205,43 @@ function injectTableHeadersAndToolbar() {
     const table = document.querySelector('#usersTableBody').closest('table');
     const theadTr = table.querySelector('thead tr');
     
+    // Tiêm Style Tối ưu Bố cục Nút cho Mobile
+    if (!document.getElementById('mobile-user-row-style')) {
+        const style = document.createElement('style');
+        style.id = 'mobile-user-row-style';
+        style.innerHTML = `
+            @media (max-width: 768px) {
+                /* Ép full chiều ngang cho bảng User */
+                #tab-user-list .admin-table { min-width: 100% !important; }
+                
+                /* Ẩn cột Trạng thái và Hành động ở thead và tbody (Trên Mobile) */
+                #tab-user-list .admin-table th:nth-child(4), 
+                #tab-user-list .admin-table th:nth-child(5) { display: none !important; }
+                .desktop-status-td, .desktop-action-td { display: none !important; }
+                
+                /* Hiển thị Action Bar dạng lưới nằm ngay dưới Email */
+                .mobile-status-badge { display: block !important; }
+                .mobile-action-bar { 
+                    display: flex !important; 
+                    flex-wrap: wrap; 
+                    gap: 8px; 
+                    margin-top: 15px; 
+                    padding-top: 12px; 
+                    border-top: 1px dashed #cbd5e1; 
+                    width: 100%;
+                }
+                .mobile-action-bar button { 
+                    flex: 1; 
+                    min-width: 45%; 
+                    justify-content: center; 
+                    padding: 10px !important; 
+                    font-size: 13px !important; 
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     if (theadTr && !theadTr.querySelector('.th-bulk-checkbox')) {
         const th = document.createElement('th');
         th.className = 'text-center th-bulk-checkbox';
@@ -428,6 +464,14 @@ export function renderUserList() {
 
         const isChecked = selectedUserIds.has(user.userId) ? 'checked' : '';
 
+        // Tái sử dụng HTML nút bấm cho cả Desktop và Mobile
+        const actionButtonsHtml = `
+            <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi TB">🔔 Gửi</button>
+            <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" style="${vipStyle}" ${hoverEffect}>${vipBtnText}</button>
+            <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
+            <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
+        `;
+
         const tr = document.createElement('tr');
         tr.className = 'user-row';
         tr.style.transition = "background-color 0.2s ease";
@@ -441,25 +485,38 @@ export function renderUserList() {
             </td>
             <td class="text-center" style="font-weight: 600; color: #64748b;">${stt++}</td>
             <td>
-                <div class="user-email-cell" style="align-items: flex-start;">
-                    <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; margin-top: 5px;">
+                <div class="user-email-cell" style="display: flex; align-items: flex-start; width: 100%;">
+                    <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; margin-top: 5px; flex-shrink: 0;">
                         ${firstLetter}
                     </div>
-                    <div>
+                    <div style="flex: 1; min-width: 0;">
                         <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
-                            ${user.email} ${onlineStatusHtml} ${testingBadgeHtml} ${scoreBadgeHtml} ${xpBadgeHtml} ${pendingBadge} ${costBadgeHtml}
+                            <span style="word-break: break-all;">${user.email}</span> 
+                            ${onlineStatusHtml} ${testingBadgeHtml} ${scoreBadgeHtml} ${xpBadgeHtml} ${pendingBadge} ${costBadgeHtml}
                         </div>
+                        
+                        <!-- Hiển thị Trạng thái (VIP/Thường) trên Mobile -->
+                        <div class="mobile-status-badge" style="display: none; margin-top: 8px;">
+                            <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
+                        </div>
+
                         ${datesHtml}
                     </div>
                 </div>
+                
+                <!-- Thanh Hành động nén (Chỉ hiện trên Mobile) -->
+                <div class="mobile-action-bar" style="display: none;">
+                    ${actionButtonsHtml}
+                </div>
             </td>
-            <td class="text-center"><span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span></td>
-            <td class="text-center">
+            
+            <!-- Cột Desktop: Sẽ bị ẩn trên Mobile qua lớp CSS tiêm -->
+            <td class="text-center desktop-status-td">
+                <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
+            </td>
+            <td class="text-center desktop-action-td">
                 <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
-                    <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi TB">🔔 Gửi</button>
-                    <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" style="${vipStyle}" ${hoverEffect}>${vipBtnText}</button>
-                    <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
-                    <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
+                    ${actionButtonsHtml}
                 </div>
             </td>
         `;
@@ -738,6 +795,7 @@ document.addEventListener('componentsLoaded', () => {
             }
         });
 
+        // Sự kiện Event Delegation hoạt động tốt kể cả khi nút bị nhân đôi (Desktop/Mobile)
         usersBody.addEventListener('click', (e) => {
             if(e.target.classList.contains('user-row-checkbox')) return; 
 
