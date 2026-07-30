@@ -84,7 +84,6 @@ export async function loadUserList(forceRefresh = false) {
         const snapshots = await Promise.all(promises);
         const usersSnap = snapshots[0];
         
-        // Trích xuất Email Admin hiện tại
         const auth = getAuth();
         const currentAdminEmail = auth.currentUser ? auth.currentUser.email : null;
 
@@ -121,7 +120,6 @@ export async function loadUserList(forceRefresh = false) {
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
             
-            // Xử lý logic Đang Trực Tuyến và Admin
             let isOnline = false;
             if (user.isOnline === true || user.isOnline === "true" || user.isOnline === 1) {
                 isOnline = true;
@@ -133,7 +131,6 @@ export async function loadUserList(forceRefresh = false) {
             const totalTokensUsed = user.totalTokensUsed || 0;
             let examStatus = user.examStatus || 'none'; 
 
-            // Ràng buộc chặt chẽ (Chống kẹt): Trạng thái Đang thi CHỈ CÓ HIỆU LỰC khi thực sự Online
             if (!isOnline) {
                 examStatus = 'none';
             }
@@ -205,30 +202,51 @@ function injectTableHeadersAndToolbar() {
     const table = document.querySelector('#usersTableBody').closest('table');
     const theadTr = table.querySelector('thead tr');
     
-    // Tiêm Style Tối ưu Bố cục Nút cho Mobile
+    // Tiêm Style Tối ưu Bố cục Nút và lấp đầy khoảng trống cho Mobile
     if (!document.getElementById('mobile-user-row-style')) {
         const style = document.createElement('style');
         style.id = 'mobile-user-row-style';
         style.innerHTML = `
             @media (max-width: 768px) {
-                /* Ép full chiều ngang cho bảng User */
-                #tab-user-list .admin-table { min-width: 100% !important; }
+                /* Ép bảng thành dạng Card */
+                #tab-user-list .admin-table { min-width: 100% !important; display: block; border: none; }
+                #tab-user-list .admin-table thead { display: none; }
+                #tab-user-list .admin-table tbody { display: block; width: 100%; }
                 
-                /* Ẩn cột Trạng thái và Hành động ở thead và tbody (Trên Mobile) */
-                #tab-user-list .admin-table th:nth-child(4), 
-                #tab-user-list .admin-table th:nth-child(5) { display: none !important; }
-                .desktop-status-td, .desktop-action-td { display: none !important; }
+                .user-row {
+                    display: flex !important;
+                    flex-wrap: wrap;
+                    background: #fff;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 12px;
+                    margin-bottom: 15px;
+                    padding: 12px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                }
                 
-                /* Hiển thị Action Bar dạng lưới nằm ngay dưới Email */
-                .mobile-status-badge { display: block !important; }
+                .user-row td { display: block; border: none !important; padding: 0 !important; text-align: left !important; }
+                
+                /* TẬN DỤNG CỘT TRÁI: Gộp Checkbox + STT + Avatar + Trạng thái */
+                .user-row td:nth-child(1) { width: 55px; padding-top: 5px !important; }
+                .mobile-left-data { display: flex !important; } /* Hiện dữ liệu cột trái */
+                
+                /* ẨN CÁC CỘT THỪA CỦA DESKTOP */
+                .desktop-only-cell, .desktop-status-td, .desktop-action-td { display: none !important; }
+                .user-row td:nth-child(2), .user-row td:nth-child(4), .user-row td:nth-child(5) { display: none !important; }
+                
+                /* CỘT THÔNG TIN CHÍNH BÊN PHẢI */
+                .user-row td:nth-child(3) { width: calc(100% - 55px); padding-left: 12px !important; }
+                
+                /* THANH HÀNH ĐỘNG DẠNG LƯỚI FULL CHIỀU NGANG ĐÁY CARD */
                 .mobile-action-bar { 
                     display: flex !important; 
                     flex-wrap: wrap; 
                     gap: 8px; 
                     margin-top: 15px; 
-                    padding-top: 12px; 
+                    padding-top: 15px; 
                     border-top: 1px dashed #cbd5e1; 
-                    width: 100%;
+                    width: calc(100% + 55px); /* Kéo dãn ra full thẻ card */
+                    margin-left: -55px;
                 }
                 .mobile-action-bar button { 
                     flex: 1; 
@@ -388,6 +406,7 @@ export function renderUserList() {
     let stt = startIndex + 1;
 
     paginatedUsers.forEach(user => {
+        let currentStt = stt++;
         let badgeClass = 'badge-normal';
         let badgeText = 'Thường';
 
@@ -464,7 +483,6 @@ export function renderUserList() {
 
         const isChecked = selectedUserIds.has(user.userId) ? 'checked' : '';
 
-        // Tái sử dụng HTML nút bấm cho cả Desktop và Mobile
         const actionButtonsHtml = `
             <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi TB">🔔 Gửi</button>
             <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" style="${vipStyle}" ${hoverEffect}>${vipBtnText}</button>
@@ -479,14 +497,29 @@ export function renderUserList() {
         tr.onmouseover = () => tr.style.backgroundColor = hasPendingRequest ? '#ffe4e6' : '#f8fafc';
         tr.onmouseout = () => tr.style.backgroundColor = hasPendingRequest ? '#fff1f2' : 'transparent';
         
+        // Tích hợp Layout thông minh cho cả Desktop và Mobile
         tr.innerHTML = `
-            <td class="text-center">
-                <input type="checkbox" class="user-row-checkbox" data-id="${user.userId}" data-email="${user.email}" ${isChecked} style="cursor:pointer; transform: scale(1.2);">
+            <td class="text-center" style="vertical-align: top;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <input type="checkbox" class="user-row-checkbox" data-id="${user.userId}" data-email="${user.email}" ${isChecked} style="cursor:pointer; transform: scale(1.2);">
+                    
+                    <!-- Dữ liệu tận dụng khoảng trống trên Mobile (Mặc định ẩn trên Desktop) -->
+                    <div class="mobile-left-data" style="display: none; flex-direction: column; align-items: center; gap: 8px;">
+                        <span style="font-weight: 700; color: #94a3b8; font-size: 13px;">#${currentStt}</span>
+                        <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; width: 35px; height: 35px; font-size: 16px;">
+                            ${firstLetter}
+                        </div>
+                        <span class="badge ${badgeClass}" style="padding: 3px 6px; font-size: 10px; margin-top: -3px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">${badgeText}</span>
+                    </div>
+                </div>
             </td>
-            <td class="text-center" style="font-weight: 600; color: #64748b;">${stt++}</td>
-            <td>
+            
+            <td class="text-center desktop-only-cell" style="font-weight: 600; color: #64748b;">${currentStt}</td>
+            
+            <td style="width: 100%;">
                 <div class="user-email-cell" style="display: flex; align-items: flex-start; width: 100%;">
-                    <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; margin-top: 5px; flex-shrink: 0;">
+                    <!-- Avatar Desktop -->
+                    <div class="user-avatar-placeholder desktop-only-cell" style="background-color: ${getAvatarColor(firstLetter)}; margin-top: 5px; flex-shrink: 0;">
                         ${firstLetter}
                     </div>
                     <div style="flex: 1; min-width: 0;">
@@ -494,12 +527,6 @@ export function renderUserList() {
                             <span style="word-break: break-all;">${user.email}</span> 
                             ${onlineStatusHtml} ${testingBadgeHtml} ${scoreBadgeHtml} ${xpBadgeHtml} ${pendingBadge} ${costBadgeHtml}
                         </div>
-                        
-                        <!-- Hiển thị Trạng thái (VIP/Thường) trên Mobile -->
-                        <div class="mobile-status-badge" style="display: none; margin-top: 8px;">
-                            <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
-                        </div>
-
                         ${datesHtml}
                     </div>
                 </div>
@@ -510,7 +537,6 @@ export function renderUserList() {
                 </div>
             </td>
             
-            <!-- Cột Desktop: Sẽ bị ẩn trên Mobile qua lớp CSS tiêm -->
             <td class="text-center desktop-status-td">
                 <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
             </td>
@@ -795,7 +821,6 @@ document.addEventListener('componentsLoaded', () => {
             }
         });
 
-        // Sự kiện Event Delegation hoạt động tốt kể cả khi nút bị nhân đôi (Desktop/Mobile)
         usersBody.addEventListener('click', (e) => {
             if(e.target.classList.contains('user-row-checkbox')) return; 
 
