@@ -8,7 +8,6 @@ let currentUserDataIndex = -1;
 
 const CACHE_TTL_MS = 15 * 60 * 1000; 
 
-// HÀM HELPER: Xác định cấp bậc dựa trên điểm XP
 function getTierBadge(xp) {
     if (xp < 1000) return `<span class="tier-badge tier-rookie" title="Tân binh"><i class="fa-solid fa-seedling"></i> Tân binh</span>`;
     if (xp < 3000) return `<span class="tier-badge tier-pro" title="Chuyên gia"><i class="fa-solid fa-medal"></i> Chuyên gia</span>`;
@@ -16,7 +15,6 @@ function getTierBadge(xp) {
     return `<span class="tier-badge tier-grandmaster" title="Thách đấu"><i class="fa-solid fa-gem"></i> Thách đấu</span>`;
 }
 
-// HÀM HELPER: Cập nhật dòng "Last Updated"
 function updateLastUpdatedText(timestamp) {
     const textElement = document.getElementById('lastUpdatedText');
     if (!textElement) return;
@@ -56,7 +54,6 @@ document.addEventListener('ComponentsLoaded', async () => {
     }
 });
 
-// THIẾT LẬP SỰ KIỆN NÚT BẤM (BỘ LỌC, CẬP NHẬT, VÀ MODAL SHARE)
 function setupControlListeners(currentUser) {
     const refreshBtn = document.getElementById('btnRefreshLeaderboard');
     if (refreshBtn && !refreshBtn.dataset.listenerAttached) {
@@ -92,7 +89,6 @@ function setupControlListeners(currentUser) {
         });
     }
 
-    // Xử lý đóng Modal Share
     const closeShareModal = document.getElementById('closeShareModal');
     const shareModal = document.getElementById('shareAchievementModal');
     if (closeShareModal && shareModal && !closeShareModal.dataset.listenerAttached) {
@@ -101,11 +97,10 @@ function setupControlListeners(currentUser) {
             shareModal.classList.remove('active');
         });
         shareModal.addEventListener('click', (e) => {
-            if(e.target === shareModal) shareModal.classList.remove('active'); // Đóng khi click ra ngoài Overlay
+            if(e.target === shareModal) shareModal.classList.remove('active'); 
         });
     }
 
-    // Xử lý nút Web Share API (Chia sẻ Native)
     const btnNativeShare = document.getElementById('btnNativeShare');
     if (btnNativeShare && !btnNativeShare.dataset.listenerAttached) {
         btnNativeShare.dataset.listenerAttached = "true";
@@ -124,13 +119,63 @@ function setupControlListeners(currentUser) {
                     console.log('User cancelled share or error:', err);
                 }
             } else {
-                alert('Trình duyệt của bạn không hỗ trợ tính năng chia sẻ trực tiếp. Vui lòng chụp màn hình Thẻ thành tích này để khoe với bạn bè nhé!');
+                alert('Trình duyệt của bạn không hỗ trợ tính năng chia sẻ trực tiếp. Vui lòng sử dụng nút "Lưu ảnh" để khoe với bạn bè nhé!');
+            }
+        });
+    }
+
+    // XỬ LÝ LOGIC NÚT "LƯU ẢNH" BẰNG HTML2CANVAS
+    const btnSaveImage = document.getElementById('btnSaveImage');
+    if (btnSaveImage && !btnSaveImage.dataset.listenerAttached) {
+        btnSaveImage.dataset.listenerAttached = "true";
+        btnSaveImage.addEventListener('click', async () => {
+            const originalText = btnSaveImage.innerHTML;
+            btnSaveImage.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+            
+            // Tải thư viện tự động (lazy-load) nếu chưa có
+            if (typeof html2canvas === 'undefined') {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
+            
+            try {
+                const captureArea = document.getElementById('captureArea');
+                const closeBtn = document.getElementById('closeShareModal');
+                
+                // Ẩn nút X trước khi chụp ảnh để ảnh đẹp hơn
+                if(closeBtn) closeBtn.style.display = 'none';
+                
+                const canvas = await html2canvas(captureArea, {
+                    scale: 2, // Tăng chất lượng ảnh xuất ra (HD)
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                });
+                
+                // Hiện lại nút X sau khi chụp xong
+                if(closeBtn) closeBtn.style.display = 'flex';
+                
+                const image = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                link.download = 'ThanhTich_ThiTracNghiem.png';
+                link.href = image;
+                link.click();
+                
+                btnSaveImage.innerHTML = '<i class="fa-solid fa-check"></i> Đã lưu';
+                setTimeout(() => { btnSaveImage.innerHTML = originalText; }, 2000);
+            } catch (error) {
+                console.error("Lỗi khi lưu ảnh:", error);
+                alert("Không thể lưu ảnh lúc này. Vui lòng thử lại!");
+                btnSaveImage.innerHTML = originalText;
             }
         });
     }
 }
 
-// HÀM MỞ MODAL SHARE TRUYỀN DỮ LIỆU ĐỘNG
 function openShareModal(user, rank, xp) {
     const modal = document.getElementById('shareAchievementModal');
     if(!modal) return;
@@ -144,7 +189,6 @@ function openShareModal(user, rank, xp) {
     document.getElementById('shareRank').innerText = rankText;
     document.getElementById('shareXp').innerText = xp.toLocaleString();
     
-    // Tạo QR Code động theo Domain hiện tại
     const websiteUrl = window.location.origin; 
     document.getElementById('shareQrCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(websiteUrl)}`;
     
@@ -258,9 +302,6 @@ async function initLeaderboard(currentUser) {
             });
         }
 
-        // ==========================
-        // CẬP NHẬT THÀNH TÍCH VÀ NÚT SHARE
-        // ==========================
         currentUserDataIndex = globalTopUsers.findIndex(u => u.id === currentUser.uid);
         const statElement = document.getElementById('statAccountStatus'); 
         let finalRank = "Ngoài Top 20";
@@ -288,7 +329,6 @@ async function initLeaderboard(currentUser) {
             if(statElement) statElement.innerHTML = `Ngoài Top 20`; 
         }
 
-        // Hiển thị nút Share và Gắn sự kiện lấy data
         const btnOpenShare = document.getElementById('btnOpenShare');
         if (btnOpenShare) {
             btnOpenShare.style.display = 'flex';
