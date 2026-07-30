@@ -166,9 +166,8 @@ export function renderExams() {
                             <i class="fa-solid fa-crown me-2"></i> Nâng cấp tài khoản Pro
                         </button>`;
                 } else if (isCompleted) {
-                    const correctAnswers = State.completedExams[exam.id].score || 0;
-                    const total = State.completedExams[exam.id].total || 1;
-                    let displayScore = (correctAnswers / total) * 10;
+                    // Sửa lỗi: Điểm lưu trên Firebase đã là thang điểm 10 nên lấy trực tiếp, không chia cho tổng số câu nữa
+                    let displayScore = State.completedExams[exam.id].score || 0;
                     displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
                     actionAreaHtml = `
