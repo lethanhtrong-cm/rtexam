@@ -56,7 +56,7 @@ document.addEventListener('ComponentsLoaded', async () => {
     }
 });
 
-// THIẾT LẬP SỰ KIỆN CHO NÚT CẬP NHẬT VÀ BỘ LỌC
+// THIẾT LẬP SỰ KIỆN NÚT BẤM (BỘ LỌC, CẬP NHẬT, VÀ MODAL SHARE)
 function setupControlListeners(currentUser) {
     const refreshBtn = document.getElementById('btnRefreshLeaderboard');
     if (refreshBtn && !refreshBtn.dataset.listenerAttached) {
@@ -91,6 +91,64 @@ function setupControlListeners(currentUser) {
             }
         });
     }
+
+    // Xử lý đóng Modal Share
+    const closeShareModal = document.getElementById('closeShareModal');
+    const shareModal = document.getElementById('shareAchievementModal');
+    if (closeShareModal && shareModal && !closeShareModal.dataset.listenerAttached) {
+        closeShareModal.dataset.listenerAttached = "true";
+        closeShareModal.addEventListener('click', () => {
+            shareModal.classList.remove('active');
+        });
+        shareModal.addEventListener('click', (e) => {
+            if(e.target === shareModal) shareModal.classList.remove('active'); // Đóng khi click ra ngoài Overlay
+        });
+    }
+
+    // Xử lý nút Web Share API (Chia sẻ Native)
+    const btnNativeShare = document.getElementById('btnNativeShare');
+    if (btnNativeShare && !btnNativeShare.dataset.listenerAttached) {
+        btnNativeShare.dataset.listenerAttached = "true";
+        btnNativeShare.addEventListener('click', async () => {
+            const currentXpText = document.getElementById('shareXp').innerText;
+            const currentRankText = document.getElementById('shareRank').innerText;
+            const shareData = {
+                title: 'Thành tích Thi Trắc Nghiệm',
+                text: `🔥 Tôi vừa đạt mức ${currentXpText} XP (Hạng: ${currentRankText}) trên Hệ Thống Thi Trắc Nghiệm. Truy cập ngay để đua Top cùng tôi nhé!`,
+                url: window.location.origin
+            };
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData);
+                } catch (err) {
+                    console.log('User cancelled share or error:', err);
+                }
+            } else {
+                alert('Trình duyệt của bạn không hỗ trợ tính năng chia sẻ trực tiếp. Vui lòng chụp màn hình Thẻ thành tích này để khoe với bạn bè nhé!');
+            }
+        });
+    }
+}
+
+// HÀM MỞ MODAL SHARE TRUYỀN DỮ LIỆU ĐỘNG
+function openShareModal(user, rank, xp) {
+    const modal = document.getElementById('shareAchievementModal');
+    if(!modal) return;
+    
+    const avatarUrl = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=random&color=fff`;
+    document.getElementById('shareAvatar').src = avatarUrl;
+    document.getElementById('shareName').innerText = user.displayName || 'Học viên ẩn danh';
+    document.getElementById('shareTier').innerHTML = getTierBadge(xp);
+    
+    const rankText = typeof rank === 'number' ? `#${rank}` : rank;
+    document.getElementById('shareRank').innerText = rankText;
+    document.getElementById('shareXp').innerText = xp.toLocaleString();
+    
+    // Tạo QR Code động theo Domain hiện tại
+    const websiteUrl = window.location.origin; 
+    document.getElementById('shareQrCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(websiteUrl)}`;
+    
+    modal.classList.add('active');
 }
 
 export async function updateUserDashboardRank(currentUser) {
@@ -200,30 +258,41 @@ async function initLeaderboard(currentUser) {
             });
         }
 
+        // ==========================
+        // CẬP NHẬT THÀNH TÍCH VÀ NÚT SHARE
+        // ==========================
         currentUserDataIndex = globalTopUsers.findIndex(u => u.id === currentUser.uid);
         const statElement = document.getElementById('statAccountStatus'); 
+        let finalRank = "Ngoài Top 20";
+        let finalXP = 0;
         
         if (currentUserDataIndex !== -1) {
-            const currentRank = currentUserDataIndex + 1;
-            const currentXP = globalTopUsers[currentUserDataIndex].totalXP || 0;
+            finalRank = currentUserDataIndex + 1;
+            finalXP = globalTopUsers[currentUserDataIndex].totalXP || 0;
             cRankStats.innerHTML = `
-                <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
-                <span class="rank-badge">Hạng: ${currentRank}</span>
+                <span class="xp-badge">XP Tích lũy: <b>${finalXP.toLocaleString()}</b></span>
+                <span class="rank-badge">Hạng: ${finalRank}</span>
             `;
-            if(statElement) statElement.innerHTML = `Hạng ${currentRank}`; 
+            if(statElement) statElement.innerHTML = `Hạng ${finalRank}`; 
         } else {
-            let currentXP = 0;
             const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists()) {
-                currentXP = userDocSnap.data().totalXP || 0;
+                finalXP = userDocSnap.data().totalXP || 0;
             }
             
             cRankStats.innerHTML = `
-                <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
+                <span class="xp-badge">XP Tích lũy: <b>${finalXP.toLocaleString()}</b></span>
                 <span class="rank-badge out-of-rank">Ngoài Top 20</span>
             `;
             if(statElement) statElement.innerHTML = `Ngoài Top 20`; 
+        }
+
+        // Hiển thị nút Share và Gắn sự kiện lấy data
+        const btnOpenShare = document.getElementById('btnOpenShare');
+        if (btnOpenShare) {
+            btnOpenShare.style.display = 'flex';
+            btnOpenShare.onclick = () => openShareModal(currentUser, finalRank, finalXP);
         }
 
         currentPage = 1;
@@ -283,7 +352,6 @@ function renderLeaderboardPage(restUsersList, page) {
             const actualRank = startIndex + index + 4; 
             const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=e2e8f0&color=334155`;
             
-            // Xử lý logic Animation trễ dần (Staggered Animation)
             const animationDelay = index * 0.08; 
             
             tableBody.innerHTML += `
