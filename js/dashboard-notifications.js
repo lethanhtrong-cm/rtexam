@@ -229,12 +229,22 @@ window.openAdminReplyModal = function(message) {
     const msgContainer = document.getElementById('user-admin-message');
     
     if (modal && msgContainer) {
-        // Gán message an toàn (innerText chống XSS và giữ nguyên form, xuống dòng)
-        msgContainer.innerText = message || "Không có nội dung.";
+        let safeMsg = message || "Không có nội dung.";
+        
+        // 1. Lọc an toàn XSS cơ bản (Do ta sẽ chuyển sang dùng innerHTML)
+        safeMsg = safeMsg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        
+        // 2. Regex nhận diện đường link (http, https) và bọc thẻ <a>
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        safeMsg = safeMsg.replace(urlRegex, '<a href="$1" target="_blank" style="color: #2563eb; text-decoration: underline; word-break: break-all;">$1</a>');
+        
+        // 3. Giữ nguyên định dạng xuống dòng
+        safeMsg = safeMsg.replace(/\n/g, '<br>');
+        
+        msgContainer.innerHTML = safeMsg;
         modal.style.display = 'block';
     } else {
         console.error("Không tìm thấy HTML của Modal hiển thị thông báo.");
-        // Fallback dùng Alert nếu dev quên chèn HTML Modal
         alert("Thông báo hệ thống:\n\n" + message);
     }
 }
