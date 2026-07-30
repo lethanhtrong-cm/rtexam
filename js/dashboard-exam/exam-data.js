@@ -8,12 +8,7 @@ export async function fetchUserResultsCache(user) {
     if (!user || !user.email) return;
     try {
         const cacheKey = `completedExams_${user.uid}`;
-        const cachedData = sessionStorage.getItem(cacheKey);
-        
-        if (cachedData) {
-            State.completedExams = JSON.parse(cachedData);
-            return; // Tiết kiệm lượt đọc
-        }
+        // Đã gỡ bỏ lệnh return cachedData ở đây để đảm bảo điểm luôn nạp mới nhất từ Firebase khi tải lại trang
 
         const resultsRef = collection(db, "results");
         const q = query(resultsRef, where("email", "==", user.email));
