@@ -13,6 +13,80 @@ let currentPage = 1;
 const itemsPerPage = 10; // Hiển thị chuẩn 10 đề mỗi trang
 
 // ==========================================
+// HÀM TIÊM CSS TỐI ƯU GIAO DIỆN MOBILE
+// ==========================================
+function injectAiMobileStyle() {
+    if (!document.getElementById('mobile-ai-style')) {
+        const style = document.createElement('style');
+        style.id = 'mobile-ai-style';
+        style.innerHTML = `
+            @media (max-width: 768px) {
+                /* Bẻ bảng thành dạng Card */
+                #tab-admin .admin-table { min-width: 100% !important; display: block; border: none; }
+                #tab-admin .admin-table thead { display: none; }
+                #tab-admin .admin-table tbody { display: block; width: 100%; }
+                
+                #ai-exam-list-body tr {
+                    display: flex !important;
+                    flex-direction: column;
+                    background: #fff;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 12px;
+                    margin-bottom: 15px;
+                    padding: 12px 15px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                }
+                
+                /* Hiển thị Tên cột thông qua pseudo-element */
+                #ai-exam-list-body td { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center; 
+                    border: none !important; 
+                    padding: 8px 0 !important; 
+                    text-align: right !important; 
+                }
+                
+                #ai-exam-list-body td::before {
+                    content: attr(data-label);
+                    font-weight: 700;
+                    color: #64748b;
+                    font-size: 0.8rem;
+                    text-align: left;
+                    flex-shrink: 0;
+                    margin-right: 15px;
+                }
+                
+                /* Tối ưu thanh hành động (Nút bấm) thành Grid dưới đáy */
+                #ai-exam-list-body td:last-child {
+                    flex-direction: column;
+                    margin-top: 10px;
+                    padding-top: 15px !important;
+                    border-top: 1px dashed #cbd5e1 !important;
+                }
+                #ai-exam-list-body td:last-child::before { display: none; }
+                
+                #ai-exam-list-body td:last-child > div {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    width: 100%;
+                }
+                
+                #ai-exam-list-body td:last-child button {
+                    flex: 1;
+                    min-width: 45%;
+                    justify-content: center;
+                    padding: 10px !important;
+                    font-size: 13px !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// ==========================================
 // 1. TẢI DỮ LIỆU ĐỀ THI AI TỪ FIRESTORE
 // ==========================================
 async function loadAiExams() {
@@ -116,6 +190,9 @@ async function loadAiExams() {
 // 2. RENDER BẢNG HIỂN THỊ (CÓ PHÂN TRANG)
 // ==========================================
 function renderAiExamsTable() {
+    // Tiêm CSS giao diện Mobile trước khi Render
+    injectAiMobileStyle();
+
     const tbody = document.getElementById('ai-exam-list-body');
     if (!tbody) return;
 
@@ -147,7 +224,7 @@ function renderAiExamsTable() {
     
     let stt = startIndex + 1;
 
-    // --- VẼ DỮ LIỆU ĐỀ THI VỚI UI HIỆN ĐẠI ---
+    // --- VẼ DỮ LIỆU ĐỀ THI VỚI UI HIỆN ĐẠI & DATA-LABEL CHO MOBILE ---
     pagedData.forEach(exam => {
         const tr = document.createElement('tr');
         tr.style.transition = "all 0.2s ease";
@@ -159,21 +236,21 @@ function renderAiExamsTable() {
             : `<span style="background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 6px;"><i class="fa-regular fa-user"></i> ${exam.displayCreator}</span>`;
 
         tr.innerHTML = `
-            <td class="text-center"><span style="font-weight: 700; color: #64748b;">${stt++}</span></td>
-            <td>
+            <td class="text-center" data-label="STT"><span style="font-weight: 700; color: #64748b;">${stt++}</span></td>
+            <td data-label="MÃ ĐỀ">
                 <div style="display: flex; align-items: center;">
                     <span style="background: #f8fafc; color: #0f172a; padding: 6px 12px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-weight: 700; font-size: 0.9rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
                         <i class="fa-solid fa-barcode" style="color: #94a3b8; margin-right: 6px;"></i>${exam.id}
                     </span>
                 </div>
             </td>
-            <td>${creatorBadge}</td>
-            <td class="text-center">
+            <td data-label="NGƯỜI TẠO">${creatorBadge}</td>
+            <td class="text-center" data-label="SỐ CÂU">
                 <span style="background: #f0fdf4; color: #15803d; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 5px;">
                     <i class="fa-solid fa-layer-group"></i> ${exam.questionCount} câu
                 </span>
             </td>
-            <td class="text-center">
+            <td class="text-center" data-label="NGÀY TẠO">
                 <div style="color: #475569; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px;">
                     <i class="fa-regular fa-calendar-days"></i> ${exam.displayDate}
                 </div>
