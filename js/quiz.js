@@ -358,6 +358,9 @@ async function executeSubmit() {
     // Lô-gic tính điểm XP nâng cao (Đã cập nhật Streak, Speed & Retake Bonus)
     let gainedXP = 0;
     let xpMessage = "";
+    let isRetake = false; // Biến kiểm tra ôn tập
+    let isNewRecord = false; // Biến kiểm tra vượt kỷ lục
+
     try {
         const resultsRef = collection(db, "results");
         const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId));
@@ -421,6 +424,7 @@ async function executeSubmit() {
                 gainedXP = totalRawXP;
                 xpMessage = `🎉 Xuất sắc! Bạn nhận được +${gainedXP} XP cho bài thi này!`;
             } else {
+                isRetake = true;
                 // Phân tích lịch sử thi: Lấy điểm số cao nhất đã từng đạt được
                 let previousBestScore = 0;
                 resultSnapshot.forEach(doc => {
@@ -432,6 +436,7 @@ async function executeSubmit() {
                 
                 // Khuyến khích ôn tập: Nếu phá vỡ kỷ lục điểm của chính mình, thưởng 20% Base XP
                 if (finalScore > previousBestScore) {
+                    isNewRecord = true;
                     gainedXP = Math.round((baseXP * 0.2) * difficultyMultiplier);
                     if (gainedXP > 0) {
                         xpMessage = `🔥 Thi lại tiến bộ! Bạn nhận được +${gainedXP} XP khuyến khích!`;
@@ -480,11 +485,10 @@ async function executeSubmit() {
         const examDocRef = doc(db, "exams", currentExamId);
         await setDoc(examDocRef, { attemptCount: increment(1) }, { merge: true });
         
-        // Truyền thêm gainedXP vào hàm hiển thị Modal
-        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP);
+        // Truyền trạng thái isRetake và isNewRecord vào modal
+        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord);
     } catch (error) {
-        // Truyền thêm gainedXP vào hàm hiển thị Modal ngay cả khi lỗi lưu kết quả
-        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP);
+        showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord);
     }
 }
 
@@ -564,11 +568,9 @@ function openReviewModal(score, correctCount, total) {
 
         let safeQuestionText = (q.text || "").replace(/"/g, '&quot;');
         
-        // TỐI ƯU UI MOBILE: Chia layout thành 2 hàng dọc thay vì 1 hàng ngang
         html += `
             <div style="background: var(--bg-panel); padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);">
                 
-                <!-- Hàng 1: Nút Câu X và Nút Báo lỗi dàn đều sang 2 bên -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <span style="background: #3b82f6; color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; white-space: nowrap;">Câu ${idx+1}</span>
                     <button class="btn-report-error" data-qid="${q.id}" data-qtext="${safeQuestionText}" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #f87171; color: #dc2626; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: 0.2s;">
@@ -576,7 +578,6 @@ function openReviewModal(score, correctCount, total) {
                     </button>
                 </div>
                 
-                <!-- Hàng 2: Nội dung câu hỏi và Badge Trạng thái -->
                 <div style="color: var(--text-main); font-weight: 600; font-size: 1.05rem; line-height: 1.6; margin-bottom: 15px;">
                     ${q.text} 
                     <div style="margin-top: 8px; display: inline-block;">${statusBadge}</div>
@@ -699,7 +700,7 @@ function resetFeedbackUI() {
     btn.innerText = "Gửi Đánh Giá"; btn.disabled = false;
 }
 
-function showResultModal(correctCount, total, score, xp = 0) {
+function showResultModal(correctCount, total, score, xp = 0, isRetake = false, isNewRecord = false) {
     const modal = document.getElementById('result-modal');
     document.getElementById('modal-score-text').innerText = score;
     document.getElementById('modal-correct-text').innerText = `${correctCount}/${total}`;
@@ -708,26 +709,37 @@ function showResultModal(correctCount, total, score, xp = 0) {
     const scoreCircle = document.getElementById('modal-score-circle');
     scoreCircle.style.background = `conic-gradient(#10b981 ${percentage}%, #d1fae5 ${percentage}%)`;
 
-    // TÍNH NĂNG MỚI: Hiển thị XP ngay trên bảng điểm
+    // TÍNH NĂNG MỚI: Hiển thị XP với giao diện động dựa trên trạng thái (Lần đầu / Ôn tập / Vượt kỷ lục)
     let xpDisplay = document.getElementById('modal-xp-display');
     if (!xpDisplay) {
-        // Tạo thẻ hiển thị XP nếu chưa tồn tại
         xpDisplay = document.createElement('div');
         xpDisplay.id = 'modal-xp-display';
-        xpDisplay.style.cssText = "margin-top: 15px; font-weight: bold; color: #ea580c; font-size: 1.1rem; background: #ffedd5; padding: 5px 15px; border-radius: 20px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.05);";
+        xpDisplay.style.cssText = "margin-top: 15px; font-weight: bold; font-size: 1.1rem; padding: 5px 15px; border-radius: 20px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.05);";
         
-        // Chèn ngay bên dưới vòng tròn điểm số
         if (scoreCircle && scoreCircle.parentNode) {
             scoreCircle.parentNode.insertBefore(xpDisplay, scoreCircle.nextSibling);
         }
     }
     
-    // Nếu có XP thì hiển thị, không thì ẩn đi
-    if (xp > 0) {
+    xpDisplay.style.display = 'inline-block';
+    
+    if (!isRetake) {
+        // Lần thi đầu tiên
         xpDisplay.innerHTML = `🌟 +${xp} XP`;
-        xpDisplay.style.display = 'inline-block';
+        xpDisplay.style.color = "#ea580c";
+        xpDisplay.style.background = "#ffedd5";
     } else {
-        xpDisplay.style.display = 'none';
+        // Thi lại (Chế độ ôn tập)
+        if (isNewRecord && xp > 0) {
+            xpDisplay.innerHTML = `🔥 +${xp} XP (Khuyến khích)`;
+            xpDisplay.style.color = "#ea580c";
+            xpDisplay.style.background = "#ffedd5";
+        } else {
+            // Không vượt kỷ lục, hoặc là chế độ ôn tập thông thường
+            xpDisplay.innerHTML = `🌟 +0 XP (Đã ôn tập)`;
+            xpDisplay.style.color = "#6b7280"; // Màu xám cho biết không cộng thêm điểm
+            xpDisplay.style.background = "#f3f4f6";
+        }
     }
 
     resetFeedbackUI(); 
