@@ -57,10 +57,11 @@ export function renderExams() {
         // Tạo mảng groups động dựa trên Tab hiện tại
         let groups = [];
         
-        // CHỈ HIỂN THỊ ĐỀ HOT VÀ ĐỀ CẦN ÔN TẬP KHI Ở TAB "TẤT CẢ"
+        // CHỈ HIỂN THỊ ĐỀ HOT, ĐỀ MỚI VÀ ĐỀ CẦN ÔN TẬP KHI Ở TAB "TẤT CẢ"
         if (State.currentTechnique === 'all') {
             groups.push(
                 { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
+                { mainCategory: null, title: "✨ Đề Mới", data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5) },
                 { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && ((State.completedExams[exam.id].score / (State.completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) }
             );
         }
