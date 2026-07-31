@@ -13,38 +13,39 @@ let cachedExams = [];
 let draftData = [];
 let currentEditingExamId = "";
 
-// Biến lưu trữ State cục bộ cho Real-time
+// THÊM MỚI: Biến lưu trữ State cục bộ cho Real-time
 let rawExams = [];
 let rawQuestions = [];
 let rawFeedbacks = [];
 let loadedStatus = { exams: false, questions: false, feedbacks: false };
 let listenersInitialized = false;
 
-// Trạng thái hiển thị của Bảng thống kê
-let isStatsVisible = false; 
-
 // =========================================================================
 // HÀM KHỞI TẠO LẮNG NGHE REAL-TIME (TỐI ƯU QUOTA)
 // =========================================================================
 export function loadExamList() {
+    // Đảm bảo chỉ khởi tạo listener 1 lần duy nhất để chống tràn bộ nhớ
     if (listenersInitialized) return;
     listenersInitialized = true;
     
     const container = document.getElementById('exam-list-body');
     if (container) container.innerHTML = '<div class="loading-text">⏳ Đang thiết lập kết nối thời gian thực (Real-time) để tối ưu Quota...</div>';
 
+    // 1. Lắng nghe thay đổi Cấu hình đề thi
     onSnapshot(collection(db, "exams"), (snapshot) => {
         rawExams = snapshot.docs;
         loadedStatus.exams = true;
         processAndRender();
     }, (error) => handleLoadError(error));
 
+    // 2. Lắng nghe thay đổi Câu hỏi (Tự động nhận đề mới từ Google Sheet)
     onSnapshot(collection(db, "questions"), (snapshot) => {
         rawQuestions = snapshot.docs;
         loadedStatus.questions = true;
         processAndRender();
     }, (error) => handleLoadError(error));
 
+    // 3. Lắng nghe thay đổi Đánh giá
     onSnapshot(collection(db, "feedbacks"), (snapshot) => {
         rawFeedbacks = snapshot.docs;
         loadedStatus.feedbacks = true;
@@ -62,6 +63,7 @@ function handleLoadError(error) {
 // HÀM XỬ LÝ DỮ LIỆU SAU KHI FIRESTORE TRẢ VỀ (CACHE & MAP)
 // =========================================================================
 function processAndRender() {
+    // Chỉ render khi cả 3 luồng dữ liệu đều đã tải xong lần đầu
     if (!loadedStatus.exams || !loadedStatus.questions || !loadedStatus.feedbacks) return;
 
     const examDataMap = {};
@@ -126,131 +128,11 @@ function processAndRender() {
 }
 
 // =========================================================================
-// HÀM TẠO BẢNG THỐNG KÊ NHANH (Có trạng thái Ẩn/Hiện)
-// =========================================================================
-function generateStatsHtml() {
-    const stats = {};
-    let totalExams = 0;
-    
-    // 1. Gom nhóm dữ liệu tổng quan toàn hệ thống
-    cachedExams.forEach(ex => {
-        totalExams++;
-        const t = ex.technique || "Chưa phân loại";
-        const l = ex.level || "Không xác định";
-        const time = ex.timeLimit || 0;
-
-        if(!stats[t]) stats[t] = { total: 0, levels: {} };
-        stats[t].total++;
-
-        if(!stats[t].levels[l]) stats[t].levels[l] = { total: 0, times: {} };
-        stats[t].levels[l].total++;
-
-        if(!stats[t].levels[l].times[time]) stats[t].levels[l].times[time] = 0;
-        stats[t].levels[l].times[time]++;
-    });
-
-    // 2. Render nội dung bảng (Chỉ xuất HTML nếu isStatsVisible = true)
-    let tableContent = '';
-    if (isStatsVisible) {
-        tableContent = `
-        <div style="overflow-x: auto; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 20px;">
-        <table style="width:100%; border-collapse:collapse; background: #fff; min-width: 600px;">
-            <thead style="background:#f8fafc; color:#475569; font-size:13px; text-transform:uppercase; border-bottom: 2px solid #cbd5e1;">
-                <tr>
-                    <th style="padding:12px 15px; text-align:left; width: 30%;">Chuyên khoa</th>
-                    <th style="padding:12px 15px; text-align:center; width: 25%;">Cấp độ</th>
-                    <th style="padding:12px 15px; text-align:center; width: 25%;">Thời gian</th>
-                    <th style="padding:12px 15px; text-align:center; width: 20%;">Số lượng đề</th>
-                </tr>
-            </thead>
-            <tbody>`;
-
-        for(const t in stats) {
-            const techData = stats[t];
-            const levels = Object.keys(techData.levels);
-            
-            let techRowSpan = 0;
-            levels.forEach(l => { techRowSpan += Object.keys(techData.levels[l].times).length; });
-
-            let firstTech = true;
-            for(const l of levels) {
-                const times = Object.keys(techData.levels[l].times);
-                let firstLevel = true;
-                
-                for(const time of times) {
-                    tableContent += `<tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">`;
-                    
-                    if(firstTech) {
-                        tableContent += `<td rowspan="${techRowSpan}" style="padding:15px; vertical-align:middle; font-weight:700; color:#1e293b; border-right:1px solid #e2e8f0; background: #fff;">
-                                    ${t} <br><span style="font-size:12px; font-weight: normal; color: #64748b;">(Tổng: ${techData.total} đề)</span>
-                                 </td>`;
-                        firstTech = false;
-                    }
-                    if(firstLevel) {
-                        let lvlColor = l === 'Khó' ? '#ef4444' : (l === 'Dễ' ? '#10b981' : '#f59e0b');
-                        tableContent += `<td rowspan="${times.length}" style="padding:15px; vertical-align:middle; text-align:center; font-weight:700; color:${lvlColor}; border-right:1px solid #e2e8f0; background: #fff;">
-                                    ${l} <br><span style="font-size:12px; font-weight: normal; color: #64748b;">(Có ${techData.levels[l].total} đề)</span>
-                                 </td>`;
-                        firstLevel = false;
-                    }
-                    
-                    tableContent += `<td style="padding:12px 15px; text-align:center; color:#475569; font-weight: 500;">${time} phút</td>`;
-                    tableContent += `<td style="padding:12px 15px; text-align:center; font-weight:bold; color:#0f172a; font-size: 15px;">
-                                <span style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 20px;">${techData.levels[l].times[time]}</span>
-                             </td>`;
-                    tableContent += `</tr>`;
-                }
-            }
-        }
-        tableContent += `</tbody></table></div>`;
-    }
-
-    // 3. UI Header kèm Nút Ẩn/Hiện
-    let btnStyle = isStatsVisible 
-        ? "background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;" 
-        : "background: #3b82f6; color: white; border: 1px solid #3b82f6; box-shadow: 0 2px 4px rgba(59,130,246,0.3);";
-    let btnText = isStatsVisible ? '<i class="fa-solid fa-eye-slash"></i> Ẩn thống kê' : '<i class="fa-solid fa-chart-pie"></i> Xem thống kê nhanh';
-
-    let html = `
-    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-            <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 10px; font-size: 17px;">
-                <i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i> Ngân Hàng Đề (Tổng: <span style="color:#ef4444;">${totalExams}</span> đề)
-            </h3>
-            <button id="btn-toggle-stats" style="padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; ${btnStyle}">
-                ${btnText}
-            </button>
-        </div>
-        ${tableContent}
-    </div>`;
-
-    return html;
-}
-
-// =========================================================================
 // HÀM HIỂN THỊ DANH SÁCH RA MÀN HÌNH THEO BỘ LỌC
 // =========================================================================
 export function renderExamList() {
     const container = document.getElementById('exam-list-body');
     if (!container) return;
-
-    container.innerHTML = '';
-
-    // CHÈN BẢNG THỐNG KÊ (NẾU Ở TAB CHƯA PHÂN LOẠI)
-    if (currentTechnique === "Chưa phân loại") {
-        const statsWrapper = document.createElement('div');
-        statsWrapper.innerHTML = generateStatsHtml();
-        container.appendChild(statsWrapper);
-
-        // Gắn sự kiện cho nút Ẩn/Hiện
-        const toggleBtn = statsWrapper.querySelector('#btn-toggle-stats');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                isStatsVisible = !isStatsVisible;
-                renderExamList(); // Re-render để cập nhật UI
-            });
-        }
-    }
 
     const filteredExams = cachedExams.filter(exam => {
         const matchTech = exam.technique === currentTechnique;
@@ -271,12 +153,10 @@ export function renderExamList() {
         return b.createdAt - a.createdAt;
     });
 
+    container.innerHTML = '';
+
     if (filteredExams.length === 0) {
-        const emptyMsg = document.createElement('div');
-        emptyMsg.className = 'empty-message';
-        emptyMsg.style.cssText = 'width: 100%; background: #ffffff; padding: 40px; border-radius: 12px; border: 1px dashed #cbd5e1;';
-        emptyMsg.innerHTML = '🔍 Không tìm thấy mã đề thi nào thỏa mãn điều kiện lọc hiện tại.';
-        container.appendChild(emptyMsg);
+        container.innerHTML = `<div class="empty-message" style="width: 100%; background: #ffffff; padding: 40px; border-radius: 12px; border: 1px dashed #cbd5e1;">🔍 Không tìm thấy mã đề thi nào thỏa mãn điều kiện lọc hiện tại.</div>`;
         return;
     }
 
@@ -310,6 +190,7 @@ export function renderExamList() {
         }
         const feedbackBtnClass = exam.feedbackCount > 0 ? "btn-modern-action btn-view-feedback has-feedback" : "btn-modern-action btn-view-feedback";
 
+        // Mã hóa mô tả để chèn vào dataset an toàn
         const safeDescription = encodeURIComponent(exam.description || "");
 
         const cardDiv = document.createElement('div');
@@ -751,6 +632,7 @@ async function publishExam() {
 }
 
 document.addEventListener('componentsLoaded', () => {
+    // KHỞI ĐỘNG CHUỖI LẮNG NGHE REAL-TIME THAY VÌ ON-SNAPSHOT LỒNG NHAU CŨ
     loadExamList();
     
     handleExcelRead();
