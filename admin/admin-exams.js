@@ -290,8 +290,21 @@ function initFilterChangeListeners() {
     let sortSelect = document.getElementById('examSortSelect');
 
     if (filterRow) {
-        // Tích hợp Sticky cố định thanh lọc
-        filterRow.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px;';
+        // Gom cả thanh Tìm kiếm và Lọc vào chung 1 khối Sticky
+        const searchWrapper = document.getElementById('examSearchInput')?.parentElement;
+        if (searchWrapper && !document.getElementById('exam-sticky-wrapper')) {
+            const stickyWrapper = document.createElement('div');
+            stickyWrapper.id = 'exam-sticky-wrapper';
+            stickyWrapper.style.cssText = 'position: sticky; top: 60px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px; border-bottom: 1px solid #e2e8f0;';
+            
+            searchWrapper.parentNode.insertBefore(stickyWrapper, searchWrapper);
+            stickyWrapper.appendChild(searchWrapper);
+            stickyWrapper.appendChild(filterRow);
+            
+            // Xóa bỏ trạng thái bám dính cũ của riêng thanh Lọc
+            filterRow.style.position = 'static';
+            filterRow.style.marginTop = '15px';
+        }
         
         if (!sortSelect) {
             const sortCol = document.createElement('div');
