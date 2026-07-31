@@ -94,7 +94,7 @@ function setupControlListeners(currentUser) {
         });
     }
 
-    // 3. Nút Chia Sẻ Top 3 (Tích hợp thêm QR Code và Link Web)
+    // 3. Nút Chia Sẻ Top 3 (Đã Fix lỗi CORS & Share API Timeout)
     const shareBtn = document.getElementById('btnShareLeaderboard');
     if (shareBtn && !shareBtn.dataset.listenerAttached) {
         shareBtn.dataset.listenerAttached = "true";
@@ -163,29 +163,36 @@ function setupControlListeners(currentUser) {
                 podiumElement.style.borderRadius = originalBorderRadius;
                 podiumElement.style.position = originalPosition;
 
-                // Xử lý chia sẻ hoặc tải ảnh
-                canvas.toBlob(async (blob) => {
-                    const file = new File([blob], "Top3_VinhQuang.png", { type: "image/png" });
-                    
-                    // Thử gọi Web Share API
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                // XỬ LÝ LỖI SHARE API (Dùng Promise giữ ngữ cảnh và try..catch)
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const file = new File([blob], "Top3_VinhQuang.png", { type: "image/png" });
+                
+                const fallbackDownload = () => {
+                    const link = document.createElement('a');
+                    link.download = 'Top3_VinhQuang.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    alert('Đã tải ảnh về máy thành công! (Trình duyệt không hỗ trợ Share trực tiếp)');
+                };
+
+                // Thử gọi Web Share API
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
                         await navigator.share({
                             title: 'Bảng xếp hạng Vinh Quang',
                             text: 'Cùng xem Top 3 xuất sắc nhất trên hệ thống thi trắc nghiệm nhé!',
                             files: [file]
                         });
-                    } else {
-                        // Fallback tự động tải ảnh về máy
-                        const link = document.createElement('a');
-                        link.download = 'Top3_VinhQuang.png';
-                        link.href = canvas.toDataURL('image/png');
-                        link.click();
-                        alert('Đã tải ảnh về máy thành công! (Do trình duyệt của bạn không hỗ trợ chia sẻ trực tiếp)');
+                    } catch (shareError) {
+                        console.warn("Share API bị từ chối/hủy, tự động chuyển sang tải file:", shareError);
+                        fallbackDownload();
                     }
-                    
-                    shareBtn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Chia sẻ Top 3';
-                    shareBtn.disabled = false;
-                }, 'image/png');
+                } else {
+                    fallbackDownload(); // Fallback tự động tải ảnh về máy
+                }
+                
+                shareBtn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Chia sẻ Top 3';
+                shareBtn.disabled = false;
 
             } catch (error) {
                 console.error("Lỗi chia sẻ:", error);
@@ -286,7 +293,8 @@ async function initLeaderboard(currentUser) {
             if (top3[2]) displayOrder.push({ ...top3[2], rank: 3, class: 'step-3' });
 
             displayOrder.forEach(user => {
-                const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=random&color=fff`;
+                // Đã chèn cache-busting `&_cors=` để vượt qua lỗi Multiple Allow-Origin của ui-avatars
+                const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=random&color=fff&_cors=${Date.now()}`;
                 const crown = user.rank === 1 ? '<i class="fa-solid fa-crown crown-icon"></i>' : '';
                 
                 podiumContainer.innerHTML += `
@@ -385,7 +393,9 @@ function renderLeaderboardPage(restUsersList, page) {
     } else {
         pageData.forEach((user, index) => {
             const actualRank = startIndex + index + 4; 
-            const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=e2e8f0&color=334155`;
+            
+            // Đã chèn cache-busting `&_cors=`
+            const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=e2e8f0&color=334155&_cors=${Date.now()}`;
             
             // Hiệu ứng render xếp tầng mượt mà
             const animationDelay = index * 0.08; 
@@ -394,7 +404,7 @@ function renderLeaderboardPage(restUsersList, page) {
                 <div class="leaderboard-row animate-fade-in" style="animation-delay: ${animationDelay}s">
                     <div class="row-rank">#${actualRank}</div>
                     <div class="row-info">
-                        <img src="${avatar}" alt="Avatar" class="row-avatar">
+                        <img src="${avatar}" alt="Avatar" crossorigin="anonymous" class="row-avatar">
                         <div class="row-name">
                             ${user.displayName || 'Học viên ẩn danh'}
                             ${getTierBadge(user.totalXP || 0)}
