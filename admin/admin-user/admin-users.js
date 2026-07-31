@@ -885,7 +885,10 @@ document.addEventListener('componentsLoaded', () => {
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        if (!document.getElementById('btnRefreshUsers')) {
+        // Tích hợp Sticky cố định thanh công cụ
+        toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px;';
+        
+        if (!document.getElementById('btnRefreshUsers')) {{
             const refreshBtn = document.createElement('button');
             refreshBtn.id = 'btnRefreshUsers';
             refreshBtn.className = 'btn-modern-action';
