@@ -223,13 +223,16 @@ export async function loadUserList(forceRefresh = false) {
 // ==========================================
 function initAutoClearGhostSessions() {
     setInterval(async () => {
+        // TỐI ƯU CPU: Chỉ tính toán khi thực sự có học viên đang trong trạng thái thi
+        const testingUsers = cachedUsers.filter(u => u.examStatus === 'testing');
+        if (testingUsers.length === 0) return;
+
         const now = Date.now();
         const timeoutMs = 45 * 60 * 1000; // Cấu hình giới hạn: 45 phút
         
         let clearedCount = 0;
 
-        for (const user of cachedUsers) {
-            if (user.examStatus === 'testing') {
+        for (const user of testingUsers) {
                 let timeElapsed = 0;
                 
                 // Ưu tiên 1: Dùng thời gian lưu thực tế từ Database
