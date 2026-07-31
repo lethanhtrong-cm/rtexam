@@ -146,10 +146,10 @@ export async function loadUserList(forceRefresh = false) {
             
             if (examStatus === 'testing') {
                 if (!localTestingTimers.has(userId)) {
-                    localTestingTimers.set(userId, Date.now()); // Bắt đầu đếm giờ nội bộ nếu DB không có sẵn mốc
+                    localTestingTimers.set(userId, Date.now()); 
                 }
             } else {
-                localTestingTimers.delete(userId); // Xóa khỏi bộ đếm nếu đã thi xong
+                localTestingTimers.delete(userId); 
             }
             // ---------------------------------------------
 
@@ -219,54 +219,52 @@ export async function loadUserList(forceRefresh = false) {
 }
 
 // ==========================================
-// HÀM CHẠY NGẦM TỰ ĐỘNG GỠ KẸT THI (AUTO-CLEAR)
+// HÀM CHẠY NGẦM TỰ ĐỘNG GỠ KẸT THI (AUTO-CLEAR) - ĐÃ TỐI ƯU CPU
 // ==========================================
 function initAutoClearGhostSessions() {
     setInterval(async () => {
+        // TỐI ƯU CPU: Chỉ tính toán khi thực sự có học viên đang trong trạng thái thi
+        const testingUsers = cachedUsers.filter(u => u.examStatus === 'testing');
+        if (testingUsers.length === 0) return;
+
         const now = Date.now();
         const timeoutMs = 45 * 60 * 1000; // Cấu hình giới hạn: 45 phút
         
         let clearedCount = 0;
 
-        for (const user of cachedUsers) {
-            if (user.examStatus === 'testing') {
-                let timeElapsed = 0;
-                
-                // Ưu tiên 1: Dùng thời gian lưu thực tế từ Database
-                if (user.examStartTimeMs) {
-                    timeElapsed = now - user.examStartTimeMs;
-                } 
-                // Ưu tiên 2: Dùng thời gian đếm cục bộ của Admin Panel
-                else if (user.localTestingStartMs) {
-                    timeElapsed = now - user.localTestingStartMs;
-                }
+        for (const user of testingUsers) {
+            let timeElapsed = 0;
+            
+            if (user.examStartTimeMs) {
+                timeElapsed = now - user.examStartTimeMs;
+            } 
+            else if (user.localTestingStartMs) {
+                timeElapsed = now - user.localTestingStartMs;
+            }
 
-                if (timeElapsed > timeoutMs) {
-                    try {
-                        await updateDoc(doc(db, "users", user.userId), {
-                            isOnline: false,
-                            examStatus: 'none'
-                        });
-                        
-                        // Xóa cờ khỏi bộ đếm nội bộ
-                        localTestingTimers.delete(user.userId);
-                        
-                        // Cập nhật lại UI tạm thời
-                        user.isOnline = false;
-                        user.examStatus = 'none';
-                        clearedCount++;
-                    } catch (e) {
-                        console.error(`Lỗi tự động gỡ kẹt cho user ${user.userId}:`, e);
-                    }
+            if (timeElapsed > timeoutMs) {
+                try {
+                    await updateDoc(doc(db, "users", user.userId), {
+                        isOnline: false,
+                        examStatus: 'none'
+                    });
+                    
+                    localTestingTimers.delete(user.userId);
+                    
+                    user.isOnline = false;
+                    user.examStatus = 'none';
+                    clearedCount++;
+                } catch (e) {
+                    console.error(`Lỗi tự động gỡ kẹt cho user ${user.userId}:`, e);
                 }
             }
         }
 
         if (clearedCount > 0) {
-            renderUserList(); // Tải lại bảng nếu có dòng bị gỡ
+            renderUserList(); 
             console.log(`[Auto-GC] Đã tự động dọn dẹp ${clearedCount} phiên thi bị kẹt quá 45 phút.`);
         }
-    }, 60000); // Quét ngầm mỗi 60 giây một lần
+    }, 60000); 
 }
 
 function injectTableHeadersAndToolbar() {
@@ -385,7 +383,8 @@ function injectTableHeadersAndToolbar() {
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
         
-        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 4px 6px rgba(0,0,0,0.08); flex-wrap: wrap; gap: 10px; position: sticky; top: 10px; z-index: 100;';
+        // Đẩy top xuống 135px để trôi mượt mà ngay bên dưới thanh Toolbar
+        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 4px 6px rgba(0,0,0,0.08); flex-wrap: wrap; gap: 10px; position: sticky; top: 135px; z-index: 100;';
         
         bulkBar.innerHTML = `
             <div style="font-weight: 600; color: #1e3a8a; font-size: 14px;">
@@ -853,7 +852,7 @@ async function handleBulkAction(actionType) {
 document.addEventListener('componentsLoaded', () => {
     loadUserList(); 
     initRealtimePaymentListener();
-    initAutoClearGhostSessions(); // KÍCH HOẠT TIẾN TRÌNH QUÉT NGẦM
+    initAutoClearGhostSessions(); 
 
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
@@ -888,7 +887,7 @@ document.addEventListener('componentsLoaded', () => {
         // Tích hợp Sticky cố định thanh công cụ
         toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px;';
         
-        if (!document.getElementById('btnRefreshUsers')) {{
+        if (!document.getElementById('btnRefreshUsers')) {
             const refreshBtn = document.createElement('button');
             refreshBtn.id = 'btnRefreshUsers';
             refreshBtn.className = 'btn-modern-action';
