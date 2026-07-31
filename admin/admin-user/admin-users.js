@@ -30,6 +30,9 @@ const itemsPerPage = 20;
 let selectedUserIds = new Set(); 
 let pendingVIPRequests = new Set(); 
 
+// BỘ ĐẾM THỜI GIAN CỤC BỘ PHỤC VỤ AUTO-CLEAR GHOST SESSIONS
+let localTestingTimers = new Map();
+
 export function initRealtimePaymentListener() {
     onSnapshot(collection(db, "payment_requests"), (snapshot) => {
         pendingVIPRequests.clear();
@@ -135,6 +138,21 @@ export async function loadUserList(forceRefresh = false) {
                 examStatus = 'none';
             }
 
+            // --- ĐỒNG BỘ MỐC THỜI GIAN ĐỂ AUTO-CLEAR ---
+            let examStartTimeMs = null;
+            if (user.examStartTime) {
+                examStartTimeMs = (typeof user.examStartTime.toDate === 'function') ? user.examStartTime.toDate().getTime() : new Date(user.examStartTime).getTime();
+            }
+            
+            if (examStatus === 'testing') {
+                if (!localTestingTimers.has(userId)) {
+                    localTestingTimers.set(userId, Date.now()); // Bắt đầu đếm giờ nội bộ nếu DB không có sẵn mốc
+                }
+            } else {
+                localTestingTimers.delete(userId); // Xóa khỏi bộ đếm nếu đã thi xong
+            }
+            // ---------------------------------------------
+
             const rStats = globalResultsStats[email] || { totalScore: 0, count: 0 };
             const finalAvgScore = rStats.count > 0 ? (rStats.totalScore / rStats.count) : 0;
             const finalXp = globalLeaderboardStats[userId] || 0;
@@ -167,7 +185,9 @@ export async function loadUserList(forceRefresh = false) {
                 createdAtMs: createdAtMs, 
                 createdAt: createdAtRaw,
                 vipActivationDate: user.vipActivationDate || null,
-                vipExpirationDate: user.vipExpirationDate || null
+                vipExpirationDate: user.vipExpirationDate || null,
+                examStartTimeMs: examStartTimeMs,
+                localTestingStartMs: localTestingTimers.get(userId)
             });
         });
 
@@ -196,6 +216,57 @@ export async function loadUserList(forceRefresh = false) {
         `;
         showToast("Không thể tải danh sách học viên", "error");
     }
+}
+
+// ==========================================
+// HÀM CHẠY NGẦM TỰ ĐỘNG GỠ KẸT THI (AUTO-CLEAR)
+// ==========================================
+function initAutoClearGhostSessions() {
+    setInterval(async () => {
+        const now = Date.now();
+        const timeoutMs = 45 * 60 * 1000; // Cấu hình giới hạn: 45 phút
+        
+        let clearedCount = 0;
+
+        for (const user of cachedUsers) {
+            if (user.examStatus === 'testing') {
+                let timeElapsed = 0;
+                
+                // Ưu tiên 1: Dùng thời gian lưu thực tế từ Database
+                if (user.examStartTimeMs) {
+                    timeElapsed = now - user.examStartTimeMs;
+                } 
+                // Ưu tiên 2: Dùng thời gian đếm cục bộ của Admin Panel
+                else if (user.localTestingStartMs) {
+                    timeElapsed = now - user.localTestingStartMs;
+                }
+
+                if (timeElapsed > timeoutMs) {
+                    try {
+                        await updateDoc(doc(db, "users", user.userId), {
+                            isOnline: false,
+                            examStatus: 'none'
+                        });
+                        
+                        // Xóa cờ khỏi bộ đếm nội bộ
+                        localTestingTimers.delete(user.userId);
+                        
+                        // Cập nhật lại UI tạm thời
+                        user.isOnline = false;
+                        user.examStatus = 'none';
+                        clearedCount++;
+                    } catch (e) {
+                        console.error(`Lỗi tự động gỡ kẹt cho user ${user.userId}:`, e);
+                    }
+                }
+            }
+        }
+
+        if (clearedCount > 0) {
+            renderUserList(); // Tải lại bảng nếu có dòng bị gỡ
+            console.log(`[Auto-GC] Đã tự động dọn dẹp ${clearedCount} phiên thi bị kẹt quá 45 phút.`);
+        }
+    }, 60000); // Quét ngầm mỗi 60 giây một lần
 }
 
 function injectTableHeadersAndToolbar() {
@@ -309,13 +380,11 @@ function injectTableHeadersAndToolbar() {
         };
     }
 
-    // Fix Fallback an toàn chèn Toolbar kể cả khi không có table-container
     let insertTarget = table.closest('.table-container') || table;
     if (insertTarget && !document.getElementById('bulk-action-bar')) {
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
         
-        // Thêm Sticky để thanh luôn bám trên màn hình khi cuộn
         bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 4px 6px rgba(0,0,0,0.08); flex-wrap: wrap; gap: 10px; position: sticky; top: 10px; z-index: 100;';
         
         bulkBar.innerHTML = `
@@ -479,7 +548,6 @@ export function renderUserList() {
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
         const banStyle = user.isBanned ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
         
-        // Nút gỡ kẹt Cá nhân (Chỉ hiện khi user đang bị kẹt thi)
         const resetStyle = `${baseBtnStyle} background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 2px 5px rgba(100,116,139,0.3);`;
         const resetBtnHtml = user.examStatus === 'testing' 
             ? `<button class="btn-user-action btn-reset-status" data-id="${user.userId}" style="${resetStyle}" onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'" title="Gỡ kẹt trạng thái đang thi"><i class="fa-solid fa-power-off"></i> Gỡ</button>` 
@@ -671,7 +739,6 @@ async function handleToggleBan(userId, currentBannedStatus) {
     }
 }
 
-// BỔ SUNG LOGIC XÓA KẸT TRẠNG THÁI CÁ NHÂN VÀ HÀNG LOẠT
 async function handleResetStatus(userId) {
     if (!confirm(`Xác nhận GỠ KẸT trạng thái cho tài khoản này (Ép ngoại tuyến và Hủy Đang thi)?`)) return;
     try {
@@ -685,6 +752,7 @@ async function handleResetStatus(userId) {
             u.isOnline = false;
             u.examStatus = 'none';
         }
+        localTestingTimers.delete(userId);
         renderUserList();
     } catch (error) {
         console.error("Lỗi gỡ kẹt:", error);
@@ -770,6 +838,7 @@ async function handleBulkAction(actionType) {
             if (isResetAction) {
                 u.isOnline = false;
                 u.examStatus = 'none';
+                localTestingTimers.delete(id);
             }
         });
         
@@ -784,6 +853,7 @@ async function handleBulkAction(actionType) {
 document.addEventListener('componentsLoaded', () => {
     loadUserList(); 
     initRealtimePaymentListener();
+    initAutoClearGhostSessions(); // KÍCH HOẠT TIẾN TRÌNH QUÉT NGẦM
 
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
@@ -859,7 +929,6 @@ document.addEventListener('componentsLoaded', () => {
         usersBody.addEventListener('click', (e) => {
             if(e.target.classList.contains('user-row-checkbox')) return; 
 
-            // Cập nhật lắng nghe nút Gỡ Kẹt Thi Cá Nhân
             const resetBtn = e.target.closest('.btn-reset-status');
             if (resetBtn) return handleResetStatus(resetBtn.dataset.id);
 
