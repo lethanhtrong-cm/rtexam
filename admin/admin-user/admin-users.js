@@ -202,7 +202,6 @@ function injectTableHeadersAndToolbar() {
     const table = document.querySelector('#usersTableBody').closest('table');
     const theadTr = table.querySelector('thead tr');
     
-    // TIÊM CSS TỐI ƯU CARD (ĐÃ FIX LỖI NÚT LẸM)
     if (!document.getElementById('mobile-user-row-style')) {
         const style = document.createElement('style');
         style.id = 'mobile-user-row-style';
@@ -225,26 +224,25 @@ function injectTableHeadersAndToolbar() {
                 
                 .user-row td { display: block; border: none !important; padding: 0 !important; text-align: left !important; }
                 
-                /* TẬN DỤNG CỘT TRÁI */
-                .user-row td:nth-child(1) { width: 65px; padding-top: 5px !important; flex-shrink: 0; }
-                .mobile-left-data { display: flex !important; flex-direction: column; align-items: center; gap: 8px; margin-top: 8px; } 
+                .user-row td:nth-child(1) { width: 55px; padding-top: 5px !important; }
+                .mobile-left-data { display: flex !important; } 
                 
-                /* ẨN CÁC CỘT THỪA CỦA DESKTOP */
                 .desktop-only-cell, .desktop-status-td, .desktop-action-td { display: none !important; }
+                .user-row td:nth-child(2), .user-row td:nth-child(4), .user-row td:nth-child(5) { display: none !important; }
                 
-                /* CỘT THÔNG TIN CHÍNH BÊN PHẢI */
-                .user-row td:nth-child(3) { flex: 1; min-width: 0; padding-left: 10px !important; }
+                .user-row td:nth-child(3) { width: calc(100% - 55px); padding-left: 12px !important; }
                 
-                /* HÀNG NÚT BẤM ĐỘC LẬP TỰ ĐỘNG FULL WIDTH (FIX LỖI LẸM) */
-                .mobile-action-row {
-                    display: block !important;
-                    width: 100%;
-                    margin-top: 15px;
-                    padding-top: 15px !important;
-                    border-top: 1px dashed #cbd5e1 !important;
+                .mobile-action-bar { 
+                    display: flex !important; 
+                    flex-wrap: wrap; 
+                    gap: 8px; 
+                    margin-top: 15px; 
+                    padding-top: 15px; 
+                    border-top: 1px dashed #cbd5e1; 
+                    width: calc(100% + 55px); 
+                    margin-left: -55px;
                 }
-                .mobile-action-row div { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
-                .mobile-action-row button { 
+                .mobile-action-bar button { 
                     flex: 1; 
                     min-width: 45%; 
                     justify-content: center; 
@@ -315,16 +313,18 @@ function injectTableHeadersAndToolbar() {
     if (tableContainer && !document.getElementById('bulk-action-bar')) {
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
-        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 2px 4px rgba(0,0,0,0.02);';
+        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 2px 4px rgba(0,0,0,0.02); flex-wrap: wrap; gap: 10px;';
         
+        // BỔ SUNG: Nút "Sửa Kẹt Thi" vào thanh công cụ
         bulkBar.innerHTML = `
             <div style="font-weight: 600; color: #1e3a8a; font-size: 14px;">
                 Đã chọn: <span id="bulk-selected-count" style="color: #ef4444; font-size: 16px;">0</span> tài khoản
             </div>
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <button id="btnBulkNotify" class="btn-modern-action" style="background: #8b5cf6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-bell"></i> TB Hàng Loạt</button>
                 <button id="btnBulkVip" class="btn-modern-action" style="background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-crown"></i> Kích VIP Loạt</button>
                 <button id="btnBulkBan" class="btn-modern-action" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-ban"></i> Khóa Loạt</button>
+                <button id="btnBulkReset" class="btn-modern-action" style="background: #64748b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;" title="Xóa trạng thái kẹt Online/Đang thi"><i class="fa-solid fa-power-off"></i> Sửa Kẹt Thi</button>
             </div>
         `;
         tableContainer.parentNode.insertBefore(bulkBar, tableContainer);
@@ -332,6 +332,7 @@ function injectTableHeadersAndToolbar() {
         document.getElementById('btnBulkVip').onclick = () => handleBulkAction('vip');
         document.getElementById('btnBulkBan').onclick = () => handleBulkAction('ban');
         document.getElementById('btnBulkNotify').onclick = () => handleBulkAction('notify');
+        document.getElementById('btnBulkReset').onclick = () => handleBulkAction('reset');
     }
 }
 
@@ -510,7 +511,7 @@ export function renderUserList() {
             
             <td class="text-center desktop-only-cell" style="font-weight: 600; color: #64748b;">${currentStt}</td>
             
-            <td>
+            <td style="width: 100%;">
                 <div class="user-email-cell" style="display: flex; align-items: flex-start; width: 100%;">
                     <div class="user-avatar-placeholder desktop-only-cell" style="background-color: ${getAvatarColor(firstLetter)}; margin-top: 5px; flex-shrink: 0;">
                         ${firstLetter}
@@ -523,6 +524,10 @@ export function renderUserList() {
                         ${datesHtml}
                     </div>
                 </div>
+                
+                <div class="mobile-action-bar" style="display: none;">
+                    ${actionButtonsHtml}
+                </div>
             </td>
             
             <td class="text-center desktop-status-td">
@@ -530,13 +535,6 @@ export function renderUserList() {
             </td>
             <td class="text-center desktop-action-td">
                 <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
-                    ${actionButtonsHtml}
-                </div>
-            </td>
-
-            <!-- CỘT CHỨA NÚT DÀNH RIÊNG CHO MOBILE (KHẮC PHỤC TRIỆT ĐỂ LỖI LẸM VIỀN) -->
-            <td class="mobile-action-row" style="display: none;">
-                <div>
                     ${actionButtonsHtml}
                 </div>
             </td>
@@ -663,6 +661,7 @@ async function handleToggleBan(userId, currentBannedStatus) {
     }
 }
 
+// BỔ SUNG LOGIC XỬ LÝ KẸT TRẠNG THÁI THI
 async function handleBulkAction(actionType) {
     if (selectedUserIds.size === 0) return;
     
@@ -677,14 +676,17 @@ async function handleBulkAction(actionType) {
     }
 
     const count = selectedUserIds.size;
-    let isVipAction = false, isBanAction = false;
+    let isVipAction = false, isBanAction = false, isResetAction = false;
 
     if (actionType === 'vip') {
-        if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái VIP cho ${count} tài khoản đã chọn? (Tài khoản đang Thường sẽ thành VIP 30 ngày, đang VIP sẽ bị Tắt)`)) return;
+        if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái VIP cho ${count} tài khoản đã chọn?`)) return;
         isVipAction = true;
     } else if (actionType === 'ban') {
-        if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái KHÓA cho ${count} tài khoản đã chọn? (TK bình thường sẽ bị khóa, TK bị khóa sẽ mở lại)`)) return;
+        if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái KHÓA cho ${count} tài khoản đã chọn?`)) return;
         isBanAction = true;
+    } else if (actionType === 'reset') {
+        if(!confirm(`Bạn có chắc chắn muốn XÓA TRẠNG THÁI KẸT (Ép ngoại tuyến và Hủy Đang thi) cho ${count} tài khoản đã chọn?`)) return;
+        isResetAction = true;
     }
 
     const promises = [];
@@ -704,6 +706,10 @@ async function handleBulkAction(actionType) {
         }
         if (isBanAction) {
             updates.isBanned = !u.isBanned;
+        }
+        if (isResetAction) {
+            updates.isOnline = false;
+            updates.examStatus = 'none';
         }
         promises.push(updateDoc(userRef, updates));
     });
@@ -730,6 +736,10 @@ async function handleBulkAction(actionType) {
                 u.isBanned = !u.isBanned;
                 if (u.isBanned) u.statusKey = 'banned';
                 else u.statusKey = u.isVip ? 'vip' : 'normal';
+            }
+            if (isResetAction) {
+                u.isOnline = false;
+                u.examStatus = 'none';
             }
         });
         
