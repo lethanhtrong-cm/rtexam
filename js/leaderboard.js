@@ -8,6 +8,7 @@ let currentUserDataIndex = -1;
 
 const CACHE_TTL_MS = 15 * 60 * 1000; 
 
+// HÀM HELPER: Xác định cấp bậc dựa trên điểm XP
 function getTierBadge(xp) {
     if (xp < 1000) return `<span class="tier-badge tier-rookie" title="Tân binh"><i class="fa-solid fa-seedling"></i> Tân binh</span>`;
     if (xp < 3000) return `<span class="tier-badge tier-pro" title="Chuyên gia"><i class="fa-solid fa-medal"></i> Chuyên gia</span>`;
@@ -15,6 +16,7 @@ function getTierBadge(xp) {
     return `<span class="tier-badge tier-grandmaster" title="Thách đấu"><i class="fa-solid fa-gem"></i> Thách đấu</span>`;
 }
 
+// HÀM HELPER: Cập nhật dòng "Last Updated"
 function updateLastUpdatedText(timestamp) {
     const textElement = document.getElementById('lastUpdatedText');
     if (!textElement) return;
@@ -54,7 +56,9 @@ document.addEventListener('ComponentsLoaded', async () => {
     }
 });
 
+// THIẾT LẬP SỰ KIỆN CHO CÁC NÚT TƯƠNG TÁC
 function setupControlListeners(currentUser) {
+    // 1. Nút Cập Nhật
     const refreshBtn = document.getElementById('btnRefreshLeaderboard');
     if (refreshBtn && !refreshBtn.dataset.listenerAttached) {
         refreshBtn.dataset.listenerAttached = "true";
@@ -78,6 +82,7 @@ function setupControlListeners(currentUser) {
         });
     }
 
+    // 2. Bộ Lọc Thời Gian
     const filterEl = document.getElementById('leaderboardFilter');
     if (filterEl && !filterEl.dataset.listenerAttached) {
         filterEl.dataset.listenerAttached = "true";
@@ -89,110 +94,107 @@ function setupControlListeners(currentUser) {
         });
     }
 
-    const closeShareModal = document.getElementById('closeShareModal');
-    const shareModal = document.getElementById('shareAchievementModal');
-    if (closeShareModal && shareModal && !closeShareModal.dataset.listenerAttached) {
-        closeShareModal.dataset.listenerAttached = "true";
-        closeShareModal.addEventListener('click', () => {
-            shareModal.classList.remove('active');
-        });
-        shareModal.addEventListener('click', (e) => {
-            if(e.target === shareModal) shareModal.classList.remove('active'); 
-        });
-    }
-
-    const btnNativeShare = document.getElementById('btnNativeShare');
-    if (btnNativeShare && !btnNativeShare.dataset.listenerAttached) {
-        btnNativeShare.dataset.listenerAttached = "true";
-        btnNativeShare.addEventListener('click', async () => {
-            const currentXpText = document.getElementById('shareXp').innerText;
-            const currentRankText = document.getElementById('shareRank').innerText;
-            const shareData = {
-                title: 'Thành tích Thi Trắc Nghiệm',
-                text: `🔥 Tôi vừa đạt mức ${currentXpText} XP (Hạng: ${currentRankText}) trên Hệ Thống Thi Trắc Nghiệm. Truy cập ngay để đua Top cùng tôi nhé!`,
-                url: window.location.origin
-            };
-            if (navigator.share) {
-                try {
-                    await navigator.share(shareData);
-                } catch (err) {
-                    console.log('User cancelled share or error:', err);
-                }
-            } else {
-                alert('Trình duyệt của bạn không hỗ trợ tính năng chia sẻ trực tiếp. Vui lòng sử dụng nút "Lưu ảnh" để khoe với bạn bè nhé!');
-            }
-        });
-    }
-
-    // XỬ LÝ LOGIC NÚT "LƯU ẢNH" BẰNG HTML2CANVAS
-    const btnSaveImage = document.getElementById('btnSaveImage');
-    if (btnSaveImage && !btnSaveImage.dataset.listenerAttached) {
-        btnSaveImage.dataset.listenerAttached = "true";
-        btnSaveImage.addEventListener('click', async () => {
-            const originalText = btnSaveImage.innerHTML;
-            btnSaveImage.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
-            
-            // Tải thư viện tự động (lazy-load) nếu chưa có
-            if (typeof html2canvas === 'undefined') {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
-            }
-            
+    // 3. Nút Chia Sẻ Top 3 (Tích hợp thêm QR Code và Link Web)
+    const shareBtn = document.getElementById('btnShareLeaderboard');
+    if (shareBtn && !shareBtn.dataset.listenerAttached) {
+        shareBtn.dataset.listenerAttached = "true";
+        shareBtn.addEventListener('click', async () => {
             try {
-                const captureArea = document.getElementById('captureArea');
-                const closeBtn = document.getElementById('closeShareModal');
+                shareBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo ảnh...';
+                shareBtn.disabled = true;
+
+                // Tải thư viện html2canvas động nếu chưa có
+                if (typeof html2canvas === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+
+                const podiumElement = document.getElementById('leaderboardPodium');
                 
-                // Ẩn nút X trước khi chụp ảnh để ảnh đẹp hơn
-                if(closeBtn) closeBtn.style.display = 'none';
+                // Backup CSS cũ của bục vinh quang
+                const originalBg = podiumElement.style.background;
+                const originalPadding = podiumElement.style.padding;
+                const originalBorderRadius = podiumElement.style.borderRadius;
+                const originalPosition = podiumElement.style.position;
                 
-                const canvas = await html2canvas(captureArea, {
-                    scale: 2, // Tăng chất lượng ảnh xuất ra (HD)
-                    useCORS: true,
-                    backgroundColor: '#ffffff'
+                // TẠO FOOTER CHỨA QR VÀ LINK WEB TẠM THỜI
+                const currentUrl = window.location.origin + window.location.pathname;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentUrl)}&margin=0`;
+                
+                const footerDiv = document.createElement('div');
+                footerDiv.style.cssText = "position: absolute; bottom: 15px; left: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px;";
+                footerDiv.innerHTML = `
+                    <img src="${qrUrl}" crossorigin="anonymous" style="width: 50px; height: 50px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 2px; background: #fff;">
+                    <div style="text-align: left; line-height: 1.3;">
+                        <div style="font-size: 0.9rem; font-weight: 800; color: #0f172a;">HỆ THỐNG THI TRẮC NGHIỆM</div>
+                        <div style="font-size: 0.8rem; font-weight: 600; color: #3b82f6;">${currentUrl}</div>
+                    </div>
+                `;
+
+                // Định dạng lại bục vinh quang để hiển thị đẹp khi chụp ảnh
+                podiumElement.style.position = "relative";
+                podiumElement.style.background = "#ffffff";
+                podiumElement.style.padding = "40px 20px 85px"; // Tăng bottom padding để nhét khối QR vào
+                podiumElement.style.borderRadius = "16px";
+                podiumElement.appendChild(footerDiv);
+
+                // Chờ QR tải xong hoàn toàn trước khi bấm máy chụp
+                await new Promise(resolve => {
+                    const img = footerDiv.querySelector('img');
+                    if (img.complete) resolve();
+                    else { img.onload = resolve; img.onerror = resolve; }
                 });
-                
-                // Hiện lại nút X sau khi chụp xong
-                if(closeBtn) closeBtn.style.display = 'flex';
-                
-                const image = canvas.toDataURL("image/png");
-                const link = document.createElement('a');
-                link.download = 'ThanhTich_ThiTracNghiem.png';
-                link.href = image;
-                link.click();
-                
-                btnSaveImage.innerHTML = '<i class="fa-solid fa-check"></i> Đã lưu';
-                setTimeout(() => { btnSaveImage.innerHTML = originalText; }, 2000);
+
+                const canvas = await html2canvas(podiumElement, {
+                    useCORS: true,       
+                    scale: 2,            
+                    backgroundColor: "#ffffff"
+                });
+
+                // Chụp xong -> Khôi phục lại giao diện ban đầu ngay lập tức
+                podiumElement.removeChild(footerDiv);
+                podiumElement.style.background = originalBg;
+                podiumElement.style.padding = originalPadding;
+                podiumElement.style.borderRadius = originalBorderRadius;
+                podiumElement.style.position = originalPosition;
+
+                // Xử lý chia sẻ hoặc tải ảnh
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], "Top3_VinhQuang.png", { type: "image/png" });
+                    
+                    // Thử gọi Web Share API
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: 'Bảng xếp hạng Vinh Quang',
+                            text: 'Cùng xem Top 3 xuất sắc nhất trên hệ thống thi trắc nghiệm nhé!',
+                            files: [file]
+                        });
+                    } else {
+                        // Fallback tự động tải ảnh về máy
+                        const link = document.createElement('a');
+                        link.download = 'Top3_VinhQuang.png';
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        alert('Đã tải ảnh về máy thành công! (Do trình duyệt của bạn không hỗ trợ chia sẻ trực tiếp)');
+                    }
+                    
+                    shareBtn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Chia sẻ Top 3';
+                    shareBtn.disabled = false;
+                }, 'image/png');
+
             } catch (error) {
-                console.error("Lỗi khi lưu ảnh:", error);
-                alert("Không thể lưu ảnh lúc này. Vui lòng thử lại!");
-                btnSaveImage.innerHTML = originalText;
+                console.error("Lỗi chia sẻ:", error);
+                alert("Không thể tạo ảnh chia sẻ lúc này. Vui lòng thử lại sau.");
+                shareBtn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Chia sẻ Top 3';
+                shareBtn.disabled = false;
             }
         });
     }
-}
-
-function openShareModal(user, rank, xp) {
-    const modal = document.getElementById('shareAchievementModal');
-    if(!modal) return;
-    
-    const avatarUrl = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=random&color=fff`;
-    document.getElementById('shareAvatar').src = avatarUrl;
-    document.getElementById('shareName').innerText = user.displayName || 'Học viên ẩn danh';
-    document.getElementById('shareTier').innerHTML = getTierBadge(xp);
-    
-    const rankText = typeof rank === 'number' ? `#${rank}` : rank;
-    document.getElementById('shareRank').innerText = rankText;
-    document.getElementById('shareXp').innerText = xp.toLocaleString();
-    
-    const websiteUrl = window.location.origin; 
-    document.getElementById('shareQrCode').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(websiteUrl)}`;
-    
-    modal.classList.add('active');
 }
 
 export async function updateUserDashboardRank(currentUser) {
@@ -290,7 +292,7 @@ async function initLeaderboard(currentUser) {
                 podiumContainer.innerHTML += `
                     <div class="podium-step ${user.class}">
                         ${crown}
-                        <img src="${avatar}" alt="Avatar" class="podium-avatar">
+                        <img src="${avatar}" alt="Avatar" crossorigin="anonymous" class="podium-avatar">
                         <div class="podium-name">
                             ${user.displayName || 'Học viên ẩn danh'}
                             <span style="margin-top:2px;">${getTierBadge(user.totalXP || 0)}</span>
@@ -304,35 +306,28 @@ async function initLeaderboard(currentUser) {
 
         currentUserDataIndex = globalTopUsers.findIndex(u => u.id === currentUser.uid);
         const statElement = document.getElementById('statAccountStatus'); 
-        let finalRank = "Ngoài Top 20";
-        let finalXP = 0;
         
         if (currentUserDataIndex !== -1) {
-            finalRank = currentUserDataIndex + 1;
-            finalXP = globalTopUsers[currentUserDataIndex].totalXP || 0;
+            const currentRank = currentUserDataIndex + 1;
+            const currentXP = globalTopUsers[currentUserDataIndex].totalXP || 0;
             cRankStats.innerHTML = `
-                <span class="xp-badge">XP Tích lũy: <b>${finalXP.toLocaleString()}</b></span>
-                <span class="rank-badge">Hạng: ${finalRank}</span>
+                <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
+                <span class="rank-badge">Hạng: ${currentRank}</span>
             `;
-            if(statElement) statElement.innerHTML = `Hạng ${finalRank}`; 
+            if(statElement) statElement.innerHTML = `Hạng ${currentRank}`; 
         } else {
+            let currentXP = 0;
             const userDocRef = doc(db, 'users_leaderboard', currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists()) {
-                finalXP = userDocSnap.data().totalXP || 0;
+                currentXP = userDocSnap.data().totalXP || 0;
             }
             
             cRankStats.innerHTML = `
-                <span class="xp-badge">XP Tích lũy: <b>${finalXP.toLocaleString()}</b></span>
+                <span class="xp-badge">XP Tích lũy: <b>${currentXP.toLocaleString()}</b></span>
                 <span class="rank-badge out-of-rank">Ngoài Top 20</span>
             `;
             if(statElement) statElement.innerHTML = `Ngoài Top 20`; 
-        }
-
-        const btnOpenShare = document.getElementById('btnOpenShare');
-        if (btnOpenShare) {
-            btnOpenShare.style.display = 'flex';
-            btnOpenShare.onclick = () => openShareModal(currentUser, finalRank, finalXP);
         }
 
         currentPage = 1;
@@ -392,6 +387,7 @@ function renderLeaderboardPage(restUsersList, page) {
             const actualRank = startIndex + index + 4; 
             const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=e2e8f0&color=334155`;
             
+            // Hiệu ứng render xếp tầng mượt mà
             const animationDelay = index * 0.08; 
             
             tableBody.innerHTML += `
