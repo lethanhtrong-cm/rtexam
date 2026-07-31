@@ -309,13 +309,15 @@ function injectTableHeadersAndToolbar() {
         };
     }
 
-    const tableContainer = table.closest('.table-container');
-    if (tableContainer && !document.getElementById('bulk-action-bar')) {
+    // Fix Fallback an toàn chèn Toolbar kể cả khi không có table-container
+    let insertTarget = table.closest('.table-container') || table;
+    if (insertTarget && !document.getElementById('bulk-action-bar')) {
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
-        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 2px 4px rgba(0,0,0,0.02); flex-wrap: wrap; gap: 10px;';
         
-        // BỔ SUNG: Nút "Sửa Kẹt Thi" vào thanh công cụ
+        // Thêm Sticky để thanh luôn bám trên màn hình khi cuộn
+        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 4px 6px rgba(0,0,0,0.08); flex-wrap: wrap; gap: 10px; position: sticky; top: 10px; z-index: 100;';
+        
         bulkBar.innerHTML = `
             <div style="font-weight: 600; color: #1e3a8a; font-size: 14px;">
                 Đã chọn: <span id="bulk-selected-count" style="color: #ef4444; font-size: 16px;">0</span> tài khoản
@@ -327,7 +329,7 @@ function injectTableHeadersAndToolbar() {
                 <button id="btnBulkReset" class="btn-modern-action" style="background: #64748b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;" title="Xóa trạng thái kẹt Online/Đang thi"><i class="fa-solid fa-power-off"></i> Sửa Kẹt Thi</button>
             </div>
         `;
-        tableContainer.parentNode.insertBefore(bulkBar, tableContainer);
+        insertTarget.parentNode.insertBefore(bulkBar, insertTarget);
 
         document.getElementById('btnBulkVip').onclick = () => handleBulkAction('vip');
         document.getElementById('btnBulkBan').onclick = () => handleBulkAction('ban');
@@ -476,6 +478,13 @@ export function renderUserList() {
         const vipStyle = user.isVip ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; 
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
         const banStyle = user.isBanned ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
+        
+        // Nút gỡ kẹt Cá nhân (Chỉ hiện khi user đang bị kẹt thi)
+        const resetStyle = `${baseBtnStyle} background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 2px 5px rgba(100,116,139,0.3);`;
+        const resetBtnHtml = user.examStatus === 'testing' 
+            ? `<button class="btn-user-action btn-reset-status" data-id="${user.userId}" style="${resetStyle}" onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'" title="Gỡ kẹt trạng thái đang thi"><i class="fa-solid fa-power-off"></i> Gỡ</button>` 
+            : '';
+
         const hoverEffect = `onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'"`;
 
         const isChecked = selectedUserIds.has(user.userId) ? 'checked' : '';
@@ -485,6 +494,7 @@ export function renderUserList() {
             <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" style="${vipStyle}" ${hoverEffect}>${vipBtnText}</button>
             <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
             <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
+            ${resetBtnHtml}
         `;
 
         const tr = document.createElement('tr');
@@ -661,7 +671,27 @@ async function handleToggleBan(userId, currentBannedStatus) {
     }
 }
 
-// BỔ SUNG LOGIC XỬ LÝ KẸT TRẠNG THÁI THI
+// BỔ SUNG LOGIC XÓA KẸT TRẠNG THÁI CÁ NHÂN VÀ HÀNG LOẠT
+async function handleResetStatus(userId) {
+    if (!confirm(`Xác nhận GỠ KẸT trạng thái cho tài khoản này (Ép ngoại tuyến và Hủy Đang thi)?`)) return;
+    try {
+        await updateDoc(doc(db, "users", userId), {
+            isOnline: false,
+            examStatus: 'none'
+        });
+        showToast(`Đã gỡ trạng thái kẹt thành công!`, "success");
+        const u = cachedUsers.find(user => user.userId === userId);
+        if (u) {
+            u.isOnline = false;
+            u.examStatus = 'none';
+        }
+        renderUserList();
+    } catch (error) {
+        console.error("Lỗi gỡ kẹt:", error);
+        showToast("Lỗi hệ thống khi gỡ trạng thái", "error");
+    }
+}
+
 async function handleBulkAction(actionType) {
     if (selectedUserIds.size === 0) return;
     
@@ -828,6 +858,10 @@ document.addEventListener('componentsLoaded', () => {
 
         usersBody.addEventListener('click', (e) => {
             if(e.target.classList.contains('user-row-checkbox')) return; 
+
+            // Cập nhật lắng nghe nút Gỡ Kẹt Thi Cá Nhân
+            const resetBtn = e.target.closest('.btn-reset-status');
+            if (resetBtn) return handleResetStatus(resetBtn.dataset.id);
 
             const notifyBtn = e.target.closest('.btn-notify-user');
             if (notifyBtn) return openNotificationModal(notifyBtn.dataset.email);
