@@ -13,7 +13,7 @@ let cachedExams = [];
 let draftData = [];
 let currentEditingExamId = "";
 
-// THÊM MỚI: Biến lưu trữ State cục bộ cho Real-time
+// Biến lưu trữ State cục bộ cho Real-time
 let rawExams = [];
 let rawQuestions = [];
 let rawFeedbacks = [];
@@ -635,7 +635,7 @@ async function publishExam() {
 }
 
 document.addEventListener('componentsLoaded', () => {
-    // KHỞI ĐỘNG CHUỖI LẮNG NGHE REAL-TIME THAY VÌ ON-SNAPSHOT LỒNG NHAU CŨ
+    // KHỞI ĐỘNG CHUỖI LẮNG NGHE REAL-TIME
     loadExamList();
     
     handleExcelRead();
