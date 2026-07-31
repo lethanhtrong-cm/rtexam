@@ -290,6 +290,9 @@ function initFilterChangeListeners() {
     let sortSelect = document.getElementById('examSortSelect');
 
     if (filterRow) {
+        // Tích hợp Sticky cố định thanh lọc
+        filterRow.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px;';
+        
         if (!sortSelect) {
             const sortCol = document.createElement('div');
             sortCol.className = 'filter-col-50';
