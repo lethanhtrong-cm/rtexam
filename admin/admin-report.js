@@ -9,6 +9,7 @@ let cachedReports = [];
 let currentReportSearch = "";
 let currentReportFilter = "all";
 let currentReportData = null; // Chứa dữ liệu khi mở Modal Phản hồi
+let currentViewingExamId = null; // Lưu tạm ExamID khi đang xem chi tiết câu hỏi
 
 // =========================================================================
 // HÀM TIÊM CSS TỐI ƯU GIAO DIỆN MOBILE
@@ -172,7 +173,7 @@ function initAdminReportListener() {
         });
     }
 
-    // 3. KẾT NỐI FIRESTORE REALTIME
+    // 3. KẾT NỐI FIRESTORE REALTIME VÀ CẬP NHẬT BADGE TRÊN TAB
     const reportsRef = collection(db, "reported_questions");
     const q = query(reportsRef, orderBy("timestamp", "desc"));
 
@@ -187,7 +188,7 @@ function initAdminReportListener() {
             if (data.status === 'pending') pendingCount++;
         });
 
-        // Cập nhật thẻ Badge đếm số lượng tổng quan
+        // Cập nhật thẻ Badge trong màn hình Báo cáo (Nếu có)
         const pendingCountBadge = document.getElementById('pendingReportCount');
         if (pendingCountBadge) {
             pendingCountBadge.textContent = `${pendingCount} chờ xử lý`;
@@ -197,6 +198,27 @@ function initAdminReportListener() {
                 pendingCountBadge.style.background = '#d1fae5'; pendingCountBadge.style.color = '#059669';
             }
         }
+
+        // TÍNH NĂNG MỚI: Hiển thị Badge số lượng lên Menu Tab (Sidebar)
+        // Lưu ý: Hãy đảm bảo nút mở tab này có id="menu-tab-reports" hoặc thuộc class tương ứng trong mã HTML của bạn.
+        // Tôi sẽ quét tất cả các phần tử có 'data-tab="tab-reports"' để cập nhật.
+        const tabMenuItems = document.querySelectorAll('[data-tab="tab-reports"], #menu-tab-reports');
+        tabMenuItems.forEach(tabItem => {
+            // Kiểm tra xem đã có badge chưa
+            let badge = tabItem.querySelector('.report-badge-notify');
+            if (pendingCount > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'report-badge-notify';
+                    badge.style.cssText = 'background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; margin-left: auto; font-weight: bold; line-height: 1;';
+                    tabItem.appendChild(badge);
+                }
+                badge.innerText = pendingCount > 99 ? '99+' : pendingCount;
+                badge.style.display = 'inline-block';
+            } else {
+                if (badge) badge.style.display = 'none';
+            }
+        });
 
         renderReportsTable();
     });
@@ -294,7 +316,7 @@ function renderReportsTable() {
                 <span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid #e2e8f0;">${data.examId}</span>
                 <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
                     <span style="color: #64748b; font-family: monospace; font-size: 0.8rem;">${data.questionId}</span>
-                    <button class="btn-view-question" data-qid="${data.questionId}" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.2s;" title="Xem chi tiết câu hỏi">
+                    <button class="btn-view-question" data-qid="${data.questionId}" data-examid="${data.examId}" style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.2s;" title="Xem chi tiết câu hỏi">
                         Xem
                     </button>
                 </div>
@@ -326,7 +348,8 @@ function bindRowEvents() {
     document.querySelectorAll('.btn-view-question').forEach(btn => {
         btn.addEventListener('click', function() {
             const qId = this.getAttribute('data-qid');
-            fetchAndShowQuestionDetail(qId);
+            const eId = this.getAttribute('data-examid'); // Lấy examId để phục vụ tính năng Sửa câu hỏi
+            fetchAndShowQuestionDetail(qId, eId);
         });
     });
 
@@ -411,7 +434,7 @@ function bindRowEvents() {
 // =========================================================================
 // HÀM TRUY VẤN FIRESTORE ĐỔ DỮ LIỆU CÂU HỎI VÀO MODAL
 // =========================================================================
-async function fetchAndShowQuestionDetail(questionId) {
+async function fetchAndShowQuestionDetail(questionId, examId) {
     if (!auth.currentUser) {
         alert("⛔ Lỗi bảo mật: Bạn cần đăng nhập quyền Admin để xem chi tiết câu hỏi.");
         return;
@@ -429,6 +452,43 @@ async function fetchAndShowQuestionDetail(questionId) {
     modal.style.display = 'block';
     loadingDiv.style.display = 'block';
     contentDiv.style.display = 'none';
+
+    // TÍNH NĂNG MỚI: Thêm nút "Sửa Câu Hỏi Này" vào Header hoặc Footer của Modal
+    let editBtnContainer = document.getElementById('qd-edit-btn-container');
+    if (!editBtnContainer) {
+        // Tìm element chứa nút Đóng (Close) của Modal hiện tại
+        const closeBtn = modal.querySelector('.modal-close') || modal.querySelector('[id^="close"]');
+        if (closeBtn && closeBtn.parentNode) {
+            editBtnContainer = document.createElement('div');
+            editBtnContainer.id = 'qd-edit-btn-container';
+            editBtnContainer.style.cssText = 'margin-right: 15px; display: inline-block;';
+            closeBtn.parentNode.insertBefore(editBtnContainer, closeBtn);
+        } else {
+            // Fallback nếu không tìm thấy nút đóng, nhét vào đầu contentDiv
+            editBtnContainer = document.createElement('div');
+            editBtnContainer.id = 'qd-edit-btn-container';
+            editBtnContainer.style.cssText = 'text-align: right; margin-bottom: 10px;';
+            contentDiv.prepend(editBtnContainer);
+        }
+    }
+
+    // Cập nhật nội dung nút Edit
+    editBtnContainer.innerHTML = `
+        <button id="btn-goto-edit-question" style="background-color: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2); transition: 0.2s;">
+            <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa câu hỏi này
+        </button>
+    `;
+
+    // Gắn sự kiện chuyển trang
+    document.getElementById('btn-goto-edit-question').addEventListener('click', () => {
+        if (!examId) {
+            alert("Không xác định được Mã đề (ExamID) của câu hỏi này.");
+            return;
+        }
+        // Chuyển hướng sang trang Edit Exam (Giả định URL trang edit của bạn là admin-edit-exam.html)
+        // Kèm theo tham số qid (Question ID) để trang kia biết cần focus vào câu nào
+        window.open(`admin-edit-exam.html?examId=${examId}&highlightQid=${questionId}`, '_blank');
+    });
 
     try {
         const docRef = doc(db, "questions", questionId);
