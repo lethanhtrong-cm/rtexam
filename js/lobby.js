@@ -223,6 +223,11 @@ if (UI.btnOpenInviteModal) {
     UI.btnOpenInviteModal.addEventListener('click', async () => {
         UI.inviteFriendModal.classList.add('active');
         
+        // Cập nhật text của nút gửi thành Gửi Lời Thách Đấu ngay khi mở modal
+        if (UI.btnSendInvite) {
+            UI.btnSendInvite.innerHTML = '<i class="fa-solid fa-paper-plane"></i> GỬI LỜI THÁCH ĐẤU';
+        }
+        
         // Dựng container hiển thị danh sách người dùng chèn ngay bên dưới ô nhập Email
         let usersContainer = document.getElementById('dynamicUsersContainer');
         if (!usersContainer) {
@@ -245,6 +250,10 @@ if (UI.btnOpenInviteModal) {
                     <button id="btnSelectAllOnline" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#d1fae5'" onmouseout="this.style.background='#ecfdf5'">Chọn tất cả Online</button>
                     <button id="btnSelectAllUsers" style="background: #f1f5f9; color: #3b82f6; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f1f5f9'">Chọn hết</button>
                 </div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <input type="text" id="searchUserEmail" placeholder="🔍 Tìm kiếm theo Email hoặc Tên..." style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; outline: none; transition: 0.2s;">
             </div>
             
             <div id="onlineUsersList" style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 5px;">
@@ -275,7 +284,7 @@ if (UI.btnOpenInviteModal) {
                     const cbClass = isOnline ? 'user-invite-cb online-cb' : 'user-invite-cb';
 
                     usersHtml += `
-                        <label style="display: flex; align-items: center; justify-content: space-between; padding: 12px; margin-bottom: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe';" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e2e8f0';">
+                        <label class="user-invite-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; margin-bottom: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe';" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e2e8f0';">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <input type="checkbox" class="${cbClass}" value="${u.email}" style="cursor: pointer; width: 18px; height: 18px; accent-color: #3b82f6;">
                                 <img src="${u.avatarBase64 || u.photoURL || 'https://ui-avatars.com/api/?name='+u.email}" style="width:38px; height:38px; border-radius:50%; border: 2px solid #e2e8f0; object-fit: cover;">
@@ -295,17 +304,36 @@ if (UI.btnOpenInviteModal) {
                 onlineListEl.innerHTML = usersHtml;
             }
 
+            // Xử lý sự kiện: Tìm kiếm người dùng
+            const searchInput = document.getElementById('searchUserEmail');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const items = onlineListEl.querySelectorAll('.user-invite-item');
+                    items.forEach(item => {
+                        const userEmail = item.querySelector('.user-invite-cb').value.toLowerCase();
+                        const userName = item.querySelector('span').innerText.toLowerCase();
+                        if (userEmail.includes(searchTerm) || userName.includes(searchTerm)) {
+                            item.style.display = 'flex';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
+
             // Xử lý sự kiện: Chọn tất cả Online
             const btnSelectOnline = document.getElementById('btnSelectAllOnline');
             if (btnSelectOnline) {
                 btnSelectOnline.onclick = (e) => {
                     e.preventDefault();
-                    const onlineCheckboxes = document.querySelectorAll('.online-cb');
+                    // Chỉ chọn các checkbox online đang được hiển thị (không bị ẩn bởi ô tìm kiếm)
+                    const onlineCheckboxes = Array.from(document.querySelectorAll('.online-cb')).filter(cb => cb.closest('.user-invite-item').style.display !== 'none');
                     if(onlineCheckboxes.length === 0) {
-                        alert("Hiện không có ai đang Online trên hệ thống!");
+                        alert("Hiện không có ai đang Online trên hệ thống hoặc khớp với từ khóa tìm kiếm!");
                         return;
                     }
-                    const allChecked = Array.from(onlineCheckboxes).every(cb => cb.checked);
+                    const allChecked = onlineCheckboxes.every(cb => cb.checked);
                     onlineCheckboxes.forEach(cb => cb.checked = !allChecked);
                     e.target.innerText = allChecked ? "Chọn tất cả Online" : "Bỏ chọn Online";
                 };
@@ -316,15 +344,16 @@ if (UI.btnOpenInviteModal) {
             if (btnSelectAll) {
                 btnSelectAll.onclick = (e) => {
                     e.preventDefault();
-                    const checkboxes = document.querySelectorAll('.user-invite-cb');
-                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    // Chỉ chọn các checkbox đang được hiển thị
+                    const checkboxes = Array.from(document.querySelectorAll('.user-invite-cb')).filter(cb => cb.closest('.user-invite-item').style.display !== 'none');
+                    const allChecked = checkboxes.every(cb => cb.checked);
                     checkboxes.forEach(cb => cb.checked = !allChecked);
                     e.target.innerText = allChecked ? "Chọn hết" : "Bỏ chọn hết";
                     
                     if(btnSelectOnline) {
-                        const onlineCheckboxes = document.querySelectorAll('.online-cb');
+                        const onlineCheckboxes = Array.from(document.querySelectorAll('.online-cb')).filter(cb => cb.closest('.user-invite-item').style.display !== 'none');
                         if(onlineCheckboxes.length > 0) {
-                            const allOnlineChecked = Array.from(onlineCheckboxes).every(cb => cb.checked);
+                            const allOnlineChecked = onlineCheckboxes.every(cb => cb.checked);
                             btnSelectOnline.innerText = allOnlineChecked ? "Bỏ chọn Online" : "Chọn tất cả Online";
                         }
                     }
@@ -345,7 +374,7 @@ if (UI.closeInviteModalBtn) {
     });
 }
 
-// Xử lý nút GỬI LỜI MỜI
+// Xử lý nút GỬI LỜI MỜI (nay đã thành THÁCH ĐẤU)
 if (UI.btnSendInvite) {
     UI.btnSendInvite.addEventListener('click', async () => {
         const manualEmail = document.getElementById('inviteEmailInput')?.value.trim();
