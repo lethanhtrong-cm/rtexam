@@ -426,7 +426,7 @@ function bindRowEvents() {
 }
 
 // =========================================================================
-// HÀM TRUY VẤN FIRESTORE ĐỔ DỮ LIỆU CÂU HỎI VÀO MODAL
+// HÀM TRUY VẤN FIRESTORE ĐỔ DỮ LIỆU CÂU HỎI VÀO MODAL (BỔ SUNG THUẬT TOÁN SORT)
 // =========================================================================
 async function fetchAndShowQuestionDetail(questionId, examId) {
     if (!auth.currentUser) {
@@ -486,15 +486,38 @@ async function fetchAndShowQuestionDetail(questionId, examId) {
             const data = docSnap.data();
             const finalExamId = examId || data.examId || "Không rõ";
 
-            // TÍNH NĂNG MỚI: Truy vấn toàn bộ câu hỏi của đề để tìm vị trí (Index)
+            // TÍNH NĂNG MỚI: Truy vấn và sắp xếp cục bộ để tìm Index chuẩn xác nhất
             let questionNumberText = "Không xác định";
             if (finalExamId !== "Không rõ") {
                 try {
                     const qSnap = await getDocs(query(collection(db, "questions"), where("examId", "==", finalExamId)));
                     let allQuestions = [];
-                    qSnap.forEach(d => allQuestions.push(d.id));
                     
-                    const index = allQuestions.indexOf(questionId);
+                    qSnap.forEach(d => {
+                        const qData = d.data();
+                        let timeMs = 0;
+                        const t = qData.createdAt || qData.timestamp;
+                        if (t) {
+                            timeMs = typeof t.toMillis === 'function' ? t.toMillis() : (typeof t.toDate === 'function' ? t.toDate().getTime() : Number(t));
+                        }
+                        
+                        allQuestions.push({
+                            id: d.id,
+                            time: timeMs,
+                            order: qData.order !== undefined ? Number(qData.order) : 999999
+                        });
+                    });
+                    
+                    // Thuật toán đồng bộ: Sắp xếp theo order (nếu có) -> thời gian tạo -> mặc định của Firestore (ID)
+                    allQuestions.sort((a, b) => {
+                        if (a.order !== b.order) return a.order - b.order;
+                        if (a.time !== b.time) return a.time - b.time;
+                        return a.id.localeCompare(b.id);
+                    });
+
+                    const sortedIds = allQuestions.map(item => item.id);
+                    const index = sortedIds.indexOf(questionId);
+                    
                     if (index !== -1) {
                         questionNumberText = `Câu ${index + 1} / ${allQuestions.length}`;
                     }
