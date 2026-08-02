@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 
 // Import từ các module đã tách
 import { state } from "./lobby-modules/lobby-state.js";
-import { UI, switchUIState, enhanceLeaderboardUI, renderHistoryLB, renderUI, resetAiForm, openReviewModal, openLiveView, updateLiveViewModal } from "./lobby-modules/lobby-ui.js";
+import { UI, switchUIState, enhanceLeaderboardUI, renderHistoryLB, renderUI, resetAiForm } from "./lobby-modules/lobby-ui.js";
 import { loadExamsToDropdown, parseTimeSafely } from "./lobby-modules/lobby-api.js";
 
 // Khởi tạo và kiểm tra
@@ -217,36 +217,42 @@ UI.btnSubmitAiGenerate.addEventListener('click', async () => {
 
 
 // =====================================================================
-// TÍNH NĂNG MỚI: MỜI NGƯỜI CHƠI (TICK TỪ DANH SÁCH HOẶC NHẬP EMAIL)
+// TÍNH NĂNG MỚI: MỜI NGƯỜI CHƠI (BẢN FIX LỖI HIỂN THỊ GIAO DIỆN)
 // =====================================================================
 if (UI.btnOpenInviteModal) {
     UI.btnOpenInviteModal.addEventListener('click', async () => {
         UI.inviteFriendModal.classList.add('active');
         
-        const modalBody = UI.inviteFriendModal.querySelector('.custom-modal-body');
-        
-        // 1. Dựng khung giao diện động
-        modalBody.innerHTML = `
-            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">Mời đồng nghiệp hoặc bạn bè tham gia phòng thi để cùng thảo luận và làm bài.</p>
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="font-weight:600; color:#0f172a;">Nhập Email (tùy chọn):</label>
-                <input type="email" id="inviteEmailInput" placeholder="Ví dụ: dongnghiep@gmail.com" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 5px;">
-            </div>
+        // Dựng container hiển thị danh sách người dùng chèn ngay bên dưới ô nhập Email
+        let usersContainer = document.getElementById('dynamicUsersContainer');
+        if (!usersContainer) {
+            usersContainer = document.createElement('div');
+            usersContainer.id = 'dynamicUsersContainer';
+            usersContainer.style.marginTop = '20px';
+            usersContainer.style.marginBottom = '20px';
+            usersContainer.style.textAlign = 'left';
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
-                <label style="font-weight: 600; color: #0f172a; margin: 0;"><i class="fa-solid fa-users" style="color:#3b82f6;"></i> Người dùng hệ thống:</label>
+            // Tìm ô nhập email hiện tại trên giao diện và chèn danh sách xuống dưới nó
+            if (UI.inviteEmailInput && UI.inviteEmailInput.parentNode) {
+                UI.inviteEmailInput.parentNode.insertBefore(usersContainer, UI.inviteEmailInput.nextSibling);
+            }
+        }
+        
+        usersContainer.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-top: 1px dashed #cbd5e1; padding-top: 18px;">
+                <label style="font-weight: 600; color: #0f172a; margin: 0; font-size: 0.95rem;"><i class="fa-solid fa-users" style="color:#3b82f6;"></i> Mời nhanh người dùng:</label>
                 <div style="display: flex; gap: 8px;">
-                    <button id="btnSelectAllOnline" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#d1fae5'" onmouseout="this.style.background='#ecfdf5'">Chọn tất cả Online</button>
-                    <button id="btnSelectAllUsers" style="background: #f1f5f9; color: #3b82f6; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f1f5f9'">Chọn hết</button>
+                    <button id="btnSelectAllOnline" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#d1fae5'" onmouseout="this.style.background='#ecfdf5'">Chọn tất cả Online</button>
+                    <button id="btnSelectAllUsers" style="background: #f1f5f9; color: #3b82f6; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f1f5f9'">Chọn hết</button>
                 </div>
             </div>
             
-            <div id="onlineUsersList" style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 5px;">
-                <div style="text-align:center; color:#64748b; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu người dùng...</div>
+            <div id="onlineUsersList" style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 5px;">
+                <div style="text-align:center; color:#64748b; padding: 25px;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><br><span style="display:block; margin-top:10px;">Đang quét người dùng...</span></div>
             </div>
         `;
 
-        // 2. Lấy dữ liệu và sắp xếp người Online lên trên
+        // Lấy dữ liệu và sắp xếp người Online lên trên
         try {
             const usersSnap = await getDocs(collection(db, "users"));
             const onlineListEl = document.getElementById('onlineUsersList');
@@ -263,19 +269,19 @@ if (UI.btnOpenInviteModal) {
                 if (u.email && u.email !== state.currentUser.email) {
                     const isOnline = u.isOnline;
                     const statusHtml = isOnline 
-                        ? '<span style="color: #10b981; font-size: 0.75rem; font-weight:600;"><i class="fa-solid fa-circle" style="font-size: 0.5rem; transform: translateY(-1px);"></i> Online</span>' 
-                        : '<span style="color: #94a3b8; font-size: 0.75rem; font-weight:600;"><i class="fa-solid fa-circle" style="font-size: 0.5rem; transform: translateY(-1px);"></i> Offline</span>';
+                        ? '<span style="color: #10b981; font-size: 0.75rem; font-weight:600; padding: 2px 6px; background: #d1fae5; border-radius: 10px;"><i class="fa-solid fa-circle" style="font-size: 0.5rem; transform: translateY(-1px);"></i> Online</span>' 
+                        : '<span style="color: #94a3b8; font-size: 0.75rem; font-weight:600; padding: 2px 6px; background: #e2e8f0; border-radius: 10px;"><i class="fa-solid fa-circle" style="font-size: 0.5rem; transform: translateY(-1px);"></i> Offline</span>';
                     
                     const cbClass = isOnline ? 'user-invite-cb online-cb' : 'user-invite-cb';
 
                     usersHtml += `
-                        <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='transparent'">
+                        <label style="display: flex; align-items: center; justify-content: space-between; padding: 12px; margin-bottom: 4px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#bfdbfe';" onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e2e8f0';">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <input type="checkbox" class="${cbClass}" value="${u.email}" style="cursor: pointer; width: 18px; height: 18px; accent-color: #3b82f6;">
-                                <img src="${u.avatarBase64 || u.photoURL || 'https://ui-avatars.com/api/?name='+u.email}" style="width:36px; height:36px; border-radius:50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); object-fit: cover;">
-                                <div style="display: flex; flex-direction: column; line-height: 1.3;">
+                                <img src="${u.avatarBase64 || u.photoURL || 'https://ui-avatars.com/api/?name='+u.email}" style="width:38px; height:38px; border-radius:50%; border: 2px solid #e2e8f0; object-fit: cover;">
+                                <div style="display: flex; flex-direction: column; line-height: 1.4;">
                                     <span style="font-weight: 700; font-size: 0.95rem; color: #1e293b;">${u.displayName || u.email.split('@')[0]}</span>
-                                    ${statusHtml}
+                                    <div>${statusHtml}</div>
                                 </div>
                             </div>
                         </label>
@@ -284,7 +290,7 @@ if (UI.btnOpenInviteModal) {
             });
             
             if (usersHtml === '') {
-                onlineListEl.innerHTML = '<div style="text-align:center; color:#64748b; font-size: 0.9rem; padding: 20px;">Hệ thống chưa có người dùng nào khác.</div>';
+                onlineListEl.innerHTML = '<div style="text-align:center; color:#64748b; font-size: 0.9rem; padding: 25px;">Hệ thống chưa có người dùng nào khác.</div>';
             } else {
                 onlineListEl.innerHTML = usersHtml;
             }
@@ -377,6 +383,11 @@ if (UI.btnSendInvite) {
             await Promise.all(notifPromises);
             alert(`Đã gửi thành công lời mời thách đấu tới ${targetEmails.length} người!`);
             UI.inviteFriendModal.classList.remove('active');
+            
+            // Hủy tick sau khi gửi thành công
+            document.querySelectorAll('.user-invite-cb:checked').forEach(cb => cb.checked = false);
+            if (document.getElementById('inviteEmailInput')) document.getElementById('inviteEmailInput').value = '';
+            
         } catch (err) {
             console.error("Lỗi gửi lời mời:", err);
             alert("Lỗi khi gửi thông báo. Vui lòng thử lại!");
