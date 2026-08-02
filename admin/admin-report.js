@@ -1,7 +1,7 @@
 import { db, auth } from './firebase-config.js';
 import { showToast } from './admin-core.js';
 import { 
-    collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, addDoc, serverTimestamp 
+    collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, addDoc, serverTimestamp, getDocs, where 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Biến lưu trữ dữ liệu State cục bộ để phục vụ Tìm kiếm & Lọc
@@ -95,7 +95,7 @@ function initAdminReportListener() {
     const reportsSection = document.getElementById('tab-reports');
     if (!reportsSection) return;
 
-    // 1. NHÚNG THANH CÔNG CỤ TÌM KIẾM VÀ LỌC (Đề xuất 1)
+    // 1. NHÚNG THANH CÔNG CỤ TÌM KIẾM VÀ LỌC
     if (!document.getElementById('report-toolbar')) {
         const toolbar = document.createElement('div');
         toolbar.id = 'report-toolbar';
@@ -188,7 +188,6 @@ function initAdminReportListener() {
             if (data.status === 'pending') pendingCount++;
         });
 
-        // Cập nhật thẻ Badge trong màn hình Báo cáo (Nếu có)
         const pendingCountBadge = document.getElementById('pendingReportCount');
         if (pendingCountBadge) {
             pendingCountBadge.textContent = `${pendingCount} chờ xử lý`;
@@ -199,10 +198,8 @@ function initAdminReportListener() {
             }
         }
 
-        // TÍNH NĂNG MỚI: Hiển thị Badge số lượng lên Menu Tab (Sidebar)
         const tabMenuItems = document.querySelectorAll('[data-tab="tab-reports"], #menu-tab-reports');
         tabMenuItems.forEach(tabItem => {
-            // Kiểm tra xem đã có badge chưa
             let badge = tabItem.querySelector('.report-badge-notify');
             if (pendingCount > 0) {
                 if (!badge) {
@@ -273,7 +270,6 @@ function renderReportsTable() {
             </button>
         `;
 
-        // Chèn Nút Xử lý nhanh (Đề xuất 2)
         const safeDescription = (data.description || "").replace(/"/g, '&quot;');
         
         const actionButtons = isResolved 
@@ -291,7 +287,7 @@ function renderReportsTable() {
                 ${deleteBtnHtml}
               </div>`;
 
-        // 5. Tạo dòng (Row) với hiệu ứng Hover và Viền màu trạng thái (Đề xuất 4)
+        // 5. Tạo dòng (Row) với hiệu ứng Hover và Viền màu trạng thái
         const tr = document.createElement('tr');
         tr.style.opacity = rowOpacity;
         tr.style.transition = "background 0.2s ease";
@@ -367,7 +363,7 @@ function bindRowEvents() {
         });
     });
 
-    // 3. Nút Xử lý nhanh (Đề xuất 2)
+    // 3. Nút Xử lý nhanh
     document.querySelectorAll('.btn-quick-resolve').forEach(btn => {
         btn.addEventListener('click', async function() {
             const rId = this.getAttribute('data-id');
@@ -397,7 +393,7 @@ function bindRowEvents() {
         });
     });
 
-    // 4. Mở Modal Phản hồi (Đề xuất 3 - Thêm Nhắc nhở Ngữ cảnh)
+    // 4. Mở Modal Phản hồi
     document.querySelectorAll('.btn-reply-report').forEach(btn => {
         btn.addEventListener('click', function() {
             currentReportData = {
@@ -451,10 +447,9 @@ async function fetchAndShowQuestionDetail(questionId, examId) {
     loadingDiv.style.display = 'block';
     contentDiv.style.display = 'none';
 
-    // TÍNH NĂNG MỚI: Thêm nút "Sửa Câu Hỏi Này" vào Header hoặc Footer của Modal
+    // Thêm nút "Sửa Câu Hỏi Này"
     let editBtnContainer = document.getElementById('qd-edit-btn-container');
     if (!editBtnContainer) {
-        // Tìm element chứa nút Đóng (Close) của Modal hiện tại
         const closeBtn = modal.querySelector('.modal-close') || modal.querySelector('[id^="close"]');
         if (closeBtn && closeBtn.parentNode) {
             editBtnContainer = document.createElement('div');
@@ -462,7 +457,6 @@ async function fetchAndShowQuestionDetail(questionId, examId) {
             editBtnContainer.style.cssText = 'margin-right: 15px; display: inline-block;';
             closeBtn.parentNode.insertBefore(editBtnContainer, closeBtn);
         } else {
-            // Fallback nếu không tìm thấy nút đóng, nhét vào đầu contentDiv
             editBtnContainer = document.createElement('div');
             editBtnContainer.id = 'qd-edit-btn-container';
             editBtnContainer.style.cssText = 'text-align: right; margin-bottom: 10px;';
@@ -470,21 +464,17 @@ async function fetchAndShowQuestionDetail(questionId, examId) {
         }
     }
 
-    // Cập nhật nội dung nút Edit
     editBtnContainer.innerHTML = `
         <button id="btn-goto-edit-question" style="background-color: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2); transition: 0.2s;">
             <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa câu hỏi này
         </button>
     `;
 
-    // Gắn sự kiện chuyển trang
     document.getElementById('btn-goto-edit-question').addEventListener('click', () => {
         if (!examId) {
             alert("Không xác định được Mã đề (ExamID) của câu hỏi này.");
             return;
         }
-        // Chuyển hướng sang trang Edit Exam (Giả định URL trang edit của bạn là admin-edit-exam.html)
-        // Kèm theo tham số qid (Question ID) để trang kia biết cần focus vào câu nào
         window.open(`admin-edit-exam.html?examId=${examId}&highlightQid=${questionId}`, '_blank');
     });
 
@@ -494,20 +484,38 @@ async function fetchAndShowQuestionDetail(questionId, examId) {
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            
-            // TÍNH NĂNG MỚI: Inject Header chứa thông tin Mã đề và ID Câu hỏi
+            const finalExamId = examId || data.examId || "Không rõ";
+
+            // TÍNH NĂNG MỚI: Truy vấn toàn bộ câu hỏi của đề để tìm vị trí (Index)
+            let questionNumberText = "Không xác định";
+            if (finalExamId !== "Không rõ") {
+                try {
+                    const qSnap = await getDocs(query(collection(db, "questions"), where("examId", "==", finalExamId)));
+                    let allQuestions = [];
+                    qSnap.forEach(d => allQuestions.push(d.id));
+                    
+                    const index = allQuestions.indexOf(questionId);
+                    if (index !== -1) {
+                        questionNumberText = `Câu ${index + 1} / ${allQuestions.length}`;
+                    }
+                } catch (e) {
+                    console.error("Lỗi tìm số thứ tự câu hỏi", e);
+                }
+            }
+
+            // Tạo Header chứa thông tin Vị trí
             let contextDiv = document.getElementById('qd-context-info');
             if (!contextDiv) {
                 contextDiv = document.createElement('div');
                 contextDiv.id = 'qd-context-info';
-                contextDiv.style.cssText = 'background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; color: #1e293b; display: flex; gap: 20px; border: 1px solid #bfdbfe;';
+                contextDiv.style.cssText = 'background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; color: #1e293b; display: flex; gap: 20px; border: 1px solid #bfdbfe; flex-wrap: wrap;';
                 const qdText = document.getElementById('qd-text');
                 qdText.parentNode.insertBefore(contextDiv, qdText);
             }
-            const finalExamId = examId || data.examId || "Không rõ";
+            
             contextDiv.innerHTML = `
                 <div><strong><i class="fa-solid fa-file-lines" style="color:#3b82f6;"></i> Mã đề:</strong> <span style="color: #2563eb; font-weight: 600;">${finalExamId}</span></div>
-                <div><strong><i class="fa-solid fa-hashtag" style="color:#3b82f6;"></i> ID:</strong> <span style="font-family: monospace; color: #475569;">${questionId}</span></div>
+                <div><strong><i class="fa-solid fa-list-ol" style="color:#3b82f6;"></i> Vị trí:</strong> <span style="font-weight: 600; color: #059669;">${questionNumberText}</span> <span style="font-size: 0.8rem; color: #94a3b8; font-family: monospace; margin-left: 5px;">(ID: ${questionId})</span></div>
             `;
 
             const questionText = data.text || data.questionText || data.question || data.content || "Không có nội dung câu hỏi";
