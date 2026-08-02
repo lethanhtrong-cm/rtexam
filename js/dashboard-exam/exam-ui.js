@@ -167,7 +167,6 @@ export function renderExams() {
                             <i class="fa-solid fa-crown me-2"></i> Nâng cấp tài khoản Pro
                         </button>`;
                 } else if (isCompleted) {
-                    // Sửa lỗi: Điểm lưu trên Firebase đã là thang điểm 10 nên lấy trực tiếp, không chia cho tổng số câu nữa
                     let displayScore = State.completedExams[exam.id].score || 0;
                     displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
@@ -196,6 +195,25 @@ export function renderExams() {
                 
                 const hideBtnHtml = exam.technique === 'AI Tự Động' ? `<button class="btn-hide-exam" onclick="hideExam(event, '${safeExamId}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` : '';
 
+                // LOGIC TẠO AVATAR STACK CHO NGƯỜI ĐÃ THI
+                let avatarStackHtml = `<div class="attempts" style="display: flex; align-items: center; gap: 5px;" title="${exam.attemptCount} lượt thi">`;
+                if (exam.recentAvatars && Array.isArray(exam.recentAvatars) && exam.recentAvatars.length > 0) {
+                    avatarStackHtml += `<div style="display: flex; align-items: center;">`;
+                    // Render tối đa 3 ảnh đầu tiên
+                    exam.recentAvatars.slice(0, 3).forEach((avaUrl, idx) => {
+                        avatarStackHtml += `<img src="${avaUrl}" style="width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; margin-left: ${idx > 0 ? '-10px' : '0'}; z-index: ${10 - idx}; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" onerror="this.src='https://ui-avatars.com/api/?name=U&background=e2e8f0&color=64748b'">`;
+                    });
+                    // Nếu lớn hơn 3 người, hiển thị số dư
+                    if (exam.attemptCount > 3) {
+                        avatarStackHtml += `<div style="width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; background: #f8fafc; color: #475569; font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-left: -10px; z-index: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.15);">+${exam.attemptCount - 3}</div>`;
+                    }
+                    avatarStackHtml += `</div>`;
+                } else {
+                    // Fallback mặc định khi dữ liệu ảnh chưa có
+                    avatarStackHtml += `<i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi`;
+                }
+                avatarStackHtml += `</div>`;
+
                 rowHtml += `
                     <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: visible; position: relative;">
                         ${hideBtnHtml}
@@ -203,7 +221,7 @@ export function renderExams() {
                             ${headerHtml}${mergedTagsHtml}${descriptionHtml}
                             <div class="card-meta mt-auto" style="border-top: 1px dashed #e9ecef; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #6b7280; font-weight: normal; margin-bottom: 20px;">
                                 <div class="rating" style="display: flex; align-items: center; gap: 5px;"><span>${exam.rating}</span> <i class="fa-solid fa-star" style="color: #fbbf24;"></i> <span>(${exam.ratingCount})</span></div>
-                                <div class="attempts" style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-users"></i> ${exam.attemptCount} lượt thi</div>
+                                ${avatarStackHtml}
                             </div>
                             <div>${actionAreaHtml}</div>
                         </div>
