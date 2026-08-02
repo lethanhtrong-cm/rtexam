@@ -268,8 +268,8 @@ async function viewExamHistory(examId) {
     modal.style.display = 'block';
 
     try {
-        // LƯU Ý: Đang giả định bảng lưu lịch sử thi là "history". Nếu khác, bạn hãy sửa chữ "history" bên dưới nhé!
-        const q = query(collection(db, "history"), where("examId", "==", examId));
+        // Đã đổi sang "exam_results". (Nếu Firebase của bạn dùng tên khác như "results" hay "user_history", hãy đổi chữ "exam_results" thành tên đó nhé).
+        const q = query(collection(db, "exam_results"), where("examId", "==", examId));
         const snap = await getDocs(q);
         
         tbody.innerHTML = '';
