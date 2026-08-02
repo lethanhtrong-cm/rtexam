@@ -103,7 +103,16 @@ export function injectHistoryModal() {
         <div style="background-color:#fff; margin:5vh auto; padding:0; border-radius:12px; width:95%; max-width:800px; max-height:90vh; display:flex; flex-direction:column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding:15px 20px; background: #f8fafc;">
                 <h3 style="margin:0; color:#0f172a; font-size:16px;"><i class="fa-solid fa-users" style="color:#3b82f6;"></i> Danh sách thi đề: <span id="history-modal-exam-id" style="color:#2563eb; font-weight: 800;"></span></h3>
-                <span id="close-exam-history-modal" style="cursor:pointer; font-size:24px; color:#94a3b8; line-height: 1;">&times;</span>
+                
+                <div style="display:flex; gap: 15px; align-items:center;">
+                    <!-- THẺ SELECT SORT ĐƯỢC CHÈN VÀO ĐÂY -->
+                    <select id="history-sort-select" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600; color: #475569; outline: none; cursor: pointer; background-color: #fff;">
+                        <option value="newest">Sắp xếp: Mới nhất</option>
+                        <option value="score_desc">Sắp xếp: Điểm từ cao đến thấp</option>
+                    </select>
+                    
+                    <span id="close-exam-history-modal" style="cursor:pointer; font-size:24px; color:#94a3b8; line-height: 1;">&times;</span>
+                </div>
             </div>
             <div style="overflow-y:auto; flex:1; padding: 0;">
                 <table style="width:100%; border-collapse:collapse; text-align:left;">
