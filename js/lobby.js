@@ -1,10 +1,10 @@
 import { auth, db } from "./dashboard-core.js";
-import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, deleteDoc, updateDoc, writeBatch, onSnapshot, collection, getDocs, query, where, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // Import từ các module đã tách
 import { state } from "./lobby-modules/lobby-state.js";
-import { UI, switchUIState, enhanceLeaderboardUI, renderHistoryLB, renderUI, resetAiForm } from "./lobby-modules/lobby-ui.js";
+import { UI, switchUIState, enhanceLeaderboardUI, renderHistoryLB, renderUI, resetAiForm, openReviewModal, openLiveView, updateLiveViewModal } from "./lobby-modules/lobby-ui.js";
 import { loadExamsToDropdown, parseTimeSafely } from "./lobby-modules/lobby-api.js";
 
 // Khởi tạo và kiểm tra
@@ -214,6 +214,179 @@ UI.btnSubmitAiGenerate.addEventListener('click', async () => {
         resetAiForm(); 
     }
 });
+
+
+// =====================================================================
+// TÍNH NĂNG MỚI: MỜI NGƯỜI CHƠI (TICK TỪ DANH SÁCH HOẶC NHẬP EMAIL)
+// =====================================================================
+if (UI.btnOpenInviteModal) {
+    UI.btnOpenInviteModal.addEventListener('click', async () => {
+        UI.inviteFriendModal.classList.add('active');
+        
+        const modalBody = UI.inviteFriendModal.querySelector('.custom-modal-body');
+        
+        // 1. Dựng khung giao diện động
+        modalBody.innerHTML = `
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">Mời đồng nghiệp hoặc bạn bè tham gia phòng thi để cùng thảo luận và làm bài.</p>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="font-weight:600; color:#0f172a;">Nhập Email (tùy chọn):</label>
+                <input type="email" id="inviteEmailInput" placeholder="Ví dụ: dongnghiep@gmail.com" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 5px;">
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
+                <label style="font-weight: 600; color: #0f172a; margin: 0;"><i class="fa-solid fa-users" style="color:#3b82f6;"></i> Người dùng hệ thống:</label>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btnSelectAllOnline" style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#d1fae5'" onmouseout="this.style.background='#ecfdf5'">Chọn tất cả Online</button>
+                    <button id="btnSelectAllUsers" style="background: #f1f5f9; color: #3b82f6; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f1f5f9'">Chọn hết</button>
+                </div>
+            </div>
+            
+            <div id="onlineUsersList" style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 5px;">
+                <div style="text-align:center; color:#64748b; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu người dùng...</div>
+            </div>
+        `;
+
+        // 2. Lấy dữ liệu và sắp xếp người Online lên trên
+        try {
+            const usersSnap = await getDocs(collection(db, "users"));
+            const onlineListEl = document.getElementById('onlineUsersList');
+            let usersHtml = '';
+            
+            let usersData = [];
+            usersSnap.forEach(docSnap => usersData.push(docSnap.data()));
+            
+            // Sort: Ưu tiên isOnline = true lên đầu
+            usersData.sort((a, b) => (b.isOnline === true ? 1 : 0) - (a.isOnline === true ? 1 : 0));
+
+            usersData.forEach(u => {
+                // Không hiển thị chính bản thân người đang thao tác
+                if (u.email && u.email !== state.currentUser.email) {
+                    const isOnline = u.isOnline;
+                    const statusHtml = isOnline 
+                        ? '<span style="color: #10b981; font-size: 0.75rem; font-weight:600;"><i class="fa-solid fa-circle" style="font-size: 0.5rem; transform: translateY(-1px);"></i> Online</span>' 
+                        : '<span style="color: #94a3b8; font-size: 0.75rem; font-weight:600;"><i class="fa-solid fa-circle" style="font-size: 0.5rem; transform: translateY(-1px);"></i> Offline</span>';
+                    
+                    const cbClass = isOnline ? 'user-invite-cb online-cb' : 'user-invite-cb';
+
+                    usersHtml += `
+                        <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='transparent'">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <input type="checkbox" class="${cbClass}" value="${u.email}" style="cursor: pointer; width: 18px; height: 18px; accent-color: #3b82f6;">
+                                <img src="${u.avatarBase64 || u.photoURL || 'https://ui-avatars.com/api/?name='+u.email}" style="width:36px; height:36px; border-radius:50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); object-fit: cover;">
+                                <div style="display: flex; flex-direction: column; line-height: 1.3;">
+                                    <span style="font-weight: 700; font-size: 0.95rem; color: #1e293b;">${u.displayName || u.email.split('@')[0]}</span>
+                                    ${statusHtml}
+                                </div>
+                            </div>
+                        </label>
+                    `;
+                }
+            });
+            
+            if (usersHtml === '') {
+                onlineListEl.innerHTML = '<div style="text-align:center; color:#64748b; font-size: 0.9rem; padding: 20px;">Hệ thống chưa có người dùng nào khác.</div>';
+            } else {
+                onlineListEl.innerHTML = usersHtml;
+            }
+
+            // Xử lý sự kiện: Chọn tất cả Online
+            const btnSelectOnline = document.getElementById('btnSelectAllOnline');
+            if (btnSelectOnline) {
+                btnSelectOnline.onclick = (e) => {
+                    e.preventDefault();
+                    const onlineCheckboxes = document.querySelectorAll('.online-cb');
+                    if(onlineCheckboxes.length === 0) {
+                        alert("Hiện không có ai đang Online trên hệ thống!");
+                        return;
+                    }
+                    const allChecked = Array.from(onlineCheckboxes).every(cb => cb.checked);
+                    onlineCheckboxes.forEach(cb => cb.checked = !allChecked);
+                    e.target.innerText = allChecked ? "Chọn tất cả Online" : "Bỏ chọn Online";
+                };
+            }
+
+            // Xử lý sự kiện: Chọn hết
+            const btnSelectAll = document.getElementById('btnSelectAllUsers');
+            if (btnSelectAll) {
+                btnSelectAll.onclick = (e) => {
+                    e.preventDefault();
+                    const checkboxes = document.querySelectorAll('.user-invite-cb');
+                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    checkboxes.forEach(cb => cb.checked = !allChecked);
+                    e.target.innerText = allChecked ? "Chọn hết" : "Bỏ chọn hết";
+                    
+                    if(btnSelectOnline) {
+                        const onlineCheckboxes = document.querySelectorAll('.online-cb');
+                        if(onlineCheckboxes.length > 0) {
+                            const allOnlineChecked = Array.from(onlineCheckboxes).every(cb => cb.checked);
+                            btnSelectOnline.innerText = allOnlineChecked ? "Bỏ chọn Online" : "Chọn tất cả Online";
+                        }
+                    }
+                };
+            }
+            
+        } catch (err) {
+            console.error(err);
+            document.getElementById('onlineUsersList').innerHTML = '<div style="text-align:center; color:#ef4444; padding: 20px;">Lỗi tải danh sách người dùng.</div>';
+        }
+    });
+}
+
+// Xử lý đóng Modal mời
+if (UI.closeInviteModalBtn) {
+    UI.closeInviteModalBtn.addEventListener('click', () => {
+        UI.inviteFriendModal.classList.remove('active');
+    });
+}
+
+// Xử lý nút GỬI LỜI MỜI
+if (UI.btnSendInvite) {
+    UI.btnSendInvite.addEventListener('click', async () => {
+        const manualEmail = document.getElementById('inviteEmailInput')?.value.trim();
+        const checkboxes = document.querySelectorAll('.user-invite-cb:checked');
+        let targetEmails = [];
+        
+        if (manualEmail) targetEmails.push(manualEmail);
+        checkboxes.forEach(cb => targetEmails.push(cb.value));
+        
+        targetEmails = [...new Set(targetEmails)]; // Lọc loại bỏ email bị trùng lặp
+        
+        if (targetEmails.length === 0) {
+            alert("Vui lòng nhập Email hoặc tick chọn ít nhất 1 người dùng để mời!");
+            return;
+        }
+        
+        const originalText = UI.btnSendInvite.innerHTML;
+        UI.btnSendInvite.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+        UI.btnSendInvite.disabled = true;
+        
+        try {
+            // Đẩy Push Notifications vào bộ lưu trữ Firestore cho những người được tick
+            const notifPromises = targetEmails.map(email => {
+                return addDoc(collection(db, "notifications"), {
+                    toEmail: email,
+                    title: "🎯 Lời mời thách đấu!",
+                    message: `${state.currentUser.displayName} vừa mời bạn tham gia phòng thi trực tiếp.\nMã phòng: ${state.roomId}`,
+                    type: "room_share",
+                    actionUrl: `lobby.html?roomId=${state.roomId}`,
+                    status: "unread",
+                    timestamp: serverTimestamp()
+                });
+            });
+            
+            await Promise.all(notifPromises);
+            alert(`Đã gửi thành công lời mời thách đấu tới ${targetEmails.length} người!`);
+            UI.inviteFriendModal.classList.remove('active');
+        } catch (err) {
+            console.error("Lỗi gửi lời mời:", err);
+            alert("Lỗi khi gửi thông báo. Vui lòng thử lại!");
+        } finally {
+            UI.btnSendInvite.innerHTML = originalText;
+            UI.btnSendInvite.disabled = false;
+        }
+    });
+}
+
 
 // =====================================================================
 // KHỞI TẠO VÀ LẮNG NGHE REALTIME DATABASE
