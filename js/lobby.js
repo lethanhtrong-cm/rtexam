@@ -49,6 +49,49 @@ UI.btnCopyRoomCode.addEventListener('click', async () => {
     } catch (err) { console.error("Lỗi copy:", err); }
 });
 
+// THÊM TÍNH NĂNG: NÚT THOÁT PHÒNG (Tự động chèn vào giao diện HTML)
+let btnLeaveRoom = document.getElementById('btnLeaveRoom');
+if (!btnLeaveRoom) {
+    btnLeaveRoom = document.createElement('button');
+    btnLeaveRoom.id = 'btnLeaveRoom';
+    btnLeaveRoom.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Thoát phòng';
+    btnLeaveRoom.style.cssText = "background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px;";
+    btnLeaveRoom.onmouseover = () => { btnLeaveRoom.style.background = '#fecaca'; };
+    btnLeaveRoom.onmouseout = () => { btnLeaveRoom.style.background = '#fee2e2'; };
+    
+    // Chèn cạnh nút copy mã phòng (nếu tồn tại)
+    if (UI.btnCopyRoomCode && UI.btnCopyRoomCode.parentNode) {
+        UI.btnCopyRoomCode.parentNode.appendChild(btnLeaveRoom);
+    }
+}
+
+// Logic xử lý khi click Thoát phòng
+if (btnLeaveRoom) {
+    btnLeaveRoom.addEventListener('click', async () => {
+        if (confirm("Bạn có chắc chắn muốn thoát khỏi phòng thi này?")) {
+            const originalText = btnLeaveRoom.innerHTML;
+            btnLeaveRoom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang thoát...';
+            btnLeaveRoom.disabled = true;
+            try {
+                // Xóa document của người dùng khỏi danh sách participants
+                const participantRef = doc(db, `rooms/${state.roomId}/participants/${state.currentUser.uid}`);
+                await deleteDoc(participantRef);
+                
+                // Đánh dấu để sự kiện beforeunload không chạy lại lệnh xóa
+                state.isKicked = true; 
+                
+                // Chuyển hướng về Dashboard
+                window.location.href = "dashboard.html";
+            } catch (error) {
+                console.error("Lỗi thoát phòng:", error);
+                alert("Có lỗi xảy ra khi thoát phòng!");
+                btnLeaveRoom.innerHTML = originalText;
+                btnLeaveRoom.disabled = false;
+            }
+        }
+    });
+}
+
 UI.selectExamInLobby.addEventListener('change', async () => {
     const selectedExamId = UI.selectExamInLobby.value;
     const selectedExamName = selectedExamId ? UI.selectExamInLobby.options[UI.selectExamInLobby.selectedIndex].text : null;
@@ -402,8 +445,8 @@ if (UI.btnSendInvite) {
                     toEmail: email,
                     title: "🎯 Lời mời thách đấu!",
                     message: `${state.currentUser.displayName} vừa mời bạn tham gia phòng thi trực tiếp.\nMã phòng: ${state.roomId}`,
-                    type: "room_invite", // Đã sửa type cho khớp với bộ lọc notification
-                    roomId: state.roomId, // Bổ sung roomId để logic click không bị null
+                    type: "room_invite", 
+                    roomId: state.roomId, 
                     actionUrl: `lobby.html?roomId=${state.roomId}`,
                     status: "unread",
                     timestamp: serverTimestamp()
