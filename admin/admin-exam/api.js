@@ -169,7 +169,13 @@ export async function viewExamHistory(examId) {
         });
 
         let records = Array.from(uniqueUsersMap.values());
-        records.sort((a, b) => (b.timestamp || b.createdAt || 0) - (a.timestamp || a.createdAt || 0)); 
+        
+        // Cập nhật logic: Chuyển đổi Firestore Timestamp sang Milliseconds để sắp xếp chính xác
+        records.sort((a, b) => {
+            const timeA = (a.timestamp && typeof a.timestamp.toMillis === 'function') ? a.timestamp.toMillis() : (a.timestamp || a.createdAt || 0);
+            const timeB = (b.timestamp && typeof b.timestamp.toMillis === 'function') ? b.timestamp.toMillis() : (b.timestamp || b.createdAt || 0);
+            return timeB - timeA;
+        });
 
         records.forEach(data => {
             let timeStr = 'Không xác định';
