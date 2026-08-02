@@ -281,7 +281,7 @@ window.openShareInviteModal = function(notiData, type) {
                 
                 <div style="padding: 16px 20px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px;">
                     <button onclick="document.getElementById('dynamic-invite-modal').remove()" style="padding: 8px 20px; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: #334155; transition: 0.2s;">Hủy</button>
-                    <button onclick="window.location.href='${targetUrl}'" style="padding: 8px 20px; background: #084298; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; box-shadow: 0 4px 6px rgba(8,66,152,0.2);">Vào thi ngay</button>
+                    <button onclick="window.open('${targetUrl}', '_blank')" style="padding: 8px 20px; background: #084298; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: white; transition: 0.2s; box-shadow: 0 4px 6px rgba(8,66,152,0.2);">Vào thi ngay</button>
                 </div>
                 
             </div>
