@@ -198,20 +198,32 @@ function initAdminReportListener() {
             }
         }
 
-        const tabMenuItems = document.querySelectorAll('[data-tab="tab-reports"], #menu-tab-reports');
-        tabMenuItems.forEach(tabItem => {
-            let badge = tabItem.querySelector('.report-badge-notify');
-            if (pendingCount > 0) {
-                if (!badge) {
-                    badge = document.createElement('span');
-                    badge.className = 'report-badge-notify';
-                    badge.style.cssText = 'background-color: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; margin-left: auto; font-weight: bold; line-height: 1;';
-                    tabItem.appendChild(badge);
+        // TÍNH NĂNG MỚI ĐƯỢC TỐI ƯU HÓA: Dò tìm các menu item bằng innerText để gắn Badge
+        const menuCandidates = document.querySelectorAll('a, .menu-item, .sidebar-menu li');
+        menuCandidates.forEach(item => {
+            const text = item.innerText || item.textContent;
+            // Dò tìm chính xác thẻ chứa "Quản Lý Phản Hồi" hoặc "Báo cáo lỗi"
+            if (text && (text.includes('Quản Lý Phản Hồi') || text.includes('Báo cáo lỗi câu hỏi'))) {
+                // Ngăn gắn badge vào các thẻ div bọc ngoài cùng
+                if (item.tagName === 'A' || item.classList.contains('menu-item') || item.tagName === 'LI') {
+                    let badge = item.querySelector('.report-badge-notify');
+                    if (pendingCount > 0) {
+                        if (!badge) {
+                            badge = document.createElement('span');
+                            badge.className = 'report-badge-notify';
+                            // Ép CSS Flex để badge nổi bật bên góc phải
+                            item.style.display = 'flex';
+                            item.style.alignItems = 'center';
+                            
+                            badge.style.cssText = 'background-color: #ef4444; color: white; border-radius: 20px; padding: 2px 7px; font-size: 11px; margin-left: 8px; font-weight: bold; line-height: 1; box-shadow: 0 0 5px rgba(239, 68, 68, 0.4);';
+                            item.appendChild(badge);
+                        }
+                        badge.innerText = pendingCount > 99 ? '99+' : pendingCount;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        if (badge) badge.style.display = 'none';
+                    }
                 }
-                badge.innerText = pendingCount > 99 ? '99+' : pendingCount;
-                badge.style.display = 'inline-block';
-            } else {
-                if (badge) badge.style.display = 'none';
             }
         });
 
@@ -486,7 +498,7 @@ async function fetchAndShowQuestionDetail(questionId, examId) {
             const data = docSnap.data();
             const finalExamId = examId || data.examId || "Không rõ";
 
-            // TÍNH NĂNG MỚI: Truy vấn và sắp xếp cục bộ để tìm Index chuẩn xác nhất
+            // Truy vấn và sắp xếp cục bộ để tìm Index chuẩn xác nhất
             let questionNumberText = "Không xác định";
             if (finalExamId !== "Không rõ") {
                 try {
