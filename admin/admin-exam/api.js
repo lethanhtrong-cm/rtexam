@@ -134,12 +134,12 @@ export async function viewExamHistory(examId) {
     injectHistoryModal();
     const modal = document.getElementById('exam-history-modal');
     const tbody = document.getElementById('history-table-body');
-    let sortSelect = document.getElementById('history-sort-select'); // Lấy Select
+    let sortSelect = document.getElementById('history-sort-select'); 
     
     document.getElementById('history-modal-exam-id').innerText = examId;
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">⏳ Đang kéo dữ liệu từ máy chủ...</td></tr>';
     
-    if (sortSelect) sortSelect.value = 'newest'; // Reset về "Mới nhất" khi mở đề mới
+    if (sortSelect) sortSelect.value = 'newest'; 
     modal.style.display = 'block';
 
     const getMs = (timeVal) => {
@@ -180,17 +180,14 @@ export async function viewExamHistory(examId) {
             }
         });
 
-        // Đổ dữ liệu Map thành Array
         let records = Array.from(uniqueUsersMap.values());
 
-        // LÀM SẠCH SỰ KIỆN CŨ (Chống chạy đè khi click nhiều đề)
         if (sortSelect) {
             const newSortSelect = sortSelect.cloneNode(true);
             sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
-            sortSelect = newSortSelect; // Cập nhật tham chiếu
+            sortSelect = newSortSelect; 
         }
 
-        // HÀM RENDER ĐỘNG DỰA TRÊN THẺ SELECT
         const renderTable = () => {
             const sortMode = sortSelect ? sortSelect.value : 'newest';
             
@@ -199,14 +196,21 @@ export async function viewExamHistory(examId) {
                 const timeB = getMs(b.timestamp || b.createdAt);
                 
                 if (sortMode === 'score_desc') {
-                    const scoreA = a.score !== undefined ? Number(a.score) : Number(a.correctAnswers || 0);
-                    const scoreB = b.score !== undefined ? Number(b.score) : Number(b.correctAnswers || 0);
-                    // Nếu điểm chênh lệch, xếp cao lên trên
+                    // CÔNG THỨC CHUẨN HÓA VỀ THANG ĐIỂM 10 ĐỂ SORT CÔNG BẰNG
+                    const calc10Score = (item) => {
+                        if (item.score !== undefined) return Number(item.score);
+                        if (item.correctAnswers !== undefined && item.totalQuestions) return (Number(item.correctAnswers) / Number(item.totalQuestions)) * 10;
+                        return 0;
+                    };
+                    
+                    const scoreA = calc10Score(a);
+                    const scoreB = calc10Score(b);
+                    
                     if (scoreB !== scoreA) return scoreB - scoreA;
-                    // Nếu bằng điểm, người nào nộp sau sẽ lên trên
+                    // Nếu bằng điểm, ai nộp sớm hơn (thời gian nhỏ hơn) thì xếp trên, hoặc mới nhất xếp trên tùy logic.
+                    // Ở đây mặc định điểm bằng nhau thì nộp mới nhất xếp trên.
                     return timeB - timeA;
                 } else {
-                    // Mặc định "newest": Mới nhất đến cũ nhất
                     return timeB - timeA;
                 }
             });
@@ -220,16 +224,37 @@ export async function viewExamHistory(examId) {
                     timeStr = date.toLocaleString('vi-VN');
                 }
                 
-                const scoreText = data.score !== undefined ? data.score : (data.correctAnswers || 0);
-                const totalText = data.totalQuestions || 0;
+                // GIẢI QUYẾT LỖI HIỂN THỊ TRỰC QUAN (ĐIỂM SỐ VÀ CÂU ĐÚNG)
+                const scoreVal = data.score !== undefined ? Number(data.score) : null;
+                const correctVal = data.correctAnswers !== undefined ? Number(data.correctAnswers) : null;
+                const totalVal = data.totalQuestions ? Number(data.totalQuestions) : 0;
+
+                let finalScore10 = 0;
+                let finalCorrectCount = 0;
+
+                if (scoreVal !== null) {
+                    finalScore10 = scoreVal;
+                    finalCorrectCount = correctVal !== null ? correctVal : (totalVal > 0 ? Math.round((scoreVal / 10) * totalVal) : 0);
+                } else if (correctVal !== null) {
+                    finalCorrectCount = correctVal;
+                    finalScore10 = totalVal > 0 ? (correctVal / totalVal) * 10 : 0;
+                }
+
+                const formattedScore = Number.isInteger(finalScore10) ? finalScore10 : finalScore10.toFixed(2);
+                
+                // Hiển thị tách bạch: Điểm hệ 10 và Số câu đúng
+                const displayHtml = totalVal > 0 
+                    ? `${formattedScore} đ <span style="font-size: 11px; font-weight: 500; opacity: 0.8; margin-left: 4px;">(${finalCorrectCount}/${totalVal})</span>`
+                    : `${formattedScore} đ`;
+                
                 const email = data.email || data.userEmail || data.uid || "Khách vô danh";
 
                 tbody.innerHTML += `
                     <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                         <td style="padding:15px; color:#0f172a; font-weight:600; font-size: 14px;">${email}</td>
                         <td style="padding:15px; text-align:center;">
-                            <span style="background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid #a7f3d0;">
-                                ${scoreText} ${totalText ? `/ ${totalText}` : ''}
+                            <span style="background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center;">
+                                ${displayHtml}
                             </span>
                         </td>
                         <td style="padding:15px; text-align:right; color:#64748b; font-size:13px;">${timeStr}</td>
@@ -238,7 +263,6 @@ export async function viewExamHistory(examId) {
             });
         };
 
-        // Gắn sự kiện Change và gọi render lần đầu
         if (sortSelect) sortSelect.addEventListener('change', renderTable);
         renderTable();
 
