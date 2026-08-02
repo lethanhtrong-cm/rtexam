@@ -638,20 +638,21 @@ export function renderUI() {
         UI.participantsGrid.appendChild(card);
     });
 
-    // Sinh giao diện phân trang phía dưới Grid
+    // Sinh giao diện phân trang và đưa thẳng xuống dưới cùng của trang chờ (ngoài thẻ trắng)
     let paginationContainer = document.getElementById('participants-pagination');
     if (!paginationContainer) {
         paginationContainer = document.createElement('div');
         paginationContainer.id = 'participants-pagination';
-        paginationContainer.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 12px 20px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);";
-        // Chèn Element phân trang vào ngay sau thẻ participantsGrid
-        UI.participantsGrid.parentNode.insertBefore(paginationContainer, UI.participantsGrid.nextSibling);
+        paginationContainer.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 5px 10px; background: transparent;";
+        
+        // Đưa phân trang xuống dưới cùng của tab state1Waiting
+        UI.state1Waiting.appendChild(paginationContainer);
     }
 
     paginationContainer.innerHTML = `
-        <div style="display:flex; align-items:center; gap: 10px;">
-            <label style="font-size: 0.9rem; font-weight: 700; color: #475569;"><i class="fa-solid fa-list-ol" style="color:#3b82f6;"></i> Số người/trang:</label>
-            <select id="pageSizeSelect" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-weight: 700; color: #0f172a; cursor: pointer;">
+        <div style="display:flex; align-items:center; gap: 8px;">
+            <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;"><i class="fa-solid fa-list-ol" style="color:#3b82f6;"></i> Số người/trang:</label>
+            <select id="pageSizeSelect" style="padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; font-weight: 600; color: #475569; cursor: pointer; font-size: 0.85rem; background: #fff;">
                 <option value="10" ${state.pageSize === 10 ? 'selected' : ''}>10</option>
                 <option value="20" ${state.pageSize === 20 ? 'selected' : ''}>20</option>
                 <option value="30" ${state.pageSize === 30 ? 'selected' : ''}>30</option>
@@ -660,12 +661,12 @@ export function renderUI() {
                 <option value="100" ${state.pageSize === 100 ? 'selected' : ''}>100</option>
             </select>
         </div>
-        <div style="display:flex; gap: 8px; align-items: center;">
-            <button id="btnPrevPage" ${state.currentPage === 1 ? 'disabled' : ''} style="padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: ${state.currentPage === 1 ? '#f8fafc' : '#ffffff'}; color: ${state.currentPage === 1 ? '#94a3b8' : '#3b82f6'}; cursor: ${state.currentPage === 1 ? 'not-allowed' : 'pointer'}; font-weight:bold; transition: 0.2s; box-shadow: ${state.currentPage === 1 ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'};"><i class="fa-solid fa-chevron-left"></i> Trước</button>
+        <div style="display:flex; gap: 6px; align-items: center;">
+            <button id="btnPrevPage" ${state.currentPage === 1 ? 'disabled' : ''} style="padding: 4px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: ${state.currentPage === 1 ? '#f8fafc' : '#ffffff'}; color: ${state.currentPage === 1 ? '#94a3b8' : '#3b82f6'}; cursor: ${state.currentPage === 1 ? 'not-allowed' : 'pointer'}; font-weight:600; transition: 0.2s; font-size: 0.85rem;"><i class="fa-solid fa-chevron-left"></i> Trước</button>
             
-            <span style="font-weight: 800; color: #0f172a; font-size: 0.95rem; padding: 0 15px; background: #f1f5f9; border-radius: 20px; padding: 4px 15px; border: 1px solid #e2e8f0;">${state.currentPage} / ${totalPages}</span>
+            <span style="font-weight: 700; color: #475569; font-size: 0.85rem; padding: 0 10px;">${state.currentPage} / ${totalPages}</span>
             
-            <button id="btnNextPage" ${state.currentPage === totalPages ? 'disabled' : ''} style="padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: ${state.currentPage === totalPages ? '#f8fafc' : '#ffffff'}; color: ${state.currentPage === totalPages ? '#94a3b8' : '#3b82f6'}; cursor: ${state.currentPage === totalPages ? 'not-allowed' : 'pointer'}; font-weight:bold; transition: 0.2s; box-shadow: ${state.currentPage === totalPages ? 'none' : '0 2px 4px rgba(0,0,0,0.05)'};">Sau <i class="fa-solid fa-chevron-right"></i></button>
+            <button id="btnNextPage" ${state.currentPage === totalPages ? 'disabled' : ''} style="padding: 4px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: ${state.currentPage === totalPages ? '#f8fafc' : '#ffffff'}; color: ${state.currentPage === totalPages ? '#94a3b8' : '#3b82f6'}; cursor: ${state.currentPage === totalPages ? 'not-allowed' : 'pointer'}; font-weight:600; transition: 0.2s; font-size: 0.85rem;">Sau <i class="fa-solid fa-chevron-right"></i></button>
         </div>
     `;
 
