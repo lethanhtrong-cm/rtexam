@@ -31,6 +31,24 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // =====================================================================
+// ĐỔI TÊN DASHBOARD TRÊN HEADER BẰNG DOM
+// =====================================================================
+document.querySelectorAll('*').forEach(el => {
+    if (el.childNodes.length > 0) {
+        el.childNodes.forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.nodeValue.toUpperCase();
+                if (text.includes('QUIZAPP DASHBOARD') || text.includes('QUIZZ APP DASHBOARD')) {
+                    node.nodeValue = node.nodeValue
+                        .replace(/QUIZAPP DASHBOARD/gi, 'ĐẤU TRƯỜNG KIẾN THỨC')
+                        .replace(/QUIZZ APP DASHBOARD/gi, 'ĐẤU TRƯỜNG KIẾN THỨC');
+                }
+            }
+        });
+    }
+});
+
+// =====================================================================
 // GẮN SỰ KIỆN CLICK (EVENT LISTENERS)
 // =====================================================================
 
@@ -54,14 +72,17 @@ let btnLeaveRoom = document.getElementById('btnLeaveRoom');
 if (!btnLeaveRoom) {
     btnLeaveRoom = document.createElement('button');
     btnLeaveRoom.id = 'btnLeaveRoom';
-    btnLeaveRoom.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Thoát phòng';
-    btnLeaveRoom.style.cssText = "background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-left: 10px; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px;";
+    btnLeaveRoom.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Thoát';
+    // Đã tùy chỉnh lại CSS để kích thước nhỏ gọn hơn, phù hợp nằm trên header
+    btnLeaveRoom.style.cssText = "background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-left: 15px; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem;";
     btnLeaveRoom.onmouseover = () => { btnLeaveRoom.style.background = '#fecaca'; };
     btnLeaveRoom.onmouseout = () => { btnLeaveRoom.style.background = '#fee2e2'; };
     
-    // Chèn cạnh nút copy mã phòng (nếu tồn tại)
-    if (UI.btnCopyRoomCode && UI.btnCopyRoomCode.parentNode) {
-        UI.btnCopyRoomCode.parentNode.appendChild(btnLeaveRoom);
+    // Đã thay đổi vị trí chèn: Đưa lên cạnh tên người dùng trên Header
+    if (UI.headerUserName && UI.headerUserName.parentNode) {
+        UI.headerUserName.parentNode.style.display = 'flex';
+        UI.headerUserName.parentNode.style.alignItems = 'center';
+        UI.headerUserName.parentNode.appendChild(btnLeaveRoom);
     }
 }
 
