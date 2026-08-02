@@ -20,32 +20,31 @@ let rawFeedbacks = [];
 let loadedStatus = { exams: false, questions: false, feedbacks: false };
 let listenersInitialized = false;
 
+// Trạng thái hiển thị của Bảng thống kê
+let isStatsVisible = false; 
+
 // =========================================================================
 // HÀM KHỞI TẠO LẮNG NGHE REAL-TIME (TỐI ƯU QUOTA)
 // =========================================================================
 export function loadExamList() {
-    // Đảm bảo chỉ khởi tạo listener 1 lần duy nhất để chống tràn bộ nhớ
     if (listenersInitialized) return;
     listenersInitialized = true;
     
     const container = document.getElementById('exam-list-body');
     if (container) container.innerHTML = '<div class="loading-text">⏳ Đang thiết lập kết nối thời gian thực (Real-time) để tối ưu Quota...</div>';
 
-    // 1. Lắng nghe thay đổi Cấu hình đề thi
     onSnapshot(collection(db, "exams"), (snapshot) => {
         rawExams = snapshot.docs;
         loadedStatus.exams = true;
         processAndRender();
     }, (error) => handleLoadError(error));
 
-    // 2. Lắng nghe thay đổi Câu hỏi (Tự động nhận đề mới từ Google Sheet)
     onSnapshot(collection(db, "questions"), (snapshot) => {
         rawQuestions = snapshot.docs;
         loadedStatus.questions = true;
         processAndRender();
     }, (error) => handleLoadError(error));
 
-    // 3. Lắng nghe thay đổi Đánh giá
     onSnapshot(collection(db, "feedbacks"), (snapshot) => {
         rawFeedbacks = snapshot.docs;
         loadedStatus.feedbacks = true;
@@ -63,7 +62,6 @@ function handleLoadError(error) {
 // HÀM XỬ LÝ DỮ LIỆU SAU KHI FIRESTORE TRẢ VỀ (CACHE & MAP)
 // =========================================================================
 function processAndRender() {
-    // Chỉ render khi cả 3 luồng dữ liệu đều đã tải xong lần đầu
     if (!loadedStatus.exams || !loadedStatus.questions || !loadedStatus.feedbacks) return;
 
     const examDataMap = {};
@@ -128,11 +126,217 @@ function processAndRender() {
 }
 
 // =========================================================================
+// HÀM TẠO BẢNG THỐNG KÊ NHANH (Có trạng thái Ẩn/Hiện)
+// =========================================================================
+function generateStatsHtml() {
+    const stats = {};
+    let totalExams = 0;
+    
+    cachedExams.forEach(ex => {
+        totalExams++;
+        const t = ex.technique || "Chưa phân loại";
+        const l = ex.level || "Không xác định";
+        const time = ex.timeLimit || 0;
+
+        if(!stats[t]) stats[t] = { total: 0, levels: {} };
+        stats[t].total++;
+
+        if(!stats[t].levels[l]) stats[t].levels[l] = { total: 0, times: {} };
+        stats[t].levels[l].total++;
+
+        if(!stats[t].levels[l].times[time]) stats[t].levels[l].times[time] = 0;
+        stats[t].levels[l].times[time]++;
+    });
+
+    let tableContent = '';
+    if (isStatsVisible) {
+        tableContent = `
+        <div style="overflow-x: auto; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 20px;">
+        <table style="width:100%; border-collapse:collapse; background: #fff; min-width: 600px;">
+            <thead style="background:#f8fafc; color:#475569; font-size:13px; text-transform:uppercase; border-bottom: 2px solid #cbd5e1;">
+                <tr>
+                    <th style="padding:12px 15px; text-align:left; width: 30%;">Chuyên khoa</th>
+                    <th style="padding:12px 15px; text-align:center; width: 25%;">Cấp độ</th>
+                    <th style="padding:12px 15px; text-align:center; width: 25%;">Thời gian</th>
+                    <th style="padding:12px 15px; text-align:center; width: 20%;">Số lượng đề</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        for(const t in stats) {
+            const techData = stats[t];
+            const levels = Object.keys(techData.levels);
+            
+            let techRowSpan = 0;
+            levels.forEach(l => { techRowSpan += Object.keys(techData.levels[l].times).length; });
+
+            let firstTech = true;
+            for(const l of levels) {
+                const times = Object.keys(techData.levels[l].times);
+                let firstLevel = true;
+                
+                for(const time of times) {
+                    tableContent += `<tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">`;
+                    
+                    if(firstTech) {
+                        tableContent += `<td rowspan="${techRowSpan}" style="padding:15px; vertical-align:middle; font-weight:700; color:#1e293b; border-right:1px solid #e2e8f0; background: #fff;">
+                                    ${t} <br><span style="font-size:12px; font-weight: normal; color: #64748b;">(Tổng: ${techData.total} đề)</span>
+                                 </td>`;
+                        firstTech = false;
+                    }
+                    if(firstLevel) {
+                        let lvlColor = l === 'Khó' ? '#ef4444' : (l === 'Dễ' ? '#10b981' : '#f59e0b');
+                        tableContent += `<td rowspan="${times.length}" style="padding:15px; vertical-align:middle; text-align:center; font-weight:700; color:${lvlColor}; border-right:1px solid #e2e8f0; background: #fff;">
+                                    ${l} <br><span style="font-size:12px; font-weight: normal; color: #64748b;">(Có ${techData.levels[l].total} đề)</span>
+                                 </td>`;
+                        firstLevel = false;
+                    }
+                    
+                    tableContent += `<td style="padding:12px 15px; text-align:center; color:#475569; font-weight: 500;">${time} phút</td>`;
+                    tableContent += `<td style="padding:12px 15px; text-align:center; font-weight:bold; color:#0f172a; font-size: 15px;">
+                                <span style="background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 20px;">${techData.levels[l].times[time]}</span>
+                             </td>`;
+                    tableContent += `</tr>`;
+                }
+            }
+        }
+        tableContent += `</tbody></table></div>`;
+    }
+
+    let btnStyle = isStatsVisible 
+        ? "background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;" 
+        : "background: #3b82f6; color: white; border: 1px solid #3b82f6; box-shadow: 0 2px 4px rgba(59,130,246,0.3);";
+    let btnText = isStatsVisible ? '<i class="fa-solid fa-eye-slash"></i> Ẩn thống kê' : '<i class="fa-solid fa-chart-pie"></i> Xem thống kê nhanh';
+
+    let html = `
+    <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <h3 style="margin: 0; color: #0f172a; display: flex; align-items: center; gap: 10px; font-size: 17px;">
+                <i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i> Ngân Hàng Đề (Tổng: <span style="color:#ef4444;">${totalExams}</span> đề)
+            </h3>
+            <button id="btn-toggle-stats" style="padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; ${btnStyle}">
+                ${btnText}
+            </button>
+        </div>
+        ${tableContent}
+    </div>`;
+
+    return html;
+}
+
+// =========================================================================
+// TÍNH NĂNG MỚI: XEM DANH SÁCH LỊCH SỬ HỌC VIÊN ĐÃ THI
+// =========================================================================
+function injectHistoryModal() {
+    if (document.getElementById('exam-history-modal')) return;
+    const modalHtml = `
+    <div id="exam-history-modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">
+        <div style="background-color:#fff; margin:5vh auto; padding:0; border-radius:12px; width:95%; max-width:800px; max-height:90vh; display:flex; flex-direction:column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding:15px 20px; background: #f8fafc;">
+                <h3 style="margin:0; color:#0f172a; font-size:16px;"><i class="fa-solid fa-users" style="color:#3b82f6;"></i> Danh sách thi đề: <span id="history-modal-exam-id" style="color:#2563eb; font-weight: 800;"></span></h3>
+                <span id="close-exam-history-modal" style="cursor:pointer; font-size:24px; color:#94a3b8; line-height: 1;">&times;</span>
+            </div>
+            <div style="overflow-y:auto; flex:1; padding: 0;">
+                <table style="width:100%; border-collapse:collapse; text-align:left;">
+                    <thead style="background:#f1f5f9; border-bottom:2px solid #cbd5e1; position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="padding:12px 15px; color:#475569; font-size:13px; text-transform:uppercase;">Email Học viên</th>
+                            <th style="padding:12px 15px; color:#475569; font-size:13px; text-transform:uppercase; text-align:center;">Điểm số</th>
+                            <th style="padding:12px 15px; color:#475569; font-size:13px; text-transform:uppercase; text-align:right;">Thời gian nộp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById('close-exam-history-modal').onclick = () => {
+        document.getElementById('exam-history-modal').style.display = 'none';
+    };
+}
+
+async function viewExamHistory(examId) {
+    injectHistoryModal();
+    const modal = document.getElementById('exam-history-modal');
+    const tbody = document.getElementById('history-table-body');
+    
+    document.getElementById('history-modal-exam-id').innerText = examId;
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">⏳ Đang kéo dữ liệu từ máy chủ...</td></tr>';
+    modal.style.display = 'block';
+
+    try {
+        // LƯU Ý: Đang giả định bảng lưu lịch sử thi là "history". Nếu khác, bạn hãy sửa chữ "history" bên dưới nhé!
+        const q = query(collection(db, "history"), where("examId", "==", examId));
+        const snap = await getDocs(q);
+        
+        tbody.innerHTML = '';
+        if (snap.empty) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#94a3b8; font-style: italic;">Chưa có học viên nào hoàn thành đề thi này.</td></tr>';
+            return;
+        }
+
+        let records = [];
+        snap.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
+        // Sắp xếp mới nhất lên đầu (Client-side)
+        records.sort((a, b) => (b.timestamp || b.createdAt || 0) - (a.timestamp || a.createdAt || 0)); 
+
+        records.forEach(data => {
+            let timeStr = 'Không xác định';
+            const rawTime = data.timestamp || data.createdAt;
+            if (rawTime) {
+                const date = (typeof rawTime.toDate === 'function') ? rawTime.toDate() : new Date(rawTime);
+                timeStr = date.toLocaleString('vi-VN');
+            }
+            
+            // Xử lý điểm linh hoạt tương thích cấu trúc CSDL
+            const scoreText = data.score !== undefined ? data.score : (data.correctAnswers || 0);
+            const totalText = data.totalQuestions || 0;
+            const email = data.email || data.userEmail || data.uid || "Khách vô danh";
+
+            tbody.innerHTML += `
+                <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:15px; color:#0f172a; font-weight:600; font-size: 14px;">${email}</td>
+                    <td style="padding:15px; text-align:center;">
+                        <span style="background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid #a7f3d0;">
+                            ${scoreText} ${totalText ? `/ ${totalText}` : ''}
+                        </span>
+                    </td>
+                    <td style="padding:15px; text-align:right; color:#64748b; font-size:13px;">${timeStr}</td>
+                </tr>
+            `;
+        });
+    } catch (err) {
+        console.error("Lỗi tải lịch sử:", err);
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#ef4444;">❌ Lỗi kết nối Cơ sở dữ liệu khi tải lịch sử.</td></tr>';
+    }
+}
+
+// =========================================================================
 // HÀM HIỂN THỊ DANH SÁCH RA MÀN HÌNH THEO BỘ LỌC
 // =========================================================================
 export function renderExamList() {
     const container = document.getElementById('exam-list-body');
     if (!container) return;
+
+    container.innerHTML = '';
+
+    // CHÈN BẢNG THỐNG KÊ (NẾU Ở TAB CHƯA PHÂN LOẠI)
+    if (currentTechnique === "Chưa phân loại") {
+        const statsWrapper = document.createElement('div');
+        statsWrapper.innerHTML = generateStatsHtml();
+        container.appendChild(statsWrapper);
+
+        const toggleBtn = statsWrapper.querySelector('#btn-toggle-stats');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                isStatsVisible = !isStatsVisible;
+                renderExamList();
+            });
+        }
+    }
 
     const filteredExams = cachedExams.filter(exam => {
         const matchTech = exam.technique === currentTechnique;
@@ -153,10 +357,12 @@ export function renderExamList() {
         return b.createdAt - a.createdAt;
     });
 
-    container.innerHTML = '';
-
     if (filteredExams.length === 0) {
-        container.innerHTML = `<div class="empty-message" style="width: 100%; background: #ffffff; padding: 40px; border-radius: 12px; border: 1px dashed #cbd5e1;">🔍 Không tìm thấy mã đề thi nào thỏa mãn điều kiện lọc hiện tại.</div>`;
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'empty-message';
+        emptyMsg.style.cssText = 'width: 100%; background: #ffffff; padding: 40px; border-radius: 12px; border: 1px dashed #cbd5e1;';
+        emptyMsg.innerHTML = '🔍 Không tìm thấy mã đề thi nào thỏa mãn điều kiện lọc hiện tại.';
+        container.appendChild(emptyMsg);
         return;
     }
 
@@ -190,7 +396,6 @@ export function renderExamList() {
         }
         const feedbackBtnClass = exam.feedbackCount > 0 ? "btn-modern-action btn-view-feedback has-feedback" : "btn-modern-action btn-view-feedback";
 
-        // Mã hóa mô tả để chèn vào dataset an toàn
         const safeDescription = encodeURIComponent(exam.description || "");
 
         const cardDiv = document.createElement('div');
@@ -233,6 +438,11 @@ export function renderExamList() {
                 </div>
                 
                 <div class="footer-actions-right">
+                    <!-- NÚT XEM LỊCH SỬ THI MỚI THÊM VÀO ĐÂY -->
+                    <button class="btn-modern-action btn-view-history" data-examid="${exam.examId}" style="color: #4f46e5; border-color: #c7d2fe; background: #e0e7ff;">
+                        <i class="fa-solid fa-users"></i> Xem Lịch Sử
+                    </button>
+
                     <button class="${feedbackBtnClass}" data-examid="${exam.examId}">
                         <i class="fa-solid fa-star"></i> Đánh Giá ${feedbackBadgeHtml}
                     </button>
@@ -290,7 +500,6 @@ function initFilterChangeListeners() {
     let sortSelect = document.getElementById('examSortSelect');
 
     if (filterRow) {
-        // Gom cả thanh Tìm kiếm và Lọc vào chung 1 khối Sticky
         const searchWrapper = document.getElementById('examSearchInput')?.parentElement;
         if (searchWrapper && !document.getElementById('exam-sticky-wrapper')) {
             const stickyWrapper = document.createElement('div');
@@ -301,7 +510,6 @@ function initFilterChangeListeners() {
             stickyWrapper.appendChild(searchWrapper);
             stickyWrapper.appendChild(filterRow);
             
-            // Xóa bỏ trạng thái bám dính cũ của riêng thanh Lọc
             filterRow.style.position = 'static';
             filterRow.style.marginTop = '15px';
         }
@@ -693,6 +901,12 @@ document.addEventListener('componentsLoaded', () => {
                 const examId = editContentBtn.dataset.examid;
                 window.open(`admin-edit-exam.html?examId=${examId}`, '_blank');
                 return;
+            }
+            
+            // XỬ LÝ SỰ KIỆN CLICK NÚT XEM LỊCH SỬ THI MỚI THÊM
+            const historyBtn = e.target.closest('.btn-view-history');
+            if (historyBtn) {
+                return viewExamHistory(historyBtn.dataset.examid);
             }
 
             const vipBtn = e.target.closest('.toggle-vip');
