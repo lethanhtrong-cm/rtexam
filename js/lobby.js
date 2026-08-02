@@ -369,17 +369,17 @@ if (UI.btnSendInvite) {
         try {
             // Đẩy Push Notifications vào bộ lưu trữ Firestore cho những người được tick
             const notifPromises = targetEmails.map(email => {
-                // THAY THẾ BẰNG ĐOẠN SAU (Chỉnh sửa 'type' và thêm 'roomId'):
-return addDoc(collection(db, "notifications"), {
-    toEmail: email,
-    title: "🎯 Lời mời thách đấu!",
-    message: `${state.currentUser.displayName} vừa mời bạn tham gia phòng thi trực tiếp.\nMã phòng: ${state.roomId}`,
-    type: "room_invite", // Đã sửa type cho khớp với bộ lọc notification
-    roomId: state.roomId, // Bổ sung roomId để logic click không bị null
-    actionUrl: `lobby.html?roomId=${state.roomId}`,
-    status: "unread",
-    timestamp: serverTimestamp()
-});
+                return addDoc(collection(db, "notifications"), {
+                    toEmail: email,
+                    title: "🎯 Lời mời thách đấu!",
+                    message: `${state.currentUser.displayName} vừa mời bạn tham gia phòng thi trực tiếp.\nMã phòng: ${state.roomId}`,
+                    type: "room_invite", // Đã sửa type cho khớp với bộ lọc notification
+                    roomId: state.roomId, // Bổ sung roomId để logic click không bị null
+                    actionUrl: `lobby.html?roomId=${state.roomId}`,
+                    status: "unread",
+                    timestamp: serverTimestamp()
+                });
+            });
             
             await Promise.all(notifPromises);
             alert(`Đã gửi thành công lời mời thách đấu tới ${targetEmails.length} người!`);
