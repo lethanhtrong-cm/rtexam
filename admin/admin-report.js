@@ -200,8 +200,6 @@ function initAdminReportListener() {
         }
 
         // TÍNH NĂNG MỚI: Hiển thị Badge số lượng lên Menu Tab (Sidebar)
-        // Lưu ý: Hãy đảm bảo nút mở tab này có id="menu-tab-reports" hoặc thuộc class tương ứng trong mã HTML của bạn.
-        // Tôi sẽ quét tất cả các phần tử có 'data-tab="tab-reports"' để cập nhật.
         const tabMenuItems = document.querySelectorAll('[data-tab="tab-reports"], #menu-tab-reports');
         tabMenuItems.forEach(tabItem => {
             // Kiểm tra xem đã có badge chưa
@@ -497,6 +495,21 @@ async function fetchAndShowQuestionDetail(questionId, examId) {
         if (docSnap.exists()) {
             const data = docSnap.data();
             
+            // TÍNH NĂNG MỚI: Inject Header chứa thông tin Mã đề và ID Câu hỏi
+            let contextDiv = document.getElementById('qd-context-info');
+            if (!contextDiv) {
+                contextDiv = document.createElement('div');
+                contextDiv.id = 'qd-context-info';
+                contextDiv.style.cssText = 'background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9rem; color: #1e293b; display: flex; gap: 20px; border: 1px solid #bfdbfe;';
+                const qdText = document.getElementById('qd-text');
+                qdText.parentNode.insertBefore(contextDiv, qdText);
+            }
+            const finalExamId = examId || data.examId || "Không rõ";
+            contextDiv.innerHTML = `
+                <div><strong><i class="fa-solid fa-file-lines" style="color:#3b82f6;"></i> Mã đề:</strong> <span style="color: #2563eb; font-weight: 600;">${finalExamId}</span></div>
+                <div><strong><i class="fa-solid fa-hashtag" style="color:#3b82f6;"></i> ID:</strong> <span style="font-family: monospace; color: #475569;">${questionId}</span></div>
+            `;
+
             const questionText = data.text || data.questionText || data.question || data.content || "Không có nội dung câu hỏi";
             document.getElementById('qd-text').innerText = questionText;
 
