@@ -139,6 +139,16 @@ export async function viewExamHistory(examId) {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">⏳ Đang kéo dữ liệu từ máy chủ...</td></tr>';
     modal.style.display = 'block';
 
+    // Hàm trợ thủ siêu chuẩn hóa thời gian: Biến mọi định dạng thành số Milliseconds
+    const getMs = (timeVal) => {
+        if (!timeVal) return 0;
+        if (typeof timeVal.toMillis === 'function') return timeVal.toMillis();
+        if (typeof timeVal.toDate === 'function') return timeVal.toDate().getTime();
+        if (timeVal.seconds) return timeVal.seconds * 1000;
+        const parsed = new Date(timeVal).getTime();
+        return isNaN(parsed) ? Number(timeVal) || 0 : parsed;
+    };
+
     try {
         const q = query(collection(db, "results"), where("examId", "==", examId));
         const snap = await getDocs(q);
@@ -159,10 +169,11 @@ export async function viewExamHistory(examId) {
                 uniqueUsersMap.set(userIdentifier, data);
             } else {
                 const existingData = uniqueUsersMap.get(userIdentifier);
-                const existingTime = existingData.timestamp || existingData.createdAt || 0;
-                const newTime = data.timestamp || data.createdAt || 0;
+                // Dùng hàm chuẩn hóa thời gian để so sánh an toàn
+                const existingTimeMs = getMs(existingData.timestamp || existingData.createdAt);
+                const newTimeMs = getMs(data.timestamp || data.createdAt);
                 
-                if (newTime > existingTime) {
+                if (newTimeMs > existingTimeMs) {
                     uniqueUsersMap.set(userIdentifier, data);
                 }
             }
@@ -170,12 +181,12 @@ export async function viewExamHistory(examId) {
 
         let records = Array.from(uniqueUsersMap.values());
         
-        // Cập nhật logic: Chuyển đổi Firestore Timestamp sang Milliseconds để sắp xếp chính xác
+        // Dùng hàm chuẩn hóa thời gian để sắp xếp an toàn từ mới đến cũ
         records.sort((a, b) => {
-            const timeA = (a.timestamp && typeof a.timestamp.toMillis === 'function') ? a.timestamp.toMillis() : (a.timestamp || a.createdAt || 0);
-            const timeB = (b.timestamp && typeof b.timestamp.toMillis === 'function') ? b.timestamp.toMillis() : (b.timestamp || b.createdAt || 0);
+            const timeA = getMs(a.timestamp || a.createdAt);
+            const timeB = getMs(b.timestamp || b.createdAt);
             return timeB - timeA;
-        });
+        }); 
 
         records.forEach(data => {
             let timeStr = 'Không xác định';
