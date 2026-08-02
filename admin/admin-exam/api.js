@@ -131,13 +131,51 @@ export async function viewFeedback(examId) {
 }
 
 export async function viewExamHistory(examId) {
-    injectHistoryModal();
+    // Đảm bảo Modal luôn được inject với đầy đủ cấu trúc mới trước khi gọi
+    if (!document.getElementById('exam-history-modal')) {
+        const modalHtml = `
+        <div id="exam-history-modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color:rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">
+            <div style="background-color:#fff; margin:5vh auto; padding:0; border-radius:12px; width:95%; max-width:850px; max-height:90vh; display:flex; flex-direction:column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding:15px 20px; background: #f8fafc;">
+                    <h3 style="margin:0; color:#0f172a; font-size:16px;"><i class="fa-solid fa-users" style="color:#3b82f6;"></i> Danh sách thi đề: <span id="history-modal-exam-id" style="color:#2563eb; font-weight: 800;"></span></h3>
+                    
+                    <div style="display:flex; gap: 15px; align-items:center;">
+                        <select id="history-sort-select" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: 600; color: #475569; outline: none; cursor: pointer; background-color: #fff;">
+                            <option value="newest">Sắp xếp: Mới nhất</option>
+                            <option value="score_desc">Sắp xếp: Điểm từ cao đến thấp</option>
+                        </select>
+                        <span id="close-exam-history-modal" style="cursor:pointer; font-size:24px; color:#94a3b8; line-height: 1;">&times;</span>
+                    </div>
+                </div>
+                <div style="overflow-y:auto; flex:1; padding: 0;">
+                    <table style="width:100%; border-collapse:collapse; text-align:left;">
+                        <thead style="background:#f1f5f9; border-bottom:2px solid #cbd5e1; position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th style="padding:12px 15px; color:#475569; font-size:13px; text-transform:uppercase;">Email Học viên</th>
+                                <th style="padding:12px 15px; color:#475569; font-size:13px; text-transform:uppercase; text-align:center;">Điểm số</th>
+                                <th style="padding:12px 15px; color:#475569; font-size:13px; text-transform:uppercase; text-align:center;">Thời gian làm bài</th>
+                                <th style="padding:12px 15px; color:#475569; font-size:13px; text-transform:uppercase; text-align:right;">Thời gian nộp (Mới nhất)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        document.getElementById('close-exam-history-modal').onclick = () => {
+            document.getElementById('exam-history-modal').style.display = 'none';
+        };
+    }
+
     const modal = document.getElementById('exam-history-modal');
     const tbody = document.getElementById('history-table-body');
     let sortSelect = document.getElementById('history-sort-select'); 
     
     document.getElementById('history-modal-exam-id').innerText = examId;
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">⏳ Đang kéo dữ liệu từ máy chủ...</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:#64748b;">⏳ Đang kéo dữ liệu từ máy chủ...</td></tr>`;
     
     if (sortSelect) sortSelect.value = 'newest'; 
     modal.style.display = 'block';
@@ -157,7 +195,7 @@ export async function viewExamHistory(examId) {
         
         tbody.innerHTML = '';
         if (snap.empty) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#94a3b8; font-style: italic;">Chưa có học viên nào hoàn thành đề thi này.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:#94a3b8; font-style: italic;">Chưa có học viên nào hoàn thành đề thi này.</td></tr>`;
             return;
         }
 
@@ -196,7 +234,6 @@ export async function viewExamHistory(examId) {
                 const timeB = getMs(b.timestamp || b.createdAt);
                 
                 if (sortMode === 'score_desc') {
-                    // CÔNG THỨC CHUẨN HÓA VỀ THANG ĐIỂM 10 ĐỂ SORT CÔNG BẰNG
                     const calc10Score = (item) => {
                         if (item.score !== undefined) return Number(item.score);
                         if (item.correctAnswers !== undefined && item.totalQuestions) return (Number(item.correctAnswers) / Number(item.totalQuestions)) * 10;
@@ -207,8 +244,6 @@ export async function viewExamHistory(examId) {
                     const scoreB = calc10Score(b);
                     
                     if (scoreB !== scoreA) return scoreB - scoreA;
-                    // Nếu bằng điểm, ai nộp sớm hơn (thời gian nhỏ hơn) thì xếp trên, hoặc mới nhất xếp trên tùy logic.
-                    // Ở đây mặc định điểm bằng nhau thì nộp mới nhất xếp trên.
                     return timeB - timeA;
                 } else {
                     return timeB - timeA;
@@ -224,7 +259,20 @@ export async function viewExamHistory(examId) {
                     timeStr = date.toLocaleString('vi-VN');
                 }
                 
-                // GIẢI QUYẾT LỖI HIỂN THỊ TRỰC QUAN (ĐIỂM SỐ VÀ CÂU ĐÚNG)
+                // FORMAT THỜI GIAN LÀM BÀI
+                let timeSpentStr = '--';
+                const timeSpentRaw = data.timeSpent || data.duration;
+                if (timeSpentRaw !== undefined && timeSpentRaw !== null) {
+                    const ts = Number(timeSpentRaw);
+                    if (!isNaN(ts)) {
+                        const m = Math.floor(ts / 60);
+                        const s = Math.floor(ts % 60);
+                        timeSpentStr = `${m} phút ${s < 10 ? '0' : ''}${s} giây`;
+                    } else {
+                        timeSpentStr = String(timeSpentRaw); 
+                    }
+                }
+                
                 const scoreVal = data.score !== undefined ? Number(data.score) : null;
                 const correctVal = data.correctAnswers !== undefined ? Number(data.correctAnswers) : null;
                 const totalVal = data.totalQuestions ? Number(data.totalQuestions) : 0;
@@ -241,8 +289,6 @@ export async function viewExamHistory(examId) {
                 }
 
                 const formattedScore = Number.isInteger(finalScore10) ? finalScore10 : finalScore10.toFixed(2);
-                
-                // Hiển thị tách bạch: Điểm hệ 10 và Số câu đúng
                 const displayHtml = totalVal > 0 
                     ? `${formattedScore} đ <span style="font-size: 11px; font-weight: 500; opacity: 0.8; margin-left: 4px;">(${finalCorrectCount}/${totalVal})</span>`
                     : `${formattedScore} đ`;
@@ -257,6 +303,7 @@ export async function viewExamHistory(examId) {
                                 ${displayHtml}
                             </span>
                         </td>
+                        <td style="padding:15px; text-align:center; color:#475569; font-weight:500; font-size:13px;">${timeSpentStr}</td>
                         <td style="padding:15px; text-align:right; color:#64748b; font-size:13px;">${timeStr}</td>
                     </tr>
                 `;
@@ -268,7 +315,7 @@ export async function viewExamHistory(examId) {
 
     } catch (err) {
         console.error("Lỗi tải lịch sử:", err);
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#ef4444;">❌ Lỗi kết nối Cơ sở dữ liệu khi tải lịch sử.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:#ef4444;">❌ Lỗi kết nối Cơ sở dữ liệu khi tải lịch sử.</td></tr>';
     }
 }
 
