@@ -134,12 +134,14 @@ export async function viewExamHistory(examId) {
     injectHistoryModal();
     const modal = document.getElementById('exam-history-modal');
     const tbody = document.getElementById('history-table-body');
+    let sortSelect = document.getElementById('history-sort-select'); // Lấy Select
     
     document.getElementById('history-modal-exam-id').innerText = examId;
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#64748b;">⏳ Đang kéo dữ liệu từ máy chủ...</td></tr>';
+    
+    if (sortSelect) sortSelect.value = 'newest'; // Reset về "Mới nhất" khi mở đề mới
     modal.style.display = 'block';
 
-    // Hàm trợ thủ siêu chuẩn hóa thời gian: Biến mọi định dạng thành số Milliseconds
     const getMs = (timeVal) => {
         if (!timeVal) return 0;
         if (typeof timeVal.toMillis === 'function') return timeVal.toMillis();
@@ -169,7 +171,6 @@ export async function viewExamHistory(examId) {
                 uniqueUsersMap.set(userIdentifier, data);
             } else {
                 const existingData = uniqueUsersMap.get(userIdentifier);
-                // Dùng hàm chuẩn hóa thời gian để so sánh an toàn
                 const existingTimeMs = getMs(existingData.timestamp || existingData.createdAt);
                 const newTimeMs = getMs(data.timestamp || data.createdAt);
                 
@@ -179,39 +180,68 @@ export async function viewExamHistory(examId) {
             }
         });
 
+        // Đổ dữ liệu Map thành Array
         let records = Array.from(uniqueUsersMap.values());
-        
-        // Dùng hàm chuẩn hóa thời gian để sắp xếp an toàn từ mới đến cũ
-        records.sort((a, b) => {
-            const timeA = getMs(a.timestamp || a.createdAt);
-            const timeB = getMs(b.timestamp || b.createdAt);
-            return timeB - timeA;
-        }); 
 
-        records.forEach(data => {
-            let timeStr = 'Không xác định';
-            const rawTime = data.timestamp || data.createdAt;
-            if (rawTime) {
-                const date = (typeof rawTime.toDate === 'function') ? rawTime.toDate() : new Date(rawTime);
-                timeStr = date.toLocaleString('vi-VN');
-            }
+        // LÀM SẠCH SỰ KIỆN CŨ (Chống chạy đè khi click nhiều đề)
+        if (sortSelect) {
+            const newSortSelect = sortSelect.cloneNode(true);
+            sortSelect.parentNode.replaceChild(newSortSelect, sortSelect);
+            sortSelect = newSortSelect; // Cập nhật tham chiếu
+        }
+
+        // HÀM RENDER ĐỘNG DỰA TRÊN THẺ SELECT
+        const renderTable = () => {
+            const sortMode = sortSelect ? sortSelect.value : 'newest';
             
-            const scoreText = data.score !== undefined ? data.score : (data.correctAnswers || 0);
-            const totalText = data.totalQuestions || 0;
-            const email = data.email || data.userEmail || data.uid || "Khách vô danh";
+            records.sort((a, b) => {
+                const timeA = getMs(a.timestamp || a.createdAt);
+                const timeB = getMs(b.timestamp || b.createdAt);
+                
+                if (sortMode === 'score_desc') {
+                    const scoreA = a.score !== undefined ? Number(a.score) : Number(a.correctAnswers || 0);
+                    const scoreB = b.score !== undefined ? Number(b.score) : Number(b.correctAnswers || 0);
+                    // Nếu điểm chênh lệch, xếp cao lên trên
+                    if (scoreB !== scoreA) return scoreB - scoreA;
+                    // Nếu bằng điểm, người nào nộp sau sẽ lên trên
+                    return timeB - timeA;
+                } else {
+                    // Mặc định "newest": Mới nhất đến cũ nhất
+                    return timeB - timeA;
+                }
+            });
 
-            tbody.innerHTML += `
-                <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                    <td style="padding:15px; color:#0f172a; font-weight:600; font-size: 14px;">${email}</td>
-                    <td style="padding:15px; text-align:center;">
-                        <span style="background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid #a7f3d0;">
-                            ${scoreText} ${totalText ? `/ ${totalText}` : ''}
-                        </span>
-                    </td>
-                    <td style="padding:15px; text-align:right; color:#64748b; font-size:13px;">${timeStr}</td>
-                </tr>
-            `;
-        });
+            tbody.innerHTML = '';
+            records.forEach(data => {
+                let timeStr = 'Không xác định';
+                const rawTime = data.timestamp || data.createdAt;
+                if (rawTime) {
+                    const date = (typeof rawTime.toDate === 'function') ? rawTime.toDate() : new Date(rawTime);
+                    timeStr = date.toLocaleString('vi-VN');
+                }
+                
+                const scoreText = data.score !== undefined ? data.score : (data.correctAnswers || 0);
+                const totalText = data.totalQuestions || 0;
+                const email = data.email || data.userEmail || data.uid || "Khách vô danh";
+
+                tbody.innerHTML += `
+                    <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                        <td style="padding:15px; color:#0f172a; font-weight:600; font-size: 14px;">${email}</td>
+                        <td style="padding:15px; text-align:center;">
+                            <span style="background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid #a7f3d0;">
+                                ${scoreText} ${totalText ? `/ ${totalText}` : ''}
+                            </span>
+                        </td>
+                        <td style="padding:15px; text-align:right; color:#64748b; font-size:13px;">${timeStr}</td>
+                    </tr>
+                `;
+            });
+        };
+
+        // Gắn sự kiện Change và gọi render lần đầu
+        if (sortSelect) sortSelect.addEventListener('change', renderTable);
+        renderTable();
+
     } catch (err) {
         console.error("Lỗi tải lịch sử:", err);
         tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#ef4444;">❌ Lỗi kết nối Cơ sở dữ liệu khi tải lịch sử.</td></tr>';
