@@ -276,9 +276,12 @@ export function renderExamList() {
         
         cardDiv.innerHTML = `
             <div class="card-premium-header">
-                <div class="header-left">
-                    <h3 class="exam-premium-title">${displayTitle}</h3>
-                    ${displaySubId}
+                <div class="header-left" style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" class="exam-bulk-checkbox" data-examid="${exam.examId}" style="width: 18px; height: 18px; cursor: pointer;">
+                    <div>
+                        <h3 class="exam-premium-title" style="margin: 0;">${displayTitle}</h3>
+                        ${displaySubId}
+                    </div>
                 </div>
                 <div class="header-right">
                     ${exam.isVip ? '<span class="badge-premium-vip"><i class="fa-solid fa-crown"></i> PRO</span>' : '<span class="badge-premium-free">Miễn Phí</span>'}
@@ -321,6 +324,10 @@ export function renderExamList() {
                     ${exam.isVip 
                         ? `<button class="btn-modern-action toggle-vip off" data-examid="${exam.examId}" data-vip="true"><i class="fa-solid fa-unlock"></i> Hủy VIP</button>` 
                         : `<button class="btn-modern-action toggle-vip on" data-examid="${exam.examId}" data-vip="false"><i class="fa-solid fa-lock"></i> Kích VIP</button>`
+                    }
+                    ${exam.antiCheatEnabled 
+                        ? `<button class="btn-modern-action toggle-anticheat off" data-examid="${exam.examId}" data-state="true" style="color: #ea580c; border-color: #fed7aa;"><i class="fa-solid fa-shield-halved"></i> Tắt Anti-Cheat</button>` 
+                        : `<button class="btn-modern-action toggle-anticheat on" data-examid="${exam.examId}" data-state="false" style="color: #059669; border-color: #a7f3d0;"><i class="fa-solid fa-shield"></i> Bật Anti-Cheat</button>`
                     }
                     <button class="btn-modern-action btn-delete-danger btn-delete" data-examid="${exam.examId}">
                         <i class="fa-solid fa-trash-can"></i> Xóa Đề
