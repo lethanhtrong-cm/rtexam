@@ -174,18 +174,61 @@
         </div>
     </div>
 
-    <script>
-        // Hàm giả lập xử lý Gửi tin nhắn trực tiếp UI
-        function submitDirectFeedback() {
+    <!-- SCRIPT XỬ LÝ ĐẨY DỮ LIỆU TIN NHẮN LÊN FIRESTORE -->
+    <script type="module">
+        import { db } from './js/dashboard-core.js';
+        import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // Gắn hàm vào window để gọi từ thuộc tính onclick trên nút HTML
+        window.submitDirectFeedback = async function() {
             const input = document.getElementById('inputAdminFeedback');
-            if(!input.value.trim()) {
+            const message = input.value.trim();
+            
+            if(!message) {
                 alert('Vui lòng nhập nội dung góp ý!');
                 return;
             }
-            // Móc hàm ghi dữ liệu lên Firebase vào vị trí này ở file JS
-            alert('Cảm ơn bạn! Tin nhắn góp ý của bạn đã được ghi nhận.');
-            input.value = '';
-            document.getElementById('feedback-admin-modal').style.display='none';
+
+            // Tìm nút bấm để thêm hiệu ứng Loading chống Spam click
+            const btn = document.querySelector('button[onclick="submitDirectFeedback()"]');
+            const originalHTML = btn ? btn.innerHTML : 'Gửi tin nhắn trực tiếp';
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+                btn.disabled = true;
+            }
+
+            try {
+                // Lấy thông tin email người dùng hiện hành
+                const auth = getAuth();
+                let userEmail = "Khách ẩn danh";
+                if (auth.currentUser && auth.currentUser.email) {
+                    userEmail = auth.currentUser.email;
+                } else if (localStorage.getItem('userEmail')) {
+                    userEmail = localStorage.getItem('userEmail');
+                }
+
+                // Đẩy dữ liệu lên bảng admin_feedbacks
+                await addDoc(collection(db, "admin_feedbacks"), {
+                    message: message,
+                    userEmail: userEmail,
+                    status: 'pending',
+                    timestamp: serverTimestamp()
+                });
+
+                alert('Cảm ơn bạn! Tin nhắn góp ý của bạn đã được ghi nhận.');
+                input.value = '';
+                document.getElementById('feedback-admin-modal').style.display = 'none';
+            } catch (error) {
+                console.error("Lỗi khi gửi góp ý: ", error);
+                alert("Lỗi kết nối máy chủ. Không thể gửi tin nhắn lúc này!");
+            } finally {
+                // Phục hồi lại nút
+                if (btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
+            }
         }
     </script>
 
