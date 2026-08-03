@@ -29,6 +29,9 @@ let isShowExplanation = false;
 // CỜ THEO DÕI ĐIỀU HƯỚNG ĐỂ CHỐNG XUNG ĐỘT TRẠNG THÁI ONLINE
 let isNavigating = false; 
 
+// CỜ KIỂM SOÁT TÍNH NĂNG CHỐNG GIAN LẬN (Mặc định tắt)
+let isAntiCheatEnabled = false;
+
 let timerInterval;
 let examDuration = 15 * 60; 
 let timeRemaining = examDuration;
@@ -80,12 +83,19 @@ async function returnToLobbyOrDashboard() {
 let warningCount = 0;
 
 function updateAntiCheatState() {
+    if (!isAntiCheatEnabled) {
+        document.body.classList.remove('no-select');
+        return;
+    }
+    
     if (!isSubmitted && !isShowExplanation && currentMode !== 'flashcard') document.body.classList.add('no-select');
     else document.body.classList.remove('no-select');
 }
 
 ['contextmenu', 'copy', 'cut', 'paste'].forEach(evt => {
     document.addEventListener(evt, (e) => {
+        if (!isAntiCheatEnabled) return; // Bỏ qua nếu tính năng bị tắt
+        
         if (!isSubmitted && !isShowExplanation && currentMode !== 'flashcard') {
             e.preventDefault();
             showToast("⚠️ Hành động này bị vô hiệu hóa trong phòng thi!");
@@ -94,6 +104,8 @@ function updateAntiCheatState() {
 });
 
 document.addEventListener('visibilitychange', () => {
+    if (!isAntiCheatEnabled) return; // Bỏ qua nếu tính năng bị tắt
+    
     if (document.hidden && !isSubmitted && !isShowExplanation && currentMode !== 'flashcard' && !document.getElementById('reviewExamModal').classList.contains('active')) {
         warningCount++;
         const warningModal = document.getElementById('cheat-warning-modal');
@@ -190,7 +202,20 @@ async function loadExamDataAndQuestions() {
             const examData = examDoc.data();
             if (examData.timeLimit) examDuration = examData.timeLimit * 60; 
             if (examData.difficulty) currentDifficulty = String(examData.difficulty).toLowerCase(); // Lấy độ khó
+            
+            // Khởi tạo trạng thái chống gian lận từ thuộc tính Đề thi
+            isAntiCheatEnabled = examData.antiCheatEnabled === true;
         }
+
+        // Ưu tiên trạng thái chống gian lận từ cấu hình Phòng (nếu có)
+        if (currentRoomId) {
+            const roomDocRef = doc(db, "rooms", currentRoomId);
+            const roomDoc = await getDoc(roomDocRef);
+            if (roomDoc.exists() && roomDoc.data().antiCheatEnabled !== undefined) {
+                isAntiCheatEnabled = roomDoc.data().antiCheatEnabled === true;
+            }
+        }
+
         await fetchQuestionsFromFirestore();
         initExamState(); 
     } catch (error) {
