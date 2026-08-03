@@ -448,3 +448,21 @@ export async function publishExam() {
         publishBtn.innerHTML = "🔒 Xác Nhận & Publish Lên Hệ Thống";
     }
 }
+
+// Bật/tắt Anti-Cheat cho 1 đề
+export async function toggleAntiCheat(examId, currentState) {
+    try {
+        await setDoc(doc(db, "exams", examId), { antiCheatEnabled: !currentState }, { merge: true });
+        showToast(`Đã ${!currentState ? 'BẬT' : 'TẮT'} Anti-Cheat cho đề "${examId}"!`, "success");
+    } catch (error) { showToast("Lỗi thay đổi trạng thái Anti-Cheat", "error"); }
+}
+
+// Bật/tắt Anti-Cheat hàng loạt (Bulk action)
+export async function bulkToggleAntiCheat(examIds, targetState) {
+    if (!examIds.length || !confirm(`Xác nhận ${targetState ? 'BẬT' : 'TẮT'} Anti-Cheat cho ${examIds.length} đề đã chọn?`)) return;
+    try {
+        const promises = examIds.map(id => setDoc(doc(db, "exams", id), { antiCheatEnabled: targetState }, { merge: true }));
+        await Promise.all(promises);
+        showToast(`Cập nhật Anti-Cheat hàng loạt thành công!`, "success");
+    } catch (error) { showToast("Lỗi cập nhật hàng loạt", "error"); }
+}
