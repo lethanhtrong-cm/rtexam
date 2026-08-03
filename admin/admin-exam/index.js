@@ -2,7 +2,7 @@ import { db } from '../admin-core.js';
 import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { appState } from './state.js';
 import { renderExamList, openEditPropertiesModal } from './ui.js';
-import { updateExamProperties, toggleExamVip, deleteExam, viewFeedback, viewExamHistory, handleExcelRead, publishExam } from './api.js';
+import { updateExamProperties, toggleExamVip, deleteExam, viewFeedback, viewExamHistory, handleExcelRead, publishExam, toggleAntiCheat, bulkToggleAntiCheat } from './api.js';
 
 export function loadExamList() {
     if (appState.listenersInitialized) return;
@@ -44,6 +44,7 @@ function processAndRender() {
         const data = docSnap.data();
         examDataMap[docSnap.id] = {
             isVip: data.isVip || false,
+            antiCheatEnabled: data.antiCheatEnabled || false,
             timeLimit: data.timeLimit !== undefined ? data.timeLimit : 15,
             attemptCount: data.attemptCount || 0,
             technique: data.technique || "Hỗn hợp",
@@ -75,7 +76,7 @@ function processAndRender() {
     appState.cachedExams = [];
     for (const examId in examGroups) {
         const count = examGroups[examId];
-        const config = examDataMap[examId] || { isVip: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "", description: "" };
+        const config = examDataMap[examId] || { isVip: false, antiCheatEnabled: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "", description: "" };
 
         const fCount = feedbackCounts[examId] || 0;
         const fStars = feedbackStars[examId] || 0;
@@ -87,6 +88,7 @@ function processAndRender() {
             description: config.description, 
             count: count, 
             isVip: config.isVip,
+            antiCheatEnabled: config.antiCheatEnabled,
             timeLimit: config.timeLimit, 
             attemptCount: config.attemptCount,
             technique: config.technique, 
@@ -236,8 +238,13 @@ document.addEventListener('componentsLoaded', () => {
 
             const vipBtn = e.target.closest('.toggle-vip');
             if (vipBtn) return toggleExamVip(vipBtn.dataset.examid, vipBtn.dataset.vip === "true");
+            
+            const antiCheatBtn = e.target.closest('.toggle-anticheat');
+            if (antiCheatBtn) return toggleAntiCheat(antiCheatBtn.dataset.examid, antiCheatBtn.dataset.state === "true");
+            
             const feedbackBtn = e.target.closest('.btn-view-feedback');
             if (feedbackBtn) return viewFeedback(feedbackBtn.dataset.examid);
+            
             const deleteBtn = e.target.closest('.btn-delete');
             if (deleteBtn) return deleteExam(deleteBtn.dataset.examid, deleteBtn);
         });
