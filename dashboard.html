@@ -15,6 +15,13 @@
     <div class="layout-wrapper">
         <div id="sidebar-container"></div>
 
+        <!-- KHỐI THAM GIA NHÓM ZALO QUIZPAGE -->
+        <div id="zalo-qr-sidebar" style="position: absolute; bottom: 20px; left: 15px; width: 230px; padding: 15px; background: #f8fafc; border-radius: 12px; text-align: center; border: 1px dashed #cbd5e1; z-index: 50;">
+            <h6 style="font-size: 0.85rem; font-weight: 700; color: #0f172a; margin-bottom: 10px;">Cộng đồng QUIZPAGE</h6>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://zalo.me/g/3b44he0tkfq8e0v9dibo" alt="Zalo QR" style="width: 100%; max-width: 120px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <a href="https://zalo.me/g/3b44he0tkfq8e0v9dibo" target="_blank" style="display: block; padding: 8px; background: #0068ff; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">Tham gia nhóm</a>
+        </div>
+
         <div class="main-content">
             <div class="tab-content-container">
                 <div id="tab-exams" class="tab-pane active"></div>
@@ -34,7 +41,37 @@
         </div>
     </div> 
 
+    <!-- Nút Floating Liên hệ Admin / Góp ý -->
+    <button onclick="document.getElementById('feedback-admin-modal').style.display='flex'" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; background: linear-gradient(135deg, #0068ff, #0a4ec2); color: white; width: 56px; height: 56px; border: none; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 6px 16px rgba(0, 104, 255, 0.3); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.1) translateY(-5px)';" onmouseout="this.style.transform='scale(1) translateY(0)';" title="Góp ý / Liên hệ Admin">
+        <i class="fa-solid fa-headset" style="font-size: 1.6rem;"></i>
+    </button>
+
     <div id="modals-container"></div>
+
+    <!-- Modal: Góp ý / Liên hệ Admin -->
+    <div id="feedback-admin-modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+        <div style="background-color: #ffffff; width: 90%; max-width: 420px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden; transform: scale(0.95); transition: transform 0.2s;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #0f172a;"><i class="fa-solid fa-paper-plane" style="color: #0068ff;"></i> Liên hệ & Góp ý</h3>
+                <i class="fa-solid fa-xmark" onclick="document.getElementById('feedback-admin-modal').style.display='none'" style="cursor: pointer; color: #64748b; font-size: 1.4rem; transition: 0.2s;"></i>
+            </div>
+            <div style="padding: 24px;">
+                <p style="margin-top: 0; margin-bottom: 16px; font-size: 0.95rem; color: #475569; line-height: 1.5;">Bạn có lỗi cần báo cáo hay đóng góp ý kiến? Hãy gửi tin nhắn cho Admin nhé.</p>
+                <textarea id="inputAdminFeedback" rows="4" placeholder="Nhập nội dung tin nhắn của bạn..." style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none; resize: vertical; margin-bottom: 16px; box-sizing: border-box; font-family: inherit;"></textarea>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button onclick="submitDirectFeedback()" style="width: 100%; background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);"><i class="fa-solid fa-envelope me-2"></i> Gửi tin nhắn trực tiếp</button>
+                    
+                    <div style="text-align: center; position: relative; margin: 5px 0;">
+                        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 0;">
+                        <span style="background: white; padding: 0 10px; color: #94a3b8; font-size: 0.85rem; position: relative; top: -10px; font-weight: 600;">HOẶC</span>
+                    </div>
+                    
+                    <a href="https://zalo.me/SỐ_ĐIỆN_THOẠI_CỦA_BẠN" target="_blank" style="width: 100%; background: #0068ff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; text-align: center; text-decoration: none; transition: 0.2s; display: inline-block; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0, 104, 255, 0.2);"><i class="fa-solid fa-comment-dots me-2"></i> Nhắn tin qua Zalo</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: Vào phòng thi -->
     <div id="room-options-modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
@@ -67,6 +104,58 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal: Tạo đề ngẫu nhiên -->
+    <div id="random-exam-modal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+        <div style="background-color: #ffffff; width: 90%; max-width: 450px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden; transform: scale(0.95); transition: transform 0.2s;">
+            <div style="padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc;">
+                <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #0f172a;"><i class="fa-solid fa-dice" style="color: #8b5cf6;"></i> Tạo Đề Ngẫu Nhiên</h3>
+                <i class="fa-solid fa-xmark" id="btnCloseRandomModal" style="cursor: pointer; color: #64748b; font-size: 1.4rem; transition: 0.2s;"></i>
+            </div>
+            <div style="padding: 24px;">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.95rem; font-weight: 600; color: #334155; margin-bottom: 8px;">Kỹ thuật</label>
+                    <select id="randomTech" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none;">
+                        <option value="MRI">MRI</option>
+                        <option value="CT">CT</option>
+                        <option value="X quang">X quang</option>
+                        <option value="Hỗn hợp">Hỗn hợp</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.95rem; font-weight: 600; color: #334155; margin-bottom: 8px;">Cấp độ</label>
+                    <select id="randomLevel" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none;">
+                        <option value="Dễ">Dễ</option>
+                        <option value="Trung bình" selected>Trung bình</option>
+                        <option value="Khó">Khó</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 15px; margin-bottom: 24px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.95rem; font-weight: 600; color: #334155; margin-bottom: 8px;">Số câu hỏi</label>
+                        <select id="randomCount" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none;">
+                            <option value="10">10 câu</option>
+                            <option value="20" selected>20 câu</option>
+                            <option value="40">40 câu</option>
+                            <option value="50">50 câu</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 0.95rem; font-weight: 600; color: #334155; margin-bottom: 8px;">Thời gian (phút)</label>
+                        <select id="randomTime" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; outline: none;">
+                            <option value="15">15 phút</option>
+                            <option value="30" selected>30 phút</option>
+                            <option value="45">45 phút</option>
+                            <option value="60">60 phút</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="btnSubmitCreateRandom" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; padding: 14px 20px; border-radius: 8px; font-weight: 600; font-size: 1.05rem; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3);">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Tạo & Thi ngay
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: Phản hồi từ Admin -->
     <div id="user-admin-reply-modal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px);">
@@ -84,6 +173,21 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Hàm giả lập xử lý Gửi tin nhắn trực tiếp UI
+        function submitDirectFeedback() {
+            const input = document.getElementById('inputAdminFeedback');
+            if(!input.value.trim()) {
+                alert('Vui lòng nhập nội dung góp ý!');
+                return;
+            }
+            // Móc hàm ghi dữ liệu lên Firebase vào vị trí này ở file JS
+            alert('Cảm ơn bạn! Tin nhắn góp ý của bạn đã được ghi nhận.');
+            input.value = '';
+            document.getElementById('feedback-admin-modal').style.display='none';
+        }
+    </script>
 
     <!-- Hệ thống Script Modular -->
     <script src="./js/html-loader.js"></script>
