@@ -482,9 +482,14 @@ async function executeSubmit() {
                     isNewRecord = true;
                     gainedXP = totalRawXP - previousBestRawXP;
                     xpMessage = `🔥 Kỷ lục mới! Bạn nhận thêm phần chênh lệch +${gainedXP} XP!`;
-                } else {
-                    gainedXP = 5; // Điểm chuyên cần
+                } else if (totalRawXP > 0) {
+                    // SỬA LỖI: Chỉ cộng điểm chuyên cần nếu có làm bài đàng hoàng (Điểm thô > 0)
+                    gainedXP = 5; 
                     xpMessage = `💡 Ôn tập tốt! Nhận +${gainedXP} XP điểm chuyên cần.`;
+                } else {
+                    // CHẶN SPAM: Nộp bài trắng hoặc điểm quá thấp sẽ không nhận được XP
+                    gainedXP = 0; 
+                    xpMessage = `💡 Hãy ôn tập kỹ hơn ở lần sau nhé!`;
                 }
             }
 
