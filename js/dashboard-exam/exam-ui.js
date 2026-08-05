@@ -7,8 +7,33 @@ export function renderExams() {
     if (!examListContainer) return;
     
     try {
-        if (!document.getElementById('hide-exam-style')) {
-            document.head.insertAdjacentHTML('beforeend', `<style id="hide-exam-style">.exam-card-hover:hover .btn-hide-exam { display: flex !important; }</style>`);
+        // Tích hợp CSS cho Nút ẩn đề và Hiệu ứng nổi bật của Avatar Stack
+        if (!document.getElementById('custom-exam-ui-styles')) {
+            document.head.insertAdjacentHTML('beforeend', `
+            <style id="custom-exam-ui-styles">
+                .exam-card-hover:hover .btn-hide-exam { display: flex !important; }
+                
+                /* Hiệu ứng đẹp cho Avatar Stack */
+                .avatar-stack-img { 
+                    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); 
+                    cursor: pointer; 
+                }
+                .avatar-stack-img:hover { 
+                    transform: translateY(-4px) scale(1.2); 
+                    z-index: 50 !important; 
+                    box-shadow: 0 6px 12px rgba(0,0,0,0.2) !important; 
+                    border-color: #3b82f6 !important; 
+                }
+                .attempt-pill { 
+                    background: #f8fafc; 
+                    padding: 3px 10px; 
+                    border-radius: 20px; 
+                    font-weight: 700; 
+                    color: #475569; 
+                    font-size: 0.8rem; 
+                    border: 1px solid #e2e8f0; 
+                }
+            </style>`);
         }
 
         if (State.allExamsData.length === 0) {
@@ -193,29 +218,27 @@ export function renderExams() {
                 
                 const hideBtnHtml = exam.technique === 'AI Tự Động' ? `<button class="btn-hide-exam" onclick="hideExam(event, '${safeExamId}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` : '';
 
-                // LOGIC VẼ AVATAR MỚI (Lấy 5 người kèm Tên)
-                let avatarStackHtml = `<div class="attempts" style="display: flex; align-items: center; gap: 6px;" title="${exam.attemptCount} lượt thi">`;
+                // CẬP NHẬT GIAO DIỆN AVATAR (Size lớn hơn, class Hover đẹp hơn)
+                let avatarStackHtml = `<div class="attempts" style="display: flex; align-items: center; gap: 10px;">`;
                 
                 let avatarsToRender = (exam.recentAvatars && exam.recentAvatars.length > 0) 
-                    ? exam.recentAvatars.slice(0, 5) // Đổi từ 3 -> 5
+                    ? exam.recentAvatars.slice(0, 5) 
                     : (exam.attemptCount > 0 ? [{ url: 'https://ui-avatars.com/api/?name=U&background=e2e8f0&color=64748b', name: 'Người ẩn danh' }] : []);
 
                 if (avatarsToRender.length > 0) {
-                    avatarStackHtml += `<div style="display: flex; align-items: center;">`;
+                    avatarStackHtml += `<div style="display: flex; align-items: center; padding-left: 4px;">`;
                     avatarsToRender.forEach((ava, idx) => {
-                        // Tương thích ngược với định dạng chuỗi cũ (nếu có cache sót)
                         const avaUrl = typeof ava === 'string' ? ava : ava.url;
                         const avaName = typeof ava === 'string' ? 'Người dùng' : (ava.name || 'Người dùng');
                         
-                        // Bổ sung thuộc tính title và cursor pointer
-                        avatarStackHtml += `<img src="${avaUrl}" title="${avaName}" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; margin-left: ${idx > 0 ? '-10px' : '0'}; z-index: ${10 - idx}; box-shadow: 0 1px 3px rgba(0,0,0,0.15); cursor: pointer;" onerror="this.src='https://ui-avatars.com/api/?name=U&background=e2e8f0&color=64748b'">`;
+                        avatarStackHtml += `<img class="avatar-stack-img" src="${avaUrl}" title="${avaName}" style="width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; margin-left: ${idx > 0 ? '-12px' : '0'}; z-index: ${10 - idx}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onerror="this.src='https://ui-avatars.com/api/?name=U&background=e2e8f0&color=64748b'">`;
                     });
                     avatarStackHtml += `</div>`;
                 } else {
-                    avatarStackHtml += `<i class="fa-solid fa-users" style="color: #94a3b8;"></i>`;
+                    avatarStackHtml += `<div style="width: 28px; height: 28px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border: 2px solid #fff;"><i class="fa-solid fa-users" style="color: #94a3b8; font-size: 11px;"></i></div>`;
                 }
                 
-                avatarStackHtml += `<span style="font-weight: 600; color: #6b7280; font-size: 0.85rem;">${exam.attemptCount} lượt thi</span></div>`;
+                avatarStackHtml += `<span class="attempt-pill">${exam.attemptCount} lượt thi</span></div>`;
 
                 let topBadgeHtml = '';
                 if (exam.topBadge === 'week') {
