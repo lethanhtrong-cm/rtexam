@@ -109,7 +109,7 @@ export async function loadAggregatedExamData() {
             sessionStorage.setItem(coreCacheKey, JSON.stringify(examMap));
         }
 
-        // 2.5 TÍNH TOÁN DANH HIỆU (BADGES) & AVATAR NGƯỜI THI (Tích hợp xử lý chung để giảm thiểu API call)
+        // 2.5 TÍNH TOÁN DANH HIỆU (BADGES) & AVATAR NGƯỜI THI
         let badgesMap = {};
         let avatarsMap = {};
         const extraCacheKey = `examExtraCache_${uid}`;
@@ -122,7 +122,9 @@ export async function loadAggregatedExamData() {
         } else {
             const resultsSnap = await getDocs(collection(db, "results"));
             const counts = { week: {}, month: {}, year: {} };
-            const recentUsersPerExam = {};
+            
+            // MAP chứa thông tin user theo đề thi (lưu timestamp để tìm người mới nhất)
+            const usersExamsMap = {}; 
             const allUniqueUids = new Set();
             
             const now = Date.now();
@@ -133,7 +135,7 @@ export async function loadAggregatedExamData() {
             resultsSnap.forEach(doc => {
                 const data = doc.data();
                 const eId = data.examId || data.examCode;
-                const userId = data.uid || data.userId;
+                const userId = data.uid || data.userId || data.email; // Hỗ trợ fallback sang email nếu thiếu uid
                 
                 // Chuẩn hóa timestamp
                 let ts = 0;
@@ -151,13 +153,13 @@ export async function loadAggregatedExamData() {
                         if (ts >= tYear) counts.year[eId] = (counts.year[eId] || 0) + 1;
                     }
                     
-                    // Thu thập UID cho Avatar (tối đa 3 người/đề)
+                    // Thu thập người dùng và lưu lại timestamp lớn nhất (nộp bài gần nhất) của họ
                     if (userId) {
-                        if (!recentUsersPerExam[eId]) recentUsersPerExam[eId] = new Set();
-                        if (recentUsersPerExam[eId].size < 3) {
-                            recentUsersPerExam[eId].add(userId);
-                            allUniqueUids.add(userId);
+                        if (!usersExamsMap[eId]) usersExamsMap[eId] = {};
+                        if (!usersExamsMap[eId][userId] || ts > usersExamsMap[eId][userId].ts) {
+                            usersExamsMap[eId][userId] = { ts: ts, email: data.email || data.userEmail || userId };
                         }
+                        allUniqueUids.add(userId);
                     }
                 }
             });
@@ -181,16 +183,44 @@ export async function loadAggregatedExamData() {
             if (topMonth && !badgesMap[topMonth]) badgesMap[topMonth] = 'month';
             if (topWeek && !badgesMap[topWeek]) badgesMap[topWeek] = 'week';
 
-            // Tạo Avatar giả lập theo tên (có thể thay bằng API query vào bảng users sau này)
+            // Gọi Firestore để kéo Avatar THẬT từ bảng users
             const userAvatars = {};
             if (allUniqueUids.size > 0) {
-                Array.from(allUniqueUids).forEach(userId => {
-                    userAvatars[userId] = `https://ui-avatars.com/api/?name=${userId.substring(0,2)}&background=e2e8f0&color=64748b`;
-                });
+                try {
+                    const usersSnap = await getDocs(collection(db, "users"));
+                    usersSnap.forEach(uDoc => {
+                        const uData = uDoc.data();
+                        const id = uDoc.id;
+                        const mail = uData.email;
+                        
+                        const photo = uData.photoURL || uData.avatar;
+                        const name = String(uData.displayName || mail || id);
+                        const defaultAva = `https://ui-avatars.com/api/?name=${name.substring(0,2)}&background=e2e8f0&color=64748b`;
+                        
+                        if (allUniqueUids.has(id)) userAvatars[id] = photo || defaultAva;
+                        if (mail && allUniqueUids.has(mail)) userAvatars[mail] = photo || defaultAva;
+                    });
+                } catch (e) {
+                    console.log("Không thể kéo dữ liệu Avatar từ users", e);
+                }
             }
-            
-            Object.keys(recentUsersPerExam).forEach(eId => {
-                avatarsMap[eId] = Array.from(recentUsersPerExam[eId]).map(userId => userAvatars[userId]);
+
+            // Fallback (dự phòng) trường hợp user thi nhưng không tồn tại trong bảng users
+            Array.from(allUniqueUids).forEach(userId => {
+                if (!userAvatars[userId]) {
+                    const prefix = String(userId).substring(0, 2);
+                    userAvatars[userId] = `https://ui-avatars.com/api/?name=${prefix}&background=e2e8f0&color=64748b`;
+                }
+            });
+
+            // Lọc ra đúng 3 người thi MỚI NHẤT cho mỗi đề
+            Object.keys(usersExamsMap).forEach(eId => {
+                const sortedUsers = Object.entries(usersExamsMap[eId])
+                    .map(([uid, info]) => ({ uid, ...info }))
+                    .sort((a, b) => b.ts - a.ts) // Sort mảng từ mới -> cũ
+                    .slice(0, 3); // Lấy 3 người đầu tiên
+                
+                avatarsMap[eId] = sortedUsers.map(u => userAvatars[u.uid]);
             });
 
             sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap }));
