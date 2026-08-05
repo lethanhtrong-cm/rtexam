@@ -400,3 +400,11 @@ function renderLeaderboardPage(restUsersList, page) {
     btnPrev.disabled = page === 1;
     btnNext.disabled = page === maxPage;
 }
+
+// Chặn các phím tắt mở Developer Tools (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U)
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || (e.ctrlKey && e.key === 'U')) {
+        e.preventDefault();
+        console.warn('⚠️ Hệ thống ghi nhận hành vi can thiệp trái phép!');
+    }
+});
