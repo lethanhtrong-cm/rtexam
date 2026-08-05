@@ -2,9 +2,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, setDoc, increment, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// ĐÃ CHIA NHỎ: Import các module xử lý giao diện và Flashcard
+// Import các module hệ thống
 import { redirect, showToast, initThemeToggle, initMobilePanel } from './quiz-modules/quiz-utils.js';
 import { initFlashcard } from './quiz-modules/quiz-flashcard.js';
+import { resetAntiCheatWarning, updateAntiCheatState, setupAntiCheatEvents, obfuscateText } from './quiz-modules/quiz-anti-cheat.js';
+import { saveDraftToLocal, loadDraftFromLocal, clearDraftFromLocal } from './quiz-modules/quiz-draft.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
@@ -25,17 +27,13 @@ let flaggedQuestions = {};
 let isSubmitted = false;
 let currentUser = null; 
 let isShowExplanation = false;
-
-// CỜ THEO DÕI ĐIỀU HƯỚNG ĐỂ CHỐNG XUNG ĐỘT TRẠNG THÁI ONLINE
 let isNavigating = false; 
-
-// CỜ KIỂM SOÁT TÍNH NĂNG CHỐNG GIAN LẬN (Mặc định tắt)
 let isAntiCheatEnabled = false;
 
 let timerInterval;
 let examDuration = 15 * 60; 
 let timeRemaining = examDuration;
-let currentDifficulty = 'medium'; // Thêm biến lưu độ khó của đề thi
+let currentDifficulty = 'medium'; 
 
 let finalScore = 0;
 let finalCorrectCount = 0;
@@ -54,103 +52,59 @@ const currentResultId = urlParams.get('resultId');
 const currentRoomId = urlParams.get('roomId'); 
 const currentMode = urlParams.get('mode');
 
-// Khởi tạo các thành phần giao diện từ Module
 initThemeToggle();
 initMobilePanel();
 
-// Khởi tạo Module Flashcard và cung cấp State cho nó (Dependency Injection)
 const flashcardAPI = initFlashcard(db, () => ({
-    currentExamId,
-    currentUser,
-    questions,
-    currentMode,
-    showToast,
-    returnToLobbyOrDashboard
+    currentExamId, currentUser, questions, currentMode, showToast, returnToLobbyOrDashboard
 }));
 
-async function returnToLobbyOrDashboard() {
-    isNavigating = true; // Kích hoạt cờ để hàm beforeunload bỏ qua việc ghi Offline
-    if (currentUser && !isSubmitted) {
-        try {
-            const userRef = doc(db, "users", currentUser.uid);
-            await updateDoc(userRef, { examStatus: 'idle' });
-        } catch (err) { console.error(err); }
-    }
-    if (currentRoomId) redirect(`lobby.html?roomId=${currentRoomId}`);
-    else redirect('dashboard.html');
+// =========================================================================
+// LIÊN KẾT CÁC MODULE CHỨC NĂNG BÊN NGOÀI
+// =========================================================================
+function updateAntiCheatStateHelper() {
+    updateAntiCheatState({ isAntiCheatEnabled, isSubmitted, isShowExplanation, currentMode });
 }
 
-let warningCount = 0;
-
-function updateAntiCheatState() {
-    if (!isAntiCheatEnabled) {
-        document.body.classList.remove('no-select');
-        return;
-    }
-    
-    if (!isSubmitted && !isShowExplanation && currentMode !== 'flashcard') document.body.classList.add('no-select');
-    else document.body.classList.remove('no-select');
-}
-
-['contextmenu', 'copy', 'cut', 'paste'].forEach(evt => {
-    document.addEventListener(evt, (e) => {
-        if (!isAntiCheatEnabled) return; // Bỏ qua nếu tính năng bị tắt
-        
-        if (!isSubmitted && !isShowExplanation && currentMode !== 'flashcard') {
-            e.preventDefault();
-            showToast("⚠️ Hành động này bị vô hiệu hóa trong phòng thi!");
-        }
-    });
-});
-
-document.addEventListener('visibilitychange', () => {
-    if (!isAntiCheatEnabled) return; // Bỏ qua nếu tính năng bị tắt
-    
-    if (document.hidden && !isSubmitted && !isShowExplanation && currentMode !== 'flashcard' && !document.getElementById('reviewExamModal').classList.contains('active')) {
-        warningCount++;
-        const warningModal = document.getElementById('cheat-warning-modal');
-        const warningText = document.getElementById('cheat-warning-text');
-        
-        if (warningCount >= 3) {
-            warningText.innerHTML = `<b>Vi phạm lần ${warningCount}:</b> Bạn vừa rời khỏi phòng thi!<br><br>Bạn đã vi phạm quá 3 lần, hệ thống sẽ tự động thu bài.`;
-            document.getElementById('btn-close-warning').innerText = "Đóng & Nộp bài";
-            warningModal.classList.add('active');
-            document.getElementById('btn-close-warning').onclick = () => { warningModal.classList.remove('active'); };
-            executeSubmit();
-        } else {
-            warningText.innerHTML = `<b>Vi phạm lần ${warningCount}:</b> Bạn vừa rời khỏi phòng thi!<br><br>Nếu vi phạm quá 3 lần, hệ thống sẽ tự động thu bài.`;
-            document.getElementById('btn-close-warning').innerText = "Tôi đã hiểu";
-            warningModal.classList.add('active');
-            document.getElementById('btn-close-warning').onclick = () => { warningModal.classList.remove('active'); };
-        }
-    }
-});
-
-function getDraftKey() { return `quiz_draft_${currentExamId}_${currentUser.uid}`; }
+setupAntiCheatEvents(
+    () => ({ isAntiCheatEnabled, isSubmitted, isShowExplanation, currentMode }),
+    () => executeSubmit()
+);
 
 function saveDraft() {
-    if (isSubmitted || !currentUser || !currentExamId || currentMode === 'flashcard') return;
-    const draft = { userAnswers, flaggedQuestions, timeRemaining, currentIndex };
-    localStorage.setItem(getDraftKey(), JSON.stringify(draft));
+    saveDraftToLocal({ isSubmitted, currentUser, currentExamId, currentMode, userAnswers, flaggedQuestions, timeRemaining, currentIndex });
 }
 
 function loadDraft() {
-    if (!currentUser || !currentExamId || currentMode === 'flashcard') return false;
-    const draftStr = localStorage.getItem(getDraftKey());
-    if (draftStr) {
-        try {
-            const draft = JSON.parse(draftStr);
-            userAnswers = draft.userAnswers || {};
-            flaggedQuestions = draft.flaggedQuestions || {};
-            if (draft.timeRemaining) timeRemaining = draft.timeRemaining;
-            if (draft.currentIndex !== undefined) currentIndex = draft.currentIndex;
-            return true;
-        } catch(e) {}
+    const draft = loadDraftFromLocal(currentUser, currentExamId, currentMode);
+    if (draft) {
+        userAnswers = draft.userAnswers || {};
+        flaggedQuestions = draft.flaggedQuestions || {};
+        if (draft.timeRemaining !== undefined) timeRemaining = draft.timeRemaining;
+        if (draft.currentIndex !== undefined) currentIndex = draft.currentIndex;
+        return true;
     }
     return false;
 }
 
-function clearDraft() { if (currentUser && currentExamId) localStorage.removeItem(getDraftKey()); }
+function clearDraft() {
+    clearDraftFromLocal(currentUser, currentExamId);
+}
+
+// =========================================================================
+// QUẢN LÝ TẢI TRANG & ĐIỀU HƯỚNG
+// =========================================================================
+async function returnToLobbyOrDashboard() {
+    isNavigating = true; 
+    if (currentUser && !isSubmitted) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            await updateDoc(userRef, { examStatus: 'idle' });
+        } catch (err) {}
+    }
+    if (currentRoomId) redirect(`lobby.html?roomId=${currentRoomId}`);
+    else redirect('dashboard.html');
+}
 
 onAuthStateChanged(auth, (user) => {
     if (!user || user.isAnonymous) {
@@ -162,11 +116,8 @@ onAuthStateChanged(auth, (user) => {
             loadReviewMode(currentResultId);
         } else if (currentExamId) {
             document.getElementById('quiz-title-display').innerText = `Bài thi: ${currentExamId}`;
-            if (currentMode === 'flashcard') {
-                loadFlashcardMode();
-            } else {
-                loadExamDataAndQuestions();
-            }
+            if (currentMode === 'flashcard') loadFlashcardMode();
+            else loadExamDataAndQuestions();
         }
     }
 });
@@ -179,10 +130,7 @@ async function loadFlashcardMode() {
     try {
         await fetchQuestionsFromFirestore();
         document.getElementById('skeleton-container').classList.remove('active');
-        
-        // Gọi hàm từ Module flashcard để kích hoạt hiển thị
         if (flashcardAPI) flashcardAPI.triggerCreate();
-        
     } catch (error) {
         document.getElementById('skeleton-container').classList.remove('active');
         document.getElementById('real-content').classList.remove('hidden');
@@ -201,13 +149,10 @@ async function loadExamDataAndQuestions() {
         if (examDoc.exists()) {
             const examData = examDoc.data();
             if (examData.timeLimit) examDuration = examData.timeLimit * 60; 
-            if (examData.difficulty) currentDifficulty = String(examData.difficulty).toLowerCase(); // Lấy độ khó
-            
-            // Khởi tạo trạng thái chống gian lận từ thuộc tính Đề thi
+            if (examData.difficulty) currentDifficulty = String(examData.difficulty).toLowerCase(); 
             isAntiCheatEnabled = examData.antiCheatEnabled === true;
         }
 
-        // Ưu tiên trạng thái chống gian lận từ cấu hình Phòng (nếu có)
         if (currentRoomId) {
             const roomDocRef = doc(db, "rooms", currentRoomId);
             const roomDoc = await getDoc(roomDocRef);
@@ -228,7 +173,7 @@ async function loadExamDataAndQuestions() {
 async function initExamState() {
     isSubmitted = false;
     isShowExplanation = false;
-    warningCount = 0;
+    resetAntiCheatWarning(); // Chuyển logic reset vào trong Module
     
     const hasDraft = loadDraft();
     if (!hasDraft) {
@@ -240,7 +185,7 @@ async function initExamState() {
         showToast("Đã khôi phục trạng thái bài làm trước đó!");
     }
     
-    updateAntiCheatState(); 
+    updateAntiCheatStateHelper(); 
     
     const btnSubmit = document.getElementById('btn-submit-exam');
     btnSubmit.disabled = false; 
@@ -281,7 +226,7 @@ async function loadReviewMode(resultId) {
         userAnswers = resultData.savedAnswers || {}; 
         isSubmitted = true;
         isShowExplanation = true;
-        updateAntiCheatState(); 
+        updateAntiCheatStateHelper(); 
 
         document.getElementById('quiz-title-display').innerText = `Xem lại bài thi: ${currentExamId}`;
         document.getElementById('timer-container-box').style.display = 'none'; 
@@ -359,9 +304,6 @@ function updateTimerDisplay() {
     }
 }
 
-// =========================================================================
-// HÀM HELPER HỖ TRỢ BỘ LỌC THỜI GIAN DB
-// =========================================================================
 function getCurrentMonthKey() {
     const now = new Date();
     const year = now.getFullYear();
@@ -381,7 +323,7 @@ async function executeSubmit() {
     stopTimer(); 
     isSubmitted = true; 
     clearDraft(); 
-    updateAntiCheatState(); 
+    updateAntiCheatStateHelper(); 
     
     finalTotal = questions.length;
     const timeSpent = examDuration - timeRemaining; 
@@ -397,104 +339,79 @@ async function executeSubmit() {
 
     finalScore = Math.round(((finalCorrectCount / finalTotal) * 10) * 100) / 100; 
 
-    // Biến toàn cục dùng cho XP Logic
     let gainedXP = 0;
     let xpMessage = "";
     let isRetake = false;
     let isNewRecord = false;
     let totalRawXP = 0;
     
-    // Biến xử lý Điểm danh ngày mới (Daily Attendance)
     let attendanceBonus = 0;
     let isDailyFirst = false;
-    const todayStr = new Date().toLocaleDateString('en-CA'); // Định dạng YYYY-MM-DD
+    const todayStr = new Date().toLocaleDateString('en-CA'); 
 
     try {
         const resultsRef = collection(db, "results");
         const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId));
         const resultSnapshot = await getDocs(qResult);
         
-        // KIỂM TRA ĐIỂM DANH: Đọc dữ liệu Leaderboard
         const leaderboardRef = doc(db, "users_leaderboard", currentUser.uid);
         const lbSnap = await getDoc(leaderboardRef);
         
         if (lbSnap.exists()) {
-            if (lbSnap.data().lastAttendanceDate !== todayStr) {
-                isDailyFirst = true; // Khác ngày lưu trữ -> Đánh dấu là làm bài lần đầu trong ngày
-            }
+            if (lbSnap.data().lastAttendanceDate !== todayStr) isDailyFirst = true; 
         } else {
-            isDailyFirst = true; // Tài khoản mới hoàn toàn
+            isDailyFirst = true; 
         }
         
-        // Nếu là bài đầu tiên trong ngày, tặng thưởng cố định 20 XP
-        if (isDailyFirst) {
-            attendanceBonus = 20;
-        }
+        if (isDailyFirst) attendanceBonus = 20;
 
         if (finalTotal > 0) {
             let wrongOrEmptyCount = finalTotal - finalCorrectCount;
-
-            // 1. Tính điểm cơ bản & Phạt điểm (10 điểm đúng, -2 điểm sai/bỏ trống)
             let baseXP = (finalCorrectCount * 10) - (wrongOrEmptyCount * 2);
             if (baseXP < 0) baseXP = 0; 
             
             let accuracyRate = finalCorrectCount / finalTotal;
-
-            // 2. Xét Ngưỡng kích hoạt hệ số 75%
             let difficultyMultiplier = 1.0;
             if (accuracyRate >= 0.75) {
                 if (currentDifficulty === 'hard') difficultyMultiplier = 1.5;
                 else if (currentDifficulty === 'medium') difficultyMultiplier = 1.2;
             }
 
-            // 3. Thưởng hoàn thành trọn vẹn 100% & 4. Thưởng tốc độ
             let perfectBonus = 0;
             let speedBonus = 0;
 
             if (accuracyRate === 1) {
-                perfectBonus = 100; // Flat Bonus cực lớn cho 100%
-                
-                // Thưởng tốc độ tỉ lệ thuận với thời gian còn lại (Tối đa nhận 50 XP)
+                perfectBonus = 100; 
                 speedBonus = Math.round((timeRemaining / examDuration) * 50);
             }
 
-            // Tổng XP thô nhận được từ lần làm này
             totalRawXP = Math.round((baseXP * difficultyMultiplier) + perfectBonus + speedBonus);
             if (totalRawXP < 0) totalRawXP = 0;
 
-            // 5. Phân loại luồng xử lý: Làm lần đầu hay Ôn tập
             if (resultSnapshot.empty) {
                 gainedXP = totalRawXP;
                 xpMessage = `🎉 Xuất sắc! Bạn nhận được +${gainedXP} XP cho bài thi này!`;
             } else {
                 isRetake = true;
-                
-                // Quét điểm thô cao nhất trong lịch sử ôn tập đề này
                 let previousBestRawXP = 0;
                 resultSnapshot.forEach(doc => {
                     let data = doc.data();
-                    if (data.earnedXP && data.earnedXP > previousBestRawXP) {
-                        previousBestRawXP = data.earnedXP;
-                    }
+                    if (data.earnedXP && data.earnedXP > previousBestRawXP) previousBestRawXP = data.earnedXP;
                 });
                 
                 if (totalRawXP > previousBestRawXP) {
                     isNewRecord = true;
-                    // SỬA LỖI: Áp dụng công thức 20% Base XP nhân hệ số khó
                     gainedXP = Math.round((baseXP * 0.2) * difficultyMultiplier);
                     xpMessage = `🔥 Kỷ lục mới! Bạn nhận được +${gainedXP} XP khuyến khích!`;
                 } else if (totalRawXP > 0) {
-                    // SỬA LỖI: Chỉ cộng điểm chuyên cần nếu có làm bài đàng hoàng (Điểm thô > 0)
                     gainedXP = 5; 
                     xpMessage = `💡 Ôn tập tốt! Nhận +${gainedXP} XP điểm chuyên cần.`;
                 } else {
-                    // CHẶN SPAM: Nộp bài trắng hoặc điểm quá thấp sẽ không nhận được XP
                     gainedXP = 0; 
                     xpMessage = `💡 Hãy ôn tập kỹ hơn ở lần sau nhé!`;
                 }
             }
 
-            // 6. Cập nhật Leaderboard Gồm cả Điểm thi + Điểm danh
             const totalAddedXP = gainedXP + attendanceBonus;
             
             if (totalAddedXP > 0) {
@@ -510,7 +427,6 @@ async function executeSubmit() {
                     [weekKey]: increment(totalAddedXP)
                 };
                 
-                // Ghi nhận mốc điểm danh ngày mới
                 if (isDailyFirst) {
                     updatePayload.lastAttendanceDate = todayStr;
                     xpMessage += ` (+20 XP Điểm danh ngày mới!)`;
@@ -543,14 +459,13 @@ async function executeSubmit() {
         await addDoc(collection(db, "results"), {
             email: currentUser.email, examId: currentExamId, score: finalScore,
             correctCount: finalCorrectCount, totalQuestions: finalTotal,
-            earnedXP: totalRawXP, // BẮT BUỘC LƯU LẠI XP THÔ ĐỂ SO SÁNH VỚI CÁC LẦN ÔN TẬP SAU
+            earnedXP: totalRawXP, 
             savedAnswers: userAnswers, timeSpent: timeSpent, timestamp: new Date().toISOString() 
         });
 
         const examDocRef = doc(db, "exams", currentExamId);
         await setDoc(examDocRef, { attemptCount: increment(1) }, { merge: true });
         
-        // Cập nhật tham số cuối cùng để hiển thị trên Modal
         showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
     } catch (error) {
         showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
@@ -765,7 +680,6 @@ function resetFeedbackUI() {
     btn.innerText = "Gửi Đánh Giá"; btn.disabled = false;
 }
 
-// Cập nhật tham số nhận thêm khoản attendanceBonus (Điểm danh)
 function showResultModal(correctCount, total, score, xp = 0, isRetake = false, isNewRecord = false, attendanceBonus = 0) {
     const modal = document.getElementById('result-modal');
     document.getElementById('modal-score-text').innerText = score;
@@ -775,13 +689,11 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
     const scoreCircle = document.getElementById('modal-score-circle');
     scoreCircle.style.background = `conic-gradient(#10b981 ${percentage}%, #d1fae5 ${percentage}%)`;
 
-    // CẬP NHẬT GIAO DIỆN XP KÈM THÔNG BÁO ĐIỂM DANH
     let xpDisplay = document.getElementById('modal-xp-display');
     if (!xpDisplay) {
         xpDisplay = document.createElement('div');
         xpDisplay.id = 'modal-xp-display';
         xpDisplay.style.cssText = "margin-top: 15px; font-weight: bold; font-size: 1.1rem; padding: 5px 15px; border-radius: 20px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.05);";
-        
         if (scoreCircle && scoreCircle.parentNode) {
             scoreCircle.parentNode.insertBefore(xpDisplay, scoreCircle.nextSibling);
         }
@@ -789,23 +701,19 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
     
     xpDisplay.style.display = 'inline-block';
     
-    // Tổng số XP học viên nhìn thấy
     let totalXPShow = xp + attendanceBonus;
     let attText = attendanceBonus > 0 ? " + Điểm danh" : "";
     
     if (!isRetake) {
-        // Lần thi đầu tiên của đề thi này
         xpDisplay.innerHTML = `🌟 +${totalXPShow} XP${attendanceBonus > 0 ? ' (Gồm Điểm danh)' : ''}`;
         xpDisplay.style.color = "#ea580c";
         xpDisplay.style.background = "#ffedd5";
     } else {
-        // Thi lại (Chế độ ôn tập)
         if (isNewRecord && xp > 0) {
             xpDisplay.innerHTML = `🔥 +${totalXPShow} XP (Vượt kỷ lục${attText})`;
             xpDisplay.style.color = "#ea580c";
             xpDisplay.style.background = "#ffedd5";
         } else {
-            // Không phá kỷ lục
             xpDisplay.innerHTML = `💡 +${totalXPShow} XP (Chuyên cần${attText})`;
             xpDisplay.style.color = "#059669"; 
             xpDisplay.style.background = "#d1fae5";
@@ -823,9 +731,8 @@ document.getElementById('btn-back-dashboard').onclick = () => returnToLobbyOrDas
 document.getElementById('btn-modal-retry').onclick = () => { closeModal(); initExamState(); };
 document.getElementById('btn-modal-explain').onclick = () => { closeModal(); openReviewModal(finalScore, finalCorrectCount, finalTotal); };
 
-
 // =========================================================================
-// QUẢN LÝ TƯƠNG TÁC LÀM BÀI (TÙY CHỌN, BẤM PHÍM, V.V...)
+// QUẢN LÝ GIAO DIỆN CÂU HỎI
 // =========================================================================
 function handleOptionSelect(idx) {
     if (isSubmitted) return; 
@@ -865,7 +772,8 @@ function renderQuestion() {
     const options = questionData.options || [];
 
     document.getElementById('question-badge').innerText = `Câu ${currentIndex + 1}`;
-    document.getElementById('question-text').innerText = questionText;
+    // CHỐNG GIAN LẬN: Mã này tự động gọi hàm obfuscateText từ quiz-anti-cheat.js
+    document.getElementById('question-text').innerHTML = obfuscateText(questionText, isSubmitted, isShowExplanation);
     
     const container = document.getElementById('options-container');
     container.innerHTML = ''; 
@@ -878,7 +786,7 @@ function renderQuestion() {
         if (userAnswers[currentIndex] === idx) extraClasses += ' selected';
 
         div.className = 'option-item' + extraClasses;
-        div.innerHTML = `<div class="option-label">${['A','B','C','D'][idx]}</div><div>${opt}</div>`;
+        div.innerHTML = `<div class="option-label">${['A','B','C','D', 'E', 'F'][idx]}</div><div>${obfuscateText(opt, isSubmitted, isShowExplanation)}</div>`;
         
         div.onclick = () => handleOptionSelect(idx);
         container.appendChild(div);
@@ -929,7 +837,7 @@ document.getElementById('btn-prev').onclick = () => { if(currentIndex > 0) { cur
 document.getElementById('btn-next').onclick = () => { if(currentIndex < questions.length - 1) { currentIndex++; saveDraft(); renderAll(); } };
 
 document.getElementById('btn-logout').addEventListener('click', () => {
-    isNavigating = true; // NGĂN CHẶN XUNG ĐỘT TRẠNG THÁI KHI ĐĂNG XUẤT
+    isNavigating = true; 
     if (currentUser) {
         updateDoc(doc(db, "users", currentUser.uid), { isOnline: false, examStatus: 'idle' }).catch(() => {});
         sessionStorage.removeItem(`online_flag_${currentUser.uid}`);
@@ -955,13 +863,11 @@ document.addEventListener('keydown', (e) => {
 // SỰ KIỆN: XỬ LÝ KHI NGƯỜI DÙNG TẮT TRÌNH DUYỆT / ĐÓNG TAB NGANG
 // =========================================================================
 window.addEventListener('beforeunload', () => {
-    // Chỉ kích hoạt ghi Offline nếu người dùng thực sự đóng tab (không phải điều hướng nội bộ)
     if (!isNavigating && currentUser) {
         updateDoc(doc(db, "users", currentUser.uid), { 
             isOnline: false, 
             examStatus: 'idle' 
         }).catch(() => {});
-        // Xóa cờ cache để lần sau mở lại web sẽ tự nhận là Online
         sessionStorage.removeItem(`online_flag_${currentUser.uid}`);
     }
 });
