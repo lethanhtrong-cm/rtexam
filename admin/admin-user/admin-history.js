@@ -62,13 +62,53 @@ export async function handleViewHistory(userEmail) {
             return tA - tB;
         });
 
-        // Bước 3: Đếm số thứ tự lần thi (attempt) trên từng mã đề
+        // Bước 3: Đếm số thứ tự lần thi (attempt) và mô phỏng lại XP thực nhận
         const attemptCounts = {};
+        const maxRawXpDict = {};
+
         resultsArray.forEach(item => {
-            const examCode = item.data.examId || item.data.examCode || item.data.quizId || 'Không rõ';
-            if (!attemptCounts[examCode]) attemptCounts[examCode] = 0;
+            const data = item.data;
+            const examCode = data.examId || data.examCode || data.quizId || 'Không rõ';
+            
+            // Khởi tạo Tracking
+            if (!attemptCounts[examCode]) {
+                attemptCounts[examCode] = 0;
+                maxRawXpDict[examCode] = 0;
+            }
             attemptCounts[examCode]++;
             item.attemptNumber = attemptCounts[examCode];
+
+            // Trích xuất XP Thô (Raw XP) từ DB
+            let rawXP = 0;
+            if (data.earnedXP !== undefined) {
+                rawXP = data.earnedXP;
+            } else if (data.xp !== undefined) {
+                rawXP = data.xp;
+            } else if (data.score !== undefined && data.score > 0) {
+                // Tương thích ngược (Legacy Fallback): Những bài làm rất cũ không có field XP
+                // Tính ước lượng Base XP = Điểm x 10 
+                rawXP = Math.round(data.score * 10);
+            }
+
+            // Phân loại và tính XP thực tế được hiển thị (Gained XP)
+            let displayXP = 0;
+            if (item.attemptNumber === 1) {
+                displayXP = rawXP; // Lần đầu: Nhận full
+                maxRawXpDict[examCode] = rawXP;
+            } else {
+                let prevMax = maxRawXpDict[examCode];
+                if (rawXP > prevMax) {
+                    displayXP = rawXP - prevMax; // Vượt kỷ lục: Lấy phần chênh lệch
+                    maxRawXpDict[examCode] = rawXP; // Cập nhật kỷ lục
+                } else if (rawXP > 0) {
+                    displayXP = 5; // Ôn tập không vượt kỷ lục: Điểm chuyên cần
+                } else {
+                    displayXP = 0; // Điểm liệt / Nộp bài trắng
+                }
+            }
+            
+            // Lưu XP hiển thị vào object để xài ở Bước 5
+            item.displayXP = displayXP;
         });
 
         // Bước 4: Đảo ngược mảng để hiển thị bài làm mới nhất lên trên cùng (UX)
@@ -80,8 +120,8 @@ export async function handleViewHistory(userEmail) {
             const examCode = data.examId || data.examCode || data.quizId || 'Không rõ';
             const score = data.score !== undefined ? data.score : 'N/A';
             
-            // Trích xuất điểm XP (hỗ trợ fallback nếu trường lưu là earnedXP)
-            const xp = data.xp !== undefined ? data.xp : (data.earnedXP || 0);
+            // Sử dụng XP đã được tính toán ở Bước 3
+            const xp = item.displayXP;
             
             const examName = cachedExamsMap[examCode];
             const displayTitle = examName 
