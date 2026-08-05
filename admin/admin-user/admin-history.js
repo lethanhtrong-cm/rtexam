@@ -98,7 +98,8 @@ export async function handleViewHistory(userEmail) {
             } else {
                 let prevMax = maxRawXpDict[examCode];
                 if (rawXP > prevMax) {
-                    displayXP = rawXP - prevMax; // Vượt kỷ lục: Lấy phần chênh lệch
+                    // SỬA LỖI: Mô phỏng điểm khuyến khích hiển thị (20% XP, giới hạn tối đa 30 XP)
+                    displayXP = Math.min(Math.round(rawXP * 0.2), 30); 
                     maxRawXpDict[examCode] = rawXP; // Cập nhật kỷ lục
                 } else if (rawXP > 0) {
                     displayXP = 5; // Ôn tập không vượt kỷ lục: Điểm chuyên cần
