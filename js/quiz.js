@@ -480,8 +480,9 @@ async function executeSubmit() {
                 
                 if (totalRawXP > previousBestRawXP) {
                     isNewRecord = true;
-                    gainedXP = totalRawXP - previousBestRawXP;
-                    xpMessage = `🔥 Kỷ lục mới! Bạn nhận thêm phần chênh lệch +${gainedXP} XP!`;
+                    // SỬA LỖI: Áp dụng công thức 20% Base XP nhân hệ số khó
+                    gainedXP = Math.round((baseXP * 0.2) * difficultyMultiplier);
+                    xpMessage = `🔥 Kỷ lục mới! Bạn nhận được +${gainedXP} XP khuyến khích!`;
                 } else if (totalRawXP > 0) {
                     // SỬA LỖI: Chỉ cộng điểm chuyên cần nếu có làm bài đàng hoàng (Điểm thô > 0)
                     gainedXP = 5; 
