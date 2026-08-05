@@ -123,7 +123,6 @@ export async function loadAggregatedExamData() {
             const resultsSnap = await getDocs(collection(db, "results"));
             const counts = { week: {}, month: {}, year: {} };
             
-            // MAP chứa thông tin user theo đề thi (lưu timestamp để tìm người mới nhất)
             const usersExamsMap = {}; 
             const allUniqueUids = new Set();
             
@@ -135,9 +134,8 @@ export async function loadAggregatedExamData() {
             resultsSnap.forEach(doc => {
                 const data = doc.data();
                 const eId = data.examId || data.examCode;
-                const userId = data.uid || data.userId || data.email; // Hỗ trợ fallback sang email nếu thiếu uid
+                const userId = data.uid || data.userId || data.email; 
                 
-                // Chuẩn hóa timestamp
                 let ts = 0;
                 if (data.createdAt) {
                     ts = typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime();
@@ -146,14 +144,12 @@ export async function loadAggregatedExamData() {
                 }
                 
                 if (eId && examMap[eId] && examMap[eId].isValid) {
-                    // Đếm lượt thi theo chu kỳ thời gian
                     if (ts) {
                         if (ts >= tWeek) counts.week[eId] = (counts.week[eId] || 0) + 1;
                         if (ts >= tMonth) counts.month[eId] = (counts.month[eId] || 0) + 1;
                         if (ts >= tYear) counts.year[eId] = (counts.year[eId] || 0) + 1;
                     }
                     
-                    // Thu thập người dùng và lưu lại timestamp lớn nhất (nộp bài gần nhất) của họ
                     if (userId) {
                         if (!usersExamsMap[eId]) usersExamsMap[eId] = {};
                         if (!usersExamsMap[eId][userId] || ts > usersExamsMap[eId][userId].ts) {
@@ -164,7 +160,6 @@ export async function loadAggregatedExamData() {
                 }
             });
 
-            // Hàm tìm đề có lượt thi cao nhất
             const getTopExam = (obj) => {
                 let max = 0;
                 let topId = null;
@@ -178,13 +173,13 @@ export async function loadAggregatedExamData() {
             const topMonth = getTopExam(counts.month);
             const topYear = getTopExam(counts.year);
 
-            // Gán danh hiệu (Ưu tiên hiển thị: Năm > Tháng > Tuần)
             if (topYear) badgesMap[topYear] = 'year';
             if (topMonth && !badgesMap[topMonth]) badgesMap[topMonth] = 'month';
             if (topWeek && !badgesMap[topWeek]) badgesMap[topWeek] = 'week';
 
-            // Gọi Firestore để kéo Avatar THẬT từ bảng users
             const userAvatars = {};
+            const userNames = {}; // MỚI: Thêm object để lưu tên
+
             if (allUniqueUids.size > 0) {
                 try {
                     const usersSnap = await getDocs(collection(db, "users"));
@@ -197,30 +192,34 @@ export async function loadAggregatedExamData() {
                         const name = String(uData.displayName || mail || id);
                         const defaultAva = `https://ui-avatars.com/api/?name=${name.substring(0,2)}&background=e2e8f0&color=64748b`;
                         
-                        if (allUniqueUids.has(id)) userAvatars[id] = photo || defaultAva;
-                        if (mail && allUniqueUids.has(mail)) userAvatars[mail] = photo || defaultAva;
+                        if (allUniqueUids.has(id)) { userAvatars[id] = photo || defaultAva; userNames[id] = name; }
+                        if (mail && allUniqueUids.has(mail)) { userAvatars[mail] = photo || defaultAva; userNames[mail] = name; }
                     });
                 } catch (e) {
                     console.log("Không thể kéo dữ liệu Avatar từ users", e);
                 }
             }
 
-            // Fallback (dự phòng) trường hợp user thi nhưng không tồn tại trong bảng users
             Array.from(allUniqueUids).forEach(userId => {
                 if (!userAvatars[userId]) {
                     const prefix = String(userId).substring(0, 2);
                     userAvatars[userId] = `https://ui-avatars.com/api/?name=${prefix}&background=e2e8f0&color=64748b`;
+                    userNames[userId] = userId; // Fallback name
                 }
             });
 
-            // Lọc ra đúng 3 người thi MỚI NHẤT cho mỗi đề
+            // Lọc ra đúng 5 người thi MỚI NHẤT cho mỗi đề thay vì 3
             Object.keys(usersExamsMap).forEach(eId => {
                 const sortedUsers = Object.entries(usersExamsMap[eId])
                     .map(([uid, info]) => ({ uid, ...info }))
-                    .sort((a, b) => b.ts - a.ts) // Sort mảng từ mới -> cũ
-                    .slice(0, 3); // Lấy 3 người đầu tiên
+                    .sort((a, b) => b.ts - a.ts)
+                    .slice(0, 5); // Đổi thành 5
                 
-                avatarsMap[eId] = sortedUsers.map(u => userAvatars[u.uid]);
+                // MỚI: Lưu Object gồm URL và Name thay vì chuỗi
+                avatarsMap[eId] = sortedUsers.map(u => ({
+                    url: userAvatars[u.uid],
+                    name: userNames[u.uid] || u.uid
+                }));
             });
 
             sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap }));
@@ -242,7 +241,6 @@ export async function loadAggregatedExamData() {
                 examMap[eId].ratingCount = 0;
             }
             
-            // Gắn danh hiệu & Avatar vào dữ liệu hiển thị
             examMap[eId].topBadge = badgesMap[eId] || null;
             examMap[eId].recentAvatars = avatarsMap[eId] || [];
         });
