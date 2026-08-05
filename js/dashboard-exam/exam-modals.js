@@ -34,9 +34,31 @@ export function initModals() {
 
    window.openShareModal = function(examId) {
         State.currentShareExamId = examId;
-        // Cố định link chia sẻ trỏ về tên miền mới theo yêu cầu
-        document.getElementById('shareLinkInput').value = `https://exam.ktv3mien.com/quiz.html?examId=${examId}`;
+        const shareUrl = `https://exam.ktv3mien.com/quiz.html?examId=${examId}`;
+        document.getElementById('shareLinkInput').value = shareUrl;
         document.getElementById('shareEmailInput').value = '';
+
+        // Tự động chèn và cập nhật QR Code vào giao diện Share Modal
+        let qrContainer = document.getElementById('share-qr-container');
+        if (!qrContainer) {
+            const linkInput = document.getElementById('shareLinkInput');
+            if (linkInput && linkInput.parentNode) {
+                const qrHtml = `
+                <div id="share-qr-container" style="text-align: center; margin-bottom: 20px; display: flex; flex-direction: column; align-items: center;">
+                    <div style="background: white; padding: 10px; border-radius: 12px; border: 1px dashed #cbd5e1; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                        <img id="share-qr-image" src="" style="width: 140px; height: 140px; display: block;" alt="QR Code Share">
+                    </div>
+                    <span style="font-size: 0.85rem; color: #475569; margin-top: 10px; font-weight: 600;"><i class="fa-solid fa-qrcode"></i> Quét mã để làm bài trên điện thoại</span>
+                </div>`;
+                linkInput.parentNode.insertAdjacentHTML('beforebegin', qrHtml);
+            }
+        }
+        
+        const qrImage = document.getElementById('share-qr-image');
+        if (qrImage) {
+            qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
+        }
+
         document.getElementById('shareExamModal').classList.add('active');
     };
 
