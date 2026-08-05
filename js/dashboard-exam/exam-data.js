@@ -8,7 +8,6 @@ export async function fetchUserResultsCache(user) {
     if (!user || !user.email) return;
     try {
         const cacheKey = `completedExams_${user.uid}`;
-        // Đã gỡ bỏ lệnh return cachedData ở đây để đảm bảo điểm luôn nạp mới nhất từ Firebase khi tải lại trang
 
         const resultsRef = collection(db, "results");
         const q = query(resultsRef, where("email", "==", user.email));
@@ -40,8 +39,8 @@ export async function fetchUserResultsCache(user) {
 export async function loadAggregatedExamData() {
     try {
         const uid = auth.currentUser ? auth.currentUser.uid : 'guest';
-        const metaCacheKey = `examMetaCache_${uid}`; // Chứa Rating/Feedback (Xóa khi tắt Tab)
-        const coreCacheKey = `examCoreCache_${uid}`; // Chứa Đề/Câu hỏi (Xóa khi F5)
+        const metaCacheKey = `examMetaCache_${uid}`; 
+        const coreCacheKey = `examCoreCache_${uid}`; 
 
         // 1. XỬ LÝ META (RATING & FEEDBACKS)
         let ratingMap = {};
@@ -110,7 +109,94 @@ export async function loadAggregatedExamData() {
             sessionStorage.setItem(coreCacheKey, JSON.stringify(examMap));
         }
 
-        // 3. GHÉP NỐI CORE VÀ META THÀNH DỮ LIỆU CUỐI CÙNG
+        // 2.5 TÍNH TOÁN DANH HIỆU (BADGES) & AVATAR NGƯỜI THI (Tích hợp xử lý chung để giảm thiểu API call)
+        let badgesMap = {};
+        let avatarsMap = {};
+        const extraCacheKey = `examExtraCache_${uid}`;
+        const cachedExtra = sessionStorage.getItem(extraCacheKey);
+
+        if (cachedExtra) {
+            const parsed = JSON.parse(cachedExtra);
+            badgesMap = parsed.badgesMap || {};
+            avatarsMap = parsed.avatarsMap || {};
+        } else {
+            const resultsSnap = await getDocs(collection(db, "results"));
+            const counts = { week: {}, month: {}, year: {} };
+            const recentUsersPerExam = {};
+            const allUniqueUids = new Set();
+            
+            const now = Date.now();
+            const tWeek = now - (7 * 24 * 60 * 60 * 1000);
+            const tMonth = now - (30 * 24 * 60 * 60 * 1000);
+            const tYear = now - (365 * 24 * 60 * 60 * 1000);
+
+            resultsSnap.forEach(doc => {
+                const data = doc.data();
+                const eId = data.examId || data.examCode;
+                const userId = data.uid || data.userId;
+                
+                // Chuẩn hóa timestamp
+                let ts = 0;
+                if (data.createdAt) {
+                    ts = typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime();
+                } else if (data.timestamp) {
+                    ts = data.timestamp;
+                }
+                
+                if (eId && examMap[eId] && examMap[eId].isValid) {
+                    // Đếm lượt thi theo chu kỳ thời gian
+                    if (ts) {
+                        if (ts >= tWeek) counts.week[eId] = (counts.week[eId] || 0) + 1;
+                        if (ts >= tMonth) counts.month[eId] = (counts.month[eId] || 0) + 1;
+                        if (ts >= tYear) counts.year[eId] = (counts.year[eId] || 0) + 1;
+                    }
+                    
+                    // Thu thập UID cho Avatar (tối đa 3 người/đề)
+                    if (userId) {
+                        if (!recentUsersPerExam[eId]) recentUsersPerExam[eId] = new Set();
+                        if (recentUsersPerExam[eId].size < 3) {
+                            recentUsersPerExam[eId].add(userId);
+                            allUniqueUids.add(userId);
+                        }
+                    }
+                }
+            });
+
+            // Hàm tìm đề có lượt thi cao nhất
+            const getTopExam = (obj) => {
+                let max = 0;
+                let topId = null;
+                for (const id in obj) {
+                    if (obj[id] > max) { max = obj[id]; topId = id; }
+                }
+                return topId;
+            };
+
+            const topWeek = getTopExam(counts.week);
+            const topMonth = getTopExam(counts.month);
+            const topYear = getTopExam(counts.year);
+
+            // Gán danh hiệu (Ưu tiên hiển thị: Năm > Tháng > Tuần)
+            if (topYear) badgesMap[topYear] = 'year';
+            if (topMonth && !badgesMap[topMonth]) badgesMap[topMonth] = 'month';
+            if (topWeek && !badgesMap[topWeek]) badgesMap[topWeek] = 'week';
+
+            // Tạo Avatar giả lập theo tên (có thể thay bằng API query vào bảng users sau này)
+            const userAvatars = {};
+            if (allUniqueUids.size > 0) {
+                Array.from(allUniqueUids).forEach(userId => {
+                    userAvatars[userId] = `https://ui-avatars.com/api/?name=${userId.substring(0,2)}&background=e2e8f0&color=64748b`;
+                });
+            }
+            
+            Object.keys(recentUsersPerExam).forEach(eId => {
+                avatarsMap[eId] = Array.from(recentUsersPerExam[eId]).map(userId => userAvatars[userId]);
+            });
+
+            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap }));
+        }
+
+        // 3. GHÉP NỐI CORE, META VÀ DỮ LIỆU ĐỘNG THÀNH DỮ LIỆU CUỐI CÙNG
         Object.keys(examMap).forEach(eId => {
             if (!examMap[eId].isValid) { delete examMap[eId]; return; }
             if (examMap[eId].timeLimit === undefined) examMap[eId].timeLimit = 15;
@@ -125,6 +211,10 @@ export async function loadAggregatedExamData() {
                 examMap[eId].rating = 5.0; 
                 examMap[eId].ratingCount = 0;
             }
+            
+            // Gắn danh hiệu & Avatar vào dữ liệu hiển thị
+            examMap[eId].topBadge = badgesMap[eId] || null;
+            examMap[eId].recentAvatars = avatarsMap[eId] || [];
         });
 
         State.allExamsData = Object.values(examMap);
