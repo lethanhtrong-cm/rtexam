@@ -19,7 +19,6 @@ export function renderExams() {
         let displayData = [...State.allExamsData];
         const userBookmarks = (State.currentUserData && State.currentUserData.bookmarks) ? State.currentUserData.bookmarks : [];
 
-        // Áp dụng bộ lọc
         if (State.currentTechnique === 'saved') displayData = displayData.filter(exam => userBookmarks.includes(exam.id));
         else if (State.currentTechnique !== 'all') displayData = displayData.filter(exam => exam.technique === State.currentTechnique);
         
@@ -54,10 +53,8 @@ export function renderExams() {
 
         const isUserVip = State.currentUserData && State.currentUserData.isVip === true;
 
-        // Tạo mảng groups động dựa trên Tab hiện tại
         let groups = [];
         
-        // CHỈ HIỂN THỊ ĐỀ HOT, ĐỀ MỚI VÀ ĐỀ CẦN ÔN TẬP KHI Ở TAB "TẤT CẢ"
         if (State.currentTechnique === 'all') {
             groups.push(
                 { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
@@ -65,11 +62,9 @@ export function renderExams() {
                 { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && ((State.completedExams[exam.id].score / (State.completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) }
             );
         } else if (['MRI', 'CT', 'X quang'].includes(State.currentTechnique)) {
-            // Hiển thị Đề HOT cho riêng từng Kỹ thuật
             groups.push({ mainCategory: null, title: `⭐ Đề HOT ${State.currentTechnique}`, data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) });
         }
 
-        // Bổ sung các nhóm kỹ thuật còn lại
         groups.push(
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Trung bình') },
@@ -170,7 +165,6 @@ export function renderExams() {
                             <i class="fa-solid fa-crown me-2"></i> Nâng cấp tài khoản Pro
                         </button>`;
                 } else if (isCompleted) {
-                    // Sửa lỗi: Điểm lưu trên Firebase đã là thang điểm 10 nên lấy trực tiếp, không chia cho tổng số câu nữa
                     let displayScore = State.completedExams[exam.id].score || 0;
                     displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
@@ -199,17 +193,22 @@ export function renderExams() {
                 
                 const hideBtnHtml = exam.technique === 'AI Tự Động' ? `<button class="btn-hide-exam" onclick="hideExam(event, '${safeExamId}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` : '';
 
-                // LOGIC TẠO AVATAR STACK KÈM BỘ ĐẾM SỐ LƯỢNG
+                // LOGIC VẼ AVATAR MỚI (Lấy 5 người kèm Tên)
                 let avatarStackHtml = `<div class="attempts" style="display: flex; align-items: center; gap: 6px;" title="${exam.attemptCount} lượt thi">`;
                 
                 let avatarsToRender = (exam.recentAvatars && exam.recentAvatars.length > 0) 
-                    ? exam.recentAvatars.slice(0, 3) 
-                    : (exam.attemptCount > 0 ? ['https://ui-avatars.com/api/?name=U&background=e2e8f0&color=64748b'] : []);
+                    ? exam.recentAvatars.slice(0, 5) // Đổi từ 3 -> 5
+                    : (exam.attemptCount > 0 ? [{ url: 'https://ui-avatars.com/api/?name=U&background=e2e8f0&color=64748b', name: 'Người ẩn danh' }] : []);
 
                 if (avatarsToRender.length > 0) {
                     avatarStackHtml += `<div style="display: flex; align-items: center;">`;
-                    avatarsToRender.forEach((avaUrl, idx) => {
-                        avatarStackHtml += `<img src="${avaUrl}" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; margin-left: ${idx > 0 ? '-10px' : '0'}; z-index: ${10 - idx}; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" onerror="this.src='https://ui-avatars.com/api/?name=U&background=e2e8f0&color=64748b'">`;
+                    avatarsToRender.forEach((ava, idx) => {
+                        // Tương thích ngược với định dạng chuỗi cũ (nếu có cache sót)
+                        const avaUrl = typeof ava === 'string' ? ava : ava.url;
+                        const avaName = typeof ava === 'string' ? 'Người dùng' : (ava.name || 'Người dùng');
+                        
+                        // Bổ sung thuộc tính title và cursor pointer
+                        avatarStackHtml += `<img src="${avaUrl}" title="${avaName}" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; object-fit: cover; margin-left: ${idx > 0 ? '-10px' : '0'}; z-index: ${10 - idx}; box-shadow: 0 1px 3px rgba(0,0,0,0.15); cursor: pointer;" onerror="this.src='https://ui-avatars.com/api/?name=U&background=e2e8f0&color=64748b'">`;
                     });
                     avatarStackHtml += `</div>`;
                 } else {
@@ -218,7 +217,6 @@ export function renderExams() {
                 
                 avatarStackHtml += `<span style="font-weight: 600; color: #6b7280; font-size: 0.85rem;">${exam.attemptCount} lượt thi</span></div>`;
 
-                // LOGIC TẠO DANH HIỆU (TOP TUẦN/THÁNG/NĂM)
                 let topBadgeHtml = '';
                 if (exam.topBadge === 'week') {
                     topBadgeHtml = `<div style="position: absolute; top: -12px; left: -12px; background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border: 2px solid #fff;"><i class="fa-solid fa-fire"></i> HOT TUẦN</div>`;
