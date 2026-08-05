@@ -64,6 +64,9 @@ export function renderExams() {
                 { mainCategory: null, title: "✨ Đề Mới", data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5) },
                 { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && ((State.completedExams[exam.id].score / (State.completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) }
             );
+        } else if (['MRI', 'CT', 'X quang'].includes(State.currentTechnique)) {
+            // Hiển thị Đề HOT cho riêng từng Kỹ thuật
+            groups.push({ mainCategory: null, title: `⭐ Đề HOT ${State.currentTechnique}`, data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) });
         }
 
         // Bổ sung các nhóm kỹ thuật còn lại
