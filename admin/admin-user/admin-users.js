@@ -81,13 +81,20 @@ async function exportUserHistoryToExcel(email) {
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             
-            // Xử lý Ngày thi
+            // Xử lý Ngày thi (Hỗ trợ cả createdAt và timestamp)
             let examDate = 'N/A';
-            if (data.createdAt) {
-                const dateObj = (typeof data.createdAt.toDate === 'function') ? data.createdAt.toDate() : new Date(data.createdAt);
+            let rawTime = data.createdAt || data.timestamp;
+            if (rawTime) {
+                const dateObj = (typeof rawTime.toDate === 'function') ? rawTime.toDate() : new Date(rawTime);
                 if (!isNaN(dateObj.getTime())) {
                     examDate = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
                 }
+            }
+
+            // Xử lý XP (Tìm các trường có thể lưu, hoặc tự động quy đổi từ Điểm 10)
+            let finalXP = data.xp || data.xpEarned || data.earnedXP || 0;
+            if (finalXP === 0 && data.score > 0) {
+                finalXP = Math.round(data.score * 10); // Dự phòng: Quy đổi thang điểm 10 sang thang XP 100
             }
 
             dataToExport.push({
@@ -96,7 +103,7 @@ async function exportUserHistoryToExcel(email) {
                 "Điểm Số": data.score || 0,
                 "Tổng Câu Hỏi": data.totalQuestions || data.total || 0,
                 "Thời Gian Làm (Giây)": data.timeSpent || 0,
-                "Số XP Nhận Được": data.xpEarned || 0,
+                "Số XP Nhận Được": finalXP,
                 "Ngày Nộp Bài": examDate
             });
         });
