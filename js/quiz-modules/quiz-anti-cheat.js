@@ -106,44 +106,6 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
         }
     }, 1000);
 
-    const blockDevToolsAndScreenshot = (e) => {
-        const state = getState();
-        if (!state.isAntiCheatEnabled || state.isSubmitted || state.isShowExplanation || state.currentMode === 'flashcard') return;
-
-        // Chặn F12, toàn bộ phím chức năng (F1-F12), và tổ hợp phím mở Developer Tools trên Windows & MacOS
-        if (e.key === 'F12' || (e.keyCode >= 112 && e.keyCode <= 123) || 
-           (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
-           (e.ctrlKey && (e.key === 'U' || e.key === 'u')) ||
-           (e.metaKey && e.altKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c' || e.key === 'U' || e.key === 'u'))) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.returnValue = false;
-            console.warn('⚠️ Hệ thống ghi nhận hành vi can thiệp trái phép!');
-            showToast("⚠️ Các phím chức năng và phím tắt đã bị vô hiệu hóa!");
-            return false;
-        }
-
-        // Chặn PrintScreen, và các tổ hợp phím chụp/in màn hình chứa Alt, Meta (Windows/Cmd) hoặc Ctrl + P/S
-        if (e.key === 'PrintScreen' || e.keyCode === 44 || e.altKey || e.metaKey || (e.ctrlKey && (e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S'))) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.returnValue = false;
-            try {
-                navigator.clipboard.writeText('Hành động chụp/in màn hình bị cấm trên hệ thống này!');
-            } catch (err) {
-                // Ignore clipboard API errors if permissions are missing
-            }
-            document.body.style.opacity = '0';
-            alert("⚠️ CẢNH BÁO: Các tổ hợp phím và hành động chụp màn hình không được phép trong phòng thi!");
-            setTimeout(() => { document.body.style.opacity = '1'; }, 300);
-            return false;
-        }
-    };
-
-    // Bắt sự kiện ở mức window với { capture: true } để chặn sớm nhất có thể
-    window.addEventListener('keydown', blockDevToolsAndScreenshot, { capture: true });
-    window.addEventListener('keyup', blockDevToolsAndScreenshot, { capture: true });
-
     document.addEventListener('selectionchange', () => {
         const state = getState();
         if (state.isSubmitted || state.isShowExplanation || state.currentMode === 'flashcard') return;
