@@ -766,7 +766,7 @@ export function renderUserList() {
                 <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
             </td>
             <td class="text-center desktop-action-td">
-                <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
                     ${actionButtonsHtml}
                 </div>
             </td>
