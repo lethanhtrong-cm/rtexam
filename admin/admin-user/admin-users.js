@@ -55,7 +55,7 @@ function formatDateTime(timestamp) {
 }
 
 // =========================================================================
-// XUẤT EXCEL: ĐỒNG BỘ 100% VỚI LOGIC CỦA ADMIN-HISTORY
+// XUẤT EXCEL: ĐỒNG BỘ LOGIC & THÊM DÒNG TỔNG KẾT ĐỐI CHIẾU
 // =========================================================================
 async function exportUserHistoryToExcel(email) {
     if (!email) {
@@ -149,6 +149,7 @@ async function exportUserHistoryToExcel(email) {
 
         const dataToExport = [];
         let stt = 1;
+        let totalCalculatedXP = 0; // Biến tính tổng XP của Excel
 
         resultsArray.forEach((item) => {
             const data = item.data;
@@ -163,6 +164,8 @@ async function exportUserHistoryToExcel(email) {
                 examDate = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
             }
 
+            totalCalculatedXP += item.displayXP;
+
             dataToExport.push({
                 "STT": stt++,
                 "Mã / Tên Đề Thi": examName,
@@ -175,6 +178,21 @@ async function exportUserHistoryToExcel(email) {
             });
         });
 
+        // Lấy tổng XP thực tế từ Bảng Xếp Hạng để đối chiếu
+        const targetUser = cachedUsers.find(u => u.email === email);
+        const actualLeaderboardXP = targetUser ? Math.round(targetUser.xp).toLocaleString() : "Không rõ";
+
+        // Thêm dòng tổng kết vào cuối mảng Excel
+        dataToExport.push({}); // Dòng trống phân cách
+        dataToExport.push({
+            "Thời Gian Làm (Giây)": "TỔNG XP TRONG FILE EXCEL NÀY:",
+            "Số XP Thực Nhận": totalCalculatedXP
+        });
+        dataToExport.push({
+            "Thời Gian Làm (Giây)": "TỔNG XP GHI NHẬN TRÊN BẢNG XẾP HẠNG (THỰC TẾ):",
+            "Số XP Thực Nhận": actualLeaderboardXP
+        });
+
         // Khởi tạo Workbook và Worksheet bằng SheetJS
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
         const workbook = XLSX.utils.book_new();
@@ -182,7 +200,7 @@ async function exportUserHistoryToExcel(email) {
 
         // Căn lề cột
         const wscols = [
-            {wch: 5},  {wch: 40}, {wch: 15}, {wch: 10}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 20}
+            {wch: 5},  {wch: 40}, {wch: 15}, {wch: 10}, {wch: 15}, {wch: 45}, {wch: 25}, {wch: 20}
         ];
         worksheet['!cols'] = wscols;
 
