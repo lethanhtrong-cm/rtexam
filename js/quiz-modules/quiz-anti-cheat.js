@@ -11,7 +11,7 @@ export function initWatermark(userEmail) {
     
     const watermark = document.createElement('div');
     watermark.id = 'anti-cheat-watermark';
-    watermark.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9998; opacity: 0.04; display: none; flex-wrap: wrap; justify-content: center; align-items: center; overflow: hidden; user-select: none; font-size: 18px; font-weight: 800; color: #000; transform: rotate(-30deg);';
+    watermark.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9998; opacity: 0.1; display: none; flex-wrap: wrap; justify-content: center; align-items: center; overflow: hidden; user-select: none; font-size: 18px; font-weight: 800; color: #000; transform: rotate(-30deg);';
     
     let content = '';
     for (let i = 0; i < 150; i++) {
