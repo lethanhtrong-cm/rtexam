@@ -76,8 +76,8 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
         }
     });
 
-    // BẮT SỰ KIỆN KEYDOWN ĐỂ CHẶN F12, DEVTOOLS VÀ PRINTSCREEN TỐI ƯU HƠN
-    window.addEventListener('keydown', (e) => {
+    // BẮT SỰ KIỆN KEYDOWN VÀ KEYUP ĐỂ CHẶN F12, DEVTOOLS VÀ PRINTSCREEN TỐI ƯU HƠN
+    const blockDevToolsAndScreenshot = (e) => {
         const state = getState();
         if (!state.isAntiCheatEnabled || state.isSubmitted || state.isShowExplanation || state.currentMode === 'flashcard') return;
 
@@ -86,18 +86,29 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
            (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
             e.preventDefault();
+            e.stopPropagation();
             showToast("⚠️ Tính năng kiểm tra mã nguồn bị vô hiệu hóa!");
+            return false;
         }
 
-        // Chặn PrintScreen
+        // Chặn PrintScreen (Đặc biệt hay bắt được ở sự kiện keyup trên Windows)
         if (e.key === 'PrintScreen' || e.keyCode === 44) {
             e.preventDefault();
-            navigator.clipboard.writeText('Hành động chụp màn hình bị cấm trên hệ thống này!');
+            e.stopPropagation();
+            try {
+                navigator.clipboard.writeText('Hành động chụp màn hình bị cấm trên hệ thống này!');
+            } catch (err) {
+                // Ignore clipboard API errors if permissions are missing
+            }
             document.body.style.opacity = '0';
             alert("⚠️ CẢNH BÁO: Hành động chụp màn hình không được phép trong phòng thi!");
             setTimeout(() => { document.body.style.opacity = '1'; }, 300);
+            return false;
         }
-    });
+    };
+
+    window.addEventListener('keydown', blockDevToolsAndScreenshot);
+    window.addEventListener('keyup', blockDevToolsAndScreenshot);
 
     document.addEventListener('selectionchange', () => {
         const state = getState();
