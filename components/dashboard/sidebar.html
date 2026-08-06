@@ -1,4 +1,108 @@
 <div class="sidebar">
+    
+    <!-- KHỐI CSS NÂNG CẤP GIAO DIỆN (LUXURY UI) -->
+    <style>
+        .sidebar { padding-top: 15px; }
+        .sidebar-menu { padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
+        
+        /* Style cho Menu chính */
+        .sidebar-menu .menu-item {
+            padding: 12px 16px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            color: #475569;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .sidebar-menu .menu-item:hover { 
+            background-color: #f8fafc; 
+            color: #0f172a; 
+            border-color: #e2e8f0;
+        }
+        .sidebar-menu .menu-item.active {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1d4ed8;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.1);
+            border-color: #bfdbfe;
+        }
+        
+        /* Icon của Menu chính */
+        .sidebar-menu .menu-item .header-content { display: flex; align-items: center; gap: 12px; }
+        .sidebar-menu .menu-item .header-content i { font-size: 1.15rem; color: #64748b; transition: 0.3s; width: 22px; text-align: center; }
+        .sidebar-menu .menu-item.active .header-content i { color: #2563eb; }
+        
+        /* Style cho Sub-menu (Cây thư mục) */
+        .accordion-content { position: relative; padding: 6px 0 12px 0; }
+        
+        /* Đường kẻ dọc nối các sub-menu */
+        .accordion-content::before {
+            content: '';
+            position: absolute;
+            left: 27px;
+            top: 0;
+            bottom: 15px;
+            width: 2px;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+        
+        .sidebar-menu .sub-menu-item {
+            padding: 10px 15px 10px 45px;
+            margin: 4px 12px;
+            border-radius: 10px;
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Đường kẻ ngang trỏ vào từng sub-menu */
+        .sidebar-menu .sub-menu-item::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            width: 12px;
+            height: 2px;
+            background: #e2e8f0;
+            transform: translateY(-50%);
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+        
+        .sidebar-menu .sub-menu-item:hover { 
+            color: #0f172a; 
+            background: #f8fafc; 
+            transform: translateX(4px); 
+        }
+        .sidebar-menu .sub-menu-item:hover::before { background: #cbd5e1; }
+        
+        .sidebar-menu .sub-menu-item.active {
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 #3b82f6;
+        }
+        .sidebar-menu .sub-menu-item.active::before { background: #3b82f6; }
+        
+        .sidebar-menu .sub-menu-item i { width: 22px; margin-right: 8px; font-size: 0.95rem; text-align: center; transition: 0.3s; }
+        .sidebar-menu .sub-menu-item.active i { color: #2563eb !important; }
+        
+        /* Hover hiệu ứng cho Zalo box */
+        #zalo-qr-sidebar { transition: all 0.3s ease; border: 1px solid #e2e8f0 !important; }
+        #zalo-qr-sidebar:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); border-color: #cbd5e1 !important; }
+        #zalo-qr-sidebar a:hover { background: #0056b3 !important; transform: scale(1.02); }
+    </style>
+    <!-- KẾT THÚC KHỐI CSS -->
+
     <div class="sidebar-menu">
         <div class="menu-accordion">
             <div class="menu-item accordion-header active" data-target="tab-exams">
@@ -21,7 +125,6 @@
                     <i class="fa-solid fa-x-ray"></i> X quang
                 </div>
                 
-                <!-- ĐÃ BỔ SUNG TAB THUỐC TƯƠNG PHẢN -->
                 <div class="sub-menu-item" data-technique="Thuốc tương phản">
                     <i class="fa-solid fa-syringe"></i> Thuốc tương phản
                 </div>
@@ -41,15 +144,19 @@
         </div>
 
         <div class="menu-item" data-target="tab-history">
-            <i class="fa-solid fa-clock-rotate-left"></i> <span>Lịch sử làm bài</span>
+            <div class="header-content">
+                <i class="fa-solid fa-clock-rotate-left"></i> <span>Lịch sử làm bài</span>
+            </div>
         </div>
 
         <div class="menu-item" data-target="leaderboard">
-            <i class="fa-solid fa-trophy" style="color: var(--warning-orange);"></i> <span>Bảng Xếp Hạng</span>
+            <div class="header-content">
+                <i class="fa-solid fa-trophy" style="color: var(--warning-orange);"></i> <span>Bảng Xếp Hạng</span>
+            </div>
         </div>
     </div>
 
-    <!-- KHỐI THAM GIA NHÓM ZALO QUIZPAGE (ĐÃ FIX RESPONSIVE MOBILE) -->
+    <!-- KHỐI THAM GIA NHÓM ZALO QUIZPAGE -->
     <div id="zalo-qr-sidebar" style="margin: 20px 15px 90px 15px; padding: 12px; background: #f8fafc; border-radius: 12px; text-align: center; border: 1px dashed #cbd5e1;">
         <h6 style="font-size: 0.85rem; font-weight: 700; color: #0f172a; margin-bottom: 10px;">Cộng đồng QUIZPAGE</h6>
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://zalo.me/g/3b44he0tkfq8e0v9dibo" alt="Zalo QR" style="width: 100%; max-width: 100px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
