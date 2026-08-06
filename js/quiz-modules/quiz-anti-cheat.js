@@ -80,13 +80,13 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
         const state = getState();
         if (!state.isAntiCheatEnabled || state.isSubmitted || state.isShowExplanation || state.currentMode === 'flashcard') return;
 
-        // Chặn F12 và các tổ hợp phím mở Developer Tools
-        if (e.key === 'F12' || e.keyCode === 123 || 
+        // Chặn toàn bộ phím chức năng (F1-F12) và các tổ hợp phím mở Developer Tools
+        if ((e.keyCode >= 112 && e.keyCode <= 123) || 
            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
            (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
             e.preventDefault();
             e.stopPropagation();
-            showToast("⚠️ Tính năng kiểm tra mã nguồn bị vô hiệu hóa!");
+            showToast("⚠️ Các phím chức năng (F1-F12) và phím tắt đã bị vô hiệu hóa!");
             return false;
         }
 
