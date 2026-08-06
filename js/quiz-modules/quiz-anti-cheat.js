@@ -107,9 +107,9 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
         }
     };
 
-    // Chuyển sang bắt sự kiện trên document thay vì window để ưu tiên chặn phím tắt trình duyệt
-    document.addEventListener('keydown', blockDevToolsAndScreenshot);
-    document.addEventListener('keyup', blockDevToolsAndScreenshot);
+    // Bắt sự kiện ở mức window với { capture: true } để chặn F12 ngay lập tức trước khi trình duyệt kịp mở DevTools
+    window.addEventListener('keydown', blockDevToolsAndScreenshot, { capture: true });
+    window.addEventListener('keyup', blockDevToolsAndScreenshot, { capture: true });
 
     document.addEventListener('selectionchange', () => {
         const state = getState();
