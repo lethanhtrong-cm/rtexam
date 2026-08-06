@@ -1,13 +1,13 @@
 import { db, auth } from './firebase-config.js'; 
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// IMPORT ĐẦY ĐỦ CÁC HÀM CẦN THIẾT TỪ FIRESTORE
+import { onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export { db };
 
-// =========================================================================
-// HÀM TOAST THÔNG BÁO CHUNG HỆ THỐNG
-// =========================================================================
+// Email Quản trị viên duy nhất được phép truy cập
+const ADMIN_EMAIL = "thanhtrong.yds@gmail.com";
+const provider = new GoogleAuthProvider();
+
 export function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -22,14 +22,61 @@ export function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// THEO DÕI XÁC THỰC
-onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        // window.location.href = 'login.html'; 
+// THEO DÕI & BẢO VỆ XÁC THỰC ADMIN
+onAuthStateChanged(auth, async (user) => {
+    const body = document.body;
+    const loginOverlay = document.getElementById('admin-login-overlay');
+    
+    if (user && user.email === ADMIN_EMAIL) {
+        // Đúng tài khoản Admin: Mở khóa giao diện
+        body.classList.remove('admin-locked');
+        if (loginOverlay) loginOverlay.style.opacity = '0';
+        setTimeout(() => { if (loginOverlay) loginOverlay.style.display = 'none'; }, 500);
+        
+        // Hiển thị email Admin góc phải
+        const adminEmailDisplay = document.getElementById('display-admin-email');
+        if (adminEmailDisplay) adminEmailDisplay.innerHTML = `<i class="fa-solid fa-user-shield"></i> ${user.email}`;
+    } else {
+        // Chưa đăng nhập hoặc Sai tài khoản: Ép đăng xuất và Khóa giao diện
+        if (user) await signOut(auth); // Đăng xuất người dùng trái phép
+        body.classList.add('admin-locked');
+        if (loginOverlay) {
+            loginOverlay.style.display = 'flex';
+            // Trigger reflow
+            void loginOverlay.offsetWidth;
+            loginOverlay.style.opacity = '1';
+        }
     }
 });
 
-// HÀM TẢI COMPONENT HTML ĐỘNG
+// XỬ LÝ NÚT ĐĂNG NHẬP GOOGLE TRÊN MÀN HÌNH KHÓA
+document.addEventListener('DOMContentLoaded', () => {
+    const btnLogin = document.getElementById('btn-admin-login');
+    if (btnLogin) {
+        btnLogin.addEventListener('click', async () => {
+            const errorMsg = document.getElementById('login-error-message');
+            errorMsg.style.display = 'none';
+            btnLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...';
+            btnLogin.disabled = true;
+
+            try {
+                const result = await signInWithPopup(auth, provider);
+                if (result.user.email !== ADMIN_EMAIL) {
+                    await signOut(auth);
+                    throw new Error(`Tài khoản "${result.user.email}" không được cấp quyền Admin.`);
+                }
+            } catch (error) {
+                console.error("Lỗi đăng nhập:", error);
+                errorMsg.innerText = error.message;
+                errorMsg.style.display = 'block';
+            } finally {
+                btnLogin.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google"> Xác thực với Google';
+                btnLogin.disabled = false;
+            }
+        });
+    }
+});
+
 async function loadComponent(elementId, filePath) {
     try {
         const response = await fetch(filePath);
@@ -41,7 +88,6 @@ async function loadComponent(elementId, filePath) {
     }
 }
 
-// KHỞI TẠO HỆ THỐNG GIAO DIỆN
 document.addEventListener('DOMContentLoaded', async () => {
     await loadComponent('sidebar-container', './components/sidebar.html');
     await loadComponent('modals-container', './components/modal.html');
@@ -53,9 +99,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.dispatchEvent(new Event('componentsLoaded'));
 });
 
-// =========================================================================
-// CÁC HÀM XỬ LÝ SỰ KIỆN GIAO DIỆN CƠ BẢN
-// =========================================================================
 function initSidebarEvents() {
     const parentMenus = document.querySelectorAll('.menu-parent');
     parentMenus.forEach(parent => {
@@ -107,7 +150,6 @@ function initModalEvents() {
         if (event.target === adminReplyModal) adminReplyModal.style.display = "none";
     };
 
-    // Lắng nghe đóng Modal bằng nút X
     document.addEventListener('click', (e) => {
         if (e.target && e.target.id === 'close-qd-modal') {
             const m = document.getElementById("question-detail-modal");
@@ -125,7 +167,8 @@ function initAuthEvents() {
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
             signOut(auth).then(() => {
-                window.location.href = 'login.html';
+                // F5 lại trang để kích hoạt màn hình khóa
+                window.location.reload(); 
             }).catch((error) => {
                 showToast("Lỗi khi đăng xuất: " + error.message, "error");
             });
