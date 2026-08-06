@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// IMPORT CÁC MODULE ĐÃ ĐƯỢC PHÂN TÁCH (Cùng thư mục admin-user)
+// IMPORT CÁC MODULE ĐÃ ĐƯỢC PHÂN TÁCH
 import { getCostBadgeHtml } from './admin-billing.js';
 import { handleViewHistory } from './admin-history.js';
 import { openNotificationModal, sendNotification } from './admin-users-notify.js';
@@ -30,7 +30,6 @@ const itemsPerPage = 20;
 let selectedUserIds = new Set(); 
 let pendingVIPRequests = new Set(); 
 
-// BỘ ĐẾM THỜI GIAN CỤC BỘ PHỤC VỤ AUTO-CLEAR GHOST SESSIONS
 let localTestingTimers = new Map();
 
 export function initRealtimePaymentListener() {
@@ -53,6 +52,82 @@ function formatDateTime(timestamp) {
     const date = (typeof timestamp.toDate === 'function') ? timestamp.toDate() : new Date(timestamp);
     if (isNaN(date.getTime())) return '---';
     return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+}
+
+// =========================================================================
+// HÀM MỚI: XUẤT EXCEL LỊCH SỬ THI VÀ XP CỦA 1 THÀNH VIÊN
+// =========================================================================
+async function exportUserHistoryToExcel(email) {
+    if (!email) {
+        showToast("Không tìm thấy email học viên để xuất dữ liệu!", "error");
+        return;
+    }
+    
+    showToast(`Đang trích xuất dữ liệu của ${email}...`, "success");
+
+    try {
+        const resultsRef = collection(db, "results");
+        const q = query(resultsRef, where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            showToast(`Học viên ${email} chưa có lịch sử làm bài nào!`, "error");
+            return;
+        }
+
+        const dataToExport = [];
+        let stt = 1;
+
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            
+            // Xử lý Ngày thi
+            let examDate = 'N/A';
+            if (data.createdAt) {
+                const dateObj = (typeof data.createdAt.toDate === 'function') ? data.createdAt.toDate() : new Date(data.createdAt);
+                if (!isNaN(dateObj.getTime())) {
+                    examDate = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                }
+            }
+
+            dataToExport.push({
+                "STT": stt++,
+                "Mã / Tên Đề Thi": data.examId || data.examCode || "Không rõ",
+                "Điểm Số": data.score || 0,
+                "Tổng Câu Hỏi": data.totalQuestions || data.total || 0,
+                "Thời Gian Làm (Giây)": data.timeSpent || 0,
+                "Số XP Nhận Được": data.xpEarned || 0,
+                "Ngày Nộp Bài": examDate
+            });
+        });
+
+        // Khởi tạo Workbook và Worksheet bằng SheetJS (XLSX)
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Lịch sử thi & XP");
+
+        // Canh lề cột cho đẹp
+        const wscols = [
+            {wch: 5},  // STT
+            {wch: 25}, // Mã Đề
+            {wch: 10}, // Điểm
+            {wch: 15}, // Tổng câu
+            {wch: 20}, // Thời gian
+            {wch: 15}, // XP
+            {wch: 20}  // Ngày nộp
+        ];
+        worksheet['!cols'] = wscols;
+
+        // Tạo tên file an toàn (bỏ ký tự đặc biệt khỏi email)
+        const safeEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
+        XLSX.writeFile(workbook, `Lich_Su_Thi_${safeEmail}.xlsx`);
+        
+        showToast("Xuất Excel thành công!", "success");
+
+    } catch (error) {
+        console.error("Lỗi khi xuất Excel:", error);
+        showToast("Có lỗi xảy ra trong quá trình xuất Excel.", "error");
+    }
 }
 
 export async function loadUserList(forceRefresh = false) {
@@ -138,7 +213,6 @@ export async function loadUserList(forceRefresh = false) {
                 examStatus = 'none';
             }
 
-            // --- ĐỒNG BỘ MỐC THỜI GIAN ĐỂ AUTO-CLEAR ---
             let examStartTimeMs = null;
             if (user.examStartTime) {
                 examStartTimeMs = (typeof user.examStartTime.toDate === 'function') ? user.examStartTime.toDate().getTime() : new Date(user.examStartTime).getTime();
@@ -151,7 +225,6 @@ export async function loadUserList(forceRefresh = false) {
             } else {
                 localTestingTimers.delete(userId); 
             }
-            // ---------------------------------------------
 
             const rStats = globalResultsStats[email] || { totalScore: 0, count: 0 };
             const finalAvgScore = rStats.count > 0 ? (rStats.totalScore / rStats.count) : 0;
@@ -218,17 +291,13 @@ export async function loadUserList(forceRefresh = false) {
     }
 }
 
-// ==========================================
-// HÀM CHẠY NGẦM TỰ ĐỘNG GỠ KẸT THI (AUTO-CLEAR) - ĐÃ TỐI ƯU CPU
-// ==========================================
 function initAutoClearGhostSessions() {
     setInterval(async () => {
-        // TỐI ƯU CPU: Chỉ tính toán khi thực sự có học viên đang trong trạng thái thi
         const testingUsers = cachedUsers.filter(u => u.examStatus === 'testing');
         if (testingUsers.length === 0) return;
 
         const now = Date.now();
-        const timeoutMs = 45 * 60 * 1000; // Cấu hình giới hạn: 45 phút
+        const timeoutMs = 45 * 60 * 1000; 
         
         let clearedCount = 0;
 
@@ -383,7 +452,6 @@ function injectTableHeadersAndToolbar() {
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
         
-        // Đẩy top xuống 135px để trôi mượt mà ngay bên dưới thanh Toolbar
         bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 4px 6px rgba(0,0,0,0.08); flex-wrap: wrap; gap: 10px; position: sticky; top: 135px; z-index: 100;';
         
         bulkBar.innerHTML = `
@@ -545,6 +613,7 @@ export function renderUserList() {
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
         const vipStyle = user.isVip ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; 
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
+        const excelStyle = `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);`; // Bổ sung style cho nút Excel
         const banStyle = user.isBanned ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
         
         const resetStyle = `${baseBtnStyle} background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 2px 5px rgba(100,116,139,0.3);`;
@@ -560,6 +629,7 @@ export function renderUserList() {
             <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi TB">🔔 Gửi</button>
             <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${user.isVip}" style="${vipStyle}" ${hoverEffect}>${vipBtnText}</button>
             <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
+            <button class="btn-user-action btn-export-excel" data-email="${user.email}" style="${excelStyle}" ${hoverEffect} title="Tải Excel Lịch sử & XP"><i class="fa-solid fa-file-excel"></i> Tải XP</button>
             <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
             ${resetBtnHtml}
         `;
@@ -611,7 +681,7 @@ export function renderUserList() {
                 <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
             </td>
             <td class="text-center desktop-action-td">
-                <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
+                <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
                     ${actionButtonsHtml}
                 </div>
             </td>
@@ -884,7 +954,6 @@ document.addEventListener('componentsLoaded', () => {
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        // Tích hợp Sticky cố định thanh công cụ
         toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px;';
         
         if (!document.getElementById('btnRefreshUsers')) {
@@ -930,6 +999,10 @@ document.addEventListener('componentsLoaded', () => {
 
         usersBody.addEventListener('click', (e) => {
             if(e.target.classList.contains('user-row-checkbox')) return; 
+
+            // Gắn sự kiện cho nút Tải Excel
+            const excelBtn = e.target.closest('.btn-export-excel');
+            if (excelBtn) return exportUserHistoryToExcel(excelBtn.dataset.email);
 
             const resetBtn = e.target.closest('.btn-reset-status');
             if (resetBtn) return handleResetStatus(resetBtn.dataset.id);
