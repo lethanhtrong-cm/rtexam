@@ -80,12 +80,13 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
         const state = getState();
         if (!state.isAntiCheatEnabled || state.isSubmitted || state.isShowExplanation || state.currentMode === 'flashcard') return;
 
-        // Chặn toàn bộ phím chức năng (F1-F12) và các tổ hợp phím mở Developer Tools
-        if ((e.keyCode >= 112 && e.keyCode <= 123) || 
+        // Chặn F12, toàn bộ phím chức năng (F1-F12) và các tổ hợp phím mở Developer Tools
+        if (e.key === 'F12' || (e.keyCode >= 112 && e.keyCode <= 123) || 
            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
            (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
             e.preventDefault();
             e.stopPropagation();
+            console.warn('⚠️ Hệ thống ghi nhận hành vi can thiệp trái phép!');
             showToast("⚠️ Các phím chức năng (F1-F12) và phím tắt đã bị vô hiệu hóa!");
             return false;
         }
@@ -106,8 +107,9 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
         }
     };
 
-    window.addEventListener('keydown', blockDevToolsAndScreenshot);
-    window.addEventListener('keyup', blockDevToolsAndScreenshot);
+    // Chuyển sang bắt sự kiện trên document thay vì window để ưu tiên chặn phím tắt trình duyệt
+    document.addEventListener('keydown', blockDevToolsAndScreenshot);
+    document.addEventListener('keyup', blockDevToolsAndScreenshot);
 
     document.addEventListener('selectionchange', () => {
         const state = getState();
