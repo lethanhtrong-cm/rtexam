@@ -246,21 +246,6 @@
         .btn-fc-nav:hover:not(:disabled) { background: #8b5cf6; color: white; border-color: #8b5cf6; transform: scale(1.1); }
         .btn-fc-nav:disabled { opacity: 0.3; cursor: not-allowed; }
         .fc-progress { font-weight: 800; color: var(--text-main); font-size: 1.1rem; background: var(--bg-body); padding: 8px 20px; border-radius: 20px; border: 1px solid var(--border-color); }
-
-        /* HIỆU ỨNG SƯƠNG MÙ CHỐNG CAPTURE MÀN HÌNH */
-        .question-text, .option-item {
-            color: transparent !important;
-            text-shadow: 0 0 12px rgba(17, 24, 39, 0.95) !important;
-            transition: text-shadow 0.2s, color 0.2s;
-        }
-        body.dark-mode .question-text, body.dark-mode .option-item {
-            text-shadow: 0 0 12px rgba(249, 250, 251, 0.95) !important;
-        }
-        /* Chỉ hiện rõ khi học viên lia chuột hoặc chạm tay vào */
-        .question-text:hover, .option-item:hover, .option-item:active {
-            color: var(--text-main) !important;
-            text-shadow: none !important;
-        }
     </style>
 </head>
 <body>
@@ -301,7 +286,6 @@
 
                 <div id="real-content" class="hidden">
                     <span class="question-number-badge" id="question-badge">Câu hỏi</span>
-                    <p style="font-size: 0.85rem; color: var(--text-fade); font-style: italic; margin-bottom: 15px;"><i class="fa-solid fa-hand-pointer"></i> Mẹo: Rê chuột hoặc chạm vào vùng chứa văn bản để nhìn rõ nội dung câu hỏi và đáp án.</p>
                     <h2 class="question-text" id="question-text">Đang chuẩn bị dữ liệu...</h2>
                     <div class="options-list" id="options-container"></div>
                 </div>
