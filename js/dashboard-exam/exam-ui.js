@@ -86,10 +86,11 @@ export function renderExams() {
                 { mainCategory: null, title: "✨ Đề Mới", data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5) },
                 { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && ((State.completedExams[exam.id].score / (State.completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) }
             );
-        } else if (['MRI', 'CT', 'X quang'].includes(State.currentTechnique)) {
+        } else if (['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(State.currentTechnique)) {
             groups.push({ mainCategory: null, title: `⭐ Đề HOT ${State.currentTechnique}`, data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) });
         }
 
+        // ĐỊNH NGHĨA PHÂN LOẠI CÁC KHỐI KIẾN THỨC
         groups.push(
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Trung bình') },
@@ -103,9 +104,15 @@ export function renderExams() {
             { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Trung bình') },
             { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Khó') },
             
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Dễ') },
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Trung bình') },
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang'].includes(exam.technique)) && exam.level === 'Khó') }
+            // BỔ SUNG: KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN
+            { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Dễ') },
+            { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Trung bình') },
+            { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Khó') },
+
+            // SỬA: KHỐI HỖN HỢP BỎ QUA 'Thuốc tương phản'
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Dễ') },
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Trung bình') },
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Khó') }
         );
 
         let currentMainCategoryTracker = null;
