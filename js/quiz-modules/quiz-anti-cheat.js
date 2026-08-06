@@ -11,7 +11,7 @@ export function initWatermark(userEmail) {
     
     const watermark = document.createElement('div');
     watermark.id = 'anti-cheat-watermark';
-    watermark.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9998; opacity: 0.04; display: none; flex-wrap: wrap; justify-content: center; align-items: center; overflow: hidden; user-select: none; font-size: 18px; font-weight: 800; color: #000; transform: rotate(-30deg);';
+    watermark.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9998; opacity: 0.1; display: none; flex-wrap: wrap; justify-content: center; align-items: center; overflow: hidden; user-select: none; font-size: 18px; font-weight: 800; color: #000; transform: rotate(-30deg);';
     
     let content = '';
     for (let i = 0; i < 150; i++) {
@@ -76,8 +76,7 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
         }
     });
 
-    // BẮT SỰ KIỆN KEYDOWN ĐỂ CHẶN F12, DEVTOOLS VÀ PRINTSCREEN TỐI ƯU HƠN
-    window.addEventListener('keydown', (e) => {
+    const blockDevToolsAndScreenshot = (e) => {
         const state = getState();
         if (!state.isAntiCheatEnabled || state.isSubmitted || state.isShowExplanation || state.currentMode === 'flashcard') return;
 
@@ -86,18 +85,29 @@ export function setupAntiCheatEvents(getState, executeSubmitCb) {
            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) ||
            (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
             e.preventDefault();
+            e.stopPropagation();
             showToast("⚠️ Tính năng kiểm tra mã nguồn bị vô hiệu hóa!");
+            return false;
         }
 
-        // Chặn PrintScreen
-        if (e.key === 'PrintScreen' || e.keyCode === 44) {
+        // Chặn PrintScreen, và các tổ hợp phím chụp/in màn hình chứa Alt, Meta (Windows/Cmd) hoặc Ctrl + P/S
+        if (e.key === 'PrintScreen' || e.keyCode === 44 || e.altKey || e.metaKey || (e.ctrlKey && (e.key === 'p' || e.key === 'P' || e.key === 's' || e.key === 'S'))) {
             e.preventDefault();
-            navigator.clipboard.writeText('Hành động chụp màn hình bị cấm trên hệ thống này!');
+            e.stopPropagation();
+            try {
+                navigator.clipboard.writeText('Hành động chụp/in màn hình bị cấm trên hệ thống này!');
+            } catch (err) {
+                // Ignore clipboard API errors if permissions are missing
+            }
             document.body.style.opacity = '0';
-            alert("⚠️ CẢNH BÁO: Hành động chụp màn hình không được phép trong phòng thi!");
+            alert("⚠️ CẢNH BÁO: Các tổ hợp phím và hành động chụp màn hình không được phép trong phòng thi!");
             setTimeout(() => { document.body.style.opacity = '1'; }, 300);
+            return false;
         }
-    });
+    };
+
+    window.addEventListener('keydown', blockDevToolsAndScreenshot);
+    window.addEventListener('keyup', blockDevToolsAndScreenshot);
 
     document.addEventListener('selectionchange', () => {
         const state = getState();
