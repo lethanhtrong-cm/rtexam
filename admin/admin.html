@@ -41,7 +41,8 @@
         .btn-google-login img { width: 24px; height: 24px; }
         
         /* LỚP KHÓA GIAO DIỆN CHÍNH */
-        .admin-locked { filter: blur(5px); pointer-events: none; user-select: none; }
+        body.admin-locked > *:not(#admin-login-overlay) { filter: blur(5px); pointer-events: none; user-select: none; }
+        body.admin-locked { overflow: hidden; }
 
         /* Cấu hình cơ bản cho nút Menu Mobile */
         #mobile-menu-btn {
