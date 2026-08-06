@@ -55,7 +55,7 @@ function formatDateTime(timestamp) {
 }
 
 // =========================================================================
-// HÀM MỚI: XUẤT EXCEL LỊCH SỬ THI VÀ XP CỦA 1 THÀNH VIÊN
+// XUẤT EXCEL: ĐỒNG BỘ 100% VỚI LOGIC CỦA ADMIN-HISTORY
 // =========================================================================
 async function exportUserHistoryToExcel(email) {
     if (!email) {
@@ -66,66 +66,126 @@ async function exportUserHistoryToExcel(email) {
     showToast(`Đang trích xuất dữ liệu của ${email}...`, "success");
 
     try {
-        const resultsRef = collection(db, "results");
-        const q = query(resultsRef, where("email", "==", email));
-        const querySnapshot = await getDocs(q);
+        // Tải kết quả thi và thông tin tên đề
+        const [qSnap, eSnap] = await Promise.all([
+            getDocs(query(collection(db, "results"), where("email", "==", email))),
+            getDocs(collection(db, "exams"))
+        ]);
 
-        if (querySnapshot.empty) {
+        if (qSnap.empty) {
             showToast(`Học viên ${email} chưa có lịch sử làm bài nào!`, "error");
             return;
         }
 
+        // Tạo map lưu tên đề thi
+        const examsMap = {};
+        eSnap.forEach(docSnap => {
+            const exData = docSnap.data();
+            if (exData.examName) {
+                examsMap[docSnap.id] = exData.examName;
+            }
+        });
+
+        let resultsArray = [];
+        qSnap.forEach(docSnap => {
+            resultsArray.push({ id: docSnap.id, data: docSnap.data() });
+        });
+
+        // BƯỚC 1: Sắp xếp thời gian TĂNG DẦN để tính toán số Lần thi (Attempt) và XP chuẩn xác
+        resultsArray.sort((a, b) => {
+            const tA = a.data.timestamp ? (typeof a.data.timestamp.toDate === 'function' ? a.data.timestamp.toDate().getTime() : new Date(a.data.timestamp).getTime()) : (a.data.createdAt ? (typeof a.data.createdAt.toDate === 'function' ? a.data.createdAt.toDate().getTime() : new Date(a.data.createdAt).getTime()) : 0);
+            const tB = b.data.timestamp ? (typeof b.data.timestamp.toDate === 'function' ? b.data.timestamp.toDate().getTime() : new Date(b.data.timestamp).getTime()) : (b.data.createdAt ? (typeof b.data.createdAt.toDate === 'function' ? b.data.createdAt.toDate().getTime() : new Date(b.data.createdAt).getTime()) : 0);
+            return tA - tB;
+        });
+
+        const attemptCounts = {};
+        const maxRawXpDict = {};
+
+        resultsArray.forEach(item => {
+            const data = item.data;
+            const examCode = data.examId || data.examCode || data.quizId || 'Không rõ';
+            
+            if (!attemptCounts[examCode]) {
+                attemptCounts[examCode] = 0;
+                maxRawXpDict[examCode] = 0;
+            }
+            attemptCounts[examCode]++;
+            item.attemptNumber = attemptCounts[examCode];
+
+            // Trích xuất Raw XP
+            let rawXP = 0;
+            if (data.earnedXP !== undefined) {
+                rawXP = data.earnedXP;
+            } else if (data.xp !== undefined) {
+                rawXP = data.xp;
+            } else if (data.score !== undefined && data.score > 0) {
+                rawXP = Math.round(data.score * 10);
+            }
+
+            // Tính XP Thực nhận (Gained XP) dựa trên luật Ôn tập
+            let displayXP = 0;
+            if (item.attemptNumber === 1) {
+                displayXP = rawXP;
+                maxRawXpDict[examCode] = rawXP;
+            } else {
+                let prevMax = maxRawXpDict[examCode];
+                if (rawXP > prevMax) {
+                    displayXP = Math.min(Math.round(rawXP * 0.2), 30); 
+                    maxRawXpDict[examCode] = rawXP;
+                } else if (rawXP > 0) {
+                    displayXP = 5; 
+                } else {
+                    displayXP = 0;
+                }
+            }
+            item.displayXP = displayXP;
+            
+            // Cập nhật lại TS để bước sau dễ sort
+            item.ts = data.timestamp ? (typeof data.timestamp.toDate === 'function' ? data.timestamp.toDate().getTime() : new Date(data.timestamp).getTime()) : (data.createdAt ? (typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().getTime() : new Date(data.createdAt).getTime()) : 0);
+        });
+
+        // BƯỚC 2: Đảo ngược mảng để in ra Excel từ MỚI NHẤT -> CŨ NHẤT (Giống UI History)
+        resultsArray.sort((a, b) => b.ts - a.ts);
+
         const dataToExport = [];
         let stt = 1;
 
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
+        resultsArray.forEach((item) => {
+            const data = item.data;
+            const examCode = data.examId || data.examCode || data.quizId || "Không rõ";
+            const examName = examsMap[examCode] ? `${examsMap[examCode]} (${examCode})` : examCode;
             
-            // Xử lý Ngày thi (Hỗ trợ cả createdAt và timestamp)
+            const attemptLabel = item.attemptNumber === 1 ? "Lần đầu" : `Ôn tập (Lần ${item.attemptNumber})`;
+            
             let examDate = 'N/A';
-            let rawTime = data.createdAt || data.timestamp;
-            if (rawTime) {
-                const dateObj = (typeof rawTime.toDate === 'function') ? rawTime.toDate() : new Date(rawTime);
-                if (!isNaN(dateObj.getTime())) {
-                    examDate = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
-                }
-            }
-
-            // Xử lý XP (Tìm các trường có thể lưu, hoặc tự động quy đổi từ Điểm 10)
-            let finalXP = data.xp || data.xpEarned || data.earnedXP || 0;
-            if (finalXP === 0 && data.score > 0) {
-                finalXP = Math.round(data.score * 10); // Dự phòng: Quy đổi thang điểm 10 sang thang XP 100
+            if (item.ts > 0) {
+                const dateObj = new Date(item.ts);
+                examDate = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
             }
 
             dataToExport.push({
                 "STT": stt++,
-                "Mã / Tên Đề Thi": data.examId || data.examCode || "Không rõ",
-                "Điểm Số": data.score || 0,
+                "Mã / Tên Đề Thi": examName,
+                "Lần Thi": attemptLabel,
+                "Điểm Số": data.score !== undefined ? data.score : 0,
                 "Tổng Câu Hỏi": data.totalQuestions || data.total || 0,
                 "Thời Gian Làm (Giây)": data.timeSpent || 0,
-                "Số XP Nhận Được": finalXP,
+                "Số XP Thực Nhận": item.displayXP,
                 "Ngày Nộp Bài": examDate
             });
         });
 
-        // Khởi tạo Workbook và Worksheet bằng SheetJS (XLSX)
+        // Khởi tạo Workbook và Worksheet bằng SheetJS
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Lịch sử thi & XP");
 
-        // Canh lề cột cho đẹp
+        // Căn lề cột
         const wscols = [
-            {wch: 5},  // STT
-            {wch: 25}, // Mã Đề
-            {wch: 10}, // Điểm
-            {wch: 15}, // Tổng câu
-            {wch: 20}, // Thời gian
-            {wch: 15}, // XP
-            {wch: 20}  // Ngày nộp
+            {wch: 5},  {wch: 40}, {wch: 15}, {wch: 10}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 20}
         ];
         worksheet['!cols'] = wscols;
 
-        // Tạo tên file an toàn (bỏ ký tự đặc biệt khỏi email)
         const safeEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
         XLSX.writeFile(workbook, `Lich_Su_Thi_${safeEmail}.xlsx`);
         
@@ -620,7 +680,7 @@ export function renderUserList() {
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
         const vipStyle = user.isVip ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; 
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
-        const excelStyle = `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);`; // Bổ sung style cho nút Excel
+        const excelStyle = `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);`;
         const banStyle = user.isBanned ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
         
         const resetStyle = `${baseBtnStyle} background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 2px 5px rgba(100,116,139,0.3);`;
@@ -1007,7 +1067,6 @@ document.addEventListener('componentsLoaded', () => {
         usersBody.addEventListener('click', (e) => {
             if(e.target.classList.contains('user-row-checkbox')) return; 
 
-            // Gắn sự kiện cho nút Tải Excel
             const excelBtn = e.target.closest('.btn-export-excel');
             if (excelBtn) return exportUserHistoryToExcel(excelBtn.dataset.email);
 
