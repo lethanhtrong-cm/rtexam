@@ -17,6 +17,7 @@
         display: flex;
         gap: 20px;
         flex-wrap: wrap;
+        align-items: center;
     }
     
     .dashboard-footer-links a {
@@ -32,6 +33,18 @@
     .dashboard-footer-links a:hover {
         color: #0284c7;
         transform: translateY(-1px);
+    }
+
+    .visitor-counter-badge {
+        display: flex; 
+        align-items: center; 
+        gap: 6px; 
+        color: #059669; 
+        font-weight: 600; 
+        background: rgba(16, 185, 129, 0.1); 
+        padding: 4px 12px; 
+        border-radius: 20px;
+        border: 1px solid rgba(16, 185, 129, 0.2);
     }
 
     /* Tự động dàn dọc và căn giữa khi xem trên điện thoại */
@@ -53,6 +66,11 @@
     </div>
     
     <div class="dashboard-footer-links">
+        <!-- CHÈN THÊM BỘ ĐẾM VÀO ĐÂY -->
+        <span class="visitor-counter-badge">
+            <i class="fa-solid fa-chart-line"></i> Lượt truy cập: <span id="global-visitor-count">...</span>
+        </span>
+        
         <a href="#" onclick="document.getElementById('feedback-admin-modal').style.display='flex'; return false;"><i class="fa-solid fa-bug"></i> Báo lỗi hệ thống</a>
         <a href="#"><i class="fa-regular fa-circle-question"></i> Hỗ trợ & HDSD</a>
         <a href="#"><i class="fa-solid fa-code-branch"></i> Phiên bản v1.0.0</a>
