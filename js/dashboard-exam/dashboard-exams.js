@@ -17,11 +17,11 @@ document.addEventListener("authReady", async (e) => {
         // KIỂM TRA HÀNH ĐỘNG F5 BẰNG API BROWSER
         const navEntries = performance.getEntriesByType("navigation");
         if (navEntries.length > 0 && navEntries[0].type === "reload") {
-            // F5: Chỉ xóa CoreCache (Câu hỏi & Cấu trúc Đề thi) và ExtraCache (Avatar & Badges)
-            // Lượt thi, Rating, Feedback (Nằm ở file exam-data.js) sẽ không bị xóa và được giữ nguyên
+            // F5: Xóa TOÀN BỘ cache để ép hệ thống tải lại dữ liệu mới nhất từ Firestore
             sessionStorage.removeItem(`examCoreCache_${user.uid}`);
-            sessionStorage.removeItem(`examExtraCache_${user.uid}`); // FIX: Xóa cache Extra để ép hệ thống tải Avatar mới
-            console.log("F5 Detected: Đã xóa cache Core (Đề thi) và Extra (Avatar). Giữ nguyên Rating và Lượt thi.");
+            sessionStorage.removeItem(`examExtraCache_${user.uid}`);
+            sessionStorage.removeItem(`examMetaCache_${user.uid}`); // BỔ SUNG: Xóa luôn MetaCache (Lượt thi & Rating)
+            console.log("F5 Detected: Đã xóa toàn bộ cache Core, Extra và Meta. Dữ liệu sẽ được tải mới hoàn toàn!");
         }
     }
 
