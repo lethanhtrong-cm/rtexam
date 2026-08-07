@@ -35,6 +35,13 @@
         transform: translateY(-1px);
     }
 
+    .visitor-stats-wrapper {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
     .visitor-counter-badge {
         display: flex; 
         align-items: center; 
@@ -42,9 +49,10 @@
         color: #059669; 
         font-weight: 600; 
         background: rgba(16, 185, 129, 0.1); 
-        padding: 4px 12px; 
-        border-radius: 20px;
+        padding: 4px 10px; 
+        border-radius: 8px;
         border: 1px solid rgba(16, 185, 129, 0.2);
+        font-size: 0.8rem;
     }
 
     /* Tự động dàn dọc và căn giữa khi xem trên điện thoại */
@@ -57,6 +65,9 @@
         .dashboard-footer-links {
             justify-content: center;
         }
+        .visitor-stats-wrapper {
+            justify-content: center;
+        }
     }
 </style>
 
@@ -66,10 +77,15 @@
     </div>
     
     <div class="dashboard-footer-links">
-        <!-- CHÈN THÊM BỘ ĐẾM VÀO ĐÂY -->
-        <span class="visitor-counter-badge">
-            <i class="fa-solid fa-chart-line"></i> Lượt truy cập: <span id="global-visitor-count">...</span>
-        </span>
+        
+        <!-- BỘ ĐẾM NÂNG CẤP ĐA CHỈ SỐ -->
+        <div class="visitor-stats-wrapper">
+            <span class="visitor-counter-badge" title="Tổng lượt truy cập"><i class="fa-solid fa-globe"></i> Tổng: <span id="global-visitor-count">...</span></span>
+            <span class="visitor-counter-badge" title="Hôm nay"><i class="fa-solid fa-calendar-day"></i> Ngày: <span id="visitor-daily">...</span></span>
+            <span class="visitor-counter-badge" title="Tuần này"><i class="fa-solid fa-calendar-week"></i> Tuần: <span id="visitor-weekly">...</span></span>
+            <span class="visitor-counter-badge" title="Tháng này"><i class="fa-regular fa-calendar-days"></i> Tháng: <span id="visitor-monthly">...</span></span>
+            <span class="visitor-counter-badge" title="Năm nay"><i class="fa-solid fa-calendar"></i> Năm: <span id="visitor-yearly">...</span></span>
+        </div>
         
         <a href="#" onclick="document.getElementById('feedback-admin-modal').style.display='flex'; return false;"><i class="fa-solid fa-bug"></i> Báo lỗi hệ thống</a>
         <a href="#"><i class="fa-regular fa-circle-question"></i> Hỗ trợ & HDSD</a>
