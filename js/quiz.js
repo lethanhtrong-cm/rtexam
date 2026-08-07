@@ -81,7 +81,7 @@ function loadDraft() {
         userAnswers = draft.userAnswers || {};
         flaggedQuestions = draft.flaggedQuestions || {};
         if (draft.timeRemaining !== undefined) timeRemaining = draft.timeRemaining;
-        if (draft.currentIndex !== undefined) currentIndex = draft.currentIndex;
+        if (draft.currentIndex !== undefined) currentIndex = currentIndex = draft.currentIndex;
         return true;
     }
     return false;
@@ -463,9 +463,13 @@ async function executeSubmit() {
             savedAnswers: userAnswers, timeSpent: timeSpent, timestamp: new Date().toISOString() 
         });
 
-        const examDocRef = doc(db, "exams", currentExamId);
-        await setDoc(examDocRef, { attemptCount: increment(1) }, { merge: true });
-        
+        // TÍNH NĂNG MỚI: Chỉ cộng 1 lượt thi nếu làm trên 75% số câu hỏi
+        const answeredCount = Object.keys(userAnswers).length;
+        if (finalTotal > 0 && (answeredCount / finalTotal) >= 0.75) {
+            const examDocRef = doc(db, "exams", currentExamId);
+            await setDoc(examDocRef, { attemptCount: increment(1) }, { merge: true });
+        }
+
         showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
     } catch (error) {
         showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
