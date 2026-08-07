@@ -163,12 +163,18 @@ export async function loadAggregatedExamData() {
                     }
                     
                     if (userId) {
-                        if (!usersExamsMap[eId]) usersExamsMap[eId] = {};
-                        if (!usersExamsMap[eId][userId] || ts > usersExamsMap[eId][userId].ts) {
-                            usersExamsMap[eId][userId] = { ts: ts, email: data.email || data.userEmail || userId };
-                        }
-                        allUniqueUids.add(userId);
+                // YÊU CẦU MỚI: Chỉ lấy Avatar người thi nếu đã làm (trả lời) từ 75% số câu hỏi trở lên
+                const totalQ = data.totalQuestions || 1;
+                const answeredQ = data.savedAnswers ? Object.keys(data.savedAnswers).length : 0;
+                
+                if ((answeredQ / totalQ) >= 0.75) {
+                    if (!usersExamsMap[eId]) usersExamsMap[eId] = {};
+                    if (!usersExamsMap[eId][userId] || ts > usersExamsMap[eId][userId].ts) {
+                        usersExamsMap[eId][userId] = { ts: ts, email: data.email || data.userEmail || userId };
                     }
+                    allUniqueUids.add(userId);
+                }
+            }
                 }
             });
 
