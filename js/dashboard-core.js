@@ -29,6 +29,15 @@ document.addEventListener('ComponentsLoaded', () => {
         setDoc(doc(db, "statistics", "global"), { totalVisits: increment(1) }, { merge: true }).catch(() => {});
     }
 
+    // BẮT ĐẦU CHÈN THÊM ĐOẠN NÀY ĐỂ KÉO DỮ LIỆU HIỂN THỊ LÊN FOOTER
+    onSnapshot(doc(db, "statistics", "global"), (docSnap) => {
+        const visitorCounter = document.getElementById('global-visitor-count');
+        if (visitorCounter && docSnap.exists()) {
+            visitorCounter.innerText = (docSnap.data().totalVisits || 0).toLocaleString('vi-VN');
+        }
+    });
+    // KẾT THÚC CHÈN THÊM
+
     initDOMListeners();
     
     if (currentUserInstance) {
