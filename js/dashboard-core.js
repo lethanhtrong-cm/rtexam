@@ -4,9 +4,9 @@
 import { app, auth, db } from "./dashboard/firebase-core.js";
 import { safeRedirect, formatDate, switchTab, showNotificationModal, renderAuthInfo, setVipInactive } from "./dashboard/dashboard-ui.js";
 
-// Import core logic của Firestore và Auth (Bổ sung thêm addDoc để tạo thông báo)
+// Import core logic của Firestore và Auth (Bổ sung thêm increment để làm bộ đếm)
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Tái xuất khẩu (Re-export) để đảm bảo các file cũ (như dashboard-exams) vẫn hoạt động hoàn hảo
 export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
@@ -19,6 +19,16 @@ let currentUserInstance = null;
 
 document.addEventListener('ComponentsLoaded', () => {
     isComponentsLoaded = true;
+
+    // =================================================================
+    // TÍNH NĂNG MỚI: BỘ ĐẾM LƯỢT TRUY CẬP (VISITOR COUNTER)
+    // =================================================================
+    if (!sessionStorage.getItem('site_visited')) {
+        sessionStorage.setItem('site_visited', 'true');
+        // Ghi nhận lượt truy cập vào bảng statistics/global (tự động cộng 1)
+        setDoc(doc(db, "statistics", "global"), { totalVisits: increment(1) }, { merge: true }).catch(() => {});
+    }
+
     initDOMListeners();
     
     if (currentUserInstance) {
