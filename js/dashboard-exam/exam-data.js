@@ -42,6 +42,18 @@ export async function loadAggregatedExamData() {
         const metaCacheKey = `examMetaCache_${uid}`; 
         const coreCacheKey = `examCoreCache_${uid}`; 
 
+        // =====================================================================
+        // KIỂM TRA HÀNH ĐỘNG F5 RELOAD
+        // Chỉ xóa Cache để ép tải lại dữ liệu mới từ Firestore khi người dùng F5.
+        // Khi chuyển tab, logic này bị bỏ qua, hệ thống sẽ dùng Cache để tiết kiệm Đọc/Ghi.
+        // =====================================================================
+        const navEntries = performance.getEntriesByType("navigation");
+        if (navEntries.length > 0 && navEntries[0].type === "reload") {
+            sessionStorage.removeItem(metaCacheKey);
+            sessionStorage.removeItem(coreCacheKey);
+            sessionStorage.removeItem(`examExtraCache_${uid}`);
+        }
+
         // 1. XỬ LÝ META (RATING & FEEDBACKS)
         let ratingMap = {};
         const cachedMeta = sessionStorage.getItem(metaCacheKey);
