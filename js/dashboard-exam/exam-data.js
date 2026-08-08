@@ -1,5 +1,5 @@
 import { auth, db } from "../dashboard-core.js";
-import { collection, getDocs, query, where, getCountFromServer, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
 
@@ -9,23 +9,12 @@ export async function fetchUserResultsCache(user) {
     try {
         const cacheKey = `completedExams_${user.uid}`;
 
-        // TỐI ƯU: Kiểm tra cache trước khi gọi API để tránh Read Firestore dư thừa
-        const cachedResults = sessionStorage.getItem(cacheKey);
-        if (cachedResults) {
-            const parsedCache = JSON.parse(cachedResults);
-            if (Object.keys(parsedCache).length > 0) {
-                Object.assign(State.completedExams, parsedCache);
-                console.log("Đã tải kết quả thi từ Cache, bỏ qua Read Firestore!");
-                return; // Dừng hàm tại đây, không gọi Firebase nữa
-            }
-        }
-
         const resultsRef = collection(db, "results");
         const q = query(resultsRef, where("email", "==", user.email));
         const snap = await getDocs(q);
         
-        snap.forEach(docSnap => {
-            const data = docSnap.data();
+        snap.forEach(doc => {
+            const data = doc.data();
             const examId = data.examId || data.examCode;
             if (examId) {
                 const ts = data.createdAt ? (typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : data.timestamp || 0;
@@ -34,7 +23,7 @@ export async function fetchUserResultsCache(user) {
                         score: data.score || 0,
                         total: data.totalQuestions || data.total || 1,
                         timestamp: ts,
-                        resultId: docSnap.id
+                        resultId: doc.id
                     };
                 }
             }
@@ -72,8 +61,8 @@ export async function loadAggregatedExamData() {
             ratingMap = JSON.parse(cachedMeta);
         } else {
             const fSnap = await getDocs(collection(db, "feedbacks"));
-            fSnap.forEach((docSnap) => {
-                const data = docSnap.data();
+            fSnap.forEach((doc) => {
+                const data = doc.data();
                 const eId = data.examId;
                 const stars = data.rating || 5; 
                 if (eId) {
@@ -91,78 +80,44 @@ export async function loadAggregatedExamData() {
         if (cachedCore) {
             examMap = JSON.parse(cachedCore);
         } else {
-            // TỐI ƯU: Đọc danh sách Exams trước
+            const qSnap = await getDocs(collection(db, "questions"));
+            qSnap.forEach((doc) => {
+                const eId = doc.data().examId;
+                if (eId) {
+                    if (!examMap[eId]) examMap[eId] = { id: eId, questionCount: 0 };
+                    examMap[eId].questionCount++;
+                }
+            });
+
             const eSnap = await getDocs(collection(db, "exams"));
-            const countPromises = []; // Mảng chứa các lệnh chờ đếm câu hỏi
-
-            // BƯỚC 1: Kéo cache vĩnh viễn từ localStorage
-            const examCountsCache = JSON.parse(localStorage.getItem('longterm_exam_counts') || '{}');
-
-            eSnap.forEach((docSnap) => {
-                const eId = docSnap.id;
-                const conf = docSnap.data();
+            eSnap.forEach((doc) => {
+                const eId = doc.id;
+                const conf = doc.data();
                 const isPublicExam = conf.isPublic === true || (conf.isPublic === undefined && conf.creatorId === undefined);
                 const isMyExam = auth.currentUser && conf.creatorId === auth.currentUser.uid;
 
                 if (isPublicExam || isMyExam) {
-                    examMap[eId] = {
-                        id: eId,
-                        questionCount: 0, 
-                        isValid: true, 
-                        examName: conf.examName || "", 
-                        isVip: conf.isVip || false,
-                        timeLimit: conf.timeLimit ? parseInt(conf.timeLimit) : 15,
-                        attemptCount: conf.attemptCount || 0,
-                        technique: conf.technique || "Hỗn hợp",
-                        level: conf.level || "Trung bình",
-                        description: conf.description || ""
-                    };
-                    
-                    let parsedTime = 0;
-                    const rawTime = conf.createdAt || conf.timestamp; 
-                    if (rawTime) {
-                        if (typeof rawTime.toMillis === 'function') parsedTime = rawTime.toMillis();
-                        else if (rawTime.seconds !== undefined) parsedTime = rawTime.seconds * 1000;
-                        else parsedTime = new Date(rawTime).getTime();
-                    }
-                    examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
-
-                    // ==========================================
-                    // TỐI ƯU SIÊU CẤP N+1 QUERY (READ GIẢM THIỂU)
-                    // ==========================================
-                    if (conf.questionCount !== undefined && conf.questionCount > 0) {
-                        // Ưu tiên 1: Lấy số lượng lưu sẵn từ Database (nếu bạn có lưu)
-                        examMap[eId].questionCount = conf.questionCount;
-                        examCountsCache[eId] = conf.questionCount;
-                    } else if (examCountsCache[eId]) {
-                        // Ưu tiên 2: Lấy số lượng từ localStorage (sống sót qua F5)
-                        examMap[eId].questionCount = examCountsCache[eId];
-                    } else {
-                        // Mức độ cuối: Chỉ tốn Read API đếm trên Server cho Đề hoàn toàn mới
-                        const countQuery = query(collection(db, "questions"), where("examId", "==", eId));
-                        const countPromise = getCountFromServer(countQuery).then(snapshot => {
-                            const count = snapshot.data().count;
-                            examMap[eId].questionCount = count;
-                            examCountsCache[eId] = count; // Lưu vào biến tạm chờ update Cache
-                        });
-                        countPromises.push(countPromise);
+                    if (examMap[eId]) {
+                        examMap[eId].isValid = true; 
+                        examMap[eId].examName = conf.examName || ""; 
+                        examMap[eId].isVip = conf.isVip || false;
+                        examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
+                        examMap[eId].attemptCount = conf.attemptCount || 0;
+                        examMap[eId].technique = conf.technique || "Hỗn hợp";
+                        examMap[eId].level = conf.level || "Trung bình";
+                        examMap[eId].description = conf.description || "";
+                        
+                        let parsedTime = 0;
+                        const rawTime = conf.createdAt || conf.timestamp; 
+                        if (rawTime) {
+                            if (typeof rawTime.toMillis === 'function') parsedTime = rawTime.toMillis();
+                            else if (rawTime.seconds !== undefined) parsedTime = rawTime.seconds * 1000;
+                            else parsedTime = new Date(rawTime).getTime();
+                        }
+                        examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
                     }
                 }
             });
-
-            // Chờ các đề mới đếm xong
-            await Promise.all(countPromises);
-            
-            // BƯỚC 2: Cập nhật lại kho lưu trữ localStorage để dành cho lần F5 tiếp theo
-            localStorage.setItem('longterm_exam_counts', JSON.stringify(examCountsCache));
-
-            // TỐI ƯU: Lọc bỏ các đề không có câu hỏi để đảm bảo logic y hệt code cũ
-            Object.keys(examMap).forEach(eId => {
-                if (examMap[eId].questionCount === 0) {
-                    delete examMap[eId];
-                }
-            });
-
             sessionStorage.setItem(coreCacheKey, JSON.stringify(examMap));
         }
 
@@ -189,8 +144,8 @@ export async function loadAggregatedExamData() {
             const tMonth = now - (30 * 24 * 60 * 60 * 1000);
             const tYear = now - (365 * 24 * 60 * 60 * 1000);
 
-            resultsSnap.forEach(docSnap => {
-                const data = docSnap.data();
+            resultsSnap.forEach(doc => {
+                const data = doc.data();
                 const eId = data.examId || data.examCode;
                 const userId = data.uid || data.userId || data.email; 
                 
@@ -244,50 +199,22 @@ export async function loadAggregatedExamData() {
             if (topWeek && !badgesMap[topWeek]) badgesMap[topWeek] = 'week';
 
             const userAvatars = {};
-            const userNames = {}; 
+            const userNames = {}; // MỚI: Thêm object để lưu tên
 
-            // TỐI ƯU: Chỉ fetch song song đúng những user có mặt trong allUniqueUids
             if (allUniqueUids.size > 0) {
                 try {
-                    const userPromises = Array.from(allUniqueUids).map(async (identifier) => {
-                        let uData = null;
-                        let docId = identifier;
-
-                        if (String(identifier).includes('@')) {
-                            // Truy vấn nếu identifier là email
-                            const q = query(collection(db, "users"), where("email", "==", identifier));
-                            const snap = await getDocs(q);
-                            if (!snap.empty) {
-                                uData = snap.docs[0].data();
-                                docId = snap.docs[0].id;
-                            }
-                        } else {
-                            // Truy vấn nếu identifier là UID
-                            const docRef = doc(db, "users", identifier);
-                            const docSnap = await getDoc(docRef);
-                            if (docSnap.exists()) {
-                                uData = docSnap.data();
-                            }
-                        }
+                    const usersSnap = await getDocs(collection(db, "users"));
+                    usersSnap.forEach(uDoc => {
+                        const uData = uDoc.data();
+                        const id = uDoc.id;
+                        const mail = uData.email;
                         
-                        if (uData) return { identifier, uData, docId };
-                        return null;
-                    });
-
-                    const usersResolved = await Promise.all(userPromises);
-
-                    usersResolved.forEach(res => {
-                        if (res) {
-                            const { identifier, uData, docId } = res;
-                            const mail = uData.email;
-                            const photo = uData.photoURL || uData.avatar;
-                            const name = String(uData.displayName || mail || docId);
-                            const defaultAva = `https://ui-avatars.com/api/?name=${name.substring(0,2)}&background=e2e8f0&color=64748b`;
-                            
-                            // Map lại chính xác theo identifier gốc được lưu trong kết quả bài thi
-                            userAvatars[identifier] = photo || defaultAva;
-                            userNames[identifier] = name;
-                        }
+                        const photo = uData.photoURL || uData.avatar;
+                        const name = String(uData.displayName || mail || id);
+                        const defaultAva = `https://ui-avatars.com/api/?name=${name.substring(0,2)}&background=e2e8f0&color=64748b`;
+                        
+                        if (allUniqueUids.has(id)) { userAvatars[id] = photo || defaultAva; userNames[id] = name; }
+                        if (mail && allUniqueUids.has(mail)) { userAvatars[mail] = photo || defaultAva; userNames[mail] = name; }
                     });
                 } catch (e) {
                     console.log("Không thể kéo dữ liệu Avatar từ users", e);
@@ -307,7 +234,7 @@ export async function loadAggregatedExamData() {
                 const sortedUsers = Object.entries(usersExamsMap[eId])
                     .map(([uid, info]) => ({ uid, ...info }))
                     .sort((a, b) => b.ts - a.ts)
-                    .slice(0, 5); 
+                    .slice(0, 5); // Đổi thành 5
                 
                 // MỚI: Lưu Object gồm URL và Name thay vì chuỗi
                 avatarsMap[eId] = sortedUsers.map(u => ({
@@ -316,7 +243,7 @@ export async function loadAggregatedExamData() {
                 }));
             });
 
-            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap, dynamicAttemptCounts })); 
+            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap, dynamicAttemptCounts })); // Bổ sung lưu dynamicAttemptCounts vào Cache nếu cần
         }
 
         // Nếu lấy từ Cache, đọc lại biến dynamicAttemptCounts
