@@ -134,6 +134,7 @@ export async function loadAggregatedExamData() {
         } else {
             const resultsSnap = await getDocs(collection(db, "results"));
             const counts = { week: {}, month: {}, year: {} };
+            const dynamicAttemptCounts = {}; // BỔ SUNG: Biến đếm tổng lượt thi thực tế từ kết quả
             
             const usersExamsMap = {}; 
             const allUniqueUids = new Set();
@@ -163,18 +164,20 @@ export async function loadAggregatedExamData() {
                     }
                     
                     if (userId) {
-                // YÊU CẦU MỚI: Chỉ lấy Avatar người thi nếu đã làm (trả lời) từ 75% số câu hỏi trở lên
-                const totalQ = data.totalQuestions || 1;
-                const answeredQ = data.savedAnswers ? Object.keys(data.savedAnswers).length : 0;
-                
-                if ((answeredQ / totalQ) >= 0.75) {
-                    if (!usersExamsMap[eId]) usersExamsMap[eId] = {};
-                    if (!usersExamsMap[eId][userId] || ts > usersExamsMap[eId][userId].ts) {
-                        usersExamsMap[eId][userId] = { ts: ts, email: data.email || data.userEmail || userId };
+                        // YÊU CẦU MỚI: Chỉ lấy Avatar người thi nếu đã làm (trả lời) từ 75% số câu hỏi trở lên
+                        const totalQ = data.totalQuestions || 1;
+                        const answeredQ = data.savedAnswers ? Object.keys(data.savedAnswers).length : 0;
+                        
+                        if ((answeredQ / totalQ) >= 0.75) {
+                            dynamicAttemptCounts[eId] = (dynamicAttemptCounts[eId] || 0) + 1; // BỔ SUNG: Đếm live lượt thi
+
+                            if (!usersExamsMap[eId]) usersExamsMap[eId] = {};
+                            if (!usersExamsMap[eId][userId] || ts > usersExamsMap[eId][userId].ts) {
+                                usersExamsMap[eId][userId] = { ts: ts, email: data.email || data.userEmail || userId };
+                            }
+                            allUniqueUids.add(userId);
+                        }
                     }
-                    allUniqueUids.add(userId);
-                }
-            }
                 }
             });
 
@@ -240,15 +243,20 @@ export async function loadAggregatedExamData() {
                 }));
             });
 
-            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap }));
+            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap, dynamicAttemptCounts })); // Bổ sung lưu dynamicAttemptCounts vào Cache nếu cần
         }
+
+        // Nếu lấy từ Cache, đọc lại biến dynamicAttemptCounts
+        const dynamicAttemptCounts = cachedExtra ? (JSON.parse(cachedExtra).dynamicAttemptCounts || {}) : {};
 
         // 3. GHÉP NỐI CORE, META VÀ DỮ LIỆU ĐỘNG THÀNH DỮ LIỆU CUỐI CÙNG
         Object.keys(examMap).forEach(eId => {
             if (!examMap[eId].isValid) { delete examMap[eId]; return; }
             if (examMap[eId].timeLimit === undefined) examMap[eId].timeLimit = 15;
             if (examMap[eId].isVip === undefined) examMap[eId].isVip = false;
-            if (examMap[eId].attemptCount === undefined) examMap[eId].attemptCount = 0;
+            
+            // SỬA: Lấy số đếm live từ kết quả thực tế, nếu không có mới dùng số tĩnh hoặc 0
+            examMap[eId].attemptCount = dynamicAttemptCounts[eId] || examMap[eId].attemptCount || 0;
 
             if (ratingMap[eId]) {
                 const avg = ratingMap[eId].total / ratingMap[eId].count;
