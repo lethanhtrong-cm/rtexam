@@ -597,13 +597,12 @@ function fetchUserData(user) {
                     }
 
                     if (needsDateUpdate) {
-                        const now = new Date();
-                        const expire = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); 
-                        
-                        currentUserData.vipStart = now;
-                        currentUserData.vipEnd = expire;
-                        
-                        setDoc(userDocRef, { vipStart: now, vipEnd: expire }, { merge: true }).catch(err => console.error(err));
+                        // SỬA LỖI BẢO MẬT: Chuyển isVip thành false khi hết hạn thay vì tự động gia hạn
+                        currentUserData.isVip = false;
+                        setDoc(userDocRef, { isVip: false }, { merge: true }).catch(err => console.error(err));
+                        setVipInactive();
+                        resolve(currentUserData);
+                        return; // Ngừng thực thi các logic VIP bên dưới
                     }
                     
                     const elVipStatusBadge = document.getElementById("vipStatusBadge");
