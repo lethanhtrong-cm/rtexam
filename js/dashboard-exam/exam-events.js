@@ -48,10 +48,21 @@ export function setupToolbarEvents() {
                 btnAutoGenerate.disabled = true;
                 btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kiểm tra quyền...';
                 try {
-                    const examsRef = collection(db, "exams");
-                    const snap = await getDocs(query(examsRef, where("creatorId", "==", auth.currentUser.uid)));
-                    let aiCount = 0; snap.forEach(doc => { if (doc.data().technique === 'AI Tự Động') aiCount++; });
-                    if (aiCount >= 5) {
+                    // exam-events.js
+const examsRef = collection(db, "exams");
+
+// TỐI ƯU 1: Thêm where lọc trực tiếp từ Database
+const snap = await getDocs(query(
+    examsRef, 
+    where("creatorId", "==", auth.currentUser.uid),
+    where("technique", "==", "AI Tự Động")
+));
+
+// TỐI ƯU 2: Đọc trực tiếp size của snapshot, bỏ vòng lặp forEach
+const aiCount = snap.size; 
+
+if (aiCount >= 5) {
+    // ...
                         const modal = document.getElementById('aiGenerateModal');
                         if (modal) { modal.classList.remove('active', 'show'); modal.style.display = 'none'; }
                         if (typeof window.showLimitWarningPopup === 'function') window.showLimitWarningPopup(aiCount);
