@@ -24,8 +24,8 @@ export async function fetchUserResultsCache(user) {
         const q = query(resultsRef, where("email", "==", user.email));
         const snap = await getDocs(q);
         
-        snap.forEach(doc => {
-            const data = doc.data();
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
             const examId = data.examId || data.examCode;
             if (examId) {
                 const ts = data.createdAt ? (typeof data.createdAt.toMillis === 'function' ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : data.timestamp || 0;
@@ -34,7 +34,7 @@ export async function fetchUserResultsCache(user) {
                         score: data.score || 0,
                         total: data.totalQuestions || data.total || 1,
                         timestamp: ts,
-                        resultId: doc.id
+                        resultId: docSnap.id
                     };
                 }
             }
@@ -72,8 +72,8 @@ export async function loadAggregatedExamData() {
             ratingMap = JSON.parse(cachedMeta);
         } else {
             const fSnap = await getDocs(collection(db, "feedbacks"));
-            fSnap.forEach((doc) => {
-                const data = doc.data();
+            fSnap.forEach((docSnap) => {
+                const data = docSnap.data();
                 const eId = data.examId;
                 const stars = data.rating || 5; 
                 if (eId) {
@@ -95,16 +95,19 @@ export async function loadAggregatedExamData() {
             const eSnap = await getDocs(collection(db, "exams"));
             const countPromises = []; // Mảng chứa các lệnh chờ đếm câu hỏi
 
-            eSnap.forEach((doc) => {
-                const eId = doc.id;
-                const conf = doc.data();
+            // BƯỚC 1: Kéo cache vĩnh viễn từ localStorage
+            const examCountsCache = JSON.parse(localStorage.getItem('longterm_exam_counts') || '{}');
+
+            eSnap.forEach((docSnap) => {
+                const eId = docSnap.id;
+                const conf = docSnap.data();
                 const isPublicExam = conf.isPublic === true || (conf.isPublic === undefined && conf.creatorId === undefined);
                 const isMyExam = auth.currentUser && conf.creatorId === auth.currentUser.uid;
 
                 if (isPublicExam || isMyExam) {
                     examMap[eId] = {
                         id: eId,
-                        questionCount: 0, // Khởi tạo 0, sẽ update ngay sau đó
+                        questionCount: 0, 
                         isValid: true, 
                         examName: conf.examName || "", 
                         isVip: conf.isVip || false,
@@ -124,17 +127,34 @@ export async function loadAggregatedExamData() {
                     }
                     examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
 
-                    // TỐI ƯU: Dùng getCountFromServer đếm trên server (Tiết kiệm 99% số Read)
-                    const countQuery = query(collection(db, "questions"), where("examId", "==", eId));
-                    const countPromise = getCountFromServer(countQuery).then(snapshot => {
-                        examMap[eId].questionCount = snapshot.data().count;
-                    });
-                    countPromises.push(countPromise);
+                    // ==========================================
+                    // TỐI ƯU SIÊU CẤP N+1 QUERY (READ GIẢM THIỂU)
+                    // ==========================================
+                    if (conf.questionCount !== undefined && conf.questionCount > 0) {
+                        // Ưu tiên 1: Lấy số lượng lưu sẵn từ Database (nếu bạn có lưu)
+                        examMap[eId].questionCount = conf.questionCount;
+                        examCountsCache[eId] = conf.questionCount;
+                    } else if (examCountsCache[eId]) {
+                        // Ưu tiên 2: Lấy số lượng từ localStorage (sống sót qua F5)
+                        examMap[eId].questionCount = examCountsCache[eId];
+                    } else {
+                        // Mức độ cuối: Chỉ tốn Read API đếm trên Server cho Đề hoàn toàn mới
+                        const countQuery = query(collection(db, "questions"), where("examId", "==", eId));
+                        const countPromise = getCountFromServer(countQuery).then(snapshot => {
+                            const count = snapshot.data().count;
+                            examMap[eId].questionCount = count;
+                            examCountsCache[eId] = count; // Lưu vào biến tạm chờ update Cache
+                        });
+                        countPromises.push(countPromise);
+                    }
                 }
             });
 
-            // TỐI ƯU: Chờ tất cả truy vấn đếm song song hoàn tất
+            // Chờ các đề mới đếm xong
             await Promise.all(countPromises);
+            
+            // BƯỚC 2: Cập nhật lại kho lưu trữ localStorage để dành cho lần F5 tiếp theo
+            localStorage.setItem('longterm_exam_counts', JSON.stringify(examCountsCache));
 
             // TỐI ƯU: Lọc bỏ các đề không có câu hỏi để đảm bảo logic y hệt code cũ
             Object.keys(examMap).forEach(eId => {
@@ -169,8 +189,8 @@ export async function loadAggregatedExamData() {
             const tMonth = now - (30 * 24 * 60 * 60 * 1000);
             const tYear = now - (365 * 24 * 60 * 60 * 1000);
 
-            resultsSnap.forEach(doc => {
-                const data = doc.data();
+            resultsSnap.forEach(docSnap => {
+                const data = docSnap.data();
                 const eId = data.examId || data.examCode;
                 const userId = data.uid || data.userId || data.email; 
                 
