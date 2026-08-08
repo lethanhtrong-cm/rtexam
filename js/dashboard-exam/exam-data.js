@@ -1,5 +1,5 @@
 import { auth, db } from "../dashboard-core.js";
-import { collection, getDocs, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, query, where, getCountFromServer, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
 
@@ -224,22 +224,50 @@ export async function loadAggregatedExamData() {
             if (topWeek && !badgesMap[topWeek]) badgesMap[topWeek] = 'week';
 
             const userAvatars = {};
-            const userNames = {}; // MỚI: Thêm object để lưu tên
+            const userNames = {}; 
 
+            // TỐI ƯU: Chỉ fetch song song đúng những user có mặt trong allUniqueUids
             if (allUniqueUids.size > 0) {
                 try {
-                    const usersSnap = await getDocs(collection(db, "users"));
-                    usersSnap.forEach(uDoc => {
-                        const uData = uDoc.data();
-                        const id = uDoc.id;
-                        const mail = uData.email;
+                    const userPromises = Array.from(allUniqueUids).map(async (identifier) => {
+                        let uData = null;
+                        let docId = identifier;
+
+                        if (String(identifier).includes('@')) {
+                            // Truy vấn nếu identifier là email
+                            const q = query(collection(db, "users"), where("email", "==", identifier));
+                            const snap = await getDocs(q);
+                            if (!snap.empty) {
+                                uData = snap.docs[0].data();
+                                docId = snap.docs[0].id;
+                            }
+                        } else {
+                            // Truy vấn nếu identifier là UID
+                            const docRef = doc(db, "users", identifier);
+                            const docSnap = await getDoc(docRef);
+                            if (docSnap.exists()) {
+                                uData = docSnap.data();
+                            }
+                        }
                         
-                        const photo = uData.photoURL || uData.avatar;
-                        const name = String(uData.displayName || mail || id);
-                        const defaultAva = `https://ui-avatars.com/api/?name=${name.substring(0,2)}&background=e2e8f0&color=64748b`;
-                        
-                        if (allUniqueUids.has(id)) { userAvatars[id] = photo || defaultAva; userNames[id] = name; }
-                        if (mail && allUniqueUids.has(mail)) { userAvatars[mail] = photo || defaultAva; userNames[mail] = name; }
+                        if (uData) return { identifier, uData, docId };
+                        return null;
+                    });
+
+                    const usersResolved = await Promise.all(userPromises);
+
+                    usersResolved.forEach(res => {
+                        if (res) {
+                            const { identifier, uData, docId } = res;
+                            const mail = uData.email;
+                            const photo = uData.photoURL || uData.avatar;
+                            const name = String(uData.displayName || mail || docId);
+                            const defaultAva = `https://ui-avatars.com/api/?name=${name.substring(0,2)}&background=e2e8f0&color=64748b`;
+                            
+                            // Map lại chính xác theo identifier gốc được lưu trong kết quả bài thi
+                            userAvatars[identifier] = photo || defaultAva;
+                            userNames[identifier] = name;
+                        }
                     });
                 } catch (e) {
                     console.log("Không thể kéo dữ liệu Avatar từ users", e);
@@ -259,7 +287,7 @@ export async function loadAggregatedExamData() {
                 const sortedUsers = Object.entries(usersExamsMap[eId])
                     .map(([uid, info]) => ({ uid, ...info }))
                     .sort((a, b) => b.ts - a.ts)
-                    .slice(0, 5); // Đổi thành 5
+                    .slice(0, 5); 
                 
                 // MỚI: Lưu Object gồm URL và Name thay vì chuỗi
                 avatarsMap[eId] = sortedUsers.map(u => ({
@@ -268,7 +296,7 @@ export async function loadAggregatedExamData() {
                 }));
             });
 
-            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap, dynamicAttemptCounts })); // Bổ sung lưu dynamicAttemptCounts vào Cache nếu cần
+            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap, dynamicAttemptCounts })); 
         }
 
         // Nếu lấy từ Cache, đọc lại biến dynamicAttemptCounts
