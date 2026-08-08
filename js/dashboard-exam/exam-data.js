@@ -3,11 +3,21 @@ import { collection, getDocs, query, where } from "https://www.gstatic.com/fireb
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
 
-// Tải lịch sử làm bài (Chỉ xóa khi tắt Tab)
 export async function fetchUserResultsCache(user) {
     if (!user || !user.email) return;
     try {
         const cacheKey = `completedExams_${user.uid}`;
+
+        // BỔ SUNG: Kiểm tra cache trước khi gọi API
+        const cachedResults = sessionStorage.getItem(cacheKey);
+        if (cachedResults) {
+            const parsedCache = JSON.parse(cachedResults);
+            if (Object.keys(parsedCache).length > 0) {
+                Object.assign(State.completedExams, parsedCache);
+                console.log("Đã tải kết quả thi từ Cache, bỏ qua Read Firestore!");
+                return; // Dừng hàm tại đây, không gọi Firebase nữa
+            }
+        }
 
         const resultsRef = collection(db, "results");
         const q = query(resultsRef, where("email", "==", user.email));
