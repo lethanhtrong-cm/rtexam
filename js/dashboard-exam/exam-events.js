@@ -1,5 +1,5 @@
 import { auth, db } from "../dashboard-core.js";
-import { collection, getDocs, query, where, setDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, query, where, setDoc, doc, serverTimestamp, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
 
@@ -48,21 +48,19 @@ export function setupToolbarEvents() {
                 btnAutoGenerate.disabled = true;
                 btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kiểm tra quyền...';
                 try {
-                    // exam-events.js
-const examsRef = collection(db, "exams");
+                    const examsRef = collection(db, "exams");
 
-// TỐI ƯU 1: Thêm where lọc trực tiếp từ Database
-const snap = await getDocs(query(
-    examsRef, 
-    where("creatorId", "==", auth.currentUser.uid),
-    where("technique", "==", "AI Tự Động")
-));
+                    // TỐI ƯU 1 & 2: Dùng getCountFromServer đếm trực tiếp trên server
+                    const countQuery = query(
+                        examsRef, 
+                        where("creatorId", "==", auth.currentUser.uid),
+                        where("technique", "==", "AI Tự Động")
+                    );
+                    
+                    const snapshot = await getCountFromServer(countQuery);
+                    const aiCount = snapshot.data().count; 
 
-// TỐI ƯU 2: Đọc trực tiếp size của snapshot, bỏ vòng lặp forEach
-const aiCount = snap.size; 
-
-if (aiCount >= 5) {
-    // ...
+                    if (aiCount >= 5) {
                         const modal = document.getElementById('aiGenerateModal');
                         if (modal) { modal.classList.remove('active', 'show'); modal.style.display = 'none'; }
                         if (typeof window.showLimitWarningPopup === 'function') window.showLimitWarningPopup(aiCount);
