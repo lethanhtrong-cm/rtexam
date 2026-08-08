@@ -1,14 +1,15 @@
 import { auth, db } from "../dashboard-core.js";
-import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
 
+// Tải lịch sử làm bài (Chỉ xóa khi tắt Tab)
 export async function fetchUserResultsCache(user) {
     if (!user || !user.email) return;
     try {
         const cacheKey = `completedExams_${user.uid}`;
 
-        // BỔ SUNG: Kiểm tra cache trước khi gọi API
+        // TỐI ƯU: Kiểm tra cache trước khi gọi API để tránh Read Firestore dư thừa
         const cachedResults = sessionStorage.getItem(cacheKey);
         if (cachedResults) {
             const parsedCache = JSON.parse(cachedResults);
@@ -90,16 +91,10 @@ export async function loadAggregatedExamData() {
         if (cachedCore) {
             examMap = JSON.parse(cachedCore);
         } else {
-            const qSnap = await getDocs(collection(db, "questions"));
-            qSnap.forEach((doc) => {
-                const eId = doc.data().examId;
-                if (eId) {
-                    if (!examMap[eId]) examMap[eId] = { id: eId, questionCount: 0 };
-                    examMap[eId].questionCount++;
-                }
-            });
-
+            // TỐI ƯU: Đọc danh sách Exams trước
             const eSnap = await getDocs(collection(db, "exams"));
+            const countPromises = []; // Mảng chứa các lệnh chờ đếm câu hỏi
+
             eSnap.forEach((doc) => {
                 const eId = doc.id;
                 const conf = doc.data();
@@ -107,27 +102,47 @@ export async function loadAggregatedExamData() {
                 const isMyExam = auth.currentUser && conf.creatorId === auth.currentUser.uid;
 
                 if (isPublicExam || isMyExam) {
-                    if (examMap[eId]) {
-                        examMap[eId].isValid = true; 
-                        examMap[eId].examName = conf.examName || ""; 
-                        examMap[eId].isVip = conf.isVip || false;
-                        examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
-                        examMap[eId].attemptCount = conf.attemptCount || 0;
-                        examMap[eId].technique = conf.technique || "Hỗn hợp";
-                        examMap[eId].level = conf.level || "Trung bình";
-                        examMap[eId].description = conf.description || "";
-                        
-                        let parsedTime = 0;
-                        const rawTime = conf.createdAt || conf.timestamp; 
-                        if (rawTime) {
-                            if (typeof rawTime.toMillis === 'function') parsedTime = rawTime.toMillis();
-                            else if (rawTime.seconds !== undefined) parsedTime = rawTime.seconds * 1000;
-                            else parsedTime = new Date(rawTime).getTime();
-                        }
-                        examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
+                    examMap[eId] = {
+                        id: eId,
+                        questionCount: 0, // Khởi tạo 0, sẽ update ngay sau đó
+                        isValid: true, 
+                        examName: conf.examName || "", 
+                        isVip: conf.isVip || false,
+                        timeLimit: conf.timeLimit ? parseInt(conf.timeLimit) : 15,
+                        attemptCount: conf.attemptCount || 0,
+                        technique: conf.technique || "Hỗn hợp",
+                        level: conf.level || "Trung bình",
+                        description: conf.description || ""
+                    };
+                    
+                    let parsedTime = 0;
+                    const rawTime = conf.createdAt || conf.timestamp; 
+                    if (rawTime) {
+                        if (typeof rawTime.toMillis === 'function') parsedTime = rawTime.toMillis();
+                        else if (rawTime.seconds !== undefined) parsedTime = rawTime.seconds * 1000;
+                        else parsedTime = new Date(rawTime).getTime();
                     }
+                    examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
+
+                    // TỐI ƯU: Dùng getCountFromServer đếm trên server (Tiết kiệm 99% số Read)
+                    const countQuery = query(collection(db, "questions"), where("examId", "==", eId));
+                    const countPromise = getCountFromServer(countQuery).then(snapshot => {
+                        examMap[eId].questionCount = snapshot.data().count;
+                    });
+                    countPromises.push(countPromise);
                 }
             });
+
+            // TỐI ƯU: Chờ tất cả truy vấn đếm song song hoàn tất
+            await Promise.all(countPromises);
+
+            // TỐI ƯU: Lọc bỏ các đề không có câu hỏi để đảm bảo logic y hệt code cũ
+            Object.keys(examMap).forEach(eId => {
+                if (examMap[eId].questionCount === 0) {
+                    delete examMap[eId];
+                }
+            });
+
             sessionStorage.setItem(coreCacheKey, JSON.stringify(examMap));
         }
 
