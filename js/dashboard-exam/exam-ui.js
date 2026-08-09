@@ -222,16 +222,21 @@ export function renderExams() {
 
                 const displayTitle = exam.examName && exam.examName.trim() !== "" ? exam.examName : exam.id;
 
+                // GIẢI QUYẾT LỖI CẮT CHỮ: Tách Header thành cấu trúc Flex Column (2 Hàng)
                 const headerHtml = `
-                    <div class="header-flex-container" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; gap: 8px;">
-                        <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;" title="${displayTitle} (${exam.id})">
-                            <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayTitle}</h3>
-                            ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
+                    <div class="header-flex-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;" title="${displayTitle} (${exam.id})">
+                                <h3 class="card-title" style="margin: 0; padding: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayTitle}</h3>
+                                ${isCompleted ? '<i class="fas fa-check-circle text-success" style="color: #198754; font-size: 1.15rem; flex-shrink: 0;" title="Đã hoàn thành"></i>' : ''}
+                            </div>
+                            <div style="flex-shrink: 0;">${bookmarkHtml}</div>
                         </div>
-                        <div style="display: flex; align-items: center; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            ${newBadgeHtml}
+                            ${badgeHtml}
                             <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">${newBadgeHtml}${badgeHtml}${bookmarkHtml}</div>
                     </div>
                 `;
 
