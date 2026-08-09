@@ -33,8 +33,60 @@ export function renderExams() {
                     font-size: 0.8rem; 
                     border: 1px solid #e2e8f0; 
                 }
+
+                /* Hiệu ứng nhấp nháy cho nhãn Đề Mới */
+                @keyframes pulseNewBadge {
+                    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+                    70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+                    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+                }
             </style>`);
         }
+
+        // ==========================================================
+        // LOGIC MỚI: TÍNH TOÁN & HIỂN THỊ BADGE BÁO ĐỀ MỚI TRÊN TAB
+        // ==========================================================
+        const nowMs = Date.now();
+        const oneDayMs = 24 * 60 * 60 * 1000;
+        let newExamsCount = { 'all': 0 };
+
+        State.allExamsData.forEach(exam => {
+            const isCompleted = !!State.completedExams[exam.id];
+            // Đề mới = Tạo chưa quá 24h VÀ học viên chưa hoàn thành
+            if (exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted) {
+                newExamsCount['all']++;
+                if (exam.technique) {
+                    if (!newExamsCount[exam.technique]) newExamsCount[exam.technique] = 0;
+                    newExamsCount[exam.technique]++;
+                }
+            }
+        });
+
+        // Gắn số lượng (badge) vào thẻ menu (nút bấm có class sub-menu-item)
+        const menuItems = document.querySelectorAll('.sub-menu-item');
+        if (menuItems.length > 0) {
+            menuItems.forEach(item => {
+                const tech = item.getAttribute('data-technique');
+                
+                // Xóa badge cũ trước khi gắn cái mới để tránh bị trùng lặp
+                const oldBadge = item.querySelector('.tab-new-badge');
+                if (oldBadge) oldBadge.remove();
+
+                // Nếu có đề mới trong nhóm này, vẽ badge vào tab
+                let count = 0;
+                if (tech === 'all') count = newExamsCount['all'];
+                else if (tech) count = newExamsCount[tech] || 0;
+                
+                if (count > 0) {
+                    item.insertAdjacentHTML('beforeend', `<span class="tab-new-badge" style="background: #ef4444; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; margin-left: auto; font-weight: 800; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); line-height: 1;">${count}</span>`);
+                    // Căn chỉnh flex để badge nằm gọn sang bên phải
+                    item.style.display = 'flex';
+                    item.style.alignItems = 'center';
+                    item.style.justifyContent = 'space-between';
+                }
+            });
+        }
+        // ==========================================================
 
         if (State.allExamsData.length === 0) {
             examListContainer.innerHTML = '<div style="text-align:center; padding:40px; font-size:1.1rem; color:#64748b;">Hiện tại chưa có khóa học / đề thi nào.</div>';
@@ -150,6 +202,10 @@ export function renderExams() {
                 const isSaved = userBookmarks.includes(exam.id);
                 const isCompleted = !!State.completedExams[exam.id];
                 
+                // KIỂM TRA ĐỀ MỚI CHO TỪNG CARD
+                const isExamNew = exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted;
+                const newBadgeHtml = isExamNew ? `<span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: bold; border: 1px solid #059669; animation: pulseNewBadge 2s infinite; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(16,185,129,0.2);"><i class="fa-solid fa-sparkles"></i> MỚI</span>` : ``;
+
                 const badgeHtml = isExamVip ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>` : `<span class="course-badge badge-free header-badge">Free</span>`;
                 const bookmarkHtml = `<button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${safeExamId}')" title="Lưu đề thi"><i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i></button>`;
                 const pillBaseStyle = "padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e9ecef; background-color: #f8f9fa; white-space: nowrap; flex-shrink: 0;";
@@ -165,7 +221,7 @@ export function renderExams() {
                         <div style="display: flex; align-items: center; flex-shrink: 0;">
                             <span style="${pillBaseStyle} color: #0284c7;"> <i class="fa-solid fa-microchip" style="font-size: 0.7rem;"></i> ${exam.technique} </span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">${badgeHtml}${bookmarkHtml}</div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">${newBadgeHtml}${badgeHtml}${bookmarkHtml}</div>
                     </div>
                 `;
 
