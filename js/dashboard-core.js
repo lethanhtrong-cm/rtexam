@@ -4,36 +4,26 @@
 import { app, auth, db } from "./dashboard/firebase-core.js";
 import { safeRedirect, formatDate, switchTab, showNotificationModal, renderAuthInfo, setVipInactive } from "./dashboard/dashboard-ui.js";
 
-// Bổ sung thêm getDocs để hỗ trợ chức năng bốc câu hỏi ngẫu nhiên
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Tái xuất khẩu (Re-export) để đảm bảo các file cũ (như dashboard-exams) vẫn hoạt động hoàn hảo
 export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
 
-// =========================================================================
-// QUẢN LÝ VÒNG ĐỜI & GẮN SỰ KIỆN KHI DOM SẴN SÀNG
-// =========================================================================
 let isComponentsLoaded = false;
 let currentUserInstance = null; 
 
 document.addEventListener('ComponentsLoaded', () => {
     isComponentsLoaded = true;
 
-    // =================================================================
-    // TÍNH NĂNG MỚI: BỘ ĐẾM LƯỢT TRUY CẬP THEO CHU KỲ THỜI GIAN
-    // =================================================================
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const date = String(now.getDate()).padStart(2, '0');
     
-    // Khởi tạo các Key động
     const dateKey = `day_${year}_${month}_${date}`;
     const monthKey = `month_${year}_${month}`;
     const yearKey = `year_${year}`;
     
-    // Tính số tuần hiện tại trong năm
     const startDate = new Date(now.getFullYear(), 0, 1);
     const days = Math.floor((now - startDate) / (24 * 60 * 60 * 1000));
     const weekNumber = Math.ceil((now.getDay() + 1 + days) / 7);
@@ -41,7 +31,6 @@ document.addEventListener('ComponentsLoaded', () => {
 
     if (!sessionStorage.getItem('site_visited')) {
         sessionStorage.setItem('site_visited', 'true');
-        // Ghi nhận lượt truy cập đồng loạt cho các chu kỳ
         const updates = {
             totalVisits: increment(1),
             [dateKey]: increment(1),
@@ -52,11 +41,9 @@ document.addEventListener('ComponentsLoaded', () => {
         setDoc(doc(db, "statistics", "global"), updates, { merge: true }).catch(() => {});
     }
 
-    // Lắng nghe dữ liệu thời gian thực và đẩy lên Footer UI
     onSnapshot(doc(db, "statistics", "global"), (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
-            
             const vTotal = document.getElementById('global-visitor-count');
             const vDaily = document.getElementById('visitor-daily');
             const vWeekly = document.getElementById('visitor-weekly');
@@ -83,7 +70,6 @@ document.addEventListener('ComponentsLoaded', () => {
         const btnCreateRoom = oldBtnCreateRoom.cloneNode(true);
         oldBtnCreateRoom.parentNode.replaceChild(btnCreateRoom, oldBtnCreateRoom);
 
-        // Các biến DOM của Modal
         const roomModal = document.getElementById('room-options-modal');
         const btnCloseModal = document.getElementById('btnCloseRoomModal');
         const btnCreateNew = document.getElementById('btnSubmitCreateNewRoom');
@@ -91,7 +77,6 @@ document.addEventListener('ComponentsLoaded', () => {
         const inputJoin = document.getElementById('inputJoinRoomCode');
         const errorMsg = document.getElementById('errorJoinRoom');
 
-        // Mở Modal thay vì tạo phòng ngay
         btnCreateRoom.addEventListener('click', (e) => {
             e.preventDefault(); 
             e.stopPropagation(); 
@@ -104,7 +89,6 @@ document.addEventListener('ComponentsLoaded', () => {
             inputJoin.value = '';
             errorMsg.style.display = 'none';
             roomModal.style.display = 'flex';
-            
             roomModal.querySelector('div').style.transform = 'scale(1)';
         });
 
@@ -238,7 +222,7 @@ document.addEventListener('ComponentsLoaded', () => {
     }
 
     // =================================================================
-    // TÍNH NĂNG MỚI: TẠO ĐỀ NGẪU NHIÊN TỪ NGÂN HÀNG CÂU HỎI
+    // TÍNH NĂNG MỚI: TẠO ĐỀ NGẪU NHIÊN VỚI TIỀN TỐ RD- & HIỂN THỊ TẠI TAB ĐỀ AI TỰ TẠO
     // =================================================================
     const btnRandomExam = document.getElementById('btnRandomExam');
     if (btnRandomExam) {
@@ -311,14 +295,11 @@ document.addEventListener('ComponentsLoaded', () => {
                 btnSubmit.style.opacity = '0.7';
 
                 try {
-                    // 1. Quét tìm các đề thi phù hợp
                     const examsRef = collection(db, "exams");
                     const qExams = query(examsRef, where("technique", "==", tech), where("level", "==", level));
                     const examSnaps = await getDocs(qExams);
 
                     let allQuestions = [];
-                    
-                    // 2. Thu thập câu hỏi
                     for (let docSnap of examSnaps.docs) {
                         const eId = docSnap.id;
                         const qQs = query(collection(db, "questions"), where("examId", "==", eId));
@@ -326,7 +307,6 @@ document.addEventListener('ComponentsLoaded', () => {
                         qsSnaps.forEach(q => allQuestions.push(q.data()));
                     }
 
-                    // 3. Kiểm tra số lượng
                     if (allQuestions.length < timeLimit) {
                         alert(`Kho dữ liệu không đủ câu hỏi! (Hiện có ${allQuestions.length}/${timeLimit} câu thuộc ${tech} - ${level}). Vui lòng giảm thời gian hoặc chọn Mức độ khác.`);
                         btnSubmit.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Khởi tạo & Vào thi';
@@ -335,18 +315,18 @@ document.addEventListener('ComponentsLoaded', () => {
                         return;
                     }
 
-                    // 4. Thuật toán xáo trộn Fisher-Yates
                     for (let i = allQuestions.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
                     }
                     const selectedQuestions = allQuestions.slice(0, timeLimit);
 
-                    // 5. Lưu Đề thi mới
-                    const randomExamId = "RAND_" + Math.floor(100000 + Math.random() * 900000);
+                    // SỬA: Dùng tiền tố RD- cho mã đề ngẫu nhiên
+                    const randomExamId = "RD-" + Math.floor(100000 + Math.random() * 900000);
+                    
                     await setDoc(doc(db, "exams", randomExamId), {
-                        examName: `Đề Ngẫu Nhiên: ${tech}`,
-                        technique: "AI Tự Động", // Phân loại vào tab Hỗn hợp & AI để user có thể ẩn đi sau này
+                        examName: `Đề Ngẫu Nhiên: ${tech} (${level})`,
+                        technique: "AI Tự Động", // Gom vào tab "Đề AI Tự tạo" / Hỗn hợp & AI để user quản lý & ẩn đề
                         level: level,
                         timeLimit: timeLimit,
                         questionCount: timeLimit,
@@ -355,7 +335,6 @@ document.addEventListener('ComponentsLoaded', () => {
                         authorEmail: auth.currentUser.email,
                     });
 
-                    // 6. Lưu câu hỏi vào đề mới
                     for (let i = 0; i < selectedQuestions.length; i++) {
                         let qData = selectedQuestions[i];
                         qData.examId = randomExamId;
@@ -433,7 +412,6 @@ function initDOMListeners() {
         });
     }
 
-    // EVENT DELEGATION
     document.addEventListener('click', (e) => {
         const notiDropdown = document.getElementById('notiDropdown');
         const userDropdown = document.getElementById('userDropdown');
@@ -458,7 +436,6 @@ function initDOMListeners() {
             if (userDropdown) userDropdown.classList.remove('show');
             sessionStorage.removeItem('dashboard_user_rank');
             
-            // CẬP NHẬT TRẠNG THÁI OFFLINE KHI CHỦ ĐỘNG ĐĂNG XUẤT
             if (auth.currentUser) {
                 updateDoc(doc(db, "users", auth.currentUser.uid), { isOnline: false }).catch(() => {});
             }
@@ -467,7 +444,6 @@ function initDOMListeners() {
             return;
         }
 
-        // --- CẬP NHẬT LOGIC XÁC NHẬN CHUYỂN KHOẢN ---
         if (e.target.closest('#btnConfirmPayment')) {
             e.preventDefault(); e.stopPropagation();
             if (userDropdown) userDropdown.classList.remove('show');
@@ -497,7 +473,6 @@ function initDOMListeners() {
             return;
         }
 
-        // --- TÍNH NĂNG MỚI: HỦY YÊU CẦU CHUYỂN KHOẢN ---
         if (e.target.closest('#btnCancelPayment')) {
             e.preventDefault(); e.stopPropagation();
             if (auth.currentUser) {
@@ -573,9 +548,6 @@ function initDOMListeners() {
     });
 }
 
-// =========================================================================
-// XỬ LÝ THÔNG BÁO TỪ ADMIN VÀ RENDER GIAO DIỆN
-// =========================================================================
 function initNotificationListener(user) {
     if (!user) return;
     const userEmail = user.email;
@@ -641,9 +613,6 @@ function initNotificationListener(user) {
     });
 }
 
-// =========================================================================
-// XỬ LÝ LẮNG NGHE TRẠNG THÁI THANH TOÁN (GIỮ TRẠNG THÁI KHI RELOAD TRANG)
-// =========================================================================
 function initPaymentStatusListener(user) {
     if (!user) return;
     
@@ -675,9 +644,6 @@ function initPaymentStatusListener(user) {
     });
 }
 
-// =========================================================================
-// XỬ LÝ AUTHENTICATION & ĐỒNG BỘ UI THÔNG TIN USER
-// =========================================================================
 function fetchUserData(user) {
     return new Promise((resolve) => {
         const userDocRef = doc(db, "users", user.uid);
@@ -707,7 +673,6 @@ function fetchUserData(user) {
                 }
 
                 if (currentUserData.isVip) {
-                    
                     let needsDateUpdate = false;
                     
                     if (!currentUserData.vipStart || !currentUserData.vipEnd) {
@@ -855,9 +820,6 @@ async function executeAuthUI(user) {
     }
 }
 
-// =========================================================================
-// QUẢN LÝ TRẠNG THÁI ONLINE / OFFLINE REALTIME (CÁCH 2)
-// =========================================================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUserInstance = user; 
