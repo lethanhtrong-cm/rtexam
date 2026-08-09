@@ -4,9 +4,9 @@
 import { app, auth, db } from "./dashboard/firebase-core.js";
 import { safeRedirect, formatDate, switchTab, showNotificationModal, renderAuthInfo, setVipInactive } from "./dashboard/dashboard-ui.js";
 
-// Import core logic của Firestore và Auth (Bổ sung thêm increment để làm bộ đếm)
+// Bổ sung thêm getDocs để hỗ trợ chức năng bốc câu hỏi ngẫu nhiên
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Tái xuất khẩu (Re-export) để đảm bảo các file cũ (như dashboard-exams) vẫn hoạt động hoàn hảo
 export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
@@ -105,11 +105,9 @@ document.addEventListener('ComponentsLoaded', () => {
             errorMsg.style.display = 'none';
             roomModal.style.display = 'flex';
             
-            // Hiệu ứng Pop-in
             roomModal.querySelector('div').style.transform = 'scale(1)';
         });
 
-        // Đóng Modal
         const closeModal = () => {
             roomModal.querySelector('div').style.transform = 'scale(0.95)';
             setTimeout(() => roomModal.style.display = 'none', 150);
@@ -119,13 +117,9 @@ document.addEventListener('ComponentsLoaded', () => {
             if (e.target === roomModal) closeModal();
         });
 
-        // =================================================================
-        // TÍNH NĂNG MỚI: BẬT POPUP CHỌN VAI TRÒ KHI NHẤN "TẠO PHÒNG MỚI"
-        // =================================================================
         btnCreateNew.addEventListener('click', (e) => {
             e.preventDefault();
 
-            // 1. Tạo giao diện Popup Modal động (Tuân thủ CSS từ modal.html)
             const popupHTML = `
                 <div class="custom-modal-overlay" id="roleSelectionModal" style="display: flex; z-index: 100000; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
                     <div class="custom-modal-content" style="max-width: 400px; animation: modalNotifFade 0.25s ease-out;">
@@ -148,7 +142,6 @@ document.addEventListener('ComponentsLoaded', () => {
                 </div>
             `;
             
-            // Thêm Popup vào cuối trang
             document.body.insertAdjacentHTML('beforeend', popupHTML);
 
             const roleModal = document.getElementById('roleSelectionModal');
@@ -156,7 +149,6 @@ document.addEventListener('ComponentsLoaded', () => {
             const btnProctor = document.getElementById('btnRoleProctor');
             const btnPlayer = document.getElementById('btnRolePlayer');
 
-            // Hiệu ứng Hover cho nút
             btnProctor.onmouseover = () => btnProctor.style.transform = 'translateY(-3px)';
             btnProctor.onmouseout = () => btnProctor.style.transform = 'translateY(0)';
             btnPlayer.onmouseover = () => btnPlayer.style.transform = 'translateY(-3px)';
@@ -166,9 +158,8 @@ document.addEventListener('ComponentsLoaded', () => {
             closeBtn.addEventListener('click', destroyModal);
             roleModal.addEventListener('click', (ev) => { if (ev.target === roleModal) destroyModal(); });
 
-            // 2. Hàm xử lý logic gốc sau khi chọn vai trò
             const executeRoomCreation = async (role) => {
-                destroyModal(); // Đóng popup chọn vai trò
+                destroyModal(); 
                 
                 const originalText = btnCreateNew.innerHTML;
                 btnCreateNew.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
@@ -183,7 +174,7 @@ document.addEventListener('ComponentsLoaded', () => {
                     await setDoc(roomRef, {
                         hostEmail: auth.currentUser.email,
                         hostUid: auth.currentUser.uid,
-                        hostRole: role, // Ghi nhận 'proctor' (Giám thị) hoặc 'player' (Thi đấu)
+                        hostRole: role, 
                         status: 'waiting',
                         isLocked: false,
                         examId: null,   
@@ -192,7 +183,7 @@ document.addEventListener('ComponentsLoaded', () => {
                     });
 
                     if (newTab) newTab.location.href = targetUrl;
-                    closeModal(); // Đóng form Modal chính
+                    closeModal(); 
                     
                 } catch (error) {
                     console.error("Lỗi Firestore:", error);
@@ -204,13 +195,10 @@ document.addEventListener('ComponentsLoaded', () => {
                 }
             };
 
-            // Lắng nghe click chọn vai trò
             btnProctor.addEventListener('click', () => executeRoomCreation('proctor'));
             btnPlayer.addEventListener('click', () => executeRoomCreation('player'));
         });
 
-
-        // Xử lý nút: THAM GIA PHÒNG
         btnJoin.addEventListener('click', async () => {
             const rawCode = inputJoin.value.trim().toUpperCase();
             if (!rawCode) {
@@ -248,6 +236,147 @@ document.addEventListener('ComponentsLoaded', () => {
             if (e.key === 'Enter') btnJoin.click();
         });
     }
+
+    // =================================================================
+    // TÍNH NĂNG MỚI: TẠO ĐỀ NGẪU NHIÊN TỪ NGÂN HÀNG CÂU HỎI
+    // =================================================================
+    const btnRandomExam = document.getElementById('btnRandomExam');
+    if (btnRandomExam) {
+        btnRandomExam.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            if (!auth.currentUser) {
+                alert("Vui lòng đăng nhập để sử dụng tính năng tạo đề.");
+                return;
+            }
+
+            const popupHTML = `
+                <div class="custom-modal-overlay" id="randomExamModal" style="display: flex; z-index: 100000; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center;">
+                    <div class="custom-modal-content" style="width: 90%; max-width: 400px; background: white; border-radius: 12px; padding: 25px; animation: modalNotifFade 0.25s ease-out; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px;">
+                            <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a;"><i class="fa-solid fa-dice" style="color: #ef4444;"></i> Tạo Đề Ngẫu Nhiên</h3>
+                            <button id="closeRandomModalBtn" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="font-weight: 600; font-size: 0.9rem; color: #475569; display: block; margin-bottom: 8px;">Kỹ thuật hình ảnh:</label>
+                                <select id="randTech" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.95rem; color: #334155;">
+                                    <option value="MRI">MRI</option>
+                                    <option value="CT">CT Scanner</option>
+                                    <option value="X quang">X quang</option>
+                                    <option value="Thuốc tương phản">Thuốc tương phản</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-weight: 600; font-size: 0.9rem; color: #475569; display: block; margin-bottom: 8px;">Mức độ khó:</label>
+                                <select id="randLevel" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.95rem; color: #334155;">
+                                    <option value="Dễ">Dễ</option>
+                                    <option value="Trung bình">Trung bình</option>
+                                    <option value="Khó">Khó</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-weight: 600; font-size: 0.9rem; color: #475569; display: block; margin-bottom: 8px;">Thời gian làm bài:</label>
+                                <select id="randTime" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.95rem; color: #334155;">
+                                    <option value="15">15 phút (Bốc 15 câu)</option>
+                                    <option value="30">30 phút (Bốc 30 câu)</option>
+                                    <option value="45">45 phút (Bốc 45 câu)</option>
+                                </select>
+                            </div>
+                            <button id="btnSubmitRandomExam" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1.05rem; cursor: pointer; margin-top: 10px; transition: 0.2s; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Khởi tạo & Vào thi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', popupHTML);
+
+            const modal = document.getElementById('randomExamModal');
+            const closeBtn = document.getElementById('closeRandomModalBtn');
+            
+            const closeModal = () => modal.remove();
+            closeBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (ev) => { if (ev.target === modal) closeModal(); });
+
+            document.getElementById('btnSubmitRandomExam').addEventListener('click', async () => {
+                const tech = document.getElementById('randTech').value;
+                const level = document.getElementById('randLevel').value;
+                const timeLimit = parseInt(document.getElementById('randTime').value);
+                const btnSubmit = document.getElementById('btnSubmitRandomExam');
+
+                btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Hệ thống đang xáo trộn...';
+                btnSubmit.disabled = true;
+                btnSubmit.style.opacity = '0.7';
+
+                try {
+                    // 1. Quét tìm các đề thi phù hợp
+                    const examsRef = collection(db, "exams");
+                    const qExams = query(examsRef, where("technique", "==", tech), where("level", "==", level));
+                    const examSnaps = await getDocs(qExams);
+
+                    let allQuestions = [];
+                    
+                    // 2. Thu thập câu hỏi
+                    for (let docSnap of examSnaps.docs) {
+                        const eId = docSnap.id;
+                        const qQs = query(collection(db, "questions"), where("examId", "==", eId));
+                        const qsSnaps = await getDocs(qQs);
+                        qsSnaps.forEach(q => allQuestions.push(q.data()));
+                    }
+
+                    // 3. Kiểm tra số lượng
+                    if (allQuestions.length < timeLimit) {
+                        alert(`Kho dữ liệu không đủ câu hỏi! (Hiện có ${allQuestions.length}/${timeLimit} câu thuộc ${tech} - ${level}). Vui lòng giảm thời gian hoặc chọn Mức độ khác.`);
+                        btnSubmit.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Khởi tạo & Vào thi';
+                        btnSubmit.disabled = false;
+                        btnSubmit.style.opacity = '1';
+                        return;
+                    }
+
+                    // 4. Thuật toán xáo trộn Fisher-Yates
+                    for (let i = allQuestions.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+                    }
+                    const selectedQuestions = allQuestions.slice(0, timeLimit);
+
+                    // 5. Lưu Đề thi mới
+                    const randomExamId = "RAND_" + Math.floor(100000 + Math.random() * 900000);
+                    await setDoc(doc(db, "exams", randomExamId), {
+                        examName: `Đề Ngẫu Nhiên: ${tech}`,
+                        technique: "AI Tự Động", // Phân loại vào tab Hỗn hợp & AI để user có thể ẩn đi sau này
+                        level: level,
+                        timeLimit: timeLimit,
+                        questionCount: timeLimit,
+                        isVip: false,
+                        createdAt: Date.now(),
+                        authorEmail: auth.currentUser.email,
+                    });
+
+                    // 6. Lưu câu hỏi vào đề mới
+                    for (let i = 0; i < selectedQuestions.length; i++) {
+                        let qData = selectedQuestions[i];
+                        qData.examId = randomExamId;
+                        qData.order = i;
+                        await addDoc(collection(db, "questions"), qData);
+                    }
+
+                    closeModal();
+                    safeRedirect(`quiz.html?examId=${randomExamId}`);
+
+                } catch (error) {
+                    console.error("Lỗi trộn đề: ", error);
+                    alert("Có lỗi xảy ra do quyền truy cập hoặc kết nối mạng. Vui lòng thử lại!");
+                    btnSubmit.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Khởi tạo & Vào thi';
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.opacity = '1';
+                }
+            });
+        });
+    }
+
 });
 
 function initDOMListeners() {
@@ -347,7 +476,6 @@ function initDOMListeners() {
             if (btn && btn.disabled) return; 
             
             if (auth.currentUser) {
-                // Đổi trạng thái giao diện nút Xác nhận TẠM THỜI (Real-time listener sẽ gánh phần còn lại)
                 if (btn) {
                     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Chờ phê duyệt...';
                     btn.style.background = '#94a3b8';
@@ -358,7 +486,6 @@ function initDOMListeners() {
                 const cancelBtn = document.getElementById('btnCancelPayment');
                 if (cancelBtn) cancelBtn.style.display = 'block';
 
-                // Ghi dữ liệu lên Firestore với ID là UID của user
                 setDoc(doc(db, "payment_requests", auth.currentUser.uid), { 
                     uid: auth.currentUser.uid, 
                     email: auth.currentUser.email, 
@@ -374,7 +501,6 @@ function initDOMListeners() {
         if (e.target.closest('#btnCancelPayment')) {
             e.preventDefault(); e.stopPropagation();
             if (auth.currentUser) {
-                // Xóa Document yêu cầu khỏi Firestore (Listener sẽ tự động phục hồi nút bấm)
                 deleteDoc(doc(db, "payment_requests", auth.currentUser.uid)).catch(() => alert("Lỗi khi hủy thao tác, vui lòng thử lại!"));
             }
             return;
@@ -526,7 +652,6 @@ function initPaymentStatusListener(user) {
         const btn = document.getElementById('btnConfirmPayment');
         const cancelBtn = document.getElementById('btnCancelPayment');
         
-        // NẾU CÓ YÊU CẦU ĐANG CHỜ PHÊ DUYỆT TRONG DB
         if (docSnap.exists() && docSnap.data().status === 'pending') {
             if (btn) {
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Chờ phê duyệt...';
@@ -536,9 +661,7 @@ function initPaymentStatusListener(user) {
             }
             if (cancelBtn) cancelBtn.style.display = 'block';
         } 
-        // NẾU KHÔNG CÓ YÊU CẦU (Bị Hủy, Hoặc Đã Duyệt)
         else {
-            // Phục hồi lại nút nếu nó đang bị kẹt chữ "Chờ phê duyệt"
             if (btn && btn.innerHTML.includes('Chờ phê duyệt')) {
                 btn.innerHTML = '<i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản';
                 btn.style.background = ''; 
@@ -597,12 +720,11 @@ function fetchUserData(user) {
                     }
 
                     if (needsDateUpdate) {
-                        // SỬA LỖI BẢO MẬT: Chuyển isVip thành false khi hết hạn thay vì tự động gia hạn
                         currentUserData.isVip = false;
                         setDoc(userDocRef, { isVip: false }, { merge: true }).catch(err => console.error(err));
                         setVipInactive();
                         resolve(currentUserData);
-                        return; // Ngừng thực thi các logic VIP bên dưới
+                        return; 
                     }
                     
                     const elVipStatusBadge = document.getElementById("vipStatusBadge");
@@ -632,9 +754,6 @@ function fetchUserData(user) {
                         `;
                     }
                     
-                    // =========================================================================
-                    // TÍNH NĂNG ĐIỀU HƯỚNG TỰ ĐỘNG, PUSH THÔNG BÁO VÀ POPUP XỊN XÒ KHI ĐƯỢC DUYỆT
-                    // =========================================================================
                     const tabVip = document.getElementById('tab-vip');
                     if (tabVip && tabVip.classList.contains('active')) {
                         const btn = document.getElementById('btnConfirmPayment');
@@ -649,13 +768,11 @@ function fetchUserData(user) {
                             btnCancel.style.display = 'none';
                         }
                         
-                        // Tìm chính xác mục menu con "Tất cả" của Kho Đề Thi để chuyển hướng về
                         const allExamsMenu = document.querySelector('.sub-menu-item[data-technique="all"]') || document.querySelector('[data-target="tab-dashboard"]');
                         if (allExamsMenu) {
                             allExamsMenu.click();
                         }
                         
-                        // XÓA ALERT CŨ - PUSH THÔNG BÁO LÊN FIRESTORE VÀ HIỂN THỊ POPUP HTML/CSS
                         try {
                             addDoc(collection(db, "notifications"), {
                                 toEmail: auth.currentUser.email,
@@ -669,11 +786,9 @@ function fetchUserData(user) {
                             console.error("Lỗi khi tự động push thông báo:", err);
                         }
 
-                        // Xóa popup cũ nếu bị kẹt
                         const existingModal = document.getElementById('vipSuccessModalCustom');
                         if (existingModal) existingModal.remove();
 
-                        // Bơm Modal Popup mới vào body
                         const popupHTML = `
                             <div class="custom-modal-overlay" id="vipSuccessModalCustom" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); justify-content: center; align-items: center;">
                                 <div class="custom-modal-content" style="max-width: 450px; background: #fff; border-radius: 16px; padding: 35px 25px; text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
@@ -692,7 +807,6 @@ function fetchUserData(user) {
                         `;
                         document.body.insertAdjacentHTML('beforeend', popupHTML);
                         
-                        // Lắng nghe sự kiện đóng Popup
                         const successModal = document.getElementById('vipSuccessModalCustom');
                         const closeBtn = document.getElementById('closeVipSuccessBtn');
                         
@@ -700,7 +814,6 @@ function fetchUserData(user) {
                         closeBtn.addEventListener('click', closeCustomModal);
                         successModal.addEventListener('click', (e) => { if (e.target === successModal) closeCustomModal(); });
                     }
-                    // =========================================================================
                     
                 } else {
                     setVipInactive();
@@ -726,7 +839,6 @@ async function executeAuthUI(user) {
     initNotificationListener(user);
     initPaymentStatusListener(user); 
     
-    // TÍNH NĂNG MỚI: Truy vấn điểm XP và hiển thị ra thẻ Card
     try {
         const xpDoc = await getDoc(doc(db, "users_leaderboard", user.uid));
         const statTotalXP = document.getElementById("statTotalXP");
@@ -750,25 +862,20 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUserInstance = user; 
         
-        // 1. CẬP NHẬT ONLINE NGAY KHI RENDER / RELOAD TRANG
         updateDoc(doc(db, "users", user.uid), { isOnline: true }).catch(() => {});
         
-        // 2. TỰ ĐỘNG CHUYỂN OFFLINE KHI F5 / RELOAD / ĐÓNG TAB
         window.addEventListener('beforeunload', () => {
             updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
         });
 
-        // 3. TỰ ĐỘNG CHUYỂN OFFLINE KHI MÁY TÍNH SLEEP / KHÓA MÀN HÌNH (Page Lifecycle)
         document.addEventListener('freeze', () => {
             updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
         });
 
-        // 4. TỰ ĐỘNG CHUYỂN OFFLINE KHI MẤT KẾT NỐI MẠNG INTERNET
         window.addEventListener('offline', () => {
             updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
         });
 
-        // 5. PHỤC HỒI ONLINE KHI MÁY TÍNH WAKE UP HOẶC CÓ MẠNG LẠI
         window.addEventListener('online', () => {
             updateDoc(doc(db, "users", user.uid), { isOnline: true }).catch(() => {});
         });
