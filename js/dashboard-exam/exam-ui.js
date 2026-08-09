@@ -51,27 +51,25 @@ export function renderExams() {
         }
 
         // ==========================================================
-        // LOGIC KHÔI PHỤC: LẤY EMAIL NGƯỜI DÙNG ĐỂ LỌC ĐỀ RIÊNG TƯ
+        // LOGIC: LẤY EMAIL NGƯỜI DÙNG ĐỂ LỌC ĐỀ RIÊNG TƯ
         // ==========================================================
         const displayEmailEl = document.getElementById("displayEmail");
         const currentUserEmail = (displayEmailEl && displayEmailEl.textContent !== "...") ? displayEmailEl.textContent.trim() : "";
 
         // ==========================================================
-        // LOGIC: TÍNH TOÁN & HIỂN THỊ BADGE BÁO ĐỀ MỚI TRÊN TAB
+        // LOGIC MỚI: ĐẾM BADGE "ĐỀ MỚI" - BỎ GIỚI HẠN 24H
         // ==========================================================
-        const nowMs = Date.now();
-        const oneDayMs = 24 * 60 * 60 * 1000;
         let newExamsCount = { 'all': 0 };
 
         State.allExamsData.forEach(exam => {
-            // KHÔI PHỤC LỌC BỎ: Đề Ngẫu nhiên (AI Tự Động / RD-) KHÔNG PHẢI do user hiện tại tạo
+            // LỌC BỎ: Đề Ngẫu nhiên (AI Tự Động / RD-) KHÔNG PHẢI do user hiện tại tạo
             if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) {
-                return; // Bỏ qua, không đếm vào huy hiệu "MỚI"
+                return; 
             }
 
             const isCompleted = !!State.completedExams[exam.id];
-            // Đề mới = Tạo chưa quá 24h VÀ học viên chưa hoàn thành
-            if (exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted) {
+            // Đề mới = học viên chưa hoàn thành (Bỏ điều kiện thời gian 24h)
+            if (!isCompleted) {
                 newExamsCount['all']++;
                 if (exam.technique) {
                     if (!newExamsCount[exam.technique]) newExamsCount[exam.technique] = 0;
@@ -111,7 +109,7 @@ export function renderExams() {
         let displayData = [...State.allExamsData];
 
         // ==========================================================
-        // KHÔI PHỤC LỌC HIỂN THỊ: CHỈ HIỂN THỊ ĐỀ NGẪU NHIÊN CỦA CHÍNH MÌNH
+        // LỌC HIỂN THỊ: CHỈ HIỂN THỊ ĐỀ NGẪU NHIÊN CỦA CHÍNH MÌNH
         // ==========================================================
         displayData = displayData.filter(exam => {
             if (exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) {
@@ -225,8 +223,8 @@ export function renderExams() {
                 const isSaved = userBookmarks.includes(exam.id);
                 const isCompleted = !!State.completedExams[exam.id];
                 
-                // KIỂM TRA ĐỀ MỚI CHO TỪNG CARD & ÁP DỤNG CSS MỚI
-                const isExamNew = exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted;
+                // KIỂM TRA ĐỀ MỚI CHO TỪNG CARD (Bỏ điều kiện 24h, chỉ check !isCompleted)
+                const isExamNew = !isCompleted;
                 const newBadgeHtml = isExamNew ? `<span style="background: linear-gradient(135deg, #ef4444, #f97316); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 900; animation: pulseNewBadge 1.2s infinite; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); letter-spacing: 0.5px; z-index: 10;"><i class="fa-solid fa-bolt"></i> MỚI</span>` : ``;
                 
                 // NẾU ĐỀ MỚI, THAY ĐỔI VIỀN CARD VÀ TẠO HIỆU ỨNG PHÁT SÁNG
@@ -238,7 +236,6 @@ export function renderExams() {
 
                 const displayTitle = exam.examName && exam.examName.trim() !== "" ? exam.examName : exam.id;
 
-                // GIẢI QUYẾT LỖI CẮT CHỮ: Tách Header thành cấu trúc Flex Column (2 Hàng)
                 const headerHtml = `
                     <div class="header-flex-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
@@ -342,7 +339,6 @@ export function renderExams() {
                     topBadgeHtml = `<div style="position: absolute; top: -12px; left: -12px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border: 2px solid #fff;"><i class="fa-solid fa-trophy"></i> ĐỀ CỦA NĂM</div>`;
                 }
 
-                // Gắn biến cardOutlineStyle vào inline-style của thẻ course-card
                 rowHtml += `
                     <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; background: #fff; overflow: visible; position: relative; ${cardOutlineStyle}">
                         ${topBadgeHtml}
