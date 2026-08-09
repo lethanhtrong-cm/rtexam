@@ -222,7 +222,7 @@ document.addEventListener('ComponentsLoaded', () => {
     }
 
     // =================================================================
-    // TÍNH NĂNG MỚI: TẠO ĐỀ NGẪU NHIÊN VỚI TIỀN TỐ RD- & HIỂN THỊ TẠI TAB ĐỀ AI TỰ TẠO
+    // TÍNH NĂNG MỚI: TẠO ĐỀ NGẪU NHIÊN - ĐÃ TỐI ƯU READ/WRITE CỰC ĐẠI
     // =================================================================
     const btnRandomExam = document.getElementById('btnRandomExam');
     if (btnRandomExam) {
@@ -295,12 +295,31 @@ document.addEventListener('ComponentsLoaded', () => {
                 btnSubmit.style.opacity = '0.7';
 
                 try {
+                    // Bước 1: Tìm danh sách các đề thi phù hợp (Mất 1 Read)
                     const examsRef = collection(db, "exams");
                     const qExams = query(examsRef, where("technique", "==", tech), where("level", "==", level));
                     const examSnaps = await getDocs(qExams);
 
+                    if (examSnaps.empty) {
+                        alert(`Chưa có dữ liệu nào cho bộ môn ${tech} - Cấp độ ${level}.`);
+                        btnSubmit.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Khởi tạo & Vào thi';
+                        btnSubmit.disabled = false;
+                        btnSubmit.style.opacity = '1';
+                        return;
+                    }
+
+                    // Bước 2: TỐI ƯU READ - Xáo trộn ngẫu nhiên danh sách ID Đề thi trước
+                    let examDocs = examSnaps.docs;
+                    for (let i = examDocs.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [examDocs[i], examDocs[j]] = [examDocs[j], examDocs[i]];
+                    }
+
+                    // Bước 3: TỐI ƯU READ - Chỉ chui vào rút câu hỏi cho đến khi MẢNG TẠM ĐỦ SỐ LƯỢNG thì STOP ngắt kết nối.
                     let allQuestions = [];
-                    for (let docSnap of examSnaps.docs) {
+                    for (let docSnap of examDocs) {
+                        if (allQuestions.length >= timeLimit) break; // NGẮT VÒNG LẶP SỚM ĐỂ TIẾT KIỆM QUOTA
+
                         const eId = docSnap.id;
                         const qQs = query(collection(db, "questions"), where("examId", "==", eId));
                         const qsSnaps = await getDocs(qQs);
@@ -308,25 +327,26 @@ document.addEventListener('ComponentsLoaded', () => {
                     }
 
                     if (allQuestions.length < timeLimit) {
-                        alert(`Kho dữ liệu không đủ câu hỏi! (Hiện có ${allQuestions.length}/${timeLimit} câu thuộc ${tech} - ${level}). Vui lòng giảm thời gian hoặc chọn Mức độ khác.`);
+                        alert(`Kho dữ liệu không đủ! (Hiện chỉ bốc được ${allQuestions.length}/${timeLimit} câu). Vui lòng giảm thời gian xuống.`);
                         btnSubmit.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Khởi tạo & Vào thi';
                         btnSubmit.disabled = false;
                         btnSubmit.style.opacity = '1';
                         return;
                     }
 
+                    // Bước 4: Xáo trộn mảng câu hỏi vừa bốc được lần cuối để chống trùng lặp pattern
                     for (let i = allQuestions.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
                     }
                     const selectedQuestions = allQuestions.slice(0, timeLimit);
 
-                    // SỬA: Dùng tiền tố RD- cho mã đề ngẫu nhiên
+                    // Bước 5: Viết đề thi mới với tiền tố RD-
                     const randomExamId = "RD-" + Math.floor(100000 + Math.random() * 900000);
                     
                     await setDoc(doc(db, "exams", randomExamId), {
                         examName: `Đề Ngẫu Nhiên: ${tech} (${level})`,
-                        technique: "AI Tự Động", // Gom vào tab "Đề AI Tự tạo" / Hỗn hợp & AI để user quản lý & ẩn đề
+                        technique: "AI Tự Động", // Vẫn giữ Hỗn hợp & AI để User tự quản lý ẩn/xóa
                         level: level,
                         timeLimit: timeLimit,
                         questionCount: timeLimit,
@@ -335,6 +355,7 @@ document.addEventListener('ComponentsLoaded', () => {
                         authorEmail: auth.currentUser.email,
                     });
 
+                    // Ghi câu hỏi vào DB (Bắt buộc tốn Write để bảo toàn kiến trúc file quiz.js)
                     for (let i = 0; i < selectedQuestions.length; i++) {
                         let qData = selectedQuestions[i];
                         qData.examId = randomExamId;
