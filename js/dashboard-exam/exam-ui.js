@@ -34,11 +34,18 @@ export function renderExams() {
                     border: 1px solid #e2e8f0; 
                 }
 
-                /* Hiệu ứng nhấp nháy cho nhãn Đề Mới */
+                /* Hiệu ứng nhấp nháy cho nhãn Đề Mới (Cực mạnh) */
                 @keyframes pulseNewBadge {
-                    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-                    70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-                    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+                    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+                    50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+                    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                }
+
+                /* Hiệu ứng phát sáng viền Card Đề Mới */
+                @keyframes cardPulseGlow {
+                    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+                    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
                 }
             </style>`);
         }
@@ -202,9 +209,12 @@ export function renderExams() {
                 const isSaved = userBookmarks.includes(exam.id);
                 const isCompleted = !!State.completedExams[exam.id];
                 
-                // KIỂM TRA ĐỀ MỚI CHO TỪNG CARD
+                // KIỂM TRA ĐỀ MỚI CHO TỪNG CARD & ÁP DỤNG CSS MỚI
                 const isExamNew = exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted;
-                const newBadgeHtml = isExamNew ? `<span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: bold; border: 1px solid #059669; animation: pulseNewBadge 2s infinite; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(16,185,129,0.2);"><i class="fa-solid fa-sparkles"></i> MỚI</span>` : ``;
+                const newBadgeHtml = isExamNew ? `<span style="background: linear-gradient(135deg, #ef4444, #f97316); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 900; animation: pulseNewBadge 1.2s infinite; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); letter-spacing: 0.5px; z-index: 10;"><i class="fa-solid fa-bolt"></i> MỚI</span>` : ``;
+                
+                // NẾU ĐỀ MỚI, THAY ĐỔI VIỀN CARD VÀ TẠO HIỆU ỨNG PHÁT SÁNG
+                const cardOutlineStyle = isExamNew ? `border: 2px solid #ef4444; animation: cardPulseGlow 2s infinite;` : `border: 1px solid #eef0f2;`;
 
                 const badgeHtml = isExamVip ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>` : `<span class="course-badge badge-free header-badge">Free</span>`;
                 const bookmarkHtml = `<button class="btn-bookmark header-bookmark ${isSaved ? 'saved' : ''}" onclick="toggleBookmark(event, '${safeExamId}')" title="Lưu đề thi"><i class="${isSaved ? 'fa-solid' : 'fa-regular'} fa-heart"></i></button>`;
@@ -312,8 +322,9 @@ export function renderExams() {
                     topBadgeHtml = `<div style="position: absolute; top: -12px; left: -12px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border: 2px solid #fff;"><i class="fa-solid fa-trophy"></i> ĐỀ CỦA NĂM</div>`;
                 }
 
+                // Gắn biến cardOutlineStyle vào inline-style của thẻ course-card
                 rowHtml += `
-                    <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; border: 1px solid #eef0f2; background: #fff; overflow: visible; position: relative;">
+                    <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; background: #fff; overflow: visible; position: relative; ${cardOutlineStyle}">
                         ${topBadgeHtml}
                         ${hideBtnHtml}
                         <div class="card-body p-4 d-flex flex-column h-100">
