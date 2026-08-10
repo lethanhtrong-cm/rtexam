@@ -1,6 +1,7 @@
 import { signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, setDoc, deleteDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { switchTab, showNotificationModal } from "../../dashboard/dashboard-ui.js";
+// Tìm dòng số 3 và thay thế bằng dòng dưới đây:
+import { switchTab, showNotificationModal } from "../dashboard/dashboard-ui.js";
 
 export function initDOMListeners(auth, db) {
     const mainMenuItems = document.querySelectorAll('.sidebar-menu > .menu-item[data-target]');
