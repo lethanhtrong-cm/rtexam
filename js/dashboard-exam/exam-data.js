@@ -1,5 +1,5 @@
 import { auth, db } from "../dashboard-core.js";
-import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
 
@@ -88,7 +88,6 @@ export async function loadAggregatedExamData() {
                 const isMyExam = auth.currentUser && conf.creatorId === auth.currentUser.uid;
 
                 if (isPublicExam || isMyExam) {
-                    // Khởi tạo trực tiếp từ dữ liệu Đề, không phụ thuộc vào mảng câu hỏi
                     examMap[eId] = {
                         id: eId,
                         isValid: true,
@@ -127,7 +126,13 @@ export async function loadAggregatedExamData() {
             badgesMap = parsed.badgesMap || {};
             avatarsMap = parsed.avatarsMap || {};
         } else {
-            const resultsSnap = await getDocs(collection(db, "results"));
+            // =================================================================
+            // TỐI ƯU READ LỚN NHẤT: GIỚI HẠN TẢI KẾT QUẢ ĐỂ BẢO VỆ QUOTA FIRESTORE
+            // Chỉ lấy 1000 lượt thi mới nhất thay vì toàn bộ lịch sử hệ thống
+            // =================================================================
+            const resultsQuery = query(collection(db, "results"), orderBy("createdAt", "desc"), limit(1000));
+            const resultsSnap = await getDocs(resultsQuery);
+            
             const counts = { week: {}, month: {}, year: {} };
             const dynamicAttemptCounts = {}; 
             
@@ -162,6 +167,7 @@ export async function loadAggregatedExamData() {
                         const totalQ = data.totalQuestions || 1;
                         const answeredQ = data.savedAnswers ? Object.keys(data.savedAnswers).length : 0;
                         
+                        // Chỉ lấy Avatar người thi nếu đã làm (trả lời) từ 75% số câu hỏi trở lên
                         if ((answeredQ / totalQ) >= 0.75) {
                             dynamicAttemptCounts[eId] = (dynamicAttemptCounts[eId] || 0) + 1; 
 
