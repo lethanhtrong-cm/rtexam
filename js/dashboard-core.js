@@ -7,12 +7,12 @@ import { safeRedirect, formatDate, switchTab, showNotificationModal, renderAuthI
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// IMPORT CÁC MODULE ĐÃ ĐƯỢC CHIA NHỎ
-import { initStatistics } from "./js/dashboard-core/stats.js";
-import { initRoomModals } from "./js/dashboard-core/rooms.js";
-import { initRandomExam } from "./js/dashboard-core/random-exam.js";
-import { initDOMListeners } from "./js/dashboard-core/dom-listeners.js";
-import { executeAuthUI, initNotificationListener } from "./js/dashboard-core/user-services.js";
+// IMPORT CÁC MODULE ĐÃ ĐƯỢC CHIA NHỎ (Đã sửa lỗi đường dẫn)
+import { initStatistics } from "./dashboard-core/stats.js";
+import { initRoomModals } from "./dashboard-core/rooms.js";
+import { initRandomExam } from "./dashboard-core/random-exam.js";
+import { initDOMListeners } from "./dashboard-core/dom-listeners.js";
+import { executeAuthUI, initNotificationListener } from "./dashboard-core/user-services.js";
 
 // RE-EXPORT ĐỂ BẢO TOÀN KIẾN TRÚC CHO CÁC FILE KHÁC (exam-data.js, exam-modals.js...)
 export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
