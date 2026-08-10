@@ -5,7 +5,6 @@ import { app, auth, db } from "./dashboard/firebase-core.js";
 import { safeRedirect, formatDate, switchTab, showNotificationModal, renderAuthInfo, setVipInactive } from "./dashboard/dashboard-ui.js";
 
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// BỔ SUNG: Import thêm limit và writeBatch để tối ưu hóa Read/Write
 import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, increment, getDocs, limit, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
@@ -33,7 +32,6 @@ document.addEventListener('ComponentsLoaded', () => {
     if (!sessionStorage.getItem('site_visited')) {
         sessionStorage.setItem('site_visited', 'true');
         
-        // TỐI ƯU HIỆU SUẤT: Trì hoãn bộ đếm 3 giây để nhường băng thông cho UI tải mượt mà
         setTimeout(() => {
             const updates = {
                 totalVisits: increment(1),
@@ -226,9 +224,6 @@ document.addEventListener('ComponentsLoaded', () => {
         });
     }
 
-    // =================================================================
-    // TÍNH NĂNG MỚI: TẠO ĐỀ NGẪU NHIÊN - ĐÃ TỐI ƯU READ/WRITE CỰC ĐẠI
-    // =================================================================
     const btnRandomExam = document.getElementById('btnRandomExam');
     if (btnRandomExam) {
         btnRandomExam.addEventListener('click', (e) => {
@@ -300,7 +295,6 @@ document.addEventListener('ComponentsLoaded', () => {
                 btnSubmit.style.opacity = '0.7';
 
                 try {
-                    // Bước 1: Tìm danh sách các đề thi phù hợp (Mất 1 Read)
                     const examsRef = collection(db, "exams");
                     const qExams = query(examsRef, where("technique", "==", tech), where("level", "==", level));
                     const examSnaps = await getDocs(qExams);
@@ -313,21 +307,18 @@ document.addEventListener('ComponentsLoaded', () => {
                         return;
                     }
 
-                    // Bước 2: TỐI ƯU READ - Xáo trộn ngẫu nhiên danh sách ID Đề thi trước
                     let examDocs = examSnaps.docs;
                     for (let i = examDocs.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [examDocs[i], examDocs[j]] = [examDocs[j], examDocs[i]];
                     }
 
-                    // Bước 3: TỐI ƯU READ - Giới hạn FETCH bằng hàm limit() để chống tràn Data
                     let allQuestions = [];
                     for (let docSnap of examDocs) {
-                        if (allQuestions.length >= timeLimit) break; // NGẮT VÒNG LẶP SỚM
+                        if (allQuestions.length >= timeLimit) break;
                         
                         const remainingNeeded = timeLimit - allQuestions.length;
                         const eId = docSnap.id;
-                        // Chỉ tải số lượng câu hỏi cần thiết, tránh fetch cả trăm câu của 1 đề
                         const qQs = query(collection(db, "questions"), where("examId", "==", eId), limit(remainingNeeded));
                         const qsSnaps = await getDocs(qQs);
                         qsSnaps.forEach(q => allQuestions.push(q.data()));
@@ -341,17 +332,13 @@ document.addEventListener('ComponentsLoaded', () => {
                         return;
                     }
 
-                    // Bước 4: Xáo trộn mảng câu hỏi vừa bốc được lần cuối để chống trùng lặp pattern
                     for (let i = allQuestions.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
                     }
                     const selectedQuestions = allQuestions.slice(0, timeLimit);
 
-                    // Bước 5: Viết đề thi mới với tiền tố RD-
                     const randomExamId = "RD-" + Math.floor(100000 + Math.random() * 900000);
-                    
-                    // TỐI ƯU WRITE: Sử dụng writeBatch để gửi lên Server trong 1 lần duy nhất, tăng tốc độ xử lý mạng 10x
                     const batch = writeBatch(db);
                     
                     const examRef = doc(db, "exams", randomExamId);
@@ -366,16 +353,14 @@ document.addEventListener('ComponentsLoaded', () => {
                         authorEmail: auth.currentUser.email,
                     });
 
-                    // Ghi câu hỏi vào DB thông qua Batch (Bảo toàn kiến trúc lấy ID gốc của file quiz.js)
                     for (let i = 0; i < selectedQuestions.length; i++) {
                         let qData = selectedQuestions[i];
                         qData.examId = randomExamId;
                         qData.order = i;
-                        const newQRef = doc(collection(db, "questions")); // Tạo document reference mới
+                        const newQRef = doc(collection(db, "questions")); 
                         batch.set(newQRef, qData);
                     }
                     
-                    // Thực thi Commit toàn bộ dữ liệu 
                     await batch.commit();
 
                     closeModal();
@@ -749,7 +734,7 @@ function fetchUserData(user) {
                     const topbarVipContainer = document.getElementById('topbar-vip-container');
                     if (topbarVipContainer) {
                         topbarVipContainer.innerHTML = `
-                            <div class="topbar-vip-badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
+                            <div class="topbar-vip-badge" style="background: background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
                                 <i class="fa-solid fa-gem"></i> PRO
                             </div>
                         `;
@@ -860,23 +845,19 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUserInstance = user; 
         
-        updateDoc(doc(db, "users", user.uid), { isOnline: true }).catch(() => {});
+        let currentOnlineStatus = null;
+        const updateOnlineStatus = (status) => {
+            if (currentOnlineStatus === status) return;
+            currentOnlineStatus = status;
+            updateDoc(doc(db, "users", user.uid), { isOnline: status }).catch(() => {});
+        };
+
+        updateOnlineStatus(true);
         
-        window.addEventListener('beforeunload', () => {
-            updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
-        });
-
-        document.addEventListener('freeze', () => {
-            updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
-        });
-
-        window.addEventListener('offline', () => {
-            updateDoc(doc(db, "users", user.uid), { isOnline: false }).catch(() => {});
-        });
-
-        window.addEventListener('online', () => {
-            updateDoc(doc(db, "users", user.uid), { isOnline: true }).catch(() => {});
-        });
+        window.addEventListener('beforeunload', () => updateOnlineStatus(false));
+        document.addEventListener('freeze', () => updateOnlineStatus(false));
+        window.addEventListener('offline', () => updateOnlineStatus(false));
+        window.addEventListener('online', () => updateOnlineStatus(true));
 
         if (isComponentsLoaded) {
             executeAuthUI(user);
