@@ -60,7 +60,7 @@ export async function loadAggregatedExamData() {
         if (cachedMeta) {
             ratingMap = JSON.parse(cachedMeta);
         } else {
-            const fSnap = await getDocs(collection(db, "feedbacks"));
+            const fSnap = await getDocs(query(collection(db, "feedbacks"), limit(2500)));
             fSnap.forEach((doc) => {
                 const data = doc.data();
                 const eId = data.examId;
