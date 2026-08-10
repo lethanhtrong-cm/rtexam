@@ -130,7 +130,7 @@ export async function loadAggregatedExamData() {
             // TỐI ƯU READ LỚN NHẤT: GIỚI HẠN TẢI KẾT QUẢ ĐỂ BẢO VỆ QUOTA FIRESTORE
             // Chỉ lấy 1000 lượt thi mới nhất thay vì toàn bộ lịch sử hệ thống
             // =================================================================
-            const resultsQuery = query(collection(db, "results"), orderBy("createdAt", "desc"), limit(1000));
+            const resultsQuery = query(collection(db, "results"), limit(2500));
             const resultsSnap = await getDocs(resultsQuery);
             
             const counts = { week: {}, month: {}, year: {} };
