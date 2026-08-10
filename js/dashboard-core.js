@@ -5,7 +5,8 @@ import { app, auth, db } from "./dashboard/firebase-core.js";
 import { safeRedirect, formatDate, switchTab, showNotificationModal, renderAuthInfo, setVipInactive } from "./dashboard/dashboard-ui.js";
 
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// BỔ SUNG: Import thêm limit và writeBatch để tối ưu hóa Read/Write
+import { doc, getDoc, setDoc, deleteDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, increment, getDocs, limit, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
 
@@ -31,14 +32,18 @@ document.addEventListener('ComponentsLoaded', () => {
 
     if (!sessionStorage.getItem('site_visited')) {
         sessionStorage.setItem('site_visited', 'true');
-        const updates = {
-            totalVisits: increment(1),
-            [dateKey]: increment(1),
-            [weekKey]: increment(1),
-            [monthKey]: increment(1),
-            [yearKey]: increment(1)
-        };
-        setDoc(doc(db, "statistics", "global"), updates, { merge: true }).catch(() => {});
+        
+        // TỐI ƯU HIỆU SUẤT: Trì hoãn bộ đếm 3 giây để nhường băng thông cho UI tải mượt mà
+        setTimeout(() => {
+            const updates = {
+                totalVisits: increment(1),
+                [dateKey]: increment(1),
+                [weekKey]: increment(1),
+                [monthKey]: increment(1),
+                [yearKey]: increment(1)
+            };
+            setDoc(doc(db, "statistics", "global"), updates, { merge: true }).catch(() => {});
+        }, 3000);
     }
 
     onSnapshot(doc(db, "statistics", "global"), (docSnap) => {
@@ -315,13 +320,15 @@ document.addEventListener('ComponentsLoaded', () => {
                         [examDocs[i], examDocs[j]] = [examDocs[j], examDocs[i]];
                     }
 
-                    // Bước 3: TỐI ƯU READ - Chỉ chui vào rút câu hỏi cho đến khi MẢNG TẠM ĐỦ SỐ LƯỢNG thì STOP ngắt kết nối.
+                    // Bước 3: TỐI ƯU READ - Giới hạn FETCH bằng hàm limit() để chống tràn Data
                     let allQuestions = [];
                     for (let docSnap of examDocs) {
-                        if (allQuestions.length >= timeLimit) break; // NGẮT VÒNG LẶP SỚM ĐỂ TIẾT KIỆM QUOTA
-
+                        if (allQuestions.length >= timeLimit) break; // NGẮT VÒNG LẶP SỚM
+                        
+                        const remainingNeeded = timeLimit - allQuestions.length;
                         const eId = docSnap.id;
-                        const qQs = query(collection(db, "questions"), where("examId", "==", eId));
+                        // Chỉ tải số lượng câu hỏi cần thiết, tránh fetch cả trăm câu của 1 đề
+                        const qQs = query(collection(db, "questions"), where("examId", "==", eId), limit(remainingNeeded));
                         const qsSnaps = await getDocs(qQs);
                         qsSnaps.forEach(q => allQuestions.push(q.data()));
                     }
@@ -344,9 +351,13 @@ document.addEventListener('ComponentsLoaded', () => {
                     // Bước 5: Viết đề thi mới với tiền tố RD-
                     const randomExamId = "RD-" + Math.floor(100000 + Math.random() * 900000);
                     
-                    await setDoc(doc(db, "exams", randomExamId), {
+                    // TỐI ƯU WRITE: Sử dụng writeBatch để gửi lên Server trong 1 lần duy nhất, tăng tốc độ xử lý mạng 10x
+                    const batch = writeBatch(db);
+                    
+                    const examRef = doc(db, "exams", randomExamId);
+                    batch.set(examRef, {
                         examName: `Đề Ngẫu Nhiên: ${tech} (${level})`,
-                        technique: "AI Tự Động", // Vẫn giữ Hỗn hợp & AI để User tự quản lý ẩn/xóa
+                        technique: "AI Tự Động", 
                         level: level,
                         timeLimit: timeLimit,
                         questionCount: timeLimit,
@@ -355,13 +366,17 @@ document.addEventListener('ComponentsLoaded', () => {
                         authorEmail: auth.currentUser.email,
                     });
 
-                    // Ghi câu hỏi vào DB (Bắt buộc tốn Write để bảo toàn kiến trúc file quiz.js)
+                    // Ghi câu hỏi vào DB thông qua Batch (Bảo toàn kiến trúc lấy ID gốc của file quiz.js)
                     for (let i = 0; i < selectedQuestions.length; i++) {
                         let qData = selectedQuestions[i];
                         qData.examId = randomExamId;
                         qData.order = i;
-                        await addDoc(collection(db, "questions"), qData);
+                        const newQRef = doc(collection(db, "questions")); // Tạo document reference mới
+                        batch.set(newQRef, qData);
                     }
+                    
+                    // Thực thi Commit toàn bộ dữ liệu 
+                    await batch.commit();
 
                     closeModal();
                     safeRedirect(`quiz.html?examId=${randomExamId}`);
