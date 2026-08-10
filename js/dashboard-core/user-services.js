@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { formatDate, setVipInactive, renderAuthInfo } from "../../dashboard/dashboard-ui.js";
+// Tìm dòng số 3 và thay thế bằng dòng dưới đây:
+import { formatDate, setVipInactive, renderAuthInfo } from "../dashboard/dashboard-ui.js";
 
 export function initNotificationListener(auth, db) {
     const user = auth.currentUser;
