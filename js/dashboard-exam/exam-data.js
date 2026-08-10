@@ -74,21 +74,12 @@ export async function loadAggregatedExamData() {
             sessionStorage.setItem(metaCacheKey, JSON.stringify(ratingMap));
         }
 
-        // 2. XỬ LÝ CORE (SỐ LƯỢNG CÂU HỎI & CẤU HÌNH ĐỀ THI)
+        // 2. XỬ LÝ CORE (CẤU HÌNH ĐỀ THI - ĐÃ TỐI ƯU LOẠI BỎ LOAD TOÀN BỘ CÂU HỎI)
         let examMap = {};
         const cachedCore = sessionStorage.getItem(coreCacheKey);
         if (cachedCore) {
             examMap = JSON.parse(cachedCore);
         } else {
-            const qSnap = await getDocs(collection(db, "questions"));
-            qSnap.forEach((doc) => {
-                const eId = doc.data().examId;
-                if (eId) {
-                    if (!examMap[eId]) examMap[eId] = { id: eId, questionCount: 0 };
-                    examMap[eId].questionCount++;
-                }
-            });
-
             const eSnap = await getDocs(collection(db, "exams"));
             eSnap.forEach((doc) => {
                 const eId = doc.id;
@@ -97,25 +88,29 @@ export async function loadAggregatedExamData() {
                 const isMyExam = auth.currentUser && conf.creatorId === auth.currentUser.uid;
 
                 if (isPublicExam || isMyExam) {
-                    if (examMap[eId]) {
-                        examMap[eId].isValid = true; 
-                        examMap[eId].examName = conf.examName || ""; 
-                        examMap[eId].isVip = conf.isVip || false;
-                        examMap[eId].timeLimit = conf.timeLimit ? parseInt(conf.timeLimit) : 15;
-                        examMap[eId].attemptCount = conf.attemptCount || 0;
-                        examMap[eId].technique = conf.technique || "Hỗn hợp";
-                        examMap[eId].level = conf.level || "Trung bình";
-                        examMap[eId].description = conf.description || "";
-                        
-                        let parsedTime = 0;
-                        const rawTime = conf.createdAt || conf.timestamp; 
-                        if (rawTime) {
-                            if (typeof rawTime.toMillis === 'function') parsedTime = rawTime.toMillis();
-                            else if (rawTime.seconds !== undefined) parsedTime = rawTime.seconds * 1000;
-                            else parsedTime = new Date(rawTime).getTime();
-                        }
-                        examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
+                    // Khởi tạo trực tiếp từ dữ liệu Đề, không phụ thuộc vào mảng câu hỏi
+                    examMap[eId] = {
+                        id: eId,
+                        isValid: true,
+                        examName: conf.examName || "",
+                        isVip: conf.isVip || false,
+                        timeLimit: conf.timeLimit ? parseInt(conf.timeLimit) : 15,
+                        // Tối ưu Đọc: Lấy số lượng câu hỏi từ config, dự phòng bằng timeLimit thay vì đếm thủ công
+                        questionCount: conf.questionCount || conf.totalQuestions || (conf.timeLimit ? parseInt(conf.timeLimit) : 0),
+                        attemptCount: conf.attemptCount || 0,
+                        technique: conf.technique || "Hỗn hợp",
+                        level: conf.level || "Trung bình",
+                        description: conf.description || ""
+                    };
+                    
+                    let parsedTime = 0;
+                    const rawTime = conf.createdAt || conf.timestamp; 
+                    if (rawTime) {
+                        if (typeof rawTime.toMillis === 'function') parsedTime = rawTime.toMillis();
+                        else if (rawTime.seconds !== undefined) parsedTime = rawTime.seconds * 1000;
+                        else parsedTime = new Date(rawTime).getTime();
                     }
+                    examMap[eId].createdAt = isNaN(parsedTime) ? 0 : parsedTime;
                 }
             });
             sessionStorage.setItem(coreCacheKey, JSON.stringify(examMap));
@@ -134,7 +129,7 @@ export async function loadAggregatedExamData() {
         } else {
             const resultsSnap = await getDocs(collection(db, "results"));
             const counts = { week: {}, month: {}, year: {} };
-            const dynamicAttemptCounts = {}; // BỔ SUNG: Biến đếm tổng lượt thi thực tế từ kết quả
+            const dynamicAttemptCounts = {}; 
             
             const usersExamsMap = {}; 
             const allUniqueUids = new Set();
@@ -164,12 +159,11 @@ export async function loadAggregatedExamData() {
                     }
                     
                     if (userId) {
-                        // YÊU CẦU MỚI: Chỉ lấy Avatar người thi nếu đã làm (trả lời) từ 75% số câu hỏi trở lên
                         const totalQ = data.totalQuestions || 1;
                         const answeredQ = data.savedAnswers ? Object.keys(data.savedAnswers).length : 0;
                         
                         if ((answeredQ / totalQ) >= 0.75) {
-                            dynamicAttemptCounts[eId] = (dynamicAttemptCounts[eId] || 0) + 1; // BỔ SUNG: Đếm live lượt thi
+                            dynamicAttemptCounts[eId] = (dynamicAttemptCounts[eId] || 0) + 1; 
 
                             if (!usersExamsMap[eId]) usersExamsMap[eId] = {};
                             if (!usersExamsMap[eId][userId] || ts > usersExamsMap[eId][userId].ts) {
@@ -199,7 +193,7 @@ export async function loadAggregatedExamData() {
             if (topWeek && !badgesMap[topWeek]) badgesMap[topWeek] = 'week';
 
             const userAvatars = {};
-            const userNames = {}; // MỚI: Thêm object để lưu tên
+            const userNames = {}; 
 
             if (allUniqueUids.size > 0) {
                 try {
@@ -225,28 +219,25 @@ export async function loadAggregatedExamData() {
                 if (!userAvatars[userId]) {
                     const prefix = String(userId).substring(0, 2);
                     userAvatars[userId] = `https://ui-avatars.com/api/?name=${prefix}&background=e2e8f0&color=64748b`;
-                    userNames[userId] = userId; // Fallback name
+                    userNames[userId] = userId; 
                 }
             });
 
-            // Lọc ra đúng 5 người thi MỚI NHẤT cho mỗi đề thay vì 3
             Object.keys(usersExamsMap).forEach(eId => {
                 const sortedUsers = Object.entries(usersExamsMap[eId])
                     .map(([uid, info]) => ({ uid, ...info }))
                     .sort((a, b) => b.ts - a.ts)
-                    .slice(0, 5); // Đổi thành 5
+                    .slice(0, 5); 
                 
-                // MỚI: Lưu Object gồm URL và Name thay vì chuỗi
                 avatarsMap[eId] = sortedUsers.map(u => ({
                     url: userAvatars[u.uid],
                     name: userNames[u.uid] || u.uid
                 }));
             });
 
-            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap, dynamicAttemptCounts })); // Bổ sung lưu dynamicAttemptCounts vào Cache nếu cần
+            sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap, dynamicAttemptCounts }));
         }
 
-        // Nếu lấy từ Cache, đọc lại biến dynamicAttemptCounts
         const dynamicAttemptCounts = cachedExtra ? (JSON.parse(cachedExtra).dynamicAttemptCounts || {}) : {};
 
         // 3. GHÉP NỐI CORE, META VÀ DỮ LIỆU ĐỘNG THÀNH DỮ LIỆU CUỐI CÙNG
@@ -255,7 +246,6 @@ export async function loadAggregatedExamData() {
             if (examMap[eId].timeLimit === undefined) examMap[eId].timeLimit = 15;
             if (examMap[eId].isVip === undefined) examMap[eId].isVip = false;
             
-            // SỬA: Lấy số đếm live từ kết quả thực tế, nếu không có mới dùng số tĩnh hoặc 0
             examMap[eId].attemptCount = dynamicAttemptCounts[eId] || examMap[eId].attemptCount || 0;
 
             if (ratingMap[eId]) {
