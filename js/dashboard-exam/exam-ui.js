@@ -64,13 +64,11 @@ export function renderExams() {
         let newExamsCount = { 'all': 0 };
 
         State.allExamsData.forEach(exam => {
-            // KHÔI PHỤC LỌC BỎ: Đề Ngẫu nhiên (AI Tự Động / RD-) KHÔNG PHẢI do user hiện tại tạo
             if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) {
-                return; // Bỏ qua, không đếm vào huy hiệu "MỚI"
+                return; 
             }
 
             const isCompleted = !!State.completedExams[exam.id];
-            // Đề mới = Tạo chưa quá 24h VÀ học viên chưa hoàn thành
             if (exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted) {
                 newExamsCount['all']++;
                 if (exam.technique) {
@@ -80,7 +78,6 @@ export function renderExams() {
             }
         });
 
-        // Gắn số lượng (badge) vào thẻ menu (nút bấm có class sub-menu-item)
         const menuItems = document.querySelectorAll('.sub-menu-item');
         if (menuItems.length > 0) {
             menuItems.forEach(item => {
@@ -108,45 +105,54 @@ export function renderExams() {
             return;
         }
 
-        let displayData = [...State.allExamsData];
+        const userBookmarks = (State.currentUserData && State.currentUserData.bookmarks) ? State.currentUserData.bookmarks : [];
 
         // ==========================================================
-        // KHÔI PHỤC LỌC HIỂN THỊ: CHỈ HIỂN THỊ ĐỀ NGẪU NHIÊN CỦA CHÍNH MÌNH
+        // TỐI ƯU HIỆU SUẤT: SINGLE-PASS FILTERING (Gộp chung tất cả bộ lọc vào 1 vòng lặp duy nhất)
         // ==========================================================
-        displayData = displayData.filter(exam => {
-            if (exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) {
-                return exam.authorEmail === currentUserEmail;
+        let displayData = State.allExamsData.filter(exam => {
+            
+            // 1. Lọc Đề AI/Ngẫu nhiên (Chỉ hiển thị của chính user)
+            if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) return false;
+
+            // 2. Lọc theo Kỹ thuật / Đề đã lưu (Saved)
+            if (State.currentTechnique === 'saved' && !userBookmarks.includes(exam.id)) return false;
+            if (State.currentTechnique !== 'all' && State.currentTechnique !== 'saved' && exam.technique !== State.currentTechnique) return false;
+            
+            // 3. Lọc theo Mức độ
+            if (State.currentLevel !== 'all' && exam.level !== State.currentLevel) return false;
+            
+            // 4. Lọc theo Thời gian
+            if (State.currentTime !== 'all' && exam.timeLimit !== parseInt(State.currentTime)) return false;
+            
+            // 5. Lọc theo Từ khóa tìm kiếm
+            if (State.currentSearchQuery !== '') {
+                const q = State.currentSearchQuery;
+                if (!exam.id.toLowerCase().includes(q) && 
+                    !(exam.examName && exam.examName.toLowerCase().includes(q)) && 
+                    !(exam.technique && exam.technique.toLowerCase().includes(q))) {
+                    return false;
+                }
             }
+
+            // 6. Lọc theo SortDropdown (Chỉ lấy Free/Vip nếu yêu cầu)
+            if (sortFilter) {
+                const filterType = sortFilter.value;
+                if (filterType === 'only_vip' && !exam.isVip) return false;
+                if (filterType === 'only_free' && exam.isVip) return false;
+            }
+
             return true;
         });
 
-        const userBookmarks = (State.currentUserData && State.currentUserData.bookmarks) ? State.currentUserData.bookmarks : [];
-
-        if (State.currentTechnique === 'saved') displayData = displayData.filter(exam => userBookmarks.includes(exam.id));
-        else if (State.currentTechnique !== 'all') displayData = displayData.filter(exam => exam.technique === State.currentTechnique);
-        
-        if (State.currentLevel !== 'all') displayData = displayData.filter(exam => exam.level === State.currentLevel);
-        if (State.currentTime !== 'all') displayData = displayData.filter(exam => exam.timeLimit === parseInt(State.currentTime));
-        
-        if (State.currentSearchQuery !== '') {
-            displayData = displayData.filter(exam => 
-                exam.id.toLowerCase().includes(State.currentSearchQuery) || 
-                (exam.examName && exam.examName.toLowerCase().includes(State.currentSearchQuery)) || 
-                (exam.technique && exam.technique.toLowerCase().includes(State.currentSearchQuery))
-            );
-        }
-
+        // Áp dụng thuật toán Sắp xếp (Chỉ thực thi 1 lần cuối cùng)
         if (sortFilter) {
             const filterType = sortFilter.value;
-            if (filterType === 'only_vip') displayData = displayData.filter(exam => exam.isVip);
-            else if (filterType === 'only_free') displayData = displayData.filter(exam => !exam.isVip);
-
             if (filterType === 'highest_rating') displayData.sort((a, b) => b.rating - a.rating);
             else if (filterType === 'most_attempts') displayData.sort((a, b) => b.attemptCount - a.attemptCount);
             else displayData.sort((a, b) => b.createdAt - a.createdAt); 
         }
 
-        examListContainer.innerHTML = "";
         examListContainer.className = State.currentView === 'grid' ? "grid-view swimlane-view" : "list-view";
 
         if (displayData.length === 0) {
@@ -191,6 +197,7 @@ export function renderExams() {
         );
 
         let currentMainCategoryTracker = null;
+        let finalHtmlBuffer = ""; // TỐI ƯU DOM: Bộ đệm chứa toàn bộ HTML để render 1 lần
 
         groups.forEach(group => {
             if (group.data.length === 0) return; 
@@ -225,11 +232,9 @@ export function renderExams() {
                 const isSaved = userBookmarks.includes(exam.id);
                 const isCompleted = !!State.completedExams[exam.id];
                 
-                // KIỂM TRA ĐỀ MỚI CHO TỪNG CARD & ÁP DỤNG CSS MỚI
                 const isExamNew = exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted;
                 const newBadgeHtml = isExamNew ? `<span style="background: linear-gradient(135deg, #ef4444, #f97316); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 900; animation: pulseNewBadge 1.2s infinite; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); letter-spacing: 0.5px; z-index: 10;"><i class="fa-solid fa-bolt"></i> MỚI</span>` : ``;
                 
-                // NẾU ĐỀ MỚI, THAY ĐỔI VIỀN CARD VÀ TẠO HIỆU ỨNG PHÁT SÁNG
                 const cardOutlineStyle = isExamNew ? `border: 2px solid #ef4444; animation: cardPulseGlow 2s infinite;` : `border: 1px solid #eef0f2;`;
 
                 const badgeHtml = isExamVip ? `<span class="course-badge badge-vip header-badge"><i class="fa-solid fa-crown"></i> PRO</span>` : `<span class="course-badge badge-free header-badge">Free</span>`;
@@ -238,7 +243,6 @@ export function renderExams() {
 
                 const displayTitle = exam.examName && exam.examName.trim() !== "" ? exam.examName : exam.id;
 
-                // GIẢI QUYẾT LỖI CẮT CHỮ: Tách Header thành cấu trúc Flex Column (2 Hàng)
                 const headerHtml = `
                     <div class="header-flex-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
@@ -342,7 +346,6 @@ export function renderExams() {
                     topBadgeHtml = `<div style="position: absolute; top: -12px; left: -12px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.2); border: 2px solid #fff;"><i class="fa-solid fa-trophy"></i> ĐỀ CỦA NĂM</div>`;
                 }
 
-                // Gắn biến cardOutlineStyle vào inline-style của thẻ course-card
                 rowHtml += `
                     <div class="course-card exam-card-hover h-100 d-flex flex-column" style="min-width: 340px; max-width: 340px; flex-shrink: 0; scroll-snap-align: start; margin-right: 24px; margin-bottom: 10px; border-radius: 12px; background: #fff; overflow: visible; position: relative; ${cardOutlineStyle}">
                         ${topBadgeHtml}
@@ -359,8 +362,13 @@ export function renderExams() {
             });
 
             rowHtml += `</div><button class="slider-btn right" onclick="slideRight(this)"><i class="fa-solid fa-chevron-right"></i></button></div></div>`;
-            examListContainer.insertAdjacentHTML('beforeend', rowHtml);
+            
+            // Đẩy vào bộ đệm thay vì vẽ ra DOM ngay
+            finalHtmlBuffer += rowHtml; 
         });
+
+        // Chỉ ghi DOM đúng 1 lần duy nhất, loại bỏ giật UI
+        examListContainer.innerHTML = finalHtmlBuffer;
 
     } catch (err) {
         console.error("LỖI HIỂN THỊ ĐỀ THI: ", err);
