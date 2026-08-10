@@ -1,6 +1,6 @@
 import { doc, setDoc, collection, query, where, getDocs, limit, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { safeRedirect } from "../../dashboard/dashboard-ui.js";
-
+// Tìm dòng số 2 và thay thế bằng dòng dưới đây:
+import { safeRedirect } from "../dashboard/dashboard-ui.js";
 export function initRandomExam(auth, db) {
     const btnRandomExam = document.getElementById('btnRandomExam');
     if (btnRandomExam) {
