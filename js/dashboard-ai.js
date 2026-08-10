@@ -1,6 +1,6 @@
 import { auth, db } from "./dashboard-core.js";
-// Bổ sung thêm hàm updateDoc và increment để cộng dồn Token cho User
-import { doc, setDoc, collection, query, where, getCountFromServer, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Bổ sung thêm hàm writeBatch để gộp giao dịch lưu dữ liệu
+import { doc, setDoc, collection, query, where, getCountFromServer, updateDoc, increment, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // =========================================================================
 // CHỜ GIAO DIỆN TẢI XONG MỚI GẮN SỰ KIỆN ĐỂ TRÁNH LỖI NULL
@@ -61,7 +61,7 @@ document.addEventListener('ComponentsLoaded', () => {
     }
 
     // =========================================================================
-    // 4. LOGIC GỌI API (VERCEL) & LƯU VÀO FIRESTORE 
+    // 4. LOGIC GỌI API (VERCEL) & LƯU VÀO FIRESTORE (SỬ DỤNG BATCH WRITE)
     // =========================================================================
     if (btnSubmitAiGenerate) {
         btnSubmitAiGenerate.addEventListener('click', async () => {
@@ -117,10 +117,14 @@ document.addEventListener('ComponentsLoaded', () => {
                 const formattedNumber = aiCount.toString().padStart(3, '0');
                 currentGeneratedExamId = "AI-" + formattedNumber;
 
-                // LƯU CÂU HỎI VÀO FIRESTORE
-                const savePromises = questions.map((q, i) => {
+                // KHỞI TẠO BATCH ĐỂ GỘP GIAO DỊCH LƯU DỮ LIỆU
+                const batch = writeBatch(db);
+
+                // LƯU CÂU HỎI VÀO BATCH
+                questions.forEach((q, i) => {
                     const questionId = `${currentGeneratedExamId}-Q${i + 1}`;
-                    return setDoc(doc(db, "questions", questionId), {
+                    const questionRef = doc(db, "questions", questionId);
+                    batch.set(questionRef, {
                         examId: currentGeneratedExamId,
                         text: q.text || q.questionText || q.question || q.content || "Lỗi: AI không có nội dung",
                         options: q.options || q.answers || [],
@@ -130,10 +134,9 @@ document.addEventListener('ComponentsLoaded', () => {
                     });
                 });
 
-                await Promise.all(savePromises);
-
-                // GHI THÔNG TIN ĐỀ THI VÀO FIRESTORE (KÈM TOKEN)
-                await setDoc(doc(db, "exams", currentGeneratedExamId), {
+                // GHI THÔNG TIN ĐỀ THI VÀO BATCH
+                const examRef = doc(db, "exams", currentGeneratedExamId);
+                batch.set(examRef, {
                     id: currentGeneratedExamId,
                     technique: "AI Tự Động",
                     level: difficulty === 'easy' ? 'Dễ' : (difficulty === 'hard' ? 'Khó' : 'Trung bình'),
@@ -146,7 +149,10 @@ document.addEventListener('ComponentsLoaded', () => {
                     tokenUsed: usedTokens
                 });
 
-                // CỘNG DỒN CHI PHÍ TOKEN VÀO TÀI KHOẢN NGƯỜI DÙNG HIỆN TẠI
+                // THỰC THI BATCH (Lưu đồng thời tất cả, đảm bảo an toàn dữ liệu)
+                await batch.commit();
+
+                // CỘNG DỒN CHI PHÍ TOKEN VÀO TÀI KHOẢN (Giữ nguyên try-catch độc lập để tránh crash nếu Rules chặn)
                 if (usedTokens > 0) {
                     try {
                         await updateDoc(doc(db, "users", auth.currentUser.uid), {
