@@ -589,7 +589,7 @@ function initNotificationListener(user) {
     const userEmail = user.email;
 
     const notifRef = collection(db, "notifications");
-    const q = query(notifRef, where("toEmail", "==", userEmail));
+    const q = query(notifRef, where("toEmail", "==", userEmail), limit(10));
 
     onSnapshot(q, (snapshot) => {
         const notifList = document.getElementById('notiListContainer');
