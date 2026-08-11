@@ -10,7 +10,7 @@ export async function fetchUserResultsCache(user) {
         const cacheKey = `completedExams_${user.uid}`;
 
         const resultsRef = collection(db, "results");
-        const q = query(resultsRef, where("email", "==", user.email));
+        const eSnap = await getDocs(query(collection(db, "exams"), limit(1500)));
         const snap = await getDocs(q);
         
         snap.forEach(doc => {
