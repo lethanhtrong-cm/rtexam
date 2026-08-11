@@ -1,4 +1,4 @@
-import { doc, setDoc, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, setDoc, getDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export function initStatistics(db) {
     const now = new Date();
@@ -30,20 +30,25 @@ export function initStatistics(db) {
         }, 3000);
     }
 
-    onSnapshot(doc(db, "statistics", "global"), (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            const vTotal = document.getElementById('global-visitor-count');
-            const vDaily = document.getElementById('visitor-daily');
-            const vWeekly = document.getElementById('visitor-weekly');
-            const vMonthly = document.getElementById('visitor-monthly');
-            const vYearly = document.getElementById('visitor-yearly');
+    // TỐI ƯU QUOTA READ: Sử dụng getDoc thay cho onSnapshot để chỉ tải số liệu 1 lần
+    getDoc(doc(db, "statistics", "global"))
+        .then((docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const vTotal = document.getElementById('global-visitor-count');
+                const vDaily = document.getElementById('visitor-daily');
+                const vWeekly = document.getElementById('visitor-weekly');
+                const vMonthly = document.getElementById('visitor-monthly');
+                const vYearly = document.getElementById('visitor-yearly');
 
-            if (vTotal) vTotal.innerText = (data.totalVisits || 0).toLocaleString('vi-VN');
-            if (vDaily) vDaily.innerText = (data[dateKey] || 0).toLocaleString('vi-VN');
-            if (vWeekly) vWeekly.innerText = (data[weekKey] || 0).toLocaleString('vi-VN');
-            if (vMonthly) vMonthly.innerText = (data[monthKey] || 0).toLocaleString('vi-VN');
-            if (vYearly) vYearly.innerText = (data[yearKey] || 0).toLocaleString('vi-VN');
-        }
-    });
+                if (vTotal) vTotal.innerText = (data.totalVisits || 0).toLocaleString('vi-VN');
+                if (vDaily) vDaily.innerText = (data[dateKey] || 0).toLocaleString('vi-VN');
+                if (vWeekly) vWeekly.innerText = (data[weekKey] || 0).toLocaleString('vi-VN');
+                if (vMonthly) vMonthly.innerText = (data[monthKey] || 0).toLocaleString('vi-VN');
+                if (vYearly) vYearly.innerText = (data[yearKey] || 0).toLocaleString('vi-VN');
+            }
+        })
+        .catch((error) => {
+            console.error("Lỗi khi tải số liệu thống kê:", error);
+        });
 }
