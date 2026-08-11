@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, setDoc, increment, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+import { getFirestore, collection, getDocs, addDoc, query, where, doc, getDoc, setDoc, increment, serverTimestamp, updateDoc, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // Import các module hệ thống
 import { redirect, showToast, initThemeToggle, initMobilePanel } from './quiz-modules/quiz-utils.js';
 import { initFlashcard } from './quiz-modules/quiz-flashcard.js';
@@ -351,7 +350,7 @@ async function executeSubmit() {
 
     try {
         const resultsRef = collection(db, "results");
-        const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId));
+        const qResult = query(resultsRef, where("email", "==", currentUser.email), where("examId", "==", currentExamId), limit(30));
         const resultSnapshot = await getDocs(qResult);
         
         const leaderboardRef = doc(db, "users_leaderboard", currentUser.uid);
