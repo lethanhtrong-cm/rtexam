@@ -1,5 +1,5 @@
 import { auth, db, safeRedirect } from "../dashboard-core.js";
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, getDocs, query, where, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, getDocs, query, where, addDoc, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
 
@@ -130,7 +130,7 @@ export function initModals() {
             const summarySnap = await getDoc(summaryRef);
             if (summarySnap.exists()) { content.innerHTML = summarySnap.data().htmlContent; return; }
 
-            const qSnap = await getDocs(query(collection(db, "questions"), where("examId", "==", examId)));
+            const qSnap = await getDocs(query(collection(db, "questions"), where("examId", "==", examId), limit(150)));
             if (qSnap.empty) { content.innerHTML = '<p style="color: #dc2626; text-align: center; font-weight: bold;">Đề thi này chưa có câu hỏi nào để tóm tắt.</p>'; return; }
 
             const questions = qSnap.docs.map(d => d.data());
