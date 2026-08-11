@@ -1,5 +1,5 @@
 import { auth, db } from "../dashboard-core.js";
-import { collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { State } from "./exam-state.js";
 import { renderExams } from "./exam-ui.js";
 
@@ -10,7 +10,7 @@ export async function fetchUserResultsCache(user) {
         const cacheKey = `completedExams_${user.uid}`;
 
         const resultsRef = collection(db, "results");
-        const eSnap = await getDocs(query(collection(db, "exams"), limit(1500)));
+        const q = query(resultsRef, where("email", "==", user.email), limit(500));
         const snap = await getDocs(q);
         
         snap.forEach(doc => {
@@ -80,7 +80,7 @@ export async function loadAggregatedExamData() {
         if (cachedCore) {
             examMap = JSON.parse(cachedCore);
         } else {
-            const eSnap = await getDocs(collection(db, "exams"));
+            const eSnap = await getDocs(query(collection(db, "exams"), limit(1500)));
             eSnap.forEach((doc) => {
                 const eId = doc.id;
                 const conf = doc.data();
@@ -94,7 +94,6 @@ export async function loadAggregatedExamData() {
                         examName: conf.examName || "",
                         isVip: conf.isVip || false,
                         timeLimit: conf.timeLimit ? parseInt(conf.timeLimit) : 15,
-                        // Tối ưu Đọc: Lấy số lượng câu hỏi từ config, dự phòng bằng timeLimit thay vì đếm thủ công
                         questionCount: conf.questionCount || conf.totalQuestions || (conf.timeLimit ? parseInt(conf.timeLimit) : 0),
                         attemptCount: conf.attemptCount || 0,
                         technique: conf.technique || "Hỗn hợp",
@@ -126,10 +125,6 @@ export async function loadAggregatedExamData() {
             badgesMap = parsed.badgesMap || {};
             avatarsMap = parsed.avatarsMap || {};
         } else {
-            // =================================================================
-            // TỐI ƯU READ LỚN NHẤT: GIỚI HẠN TẢI KẾT QUẢ ĐỂ BẢO VỆ QUOTA FIRESTORE
-            // Chỉ lấy 1000 lượt thi mới nhất thay vì toàn bộ lịch sử hệ thống
-            // =================================================================
             const resultsQuery = query(collection(db, "results"), limit(2500));
             const resultsSnap = await getDocs(resultsQuery);
             
@@ -167,7 +162,6 @@ export async function loadAggregatedExamData() {
                         const totalQ = data.totalQuestions || 1;
                         const answeredQ = data.savedAnswers ? Object.keys(data.savedAnswers).length : 0;
                         
-                        // Chỉ lấy Avatar người thi nếu đã làm (trả lời) từ 75% số câu hỏi trở lên
                         if ((answeredQ / totalQ) >= 0.75) {
                             dynamicAttemptCounts[eId] = (dynamicAttemptCounts[eId] || 0) + 1; 
 
@@ -203,10 +197,7 @@ export async function loadAggregatedExamData() {
 
             if (allUniqueUids.size > 0) {
                 try {
-                    // Thay thế dòng: const usersSnap = await getDocs(collection(db, "users"));
-// Bằng dòng code dưới đây:
-
-const usersSnap = await getDocs(query(collection(db, "users"), limit(200)));
+                    const usersSnap = await getDocs(query(collection(db, "users"), limit(200)));
                     usersSnap.forEach(uDoc => {
                         const uData = uDoc.data();
                         const id = uDoc.id;
