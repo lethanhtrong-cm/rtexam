@@ -203,7 +203,10 @@ export async function loadAggregatedExamData() {
 
             if (allUniqueUids.size > 0) {
                 try {
-                    const usersSnap = await getDocs(collection(db, "users"));
+                    // Thay thế dòng: const usersSnap = await getDocs(collection(db, "users"));
+// Bằng dòng code dưới đây:
+
+const usersSnap = await getDocs(query(collection(db, "users"), limit(200)));
                     usersSnap.forEach(uDoc => {
                         const uData = uDoc.data();
                         const id = uDoc.id;
