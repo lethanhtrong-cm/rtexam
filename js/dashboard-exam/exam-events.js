@@ -11,7 +11,17 @@ export function setupFilterEvents() {
     const viewBtns = document.querySelectorAll('.view-btn');
     const subMenuItems = document.querySelectorAll('.sub-menu-item');
 
-    if (searchInput) searchInput.addEventListener('input', (e) => { State.currentSearchQuery = e.target.value.toLowerCase(); renderExams(); });
+    // Bằng khối code dưới đây (Thêm Debounce 300ms chống lag):
+let searchTimeout = null;
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            State.currentSearchQuery = e.target.value.toLowerCase();
+            renderExams();
+        }, 300);
+    });
+}
     if (levelPills) levelPills.forEach(pill => pill.addEventListener('click', (e) => { levelPills.forEach(p => p.classList.remove('active')); e.target.classList.add('active'); State.currentLevel = e.target.getAttribute('data-level'); renderExams(); }));
     if (timePills) timePills.forEach(pill => pill.addEventListener('click', (e) => { timePills.forEach(p => p.classList.remove('active')); e.target.classList.add('active'); State.currentTime = e.target.getAttribute('data-time'); renderExams(); }));
     if (sortFilter) sortFilter.addEventListener('change', () => renderExams());
