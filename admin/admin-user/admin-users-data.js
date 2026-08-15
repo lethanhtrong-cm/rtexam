@@ -1,18 +1,16 @@
 // ==========================================
 // FILE: admin-user/admin-users-data.js
-// QUẢN LÝ KẾT NỐI DỮ LIỆU, TRẠNG THÁI (STATE) VÀ LOGIC NGẦM
+// QUẢN LÝ KẾT NỐI DỮ LIỆU VÀ TRẠNG THÁI (STATE)
 // ==========================================
 import { db } from '../admin-core.js';
 import { 
     collection, onSnapshot, doc, updateDoc, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // 1. TRẠNG THÁI DÙNG CHUNG (SINGLE SOURCE OF TRUTH)
 export const userState = {
     cachedUsers: [],
     pendingVIPRequests: new Set(),
-    localTestingTimers: new Map(),
     isUserListLoaded: false,
     isResultsLoaded: false,
     isLeaderboardLoaded: false,
@@ -69,7 +67,7 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
     const { onStart, onSuccess, onError } = callbacks;
 
     if (!forceRefresh && userState.isUserListLoaded) {
-        if (onSuccess) onSuccess(false); // false biểu thị không cần render lại thanh công cụ
+        if (onSuccess) onSuccess(false); 
         return;
     }
 
@@ -94,9 +92,6 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
 
         const snapshots = await Promise.all(promises);
         const usersSnap = snapshots[0];
-        
-        const auth = getAuth();
-        const currentAdminEmail = auth.currentUser ? auth.currentUser.email : null;
 
         if (resultsIndex !== -1) {
             userState.globalResultsStats = {};
@@ -131,33 +126,7 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
             const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
             
-            let isOnline = false;
-            if (user.isOnline === true || user.isOnline === "true" || user.isOnline === 1) {
-                isOnline = true;
-            }
-            if (currentAdminEmail && email === currentAdminEmail) {
-                isOnline = true;
-            }
-
             const totalTokensUsed = user.totalTokensUsed || 0;
-            let examStatus = user.examStatus || 'none'; 
-
-            if (!isOnline) {
-                examStatus = 'none';
-            }
-
-            let examStartTimeMs = null;
-            if (user.examStartTime) {
-                examStartTimeMs = (typeof user.examStartTime.toDate === 'function') ? user.examStartTime.toDate().getTime() : new Date(user.examStartTime).getTime();
-            }
-            
-            if (examStatus === 'testing') {
-                if (!userState.localTestingTimers.has(userId)) {
-                    userState.localTestingTimers.set(userId, Date.now()); 
-                }
-            } else {
-                userState.localTestingTimers.delete(userId); 
-            }
 
             const rStats = userState.globalResultsStats[email] || { totalScore: 0, count: 0 };
             const finalAvgScore = rStats.count > 0 ? (rStats.totalScore / rStats.count) : 0;
@@ -182,8 +151,6 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
                 email: email,
                 isVip: isVip,
                 isBanned: isBanned,
-                isOnline: isOnline,
-                examStatus: examStatus,
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
                 avgScore: finalAvgScore, 
@@ -191,13 +158,10 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
                 createdAtMs: createdAtMs, 
                 createdAt: createdAtRaw,
                 vipActivationDate: user.vipActivationDate || null,
-                vipExpirationDate: user.vipExpirationDate || null,
-                examStartTimeMs: examStartTimeMs,
-                localTestingStartMs: userState.localTestingTimers.get(userId)
+                vipExpirationDate: user.vipExpirationDate || null
             });
         });
 
-        // Bắn dữ liệu ra UI Header (Vì đây là thông số chung của Header, có thể để ở đây cho gọn)
         const totalUsersEl = document.getElementById('totalUsers');
         const totalVipUsersEl = document.getElementById('totalVipUsers');
         if (totalUsersEl) totalUsersEl.innerText = totalUsersCount;
@@ -206,57 +170,11 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
         userState.isUserListLoaded = true;
         userState.selectedUserIds.clear();
         
-        if (onSuccess) onSuccess(true); // true -> Yêu cầu UI gọi hàm Inject Toolbar
+        if (onSuccess) onSuccess(true); 
 
     } catch (error) {
         console.error("Lỗi kết nối Firestore khi tải danh sách người dùng:", error);
         userState.isUserListLoaded = false;
         if (onError) onError(error);
     }
-}
-
-// 4. AUTO CLEAR GHOST SESSIONS
-export function initAutoClearGhostSessions(onDataUpdated) {
-    setInterval(async () => {
-        const testingUsers = userState.cachedUsers.filter(u => u.examStatus === 'testing');
-        if (testingUsers.length === 0) return;
-
-        const now = Date.now();
-        const timeoutMs = 45 * 60 * 1000; 
-        
-        let clearedCount = 0;
-
-        for (const user of testingUsers) {
-            let timeElapsed = 0;
-            
-            if (user.examStartTimeMs) {
-                timeElapsed = now - user.examStartTimeMs;
-            } 
-            else if (user.localTestingStartMs) {
-                timeElapsed = now - user.localTestingStartMs;
-            }
-
-            if (timeElapsed > timeoutMs) {
-                try {
-                    await updateDoc(doc(db, "users", user.userId), {
-                        isOnline: false,
-                        examStatus: 'none'
-                    });
-                    
-                    userState.localTestingTimers.delete(user.userId);
-                    
-                    user.isOnline = false;
-                    user.examStatus = 'none';
-                    clearedCount++;
-                } catch (e) {
-                    console.error(`Lỗi tự động gỡ kẹt cho user ${user.userId}:`, e);
-                }
-            }
-        }
-
-        if (clearedCount > 0) {
-            console.log(`[Auto-GC] Đã tự động dọn dẹp ${clearedCount} phiên thi bị kẹt quá 45 phút.`);
-            if (typeof onDataUpdated === 'function') onDataUpdated();
-        }
-    }, 60000); 
 }
