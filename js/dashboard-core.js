@@ -34,6 +34,14 @@ document.addEventListener('ComponentsLoaded', () => {
     // Khởi tạo các module Modal
     initRoomModals(auth, db);
     initRandomExam(auth, db);
+
+    // ==========================================================
+    // TỰ ĐỘNG CHUYỂN TAB NÂNG CẤP VIP TỪ TRANG LÀM BÀI
+    // ==========================================================
+    if (sessionStorage.getItem('triggerUpgradeTab') === 'true') {
+        sessionStorage.removeItem('triggerUpgradeTab'); // Xóa cờ để tránh lặp lại ở lần sau
+        setTimeout(() => switchTab('tab-vip'), 300); // Đợi UI render xong rồi mở Tab
+    }
 });
 
 onAuthStateChanged(auth, async (user) => {
