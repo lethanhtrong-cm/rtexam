@@ -122,13 +122,14 @@ export function initRandomExam(auth, db) {
                     const examRef = doc(db, "exams", randomExamId);
                     batch.set(examRef, {
                         examName: `Đề Ngẫu Nhiên: ${tech} (${level})`,
-                        technique: "AI Tự Động", 
+                        technique: "Đề Ngẫu Nhiên", // Đã đổi từ "AI Tự Động" để tách nhóm riêng trên Admin
+                        sourceTech: tech, // Lưu thêm kỹ thuật gốc (MRI, CT,...)
                         level: level,
                         timeLimit: timeLimit,
                         questionCount: timeLimit,
                         isVip: false,
                         createdAt: Date.now(),
-                        authorEmail: auth.currentUser.email,
+                        authorEmail: auth.currentUser.email, // Tài khoản người tạo
                     });
 
                     for (let i = 0; i < selectedQuestions.length; i++) {
