@@ -4,6 +4,17 @@ export function renderExams() {
     const examListContainer = document.getElementById('examListContainer');
     const sortFilter = document.getElementById('sortFilter');
 
+    // ==========================================================
+    // THEO DÕI REALTIME SỰ THAY ĐỔI CỦA HUY HIỆU PRO TRÊN TOPBAR
+    // ==========================================================
+    if (!window.vipObserverSetup) {
+        const vipContainer = document.getElementById('topbar-vip-container');
+        if (vipContainer) {
+            new MutationObserver(() => renderExams()).observe(vipContainer, { childList: true });
+            window.vipObserverSetup = true;
+        }
+    }
+
     if (!examListContainer) return;
     
     try {
@@ -160,8 +171,10 @@ export function renderExams() {
             return;
         }
 
-        // Kiểm tra VIP kép: Ưu tiên nhận diện huy hiệu PRO trên Topbar (đã được cập nhật Realtime)
-const isUserVip = (State.currentUserData && State.currentUserData.isVip === true) || document.querySelector('.topbar-vip-badge') !== null;
+        // ==========================================================
+        // KIỂM TRA VIP KÉP: KẾT HỢP DỮ LIỆU NGẦM VÀ GIAO DIỆN REALTIME
+        // ==========================================================
+        const isUserVip = (State.currentUserData && State.currentUserData.isVip === true) || document.querySelector('.topbar-vip-badge') !== null;
 
         let groups = [];
         
@@ -293,7 +306,7 @@ const isUserVip = (State.currentUserData && State.currentUserData.isVip === true
                     displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
                     // ==========================================================
-                    // LOGIC MỚI: PHÂN QUYỀN NÚT XEM LẠI BÀI NGAY TRÊN CARD
+                    // PHÂN QUYỀN NÚT XEM LẠI BÀI NGAY TRÊN CARD DỰA VÀO isUserVip
                     // ==========================================================
                     let reviewBtnHtml = isUserVip 
                         ? `<button onclick="goToReview('${State.completedExams[exam.id].resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-eye"></i> Xem lại</button>`
@@ -371,11 +384,9 @@ const isUserVip = (State.currentUserData && State.currentUserData.isVip === true
 
             rowHtml += `</div><button class="slider-btn right" onclick="slideRight(this)"><i class="fa-solid fa-chevron-right"></i></button></div></div>`;
             
-            // Đẩy vào bộ đệm thay vì vẽ ra DOM ngay
             finalHtmlBuffer += rowHtml; 
         });
 
-        // Chỉ ghi DOM đúng 1 lần duy nhất, loại bỏ giật UI
         examListContainer.innerHTML = finalHtmlBuffer;
 
     } catch (err) {
