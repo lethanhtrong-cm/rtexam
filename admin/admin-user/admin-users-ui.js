@@ -76,13 +76,6 @@ export function injectTableHeadersAndToolbar() {
     }
 
     const filterSelect = document.getElementById('filterSelect');
-    
-    if (filterSelect && !filterSelect.querySelector('option[value="online"]')) {
-        const onlineOption = document.createElement('option');
-        onlineOption.value = 'online';
-        onlineOption.innerText = 'Đang trực tuyến';
-        filterSelect.appendChild(onlineOption);
-    }
 
     if (filterSelect && !filterSelect.querySelector('option[value="pending_vip"]')) {
         const pendingOption = document.createElement('option');
@@ -178,10 +171,6 @@ export function renderUserList() {
         let matchStatus = false;
         if (userState.currentFilterStatus === "all") {
             matchStatus = true;
-        } else if (userState.currentFilterStatus === "testing") {
-            matchStatus = (user.examStatus === "testing");
-        } else if (userState.currentFilterStatus === "online") {
-            matchStatus = (user.isOnline === true);
         } else if (userState.currentFilterStatus === "pending_vip") { 
             matchStatus = userState.pendingVIPRequests.has(user.userId);
         } else {
