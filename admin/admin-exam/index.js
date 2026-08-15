@@ -51,7 +51,9 @@ function processAndRender() {
             level: data.level || "Trung bình",
             createdAt: data.createdAt,
             examName: data.examName || "",
-            description: data.description || ""
+            description: data.description || "",
+            authorEmail: data.authorEmail || "Không rõ", 
+            sourceTech: data.sourceTech || "Không rõ" 
         };
     });
 
@@ -76,7 +78,7 @@ function processAndRender() {
     appState.cachedExams = [];
     for (const examId in examGroups) {
         const count = examGroups[examId];
-        const config = examDataMap[examId] || { isVip: false, antiCheatEnabled: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "", description: "" };
+        const config = examDataMap[examId] || { isVip: false, antiCheatEnabled: false, timeLimit: 15, attemptCount: 0, technique: "Hỗn hợp", level: "Trung bình", createdAt: null, examName: "", description: "", authorEmail: "Không rõ", sourceTech: "Không rõ" };
 
         const fCount = feedbackCounts[examId] || 0;
         const fStars = feedbackStars[examId] || 0;
@@ -95,7 +97,9 @@ function processAndRender() {
             level: config.level,
             createdAt: config.createdAt || 0,
             feedbackCount: fCount,
-            rating: avgRating 
+            rating: avgRating,
+            authorEmail: config.authorEmail,
+            sourceTech: config.sourceTech
         });
     }
 
