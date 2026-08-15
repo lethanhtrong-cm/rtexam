@@ -222,27 +222,6 @@ async function handleToggleBan(userId, currentBannedStatus) {
     }
 }
 
-async function handleResetStatus(userId) {
-    if (!confirm(`Xác nhận GỠ KẸT trạng thái cho tài khoản này (Ép ngoại tuyến và Hủy Đang thi)?`)) return;
-    try {
-        await updateDoc(doc(db, "users", userId), {
-            isOnline: false,
-            examStatus: 'none'
-        });
-        showToast(`Đã gỡ trạng thái kẹt thành công!`, "success");
-        const u = userState.cachedUsers.find(user => user.userId === userId);
-        if (u) {
-            u.isOnline = false;
-            u.examStatus = 'none';
-        }
-        userState.localTestingTimers.delete(userId);
-        renderUserList();
-    } catch (error) {
-        console.error("Lỗi gỡ kẹt:", error);
-        showToast("Lỗi hệ thống khi gỡ trạng thái", "error");
-    }
-}
-
 export async function handleBulkAction(actionType) {
     if (userState.selectedUserIds.size === 0) return;
     
@@ -257,7 +236,7 @@ export async function handleBulkAction(actionType) {
     }
 
     const count = userState.selectedUserIds.size;
-    let isVipAction = false, isBanAction = false, isResetAction = false;
+    let isVipAction = false, isBanAction = false;
 
     if (actionType === 'vip') {
         if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái VIP cho ${count} tài khoản đã chọn?`)) return;
@@ -265,9 +244,6 @@ export async function handleBulkAction(actionType) {
     } else if (actionType === 'ban') {
         if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái KHÓA cho ${count} tài khoản đã chọn?`)) return;
         isBanAction = true;
-    } else if (actionType === 'reset') {
-        if(!confirm(`Bạn có chắc chắn muốn XÓA TRẠNG THÁI KẸT (Ép ngoại tuyến và Hủy Đang thi) cho ${count} tài khoản đã chọn?`)) return;
-        isResetAction = true;
     }
 
     const promises = [];
@@ -287,10 +263,6 @@ export async function handleBulkAction(actionType) {
         }
         if (isBanAction) {
             updates.isBanned = !u.isBanned;
-        }
-        if (isResetAction) {
-            updates.isOnline = false;
-            updates.examStatus = 'none';
         }
         promises.push(updateDoc(userRef, updates));
     });
@@ -318,11 +290,6 @@ export async function handleBulkAction(actionType) {
                 if (u.isBanned) u.statusKey = 'banned';
                 else u.statusKey = u.isVip ? 'vip' : 'normal';
             }
-            if (isResetAction) {
-                u.isOnline = false;
-                u.examStatus = 'none';
-                userState.localTestingTimers.delete(id);
-            }
         });
         
         userState.selectedUserIds.clear();
@@ -349,9 +316,6 @@ export function initUserActionEvents() {
 
             const excelBtn = e.target.closest('.btn-export-excel');
             if (excelBtn) return exportUserHistoryToExcel(excelBtn.dataset.email);
-
-            const resetBtn = e.target.closest('.btn-reset-status');
-            if (resetBtn) return handleResetStatus(resetBtn.dataset.id);
 
             const notifyBtn = e.target.closest('.btn-notify-user');
             if (notifyBtn) return openNotificationModal(notifyBtn.dataset.email);
