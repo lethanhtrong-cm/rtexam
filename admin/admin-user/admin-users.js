@@ -25,8 +25,8 @@ document.addEventListener('componentsLoaded', () => {
     // 2. Lắng nghe cập nhật thanh toán CK Realtime
     initRealtimePaymentListener(() => renderUserList());
 
-    // 3. Chạy ngầm dọn dẹp các máy bị kẹt trạng thái đang thi
-    initAutoClearGhostSessions(() => renderUserList());
+    
+    
 
     // 4. Kích hoạt giao diện UI (Tìm kiếm, Bộ lọc Dropdown, Nút Cập nhật)
     initUserInterfaceEvents(
