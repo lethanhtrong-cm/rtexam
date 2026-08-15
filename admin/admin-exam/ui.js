@@ -1,4 +1,6 @@
 import { appState } from './state.js';
+import { db } from '../admin-core.js';
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export function generateStatsHtml() {
     const stats = {};
@@ -191,9 +193,98 @@ export function renderPreview() {
     }
 }
 
-export function renderExamList() {
+// BỔ SUNG HÀM TẠO BẢNG ĐỀ NGẪU NHIÊN RIÊNG BIỆT
+async function renderRandomExamTable(container) {
+    container.innerHTML = '<div style="text-align:center; padding: 40px; color:#64748b; font-weight: 500;">⏳ Đang tải và đối chiếu điểm số từ hệ thống...</div>';
+    
+    // Chỉ lọc ra 20 đề ngẫu nhiên mới nhất để tránh lag
+    const randomExams = appState.cachedExams
+        .filter(e => e.technique === "Đề Ngẫu Nhiên")
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 20);
+
+    if (randomExams.length === 0) {
+        container.innerHTML = '<div class="empty-message" style="width: 100%; background: #ffffff; padding: 40px; border-radius: 12px; border: 1px dashed #cbd5e1;">🔍 Chưa có người dùng nào tạo đề ngẫu nhiên gần đây.</div>';
+        return;
+    }
+
+    // Xử lý song song truy vấn điểm từ collection "results"
+    const promises = randomExams.map(async (exam) => {
+        let scoreDisplay = '<span style="color:#94a3b8; font-style:italic;">Chưa nộp bài</span>';
+        try {
+            const qResult = query(collection(db, "results"), where("examId", "==", exam.examId));
+            const snap = await getDocs(qResult);
+            
+            if (!snap.empty) {
+                const resData = snap.docs[0].data();
+                const score = resData.score !== undefined ? Number(resData.score).toFixed(2) : 0;
+                const correct = resData.correctCount || resData.correctAnswers || 0;
+                const total = resData.totalQuestions || exam.count;
+                
+                scoreDisplay = `<span style="background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center;">${score} đ</span><br><span style="font-size:12px; font-weight: 500; color:#64748b; margin-top: 4px; display: inline-block;">(${correct}/${total} câu)</span>`;
+            }
+        } catch(e) { console.error("Lỗi truy vấn điểm số:", e); }
+        
+        return { ...exam, scoreDisplay };
+    });
+
+    const examsWithScores = await Promise.all(promises);
+
+    let html = `
+    <div style="background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; overflow: hidden; margin-top: 15px;">
+        <table style="width:100%; border-collapse:collapse; text-align:left;">
+            <thead style="background:#f8fafc; border-bottom:2px solid #cbd5e1;">
+                <tr>
+                    <th style="padding:15px 20px; color:#475569; font-size:13px; text-transform:uppercase;">Tên Đề</th>
+                    <th style="padding:15px 20px; color:#475569; font-size:13px; text-transform:uppercase;">Cấu Hình Cốt Lõi</th>
+                    <th style="padding:15px 20px; color:#475569; font-size:13px; text-transform:uppercase;">Người Tạo / Khởi tạo lúc</th>
+                    <th style="padding:15px 20px; color:#475569; font-size:13px; text-transform:uppercase; text-align:center;">Điểm Đạt Được</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    examsWithScores.forEach((exam) => {
+        let formattedDate = 'Không rõ';
+        if (exam.createdAt) {
+            const d = new Date(Number(exam.createdAt));
+            formattedDate = d.toLocaleString('vi-VN');
+        }
+
+        html += `
+            <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+                <td style="padding:15px 20px; font-weight:700; color:#0f172a; font-size: 15px;">
+                    ${exam.examName || exam.examId}
+                    <div style="font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 4px;">Mã: ${exam.examId}</div>
+                </td>
+                <td style="padding:15px 20px;">
+                    <span style="display:inline-block; background:#eff6ff; color:#2563eb; padding:3px 10px; border-radius:6px; font-size:12px; font-weight: 600; margin-bottom:5px;">
+                        <i class="fa-solid fa-microchip"></i> Kỹ thuật: ${exam.sourceTech}
+                    </span><br>
+                    <span style="font-size:13px; color:#475569; font-weight: 500;">Cấp độ: ${exam.level} • Kéo dài: ${exam.timeLimit} phút</span>
+                </td>
+                <td style="padding:15px 20px; font-size:13px;">
+                    <strong style="color: #334155;">${exam.authorEmail}</strong><br>
+                    <span style="color:#64748b; font-size: 12px;">${formattedDate}</span>
+                </td>
+                <td style="padding:15px 20px; text-align:center;">${exam.scoreDisplay}</td>
+            </tr>
+        `;
+    });
+
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
+}
+
+export async function renderExamList() {
     const container = document.getElementById('exam-list-body');
     if (!container) return;
+
+    // BẺ LÁI LOGIC: NẾU LÀ ĐỀ NGẪU NHIÊN, XUẤT RA BẢNG ĐƠN GIẢN THAY VÌ CARD
+    if (appState.currentTechnique === "Đề Ngẫu Nhiên") {
+        await renderRandomExamTable(container);
+        return;
+    }
 
     container.innerHTML = '';
 
