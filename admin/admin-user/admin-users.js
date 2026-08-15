@@ -41,6 +41,18 @@ export function initRealtimePaymentListener() {
                 pendingVIPRequests.add(data.uid);
             }
         });
+
+        // BẮT ĐẦU CHÈN LOGIC: Cập nhật thông báo số lượng trên Sidebar
+        const badge = document.getElementById('pending-vip-badge');
+        if (badge) {
+            if (pendingVIPRequests.size > 0) {
+                badge.style.display = 'inline-block';
+                badge.innerText = pendingVIPRequests.size;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
         if (isUserListLoaded) renderUserList(); 
     }, (error) => {
         console.error("Lỗi khi tải yêu cầu thanh toán:", error);
@@ -500,6 +512,14 @@ function injectTableHeadersAndToolbar() {
         filterSelect.appendChild(onlineOption);
     }
 
+    // THÊM OPTION "CHỜ XÁC NHẬN" VÀO BỘ LỌC ĐỂ ĐỒNG BỘ UI
+    if (filterSelect && !filterSelect.querySelector('option[value="pending_vip"]')) {
+        const pendingOption = document.createElement('option');
+        pendingOption.value = 'pending_vip';
+        pendingOption.innerText = 'Chờ xác nhận CK';
+        filterSelect.appendChild(pendingOption);
+    }
+
     if (filterSelect && !document.getElementById('sortSelect')) {
         const sortSelect = document.createElement('select');
         sortSelect.id = 'sortSelect';
@@ -596,6 +616,9 @@ export function renderUserList() {
             matchStatus = (user.examStatus === "testing");
         } else if (currentFilterStatus === "online") {
             matchStatus = (user.isOnline === true);
+        } else if (currentFilterStatus === "pending_vip") { 
+            // LOGIC KIỂM TRA CHO TAB "CHỜ XÁC NHẬN"
+            matchStatus = pendingVIPRequests.has(user.userId);
         } else {
             matchStatus = (user.statusKey === currentFilterStatus);
         }
@@ -1013,7 +1036,16 @@ document.addEventListener('componentsLoaded', () => {
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
             const target = item.getAttribute('data-target');
-            if (target === 'tab-users') {
+            
+            // XỬ LÝ CLICK TỪ SIDEBAR ĐỂ LỌC VÀ CHUYỂN TAB
+            if (target === 'tab-users' || target === 'tab-user-list') {
+                const filter = item.getAttribute('data-filter');
+                currentFilterStatus = filter ? filter : 'all';
+                
+                // Đồng bộ lại UI Dropdown nếu có
+                const filterSelect = document.getElementById('filterSelect');
+                if (filterSelect) filterSelect.value = currentFilterStatus;
+
                 loadUserList(false); 
             }
         });
