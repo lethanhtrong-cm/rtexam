@@ -25,9 +25,6 @@ document.addEventListener('componentsLoaded', () => {
     // 2. Lắng nghe cập nhật thanh toán CK Realtime
     initRealtimePaymentListener(() => renderUserList());
 
-    
-    
-
     // 4. Kích hoạt giao diện UI (Tìm kiếm, Bộ lọc Dropdown, Nút Cập nhật)
     initUserInterfaceEvents(
         (force) => fetchAllUserData(force, dataCallbacks), 
