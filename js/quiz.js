@@ -744,20 +744,20 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
         }
     }
 
-    const btnExplain = document.getElementById('btn-modal-explain');
-    if (btnExplain) {
-        if (!isCurrentUserVip) {
-            btnExplain.innerHTML = '<i class="fa-solid fa-crown"></i> Xem lại (PRO)';
-            btnExplain.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
-            btnExplain.style.color = 'white';
-            btnExplain.style.border = 'none';
-        } else {
-            btnExplain.innerHTML = '<i class="fa-solid fa-list-check"></i> Xem lại';
-            btnExplain.style.background = '';
-            btnExplain.style.color = '';
-            btnExplain.style.border = '';
-        }
+   // ==========================================================
+// LOGIC: CHẶN VÀ ĐIỀU HƯỚNG KHI BẤM NÚT XEM LẠI TRONG MODAL
+// ==========================================================
+document.getElementById('btn-modal-explain').onclick = () => { 
+    if (isCurrentUserVip) {
+        closeModal(); 
+        openReviewModal(finalScore, finalCorrectCount, finalTotal); 
+    } else {
+        alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
+        // [THÊM MỚI 1 DÒNG]: Lưu cờ báo hiệu chuyển tab VIP vào bộ nhớ tạm
+        sessionStorage.setItem('triggerUpgradeTab', 'true');
+        redirect('dashboard.html');
     }
+};
 
     resetFeedbackUI(); 
     modal.classList.add('active');
