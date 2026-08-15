@@ -2,7 +2,7 @@
 // FILE: admin-user/admin-users.js
 // QUẢN LÝ GIAO DIỆN CHÍNH (CONTROLLER TỔNG SAU KHI REFACTOR)
 // ==========================================
-import { fetchAllUserData, initRealtimePaymentListener, initAutoClearGhostSessions, userState } from './admin-users-data.js';
+import { fetchAllUserData, initRealtimePaymentListener, userState } from './admin-users-data.js';
 import { renderUserList, injectTableHeadersAndToolbar, initUserInterfaceEvents, updateBulkActionBar } from './admin-users-ui.js';
 import { initUserActionEvents } from './admin-users-actions.js';
 import { sendNotification, openNotificationModal } from './admin-users-notify.js';
@@ -25,16 +25,16 @@ document.addEventListener('componentsLoaded', () => {
     // 2. Lắng nghe cập nhật thanh toán CK Realtime
     initRealtimePaymentListener(() => renderUserList());
 
-    // 4. Kích hoạt giao diện UI (Tìm kiếm, Bộ lọc Dropdown, Nút Cập nhật)
+    // 3. Kích hoạt giao diện UI (Tìm kiếm, Bộ lọc Dropdown, Nút Cập nhật, Nút Thông báo Hàng loạt)
     initUserInterfaceEvents(
         (force) => fetchAllUserData(force, dataCallbacks), 
         (target) => openNotificationModal(target) 
     );
 
-    // 5. Kích hoạt Click Logic cho từng dòng (VIP, Khóa, Excel, Lịch sử)
+    // 4. Kích hoạt Click Logic cho từng dòng (VIP, Khóa, Excel, Lịch sử)
     initUserActionEvents();
 
-    // 6. Xử lý Sidebar Menu Clicks (Lọc trạng thái qua thuộc tính HTML)
+    // 5. Xử lý Sidebar Menu Clicks (Lọc trạng thái qua thuộc tính HTML)
     const sidebarMenuItems = document.querySelectorAll('.menu-item');
     sidebarMenuItems.forEach(item => {
         item.addEventListener('click', (e) => {
@@ -43,6 +43,7 @@ document.addEventListener('componentsLoaded', () => {
                 const filter = item.getAttribute('data-filter');
                 userState.currentFilterStatus = filter ? filter : 'all';
                 
+                // Cập nhật lại thanh chọn dropdown UI nếu nó tồn tại
                 const filterSelect = document.getElementById('filterSelect');
                 if (filterSelect) filterSelect.value = userState.currentFilterStatus;
 
@@ -51,7 +52,7 @@ document.addEventListener('componentsLoaded', () => {
         });
     });
 
-    // 7. Khởi tạo chức năng Đóng/Mở Modal chung
+    // 6. Khởi tạo chức năng Đóng/Mở Modal chung (Lịch sử, Thông báo)
     const closeHistoryBtn = document.getElementById('closeHistoryModalBtn');
     if (closeHistoryBtn) {
         closeHistoryBtn.onclick = () => { document.getElementById('historyModal').style.display = "none"; };
@@ -62,6 +63,7 @@ document.addEventListener('componentsLoaded', () => {
         closeNotifyBtn.onclick = () => { document.getElementById('notification-modal').style.display = 'none'; };
     }
     
+    // 7. Xử lý logic nút Gửi Thông Báo (kết hợp lấy trạng thái userState)
     const sendNotifyBtn = document.getElementById('btnSendNotification');
     if (sendNotifyBtn) {
         sendNotifyBtn.onclick = () => {
