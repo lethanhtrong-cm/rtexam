@@ -29,6 +29,8 @@ let isShowExplanation = false;
 let isNavigating = false; 
 let isAntiCheatEnabled = false;
 
+let isCurrentUserVip = false;
+
 let timerInterval;
 let examDuration = 15 * 60; 
 let timeRemaining = examDuration;
@@ -105,12 +107,26 @@ async function returnToLobbyOrDashboard() {
     else redirect('dashboard.html');
 }
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (!user || user.isAnonymous) {
         localStorage.setItem('redirectAfterLogin', window.location.href);
         redirect('index.html');
     } else {
         currentUser = user;
+        
+        try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                const ud = userDoc.data();
+                if (ud.isVip) {
+                    const vipEnd = ud.vipEnd?.toDate ? ud.vipEnd.toDate() : new Date(ud.vipEnd);
+                    if (vipEnd.getTime() > Date.now()) {
+                        isCurrentUserVip = true;
+                    }
+                }
+            }
+        } catch (e) { console.error(e); }
+
         if (currentResultId) {
             loadReviewMode(currentResultId);
         } else if (currentExamId) {
@@ -172,7 +188,7 @@ async function loadExamDataAndQuestions() {
 async function initExamState() {
     isSubmitted = false;
     isShowExplanation = false;
-    resetAntiCheatWarning(); // Chuyển logic reset vào trong Module
+    resetAntiCheatWarning(); 
     
     const hasDraft = loadDraft();
     if (!hasDraft) {
@@ -211,6 +227,12 @@ async function initExamState() {
 }
 
 async function loadReviewMode(resultId) {
+    if (!isCurrentUserVip) {
+        alert("Tính năng Xem lại bài làm và giải thích chi tiết chỉ dành cho Tài khoản PRO!");
+        returnToLobbyOrDashboard();
+        return;
+    }
+
     document.getElementById('skeleton-container').classList.add('active');
     document.getElementById('real-content').classList.add('hidden');
 
@@ -462,7 +484,6 @@ async function executeSubmit() {
             savedAnswers: userAnswers, timeSpent: timeSpent, timestamp: new Date().toISOString() 
         });
 
-        // TÍNH NĂNG MỚI: Chỉ cộng 1 lượt thi nếu làm trên 75% số câu hỏi
         const answeredCount = Object.keys(userAnswers).length;
         if (finalTotal > 0 && (answeredCount / finalTotal) >= 0.75) {
             const examDocRef = doc(db, "exams", currentExamId);
@@ -723,6 +744,21 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
         }
     }
 
+    const btnExplain = document.getElementById('btn-modal-explain');
+    if (btnExplain) {
+        if (!isCurrentUserVip) {
+            btnExplain.innerHTML = '<i class="fa-solid fa-crown"></i> Xem lại (PRO)';
+            btnExplain.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+            btnExplain.style.color = 'white';
+            btnExplain.style.border = 'none';
+        } else {
+            btnExplain.innerHTML = '<i class="fa-solid fa-list-check"></i> Xem lại';
+            btnExplain.style.background = '';
+            btnExplain.style.color = '';
+            btnExplain.style.border = '';
+        }
+    }
+
     resetFeedbackUI(); 
     modal.classList.add('active');
 }
@@ -732,7 +768,16 @@ function closeModal() { document.getElementById('result-modal').classList.remove
 document.getElementById('btn-modal-dashboard-modal').onclick = () => returnToLobbyOrDashboard();
 document.getElementById('btn-back-dashboard').onclick = () => returnToLobbyOrDashboard();
 document.getElementById('btn-modal-retry').onclick = () => { closeModal(); initExamState(); };
-document.getElementById('btn-modal-explain').onclick = () => { closeModal(); openReviewModal(finalScore, finalCorrectCount, finalTotal); };
+
+document.getElementById('btn-modal-explain').onclick = () => { 
+    if (isCurrentUserVip) {
+        closeModal(); 
+        openReviewModal(finalScore, finalCorrectCount, finalTotal); 
+    } else {
+        alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
+        redirect('dashboard.html');
+    }
+};
 
 // =========================================================================
 // QUẢN LÝ GIAO DIỆN CÂU HỎI
@@ -775,7 +820,6 @@ function renderQuestion() {
     const options = questionData.options || [];
 
     document.getElementById('question-badge').innerText = `Câu ${currentIndex + 1}`;
-    // CHỐNG GIAN LẬN: Mã này tự động gọi hàm obfuscateText từ quiz-anti-cheat.js
     document.getElementById('question-text').innerHTML = obfuscateText(questionText, isSubmitted, isShowExplanation);
     
     const container = document.getElementById('options-container');
