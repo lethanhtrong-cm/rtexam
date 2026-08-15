@@ -160,7 +160,8 @@ export function renderExams() {
             return;
         }
 
-        const isUserVip = State.currentUserData && State.currentUserData.isVip === true;
+        // Kiểm tra VIP kép: Ưu tiên nhận diện huy hiệu PRO trên Topbar (đã được cập nhật Realtime)
+const isUserVip = (State.currentUserData && State.currentUserData.isVip === true) || document.querySelector('.topbar-vip-badge') !== null;
 
         let groups = [];
         
