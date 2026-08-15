@@ -76,12 +76,21 @@ export function injectTableHeadersAndToolbar() {
     }
 
     const filterSelect = document.getElementById('filterSelect');
+    
+    if (filterSelect) {
+        // TỰ ĐỘNG TÌM VÀ XÓA CÁC OPTION CŨ TỒN TẠI TRONG HTML
+        const testingOpt = filterSelect.querySelector('option[value="testing"]');
+        if (testingOpt) testingOpt.remove();
+        
+        const onlineOpt = filterSelect.querySelector('option[value="online"]');
+        if (onlineOpt) onlineOpt.remove();
 
-    if (filterSelect && !filterSelect.querySelector('option[value="pending_vip"]')) {
-        const pendingOption = document.createElement('option');
-        pendingOption.value = 'pending_vip';
-        pendingOption.innerText = 'Chờ xác nhận CK';
-        filterSelect.appendChild(pendingOption);
+        if (!filterSelect.querySelector('option[value="pending_vip"]')) {
+            const pendingOption = document.createElement('option');
+            pendingOption.value = 'pending_vip';
+            pendingOption.innerText = 'Chờ xác nhận CK';
+            filterSelect.appendChild(pendingOption);
+        }
     }
 
     if (filterSelect && !document.getElementById('sortSelect')) {
@@ -131,7 +140,6 @@ export function injectTableHeadersAndToolbar() {
                 <button id="btnBulkNotify" class="btn-modern-action" style="background: #8b5cf6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-bell"></i> TB Hàng Loạt</button>
                 <button id="btnBulkVip" class="btn-modern-action" style="background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-crown"></i> Kích VIP Loạt</button>
                 <button id="btnBulkBan" class="btn-modern-action" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-ban"></i> Khóa Loạt</button>
-                <button id="btnBulkReset" class="btn-modern-action" style="background: #64748b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;" title="Xóa trạng thái kẹt Online/Đang thi"><i class="fa-solid fa-power-off"></i> Sửa Kẹt Thi</button>
             </div>
         `;
         insertTarget.parentNode.insertBefore(bulkBar, insertTarget);
@@ -216,14 +224,6 @@ export function renderUserList() {
         }
 
         const firstLetter = user.email.charAt(0);
-        
-        const onlineStatusHtml = user.isOnline 
-            ? `<span title="Đang trực tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #10b981; border-radius: 50%; margin-left: 8px; box-shadow: 0 0 6px rgba(16,185,129,0.5);"></span>` 
-            : `<span title="Ngoại tuyến" style="display: inline-block; width: 10px; height: 10px; background-color: #cbd5e1; border-radius: 50%; margin-left: 8px;"></span>`;
-
-        const testingBadgeHtml = user.examStatus === 'testing'
-            ? `<span style="font-size: 11px; color: #d97706; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef3c7; padding: 2px 6px; border-radius: 6px;"><i class="fa-solid fa-pen-clip"></i> Đang thi</span>`
-            : '';
 
         const scoreBadgeHtml = `<span style="font-size: 11px; color: #4338ca; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0e7ff; padding: 2px 6px; border-radius: 6px;" title="Điểm trung bình (ĐTB)"><i class="fa-solid fa-star"></i> ĐTB: ${user.avgScore.toFixed(2)}</span>`;
         const xpBadgeHtml = `<span style="font-size: 11px; color: #a16207; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef08a; padding: 2px 6px; border-radius: 6px;" title="Kinh nghiệm"><i class="fa-solid fa-bolt"></i> XP: ${Math.round(user.xp).toLocaleString()}</span>`;
@@ -278,11 +278,6 @@ export function renderUserList() {
         const excelStyle = `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);`;
         const banStyle = user.isBanned ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
         
-        const resetStyle = `${baseBtnStyle} background: linear-gradient(135deg, #64748b 0%, #475569 100%); box-shadow: 0 2px 5px rgba(100,116,139,0.3);`;
-        const resetBtnHtml = user.examStatus === 'testing' 
-            ? `<button class="btn-user-action btn-reset-status" data-id="${user.userId}" style="${resetStyle}" onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'" title="Gỡ kẹt trạng thái đang thi"><i class="fa-solid fa-power-off"></i> Gỡ</button>` 
-            : '';
-
         const hoverEffect = `onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'"`;
 
         const isChecked = userState.selectedUserIds.has(user.userId) ? 'checked' : '';
@@ -293,7 +288,6 @@ export function renderUserList() {
             <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
             <button class="btn-user-action btn-export-excel" data-email="${user.email}" style="${excelStyle}" ${hoverEffect} title="Tải Excel Lịch sử & XP"><i class="fa-solid fa-file-excel"></i> Tải XP</button>
             <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
-            ${resetBtnHtml}
         `;
 
         const tr = document.createElement('tr');
@@ -328,7 +322,7 @@ export function renderUserList() {
                     <div style="flex: 1; min-width: 0;">
                         <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
                             <span style="word-break: break-all;">${user.email}</span> 
-                            ${onlineStatusHtml} ${testingBadgeHtml} ${scoreBadgeHtml} ${xpBadgeHtml} ${pendingBadge} ${costBadgeHtml}
+                            ${scoreBadgeHtml} ${xpBadgeHtml} ${pendingBadge} ${costBadgeHtml}
                         </div>
                         ${datesHtml}
                     </div>
