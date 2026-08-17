@@ -193,11 +193,11 @@ export function renderPreview() {
     }
 }
 
-// BỔ SUNG HÀM TẠO BẢNG ĐỀ NGẪU NHIÊN RIÊNG BIỆT
+// HÀM TẠO BẢNG ĐỀ NGẪU NHIÊN RIÊNG BIỆT (ĐÃ BỔ SUNG CỘT VÀ NÚT XEM ĐÁNH GIÁ/RATING)
 async function renderRandomExamTable(container) {
-    container.innerHTML = '<div style="text-align:center; padding: 40px; color:#64748b; font-weight: 500;">⏳ Đang tải và đối chiếu điểm số từ hệ thống...</div>';
+    container.innerHTML = '<div style="text-align:center; padding: 40px; color:#64748b; font-weight: 500;">⏳ Đang tải và đối chiếu dữ liệu từ hệ thống...</div>';
     
-    // Chỉ lọc ra 20 đề ngẫu nhiên mới nhất để tránh lag
+    // Chỉ lọc ra 20 đề ngẫu nhiên mới nhất
     const randomExams = appState.cachedExams
         .filter(e => e.technique === "Đề Ngẫu Nhiên")
         .sort((a, b) => b.createdAt - a.createdAt)
@@ -239,6 +239,7 @@ async function renderRandomExamTable(container) {
                     <th style="padding:15px 20px; color:#475569; font-size:13px; text-transform:uppercase;">Cấu Hình Cốt Lõi</th>
                     <th style="padding:15px 20px; color:#475569; font-size:13px; text-transform:uppercase;">Người Tạo / Khởi tạo lúc</th>
                     <th style="padding:15px 20px; color:#475569; font-size:13px; text-transform:uppercase; text-align:center;">Điểm Đạt Được</th>
+                    <th style="padding:15px 20px; color:#475569; font-size:13px; text-transform:uppercase; text-align:center;">Đánh Giá / Rating</th>
                 </tr>
             </thead>
             <tbody>
@@ -249,6 +250,22 @@ async function renderRandomExamTable(container) {
         if (exam.createdAt) {
             const d = new Date(Number(exam.createdAt));
             formattedDate = d.toLocaleString('vi-VN');
+        }
+
+        // TÍNH TOÁN VÀ TẠO GIAO DIỆN RATING
+        let feedbackHtml = '<span style="color:#94a3b8; font-size:13px; font-style:italic;">Chưa có</span>';
+        if (exam.feedbackCount > 0) {
+            const formattedRating = Number.isInteger(exam.rating) ? exam.rating : exam.rating.toFixed(1);
+            feedbackHtml = `
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                    <span style="background: #fef3c7; color: #d97706; padding: 3px 10px; border-radius: 12px; font-weight: 700; font-size: 13px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 3px;">
+                        <i class="fa-solid fa-star" style="color: #f59e0b;"></i> ${formattedRating} (${exam.feedbackCount})
+                    </span>
+                    <button class="btn-modern-action btn-view-feedback" data-examid="${exam.examId}" style="padding: 3px 8px; font-size: 11.5px; border-radius: 4px; background: #fff; cursor: pointer;">
+                        <i class="fa-regular fa-comment-dots"></i> Xem chi tiết
+                    </button>
+                </div>
+            `;
         }
 
         html += `
@@ -268,6 +285,7 @@ async function renderRandomExamTable(container) {
                     <span style="color:#64748b; font-size: 12px;">${formattedDate}</span>
                 </td>
                 <td style="padding:15px 20px; text-align:center;">${exam.scoreDisplay}</td>
+                <td style="padding:15px 20px; text-align:center;">${feedbackHtml}</td>
             </tr>
         `;
     });
