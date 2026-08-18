@@ -330,4 +330,11 @@ export function initUserActionEvents() {
             if (historyBtn) return handleViewHistory(historyBtn.dataset.email);
         });
     }
+
+    // Bắt sự kiện Click cho thanh công cụ Bulk Actions (Event Delegation)
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#btnBulkVip')) return handleBulkAction('vip');
+        if (e.target.closest('#btnBulkBan')) return handleBulkAction('ban');
+        if (e.target.closest('#btnBulkNotify')) return handleBulkAction('notify');
+    });
 }
