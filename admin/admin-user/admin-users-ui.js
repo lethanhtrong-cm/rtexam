@@ -130,8 +130,7 @@ export function injectTableHeadersAndToolbar() {
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
         
-        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #eff6ff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #bfdbfe; box-shadow: 0 4px 6px rgba(0,0,0,0.08); flex-wrap: wrap; gap: 10px; position: sticky; top: 135px; z-index: 100;';
-        
+        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #ffffff; padding: 16px 24px; border-radius: 12px; margin-bottom: 30px; border: 2px solid #8b5cf6; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.25); flex-wrap: wrap; gap: 12px; position: sticky; top: 140px; z-index: 105;';
         bulkBar.innerHTML = `
             <div style="font-weight: 600; color: #1e3a8a; font-size: 14px;">
                 Đã chọn: <span id="bulk-selected-count" style="color: #ef4444; font-size: 16px;">0</span> tài khoản
