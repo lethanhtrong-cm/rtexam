@@ -749,10 +749,10 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
     // ==========================================================
     const btnExplain = document.getElementById('btn-modal-explain');
     if (isCurrentUserVip) {
-        btnExplain.innerText = "Xem lại đáp án và giải thích";
+        btnExplain.innerText = "Xem lại ĐÁP ÁN và GIẢI THÍCH";
         btnExplain.removeAttribute("style");
     } else {
-        btnExplain.innerHTML = '<div style="line-height:1.2"><i class="fa-solid fa-lock"></i> Xem lại đáp án và giải thích</div><div style="font-size:0.85rem; margin-top:5px; color:#fef08a">(Cần nâng cấp PRO)</div>';
+        btnExplain.innerHTML = '<div style="line-height:1.2"><i class="fa-solid fa-lock"></i> Xem lại ĐÁP ÁN và GIẢI THÍCH</div><div style="font-size:0.85rem; margin-top:5px; color:#fef08a">(Cần nâng cấp PRO)</div>';
         btnExplain.style.cssText = "background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); display:flex; flex-direction:column; padding:10px; box-shadow: 0 4px 12px rgba(239,68,68,0.4); border:none;";
     }
 
