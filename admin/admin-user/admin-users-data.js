@@ -1,6 +1,7 @@
 // ==========================================
 // FILE: admin-user/admin-users-data.js
 // QUẢN LÝ KẾT NỐI DỮ LIỆU VÀ TRẠNG THÁI (STATE)
+// TỐI ƯU HÓA QUOTA: Đã loại bỏ việc fetch toàn bộ bảng "results"
 // ==========================================
 import { db } from '../admin-core.js';
 import { 
@@ -12,9 +13,7 @@ export const userState = {
     cachedUsers: [],
     pendingVIPRequests: new Set(),
     isUserListLoaded: false,
-    isResultsLoaded: false,
     isLeaderboardLoaded: false,
-    globalResultsStats: {},
     globalLeaderboardStats: {},
     // Biến phục vụ UI & Hành động
     selectedUserIds: new Set(),
@@ -77,13 +76,11 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
 
     try {
         let promises = [getDocs(collection(db, "users"))];
-        let resultsIndex = -1;
         let leaderboardIndex = -1;
 
-        if (!userState.isResultsLoaded || forceRefresh) {
-            promises.push(getDocs(collection(db, "results")));
-            resultsIndex = promises.length - 1;
-        }
+        // GIẢI PHÁP TỐI ƯU QUOTA FIREBASE:
+        // Đã loại bỏ Promise gọi getDocs(collection(db, "results")) tại đây.
+        // Bảng results có số lượng document khổng lồ, việc gọi toàn bộ sẽ lập tức làm cạn Quota.
         
         if (!userState.isLeaderboardLoaded || forceRefresh) {
             promises.push(getDocs(collection(db, "users_leaderboard")));
@@ -92,20 +89,6 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
 
         const snapshots = await Promise.all(promises);
         const usersSnap = snapshots[0];
-
-        if (resultsIndex !== -1) {
-            userState.globalResultsStats = {};
-            snapshots[resultsIndex].forEach(docSnap => {
-                const data = docSnap.data();
-                const email = data.email;
-                if (!email) return;
-                
-                if (!userState.globalResultsStats[email]) userState.globalResultsStats[email] = { totalScore: 0, count: 0 };
-                userState.globalResultsStats[email].totalScore += (parseFloat(data.score) || 0);
-                userState.globalResultsStats[email].count += 1;
-            });
-            userState.isResultsLoaded = true;
-        }
 
         if (leaderboardIndex !== -1) {
             userState.globalLeaderboardStats = {};
@@ -128,8 +111,8 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
             
             const totalTokensUsed = user.totalTokensUsed || 0;
 
-            const rStats = userState.globalResultsStats[email] || { totalScore: 0, count: 0 };
-            const finalAvgScore = rStats.count > 0 ? (rStats.totalScore / rStats.count) : 0;
+            // ĐTB tạm thời đọc từ document của user (nếu có update sau này từ Client) hoặc mặc định là 0 để bảo vệ Quota.
+            const finalAvgScore = user.avgScore || 0;
             const finalXp = userState.globalLeaderboardStats[userId] || 0;
 
             let createdAtRaw = user.firstLogin || user.creationTime || user.createdAt || user.timestamp;
