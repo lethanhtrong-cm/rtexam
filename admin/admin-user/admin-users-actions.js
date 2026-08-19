@@ -156,20 +156,37 @@ export async function exportUserHistoryToExcel(email) {
 }
 
 async function handleToggleVip(userId, currentVipStatus) {
-    try {
-        const userRef = doc(db, "users", userId);
-        const newVipStatus = !currentVipStatus;
-        
-        let updates = { isVip: newVipStatus };
-        if (newVipStatus) {
-            updates.vipActivationDate = Date.now();
-            updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000); 
-        }
+    const u = userState.cachedUsers.find(user => user.userId === userId);
+    if (!u) return;
 
-        // 1. Cập nhật User trước
+    const newVipStatus = !currentVipStatus;
+    let updates = { isVip: newVipStatus };
+
+    // 1. CẬP NHẬT TRẠNG THÁI LOCAL NGAY LẬP TỨC (Optimistic UI Update)
+    u.isVip = newVipStatus;
+    u.statusKey = newVipStatus ? 'vip' : 'normal';
+    
+    if (newVipStatus) {
+        const now = Date.now();
+        updates.vipActivationDate = now;
+        updates.vipExpirationDate = now + (30 * 24 * 60 * 60 * 1000);
+        u.vipActivationDate = updates.vipActivationDate;
+        u.vipExpirationDate = updates.vipExpirationDate;
+    } else {
+        updates.vipActivationDate = null;
+        updates.vipExpirationDate = null;
+        u.vipActivationDate = null;
+        u.vipExpirationDate = null;
+    }
+
+    // Vẽ lại UI lập tức để khóa trạng thái mới, chống xung đột Realtime Listener
+    renderUserList();
+
+    try {
+        // 2. Tiến hành đẩy dữ liệu lên Firestore
+        const userRef = doc(db, "users", userId);
         await updateDoc(userRef, updates);
         
-        // 2. Cập nhật hóa đơn bằng Promise.all để tránh trượt luồng (Race Condition)
         if (newVipStatus) {
             const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
             const snapshot = await getDocs(q);
@@ -179,28 +196,16 @@ async function handleToggleVip(userId, currentVipStatus) {
             });
             await Promise.all(paymentPromises);
         }
-
-        showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
         
-        // 3. Cập nhật State cục bộ
-        const u = userState.cachedUsers.find(user => user.userId === userId);
-        if (u) {
-            u.isVip = newVipStatus;
-            u.statusKey = newVipStatus ? 'vip' : 'normal';
-            if (newVipStatus) {
-                u.vipActivationDate = updates.vipActivationDate;
-                u.vipExpirationDate = updates.vipExpirationDate;
-            } else {
-                u.vipActivationDate = null;
-                u.vipExpirationDate = null;
-            }
-        }
+        showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
         
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
-        showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
-    } finally {
-        // 4. Buộc UI phải vẽ lại sau khi mọi thứ đã hoàn tất
+        showToast("Lỗi mạng! Đang khôi phục lại trạng thái cũ...", "error");
+        
+        // 3. Rollback (Hoàn tác) nếu có lỗi mạng xảy ra
+        u.isVip = currentVipStatus;
+        u.statusKey = currentVipStatus ? 'vip' : 'normal';
         renderUserList(); 
     }
 }
@@ -209,26 +214,31 @@ async function handleToggleBan(userId, currentBannedStatus) {
     const actionText = currentBannedStatus ? 'mở khóa' : 'khóa vĩnh viễn';
     if (!confirm(`Hệ thống cảnh báo: Bạn có chắc chắn thực hiện lệnh ${actionText} tài khoản học viên này không?`)) return;
 
+    const u = userState.cachedUsers.find(user => user.userId === userId);
+    if (!u) return;
+
+    const newBannedStatus = !currentBannedStatus;
+
+    // Optimistic Update
+    u.isBanned = newBannedStatus;
+    u.statusKey = newBannedStatus ? 'banned' : (u.isVip ? 'vip' : 'normal');
+    renderUserList();
+
     try {
         const userRef = doc(db, "users", userId);
-        const newBannedStatus = !currentBannedStatus;
         await updateDoc(userRef, { isBanned: newBannedStatus });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
-        
-        const u = userState.cachedUsers.find(user => user.userId === userId);
-        if (u) {
-            u.isBanned = newBannedStatus;
-            u.statusKey = newBannedStatus ? 'banned' : (u.isVip ? 'vip' : 'normal');
-        }
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
-        showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
-    } finally {
+        showToast("Lỗi mạng! Khôi phục trạng thái...", "error");
+        
+        // Rollback
+        u.isBanned = currentBannedStatus;
+        u.statusKey = currentBannedStatus ? 'banned' : (u.isVip ? 'vip' : 'normal');
         renderUserList(); 
     }
 }
 
-// Cờ khóa chống Click đúp cho Bulk Action
 let isProcessingBulk = false;
 
 export async function handleBulkAction(actionType) {
@@ -261,58 +271,56 @@ export async function handleBulkAction(actionType) {
     }
 
     isProcessingBulk = true;
+    const promises = [];
+
+    // 1. Áp dụng Optimistic Update cho hàng loạt tài khoản
+    userState.selectedUserIds.forEach(id => {
+        const u = userState.cachedUsers.find(user => user.userId === id);
+        if (!u) return;
+        
+        let updates = {};
+        if (isVipAction) {
+            const newVipStatus = !u.isVip;
+            updates.isVip = newVipStatus;
+            
+            if (newVipStatus) {
+                const now = Date.now();
+                updates.vipActivationDate = now;
+                updates.vipExpirationDate = now + (30 * 24 * 60 * 60 * 1000);
+            } else {
+                updates.vipActivationDate = null;
+                updates.vipExpirationDate = null;
+            }
+
+            // Ghi đè Local State
+            u.isVip = newVipStatus;
+            u.statusKey = newVipStatus ? 'vip' : 'normal';
+            u.vipActivationDate = updates.vipActivationDate;
+            u.vipExpirationDate = updates.vipExpirationDate;
+        }
+
+        if (isBanAction) {
+            updates.isBanned = !u.isBanned;
+            // Ghi đè Local State
+            u.isBanned = updates.isBanned;
+            u.statusKey = updates.isBanned ? 'banned' : (u.isVip ? 'vip' : 'normal');
+        }
+
+        promises.push(updateDoc(doc(db, "users", id), updates));
+    });
+
+    // 2. Vẽ lại UI ngay lập tức
+    renderUserList();
 
     try {
-        const promises = [];
-        userState.selectedUserIds.forEach(id => {
-            const userRef = doc(db, "users", id);
-            const u = userState.cachedUsers.find(user => user.userId === id);
-            if (!u) return;
-            
-            let updates = {};
-            if (isVipAction) {
-                const newVipStatus = !u.isVip;
-                updates.isVip = newVipStatus;
-                if (newVipStatus) {
-                    updates.vipActivationDate = Date.now();
-                    updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
-                }
-            }
-            if (isBanAction) {
-                updates.isBanned = !u.isBanned;
-            }
-            promises.push(updateDoc(userRef, updates));
-        });
-
         await Promise.all(promises);
         showToast(`Đã thực thi thao tác thành công trên ${count} tài khoản!`, "success");
-        
-        userState.selectedUserIds.forEach(id => {
-            const u = userState.cachedUsers.find(user => user.userId === id);
-            if (!u) return;
-            if (isVipAction) {
-                u.isVip = !u.isVip;
-                u.statusKey = u.isVip ? 'vip' : 'normal';
-                if (u.isVip) {
-                    u.vipActivationDate = Date.now();
-                    u.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
-                } else {
-                    u.vipActivationDate = null;
-                    u.vipExpirationDate = null;
-                }
-            }
-            if (isBanAction) {
-                u.isBanned = !u.isBanned;
-                if (u.isBanned) u.statusKey = 'banned';
-                else u.statusKey = u.isVip ? 'vip' : 'normal';
-            }
-        });
-        
         userState.selectedUserIds.clear();
+        updateBulkActionBar();
         renderUserList(); 
     } catch(err) {
         console.error("Lỗi bulk actions:", err);
-        showToast("Lỗi khi thực thi hàng loạt", "error");
+        showToast("Có lỗi mạng khi thực thi hàng loạt. Vui lòng F5 tải lại trang!", "error");
     } finally {
         isProcessingBulk = false;
     }
@@ -341,7 +349,7 @@ export function initUserActionEvents() {
             const vipBtn = e.target.closest('.btn-toggle-vip');
             if (vipBtn) {
                 if (vipBtn.disabled) return;
-                vipBtn.disabled = true; // Khóa chặn Click đúp
+                vipBtn.disabled = true; 
                 vipBtn.innerHTML = '⏳ Đang xử lý...';
                 return handleToggleVip(vipBtn.dataset.id, vipBtn.dataset.vip === 'true');
             }
@@ -349,7 +357,7 @@ export function initUserActionEvents() {
             const banBtn = e.target.closest('.btn-toggle-ban');
             if (banBtn) {
                 if (banBtn.disabled) return;
-                banBtn.disabled = true; // Khóa chặn Click đúp
+                banBtn.disabled = true; 
                 banBtn.innerHTML = '⏳ Xử lý...';
                 return handleToggleBan(banBtn.dataset.id, banBtn.dataset.banned === 'true');
             }
