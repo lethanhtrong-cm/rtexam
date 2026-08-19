@@ -128,19 +128,31 @@ function fetchUserData(user, auth, db) {
                 }
 
                 if (currentUserData.isVip) {
-                    let needsDateUpdate = false;
+                    let isExpired = false;
                     
-                    // FIXED LỖI Ở ĐÂY: Đổi tên trường thành vipActivationDate và vipExpirationDate cho khớp với Admin
-                    if (!currentUserData.vipActivationDate || !currentUserData.vipExpirationDate) {
-                        needsDateUpdate = true;
-                    } else {
-                        const endDate = currentUserData.vipExpirationDate.toDate ? currentUserData.vipExpirationDate.toDate() : new Date(currentUserData.vipExpirationDate);
-                        if (endDate.getTime() < Date.now()) {
-                            needsDateUpdate = true;
+                    // =======================================================
+                    // ĐỒNG BỘ TRƯỜNG DỮ LIỆU VỚI ADMIN PANEL ĐỂ CHỐNG AUTO-REVERT
+                    // Lấy dữ liệu từ vipExpirationDate (của Admin) hoặc vipEnd (của hệ thống cũ)
+                    // =======================================================
+                    const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
+                    const expiryField = currentUserData.vipExpirationDate || currentUserData.vipEnd;
+                    
+                    let startDateObj = null;
+                    if (startField) {
+                        startDateObj = startField.toDate ? startField.toDate() : new Date(startField);
+                    }
+                    
+                    let expiryDateObj = null;
+                    if (expiryField) {
+                        expiryDateObj = expiryField.toDate ? expiryField.toDate() : new Date(expiryField);
+                        
+                        // Kiểm tra thời hạn
+                        if (expiryDateObj.getTime() < Date.now()) {
+                            isExpired = true;
                         }
                     }
 
-                    if (needsDateUpdate) {
+                    if (isExpired) {
                         currentUserData.isVip = false;
                         setDoc(userDocRef, { isVip: false }, { merge: true }).catch(err => console.error(err));
                         setVipInactive();
@@ -161,12 +173,10 @@ function fetchUserData(user, auth, db) {
                     }
 
                     const elVipStartDate = document.getElementById("vipStartDate");
-                    // Đồng bộ cách gọi trường ngày tháng
-                    if (elVipStartDate) elVipStartDate.textContent = currentUserData.vipActivationDate ? formatDate(currentUserData.vipActivationDate) : "Không xác định";
+                    if (elVipStartDate) elVipStartDate.textContent = startDateObj ? formatDate(startDateObj) : "Không xác định";
 
                     const elVipEndDate = document.getElementById("vipEndDate");
-                    // Đồng bộ cách gọi trường ngày tháng
-                    if (elVipEndDate) elVipEndDate.textContent = currentUserData.vipExpirationDate ? formatDate(currentUserData.vipExpirationDate) : "Không xác định";
+                    if (elVipEndDate) elVipEndDate.textContent = expiryDateObj ? formatDate(expiryDateObj) : "Vĩnh viễn / Không xác định";
 
                     const topbarVipContainer = document.getElementById('topbar-vip-container');
                     if (topbarVipContainer) {
@@ -275,5 +285,16 @@ export async function executeAuthUI(user, auth, db) {
     if (currentUserData) {
         const authReadyEvent = new CustomEvent("authReady", { detail: { user, currentUserData } });
         document.dispatchEvent(authReadyEvent);
+    }
+
+    // ==========================================================
+    // BẮT CỜ TỪ TRANG QUIZ ĐỂ TỰ ĐỘNG CHUYỂN TAB VIP
+    // ==========================================================
+    if (sessionStorage.getItem('triggerUpgradeTab') === 'true') {
+        sessionStorage.removeItem('triggerUpgradeTab'); 
+        setTimeout(() => {
+            const btnVip = document.getElementById('btnUpgradeHeader');
+            if (btnVip) btnVip.click(); 
+        }, 400); 
     }
 }
