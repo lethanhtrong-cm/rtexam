@@ -18,6 +18,7 @@ export function initStatistics(db) {
     if (!sessionStorage.getItem('site_visited')) {
         sessionStorage.setItem('site_visited', 'true');
         
+        // Delay nhẹ để ưu tiên load giao diện chính trước
         setTimeout(() => {
             const updates = {
                 totalVisits: increment(1),
