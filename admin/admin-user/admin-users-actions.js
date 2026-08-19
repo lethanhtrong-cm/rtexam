@@ -150,8 +150,9 @@ export async function exportUserHistoryToExcel(email) {
         showToast("Xuất Excel thành công!", "success");
 
     } catch (error) {
-        console.error("Lỗi khi xuất Excel:", error);
-        showToast("Có lỗi xảy ra trong quá trình xuất Excel.", "error");
+        console.error("Lỗi cập nhật VIP:", error);
+        const msg = error.code === 'resource-exhausted' ? "LỖI: Đã hết Quota Firebase ngày hôm nay!" : "Lỗi mạng! Đang khôi phục lại trạng thái cũ...";
+        showToast(msg, "error");
     }
 }
 
