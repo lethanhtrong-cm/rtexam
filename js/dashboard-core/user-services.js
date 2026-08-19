@@ -146,10 +146,10 @@ function fetchUserData(user, auth, db) {
                     if (expiryField) {
                         expiryDateObj = expiryField.toDate ? expiryField.toDate() : new Date(expiryField);
                         
-                        // Kiểm tra thời hạn
-                        if (expiryDateObj.getTime() < Date.now()) {
-                            isExpired = true;
-                        }
+                        // Kiểm tra thời hạn an toàn, tránh lỗi NaN
+                if (!isNaN(expiryDateObj.getTime()) && expiryDateObj.getTime() < Date.now()) {
+                    isExpired = true;
+                }
                     }
 
                     if (isExpired) {
