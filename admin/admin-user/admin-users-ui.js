@@ -4,6 +4,8 @@
 // ==========================================
 import { userState, formatDateTime } from './admin-users-data.js';
 import { getCostBadgeHtml } from './admin-billing.js';
+import { db } from '../admin-core.js';
+import { collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export function injectTableHeadersAndToolbar() {
     const table = document.querySelector('#usersTableBody').closest('table');
@@ -78,7 +80,6 @@ export function injectTableHeadersAndToolbar() {
     const filterSelect = document.getElementById('filterSelect');
     
     if (filterSelect) {
-        // TỰ ĐỘNG TÌM VÀ XÓA CÁC OPTION CŨ TỒN TẠI TRONG HTML
         const testingOpt = filterSelect.querySelector('option[value="testing"]');
         if (testingOpt) testingOpt.remove();
         
@@ -449,6 +450,64 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
                 if(typeof openNotifyCallback === 'function') openNotifyCallback('ALL');
             };
             toolbar.appendChild(notifyAllBtn);
+        }
+
+        // ==============================================================
+        // TÍNH NĂNG MỚI: NÚT ĐỒNG BỘ ĐIỂM TRUNG BÌNH CŨ (CHẠY 1 LẦN)
+        // ==============================================================
+        if (!document.getElementById('btnSyncOldData')) {
+            const syncBtn = document.createElement('button');
+            syncBtn.id = 'btnSyncOldData';
+            syncBtn.className = 'btn-modern-action';
+            syncBtn.style.cssText = 'background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); margin-left: 10px;';
+            syncBtn.innerHTML = '<i class="fa-solid fa-database"></i> Đồng bộ ĐTB Cũ';
+            syncBtn.onmouseover = () => syncBtn.style.transform = 'translateY(-2px)';
+            syncBtn.onmouseout = () => syncBtn.style.transform = 'translateY(0)';
+            syncBtn.onclick = async () => {
+                if(!confirm("Hệ thống sẽ chạy một lệnh quét toàn bộ dữ liệu lịch sử để tính lại Điểm Trung Bình và lưu vào bảng Users. Quá trình này tiêu tốn một ít Quota nhưng chỉ cần chạy 1 LẦN DUY NHẤT. Bạn có muốn tiếp tục?")) return;
+                
+                syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+                syncBtn.disabled = true;
+                
+                try {
+                    // 1. Quét toàn bộ lịch sử điểm (results)
+                    const resultsSnap = await getDocs(collection(db, "results"));
+                    const stats = {};
+                    resultsSnap.forEach(r => {
+                        const d = r.data();
+                        if(!d.email) return;
+                        if(!stats[d.email]) stats[d.email] = { total: 0, count: 0 };
+                        stats[d.email].total += (parseFloat(d.score) || 0);
+                        stats[d.email].count += 1;
+                    });
+                    
+                    // 2. Tính toán lại và ghi chèn vào bảng users
+                    const usersSnap = await getDocs(collection(db, "users"));
+                    const promises = [];
+                    usersSnap.forEach(u => {
+                        const email = u.data().email;
+                        if(email && stats[email]) {
+                            const avg = parseFloat((stats[email].total / stats[email].count).toFixed(2));
+                            promises.push(updateDoc(doc(db, "users", u.id), {
+                                totalScore: stats[email].total,
+                                examCount: stats[email].count,
+                                avgScore: avg
+                            }));
+                        }
+                    });
+                    
+                    await Promise.all(promises);
+                    alert("Đồng bộ ĐTB thành công! Hãy nhấn nút Cập Nhật để tải lại danh sách.");
+                    if(typeof loadUserListCallback === 'function') await loadUserListCallback(true);
+                } catch(e) {
+                    console.error(e);
+                    alert("Lỗi đồng bộ: " + e.message);
+                } finally {
+                    syncBtn.innerHTML = '<i class="fa-solid fa-database"></i> Đồng bộ ĐTB Cũ';
+                    syncBtn.disabled = false;
+                }
+            };
+            toolbar.appendChild(syncBtn);
         }
     }
 }
