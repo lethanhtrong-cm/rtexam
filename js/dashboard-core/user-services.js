@@ -1,6 +1,5 @@
 import { doc, getDoc, setDoc, addDoc, serverTimestamp, onSnapshot, collection, query, where, updateDoc, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// Tìm dòng số 3 và thay thế bằng dòng dưới đây:
 import { formatDate, setVipInactive, renderAuthInfo } from "../dashboard/dashboard-ui.js";
 
 export function initNotificationListener(auth, db) {
@@ -131,10 +130,11 @@ function fetchUserData(user, auth, db) {
                 if (currentUserData.isVip) {
                     let needsDateUpdate = false;
                     
-                    if (!currentUserData.vipStart || !currentUserData.vipEnd) {
+                    // FIXED LỖI Ở ĐÂY: Đổi tên trường thành vipActivationDate và vipExpirationDate cho khớp với Admin
+                    if (!currentUserData.vipActivationDate || !currentUserData.vipExpirationDate) {
                         needsDateUpdate = true;
                     } else {
-                        const endDate = currentUserData.vipEnd.toDate ? currentUserData.vipEnd.toDate() : new Date(currentUserData.vipEnd);
+                        const endDate = currentUserData.vipExpirationDate.toDate ? currentUserData.vipExpirationDate.toDate() : new Date(currentUserData.vipExpirationDate);
                         if (endDate.getTime() < Date.now()) {
                             needsDateUpdate = true;
                         }
@@ -161,10 +161,12 @@ function fetchUserData(user, auth, db) {
                     }
 
                     const elVipStartDate = document.getElementById("vipStartDate");
-                    if (elVipStartDate) elVipStartDate.textContent = currentUserData.vipStart ? formatDate(currentUserData.vipStart) : "Không xác định";
+                    // Đồng bộ cách gọi trường ngày tháng
+                    if (elVipStartDate) elVipStartDate.textContent = currentUserData.vipActivationDate ? formatDate(currentUserData.vipActivationDate) : "Không xác định";
 
                     const elVipEndDate = document.getElementById("vipEndDate");
-                    if (elVipEndDate) elVipEndDate.textContent = currentUserData.vipEnd ? formatDate(currentUserData.vipEnd) : "Không xác định";
+                    // Đồng bộ cách gọi trường ngày tháng
+                    if (elVipEndDate) elVipEndDate.textContent = currentUserData.vipExpirationDate ? formatDate(currentUserData.vipExpirationDate) : "Không xác định";
 
                     const topbarVipContainer = document.getElementById('topbar-vip-container');
                     if (topbarVipContainer) {
