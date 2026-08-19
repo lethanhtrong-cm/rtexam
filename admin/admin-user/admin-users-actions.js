@@ -166,17 +166,23 @@ async function handleToggleVip(userId, currentVipStatus) {
             updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000); 
         }
 
+        // 1. Cập nhật User trước
         await updateDoc(userRef, updates);
         
+        // 2. Cập nhật hóa đơn bằng Promise.all để tránh trượt luồng (Race Condition)
         if (newVipStatus) {
             const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
             const snapshot = await getDocs(q);
-            snapshot.forEach(async (docSnap) => {
-                await updateDoc(docSnap.ref, { status: "completed" });
+            const paymentPromises = [];
+            snapshot.forEach((docSnap) => {
+                paymentPromises.push(updateDoc(docSnap.ref, { status: "completed" }));
             });
+            await Promise.all(paymentPromises);
         }
+
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
         
+        // 3. Cập nhật State cục bộ
         const u = userState.cachedUsers.find(user => user.userId === userId);
         if (u) {
             u.isVip = newVipStatus;
@@ -190,11 +196,12 @@ async function handleToggleVip(userId, currentVipStatus) {
             }
         }
         
-        renderUserList(); 
-        
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         showToast("Lỗi khi cập nhật trạng thái quyền VIP", "error");
+    } finally {
+        // 4. Buộc UI phải vẽ lại sau khi mọi thứ đã hoàn tất
+        renderUserList(); 
     }
 }
 
@@ -213,14 +220,16 @@ async function handleToggleBan(userId, currentBannedStatus) {
             u.isBanned = newBannedStatus;
             u.statusKey = newBannedStatus ? 'banned' : (u.isVip ? 'vip' : 'normal');
         }
-        
-        renderUserList(); 
-        
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
         showToast("Lỗi thay đổi trạng thái khóa tài khoản", "error");
+    } finally {
+        renderUserList(); 
     }
 }
+
+// Cờ khóa chống Click đúp cho Bulk Action
+let isProcessingBulk = false;
 
 export async function handleBulkAction(actionType) {
     if (userState.selectedUserIds.size === 0) return;
@@ -235,6 +244,11 @@ export async function handleBulkAction(actionType) {
         return;
     }
 
+    if (isProcessingBulk) {
+        showToast("Hệ thống đang xử lý, vui lòng chờ...", "warning");
+        return;
+    }
+
     const count = userState.selectedUserIds.size;
     let isVipAction = false, isBanAction = false;
 
@@ -246,28 +260,30 @@ export async function handleBulkAction(actionType) {
         isBanAction = true;
     }
 
-    const promises = [];
-    userState.selectedUserIds.forEach(id => {
-        const userRef = doc(db, "users", id);
-        const u = userState.cachedUsers.find(user => user.userId === id);
-        if (!u) return;
-        
-        let updates = {};
-        if (isVipAction) {
-            const newVipStatus = !u.isVip;
-            updates.isVip = newVipStatus;
-            if (newVipStatus) {
-                updates.vipActivationDate = Date.now();
-                updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
-            }
-        }
-        if (isBanAction) {
-            updates.isBanned = !u.isBanned;
-        }
-        promises.push(updateDoc(userRef, updates));
-    });
+    isProcessingBulk = true;
 
     try {
+        const promises = [];
+        userState.selectedUserIds.forEach(id => {
+            const userRef = doc(db, "users", id);
+            const u = userState.cachedUsers.find(user => user.userId === id);
+            if (!u) return;
+            
+            let updates = {};
+            if (isVipAction) {
+                const newVipStatus = !u.isVip;
+                updates.isVip = newVipStatus;
+                if (newVipStatus) {
+                    updates.vipActivationDate = Date.now();
+                    updates.vipExpirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
+                }
+            }
+            if (isBanAction) {
+                updates.isBanned = !u.isBanned;
+            }
+            promises.push(updateDoc(userRef, updates));
+        });
+
         await Promise.all(promises);
         showToast(`Đã thực thi thao tác thành công trên ${count} tài khoản!`, "success");
         
@@ -297,6 +313,8 @@ export async function handleBulkAction(actionType) {
     } catch(err) {
         console.error("Lỗi bulk actions:", err);
         showToast("Lỗi khi thực thi hàng loạt", "error");
+    } finally {
+        isProcessingBulk = false;
     }
 }
 
@@ -321,10 +339,20 @@ export function initUserActionEvents() {
             if (notifyBtn) return openNotificationModal(notifyBtn.dataset.email);
 
             const vipBtn = e.target.closest('.btn-toggle-vip');
-            if (vipBtn) return handleToggleVip(vipBtn.dataset.id, vipBtn.dataset.vip === 'true');
+            if (vipBtn) {
+                if (vipBtn.disabled) return;
+                vipBtn.disabled = true; // Khóa chặn Click đúp
+                vipBtn.innerHTML = '⏳ Đang xử lý...';
+                return handleToggleVip(vipBtn.dataset.id, vipBtn.dataset.vip === 'true');
+            }
 
             const banBtn = e.target.closest('.btn-toggle-ban');
-            if (banBtn) return handleToggleBan(banBtn.dataset.id, banBtn.dataset.banned === 'true');
+            if (banBtn) {
+                if (banBtn.disabled) return;
+                banBtn.disabled = true; // Khóa chặn Click đúp
+                banBtn.innerHTML = '⏳ Xử lý...';
+                return handleToggleBan(banBtn.dataset.id, banBtn.dataset.banned === 'true');
+            }
 
             const historyBtn = e.target.closest('.btn-history');
             if (historyBtn) return handleViewHistory(historyBtn.dataset.email);
