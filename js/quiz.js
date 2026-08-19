@@ -469,8 +469,11 @@ async function executeSubmit() {
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
-            await updateDoc(userRef, { examStatus: 'idle' });
-        } catch (err) {}
+            const ud = (await getDoc(userRef)).data() || {};
+            const newTotal = (ud.totalScore || 0) + finalScore;
+            const newCount = (ud.examCount || 0) + 1;
+            await updateDoc(userRef, { examStatus: 'idle', totalScore: newTotal, examCount: newCount, avgScore: parseFloat((newTotal / newCount).toFixed(2)) });
+        } catch (err) { console.error(err); }
     }
 
     renderAll(); 
