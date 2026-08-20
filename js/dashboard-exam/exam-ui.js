@@ -4,6 +4,17 @@ export function renderExams() {
     const examListContainer = document.getElementById('examListContainer');
     const sortFilter = document.getElementById('sortFilter');
 
+    // ==========================================================
+    // THEO DÕI REALTIME SỰ THAY ĐỔI CỦA HUY HIỆU PRO TRÊN TOPBAR
+    // ==========================================================
+    if (!window.vipObserverSetup) {
+        const vipContainer = document.getElementById('topbar-vip-container');
+        if (vipContainer) {
+            new MutationObserver(() => renderExams()).observe(vipContainer, { childList: true });
+            window.vipObserverSetup = true;
+        }
+    }
+
     if (!examListContainer) return;
     
     try {
@@ -160,7 +171,10 @@ export function renderExams() {
             return;
         }
 
-        const isUserVip = State.currentUserData && State.currentUserData.isVip === true;
+        // ==========================================================
+        // KIỂM TRA VIP KÉP: KẾT HỢP DỮ LIỆU NGẦM VÀ GIAO DIỆN REALTIME
+        // ==========================================================
+        const isUserVip = (State.currentUserData && State.currentUserData.isVip === true) || document.querySelector('.topbar-vip-badge') !== null;
 
         let groups = [];
         
@@ -291,6 +305,13 @@ export function renderExams() {
                     let displayScore = State.completedExams[exam.id].score || 0;
                     displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
+                    // ==========================================================
+                    // PHÂN QUYỀN NÚT XEM LẠI BÀI NGAY TRÊN CARD DỰA VÀO isUserVip
+                    // ==========================================================
+                    let reviewBtnHtml = isUserVip 
+                        ? `<button onclick="goToReview('${State.completedExams[exam.id].resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-eye"></i> Xem lại</button>`
+                        : `<button onclick="goToUpgrade()" style="flex: 1; padding: 10px 0; border: 1px solid #f59e0b; background: #fffbeb; color: #d97706; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" title="Tính năng dành cho tài khoản PRO"><i class="fa-solid fa-crown"></i> Xem lại (Pro)</button>`;
+
                     actionAreaHtml = `
                         <div style="margin-bottom: 20px; padding: 12px 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
                             <div><span style="font-size: 0.85rem; color: #6c757d; font-weight: 600; display: block; margin-bottom: 4px;">Lần thi gần nhất</span>
@@ -301,7 +322,7 @@ export function renderExams() {
                                 <button onclick="goToFlashcard('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-bolt"></i> Flashcard</button>
                             </div>
                             <div style="display: flex; gap: 8px; width: 100%;">
-                                <button onclick="goToReview('${State.completedExams[exam.id].resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-eye"></i> Xem lại</button>
+                                ${reviewBtnHtml}
                                 <button onclick="goToQuiz('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: #cfe2ff; color: #084298; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fas fa-redo"></i> Thi lại</button>
                                 <button onclick="openShareModal('${safeExamId}')" style="width: 44px; flex-shrink: 0; background: #e0e7ff; color: #3730a3; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s;" title="Chia sẻ"><i class="fa-solid fa-share-nodes"></i></button>
                             </div>
@@ -363,11 +384,9 @@ export function renderExams() {
 
             rowHtml += `</div><button class="slider-btn right" onclick="slideRight(this)"><i class="fa-solid fa-chevron-right"></i></button></div></div>`;
             
-            // Đẩy vào bộ đệm thay vì vẽ ra DOM ngay
             finalHtmlBuffer += rowHtml; 
         });
 
-        // Chỉ ghi DOM đúng 1 lần duy nhất, loại bỏ giật UI
         examListContainer.innerHTML = finalHtmlBuffer;
 
     } catch (err) {
