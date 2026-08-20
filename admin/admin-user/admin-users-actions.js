@@ -160,7 +160,13 @@ async function handleToggleVip(userId, currentVipStatus) {
     if (!u) return;
 
     const newVipStatus = !currentVipStatus;
-    let updates = { isVip: newVipStatus };
+    
+    // Tích hợp dọn dẹp biến cũ vĩnh viễn khỏi Database
+    let updates = { 
+        isVip: newVipStatus,
+        vipStart: null,
+        vipEnd: null
+    };
 
     // 1. CẬP NHẬT TRẠNG THÁI LOCAL NGAY LẬP TỨC (Optimistic UI Update)
     u.isVip = newVipStatus;
@@ -287,6 +293,10 @@ export async function handleBulkAction(actionType) {
         if (isVipAction) {
             const newVipStatus = !u.isVip;
             updates.isVip = newVipStatus;
+            
+            // Tích hợp dọn dẹp biến cũ vĩnh viễn khỏi Database
+            updates.vipStart = null;
+            updates.vipEnd = null;
             
             if (newVipStatus) {
                 const now = Date.now();
