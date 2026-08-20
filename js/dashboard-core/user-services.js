@@ -127,7 +127,6 @@ function fetchUserData(user, auth, db) {
                     if (elTopbarAvatar) elTopbarAvatar.src = currentUserData.avatarBase64; 
                 }
 
-                // TIN TƯỞNG 100% VÀO TRẠNG THÁI isVip TỪ DATABASE (ĐƯỢC QUẢN LÝ BỞI ADMIN)
                 if (currentUserData.isVip) {
                     const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
                     const expiryField = currentUserData.vipExpirationDate || currentUserData.vipEnd;
@@ -138,98 +137,109 @@ function fetchUserData(user, auth, db) {
                     }
                     
                     let expiryDateObj = null;
+                    let isExpired = false;
+
                     if (expiryField) {
                         expiryDateObj = expiryField.toDate ? expiryField.toDate() : new Date(expiryField);
+                        if (expiryDateObj.getTime() < Date.now()) {
+                            isExpired = true;
+                        }
                     }
                     
-                    const elVipStatusBadge = document.getElementById("vipStatusBadge");
-                    if (elVipStatusBadge) {
-                        elVipStatusBadge.textContent = "Đã kích hoạt Pro";
-                        elVipStatusBadge.className = "status-badge status-active";
-                    }
-
-                    const elVipStatusTab3 = document.getElementById("vipStatusTab3");
-                    if (elVipStatusTab3) {
-                        elVipStatusTab3.textContent = "Tài khoản PRO đang hoạt động";
-                        elVipStatusTab3.className = "status-badge status-active";
-                    }
-
-                    const elVipStartDate = document.getElementById("vipStartDate");
-                    if (elVipStartDate) elVipStartDate.textContent = startDateObj ? formatDate(startDateObj) : "Không xác định";
-
-                    const elVipEndDate = document.getElementById("vipEndDate");
-                    if (elVipEndDate) elVipEndDate.textContent = expiryDateObj ? formatDate(expiryDateObj) : "Vĩnh viễn / Không xác định";
-
-                    const topbarVipContainer = document.getElementById('topbar-vip-container');
-                    if (topbarVipContainer) {
-                        topbarVipContainer.innerHTML = `
-                            <div class="topbar-vip-badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
-                                <i class="fa-solid fa-gem"></i> PRO
-                            </div>
-                        `;
-                    }
-                    
-                    const tabVip = document.getElementById('tab-vip');
-                    if (tabVip && tabVip.classList.contains('active')) {
-                        const btn = document.getElementById('btnConfirmPayment');
-                        const btnCancel = document.getElementById('btnCancelPayment');
-                        if (btn) { 
-                            btn.innerHTML = '<i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản'; 
-                            btn.style.background = ''; 
-                            btn.style.boxShadow = '';
-                            btn.disabled = false; 
-                        }
-                        if (btnCancel) {
-                            btnCancel.style.display = 'none';
-                        }
-                        
-                        const allExamsMenu = document.querySelector('.sub-menu-item[data-technique="all"]') || document.querySelector('[data-target="tab-dashboard"]');
-                        if (allExamsMenu) {
-                            allExamsMenu.click();
-                        }
-                        
-                        try {
-                            addDoc(collection(db, "notifications"), {
-                                toEmail: auth.currentUser.email,
-                                title: "👑 Kích hoạt tài khoản PRO thành công",
-                                message: "Cảm ơn bạn đã đồng hành cùng hệ thống. Tài khoản PRO đã được kích hoạt, mở khóa toàn bộ đề thi độc quyền và tiện ích giải thích chi tiết!",
-                                status: "unread",
-                                type: "system_broadcast",
-                                timestamp: serverTimestamp()
-                            });
-                        } catch (err) {
-                            console.error("Lỗi khi tự động push thông báo:", err);
+                    if (isExpired) {
+                        // ĐÃ KHÔI PHỤC: Cập nhật Firestore khi VIP thực sự hết hạn để đồng bộ toàn hệ thống
+                        setDoc(userDocRef, { isVip: false }, { merge: true }).catch(err => console.error(err));
+                        setVipInactive();
+                        currentUserData.isVip = false;
+                    } else {
+                        const elVipStatusBadge = document.getElementById("vipStatusBadge");
+                        if (elVipStatusBadge) {
+                            elVipStatusBadge.textContent = "Đã kích hoạt Pro";
+                            elVipStatusBadge.className = "status-badge status-active";
                         }
 
-                        const existingModal = document.getElementById('vipSuccessModalCustom');
-                        if (existingModal) existingModal.remove();
+                        const elVipStatusTab3 = document.getElementById("vipStatusTab3");
+                        if (elVipStatusTab3) {
+                            elVipStatusTab3.textContent = "Tài khoản PRO đang hoạt động";
+                            elVipStatusTab3.className = "status-badge status-active";
+                        }
 
-                        const popupHTML = `
-                            <div class="custom-modal-overlay" id="vipSuccessModalCustom" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); justify-content: center; align-items: center;">
-                                <div class="custom-modal-content" style="max-width: 450px; background: #fff; border-radius: 16px; padding: 35px 25px; text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
-                                        <i class="fa-solid fa-crown" style="font-size: 2.5rem; color: white;"></i>
-                                    </div>
-                                    <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.6rem;">Nâng Cấp Thành Công!</h2>
-                                    <p style="color: #475569; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;">
-                                        Chào mừng bạn đến với hội viên <strong>PRO</strong>. Bạn đã mở khóa toàn bộ đặc quyền không giới hạn trên hệ thống.
-                                    </p>
-                                    <button id="closeVipSuccessBtn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
-                                        Khám phá ngay <i class="fa-solid fa-arrow-right ms-2"></i>
-                                    </button>
+                        const elVipStartDate = document.getElementById("vipStartDate");
+                        if (elVipStartDate) elVipStartDate.textContent = startDateObj ? formatDate(startDateObj) : "Không xác định";
+
+                        const elVipEndDate = document.getElementById("vipEndDate");
+                        if (elVipEndDate) elVipEndDate.textContent = expiryDateObj ? formatDate(expiryDateObj) : "Vĩnh viễn / Không xác định";
+
+                        const topbarVipContainer = document.getElementById('topbar-vip-container');
+                        if (topbarVipContainer) {
+                            topbarVipContainer.innerHTML = `
+                                <div class="topbar-vip-badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
+                                    <i class="fa-solid fa-gem"></i> PRO
                                 </div>
-                            </div>
-                        `;
-                        document.body.insertAdjacentHTML('beforeend', popupHTML);
+                            `;
+                        }
                         
-                        const successModal = document.getElementById('vipSuccessModalCustom');
-                        const closeBtn = document.getElementById('closeVipSuccessBtn');
-                        
-                        const closeCustomModal = () => { if (successModal) successModal.remove(); };
-                        closeBtn.addEventListener('click', closeCustomModal);
-                        successModal.addEventListener('click', (e) => { if (e.target === successModal) closeCustomModal(); });
+                        const tabVip = document.getElementById('tab-vip');
+                        if (tabVip && tabVip.classList.contains('active')) {
+                            const btn = document.getElementById('btnConfirmPayment');
+                            const btnCancel = document.getElementById('btnCancelPayment');
+                            if (btn) { 
+                                btn.innerHTML = '<i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản'; 
+                                btn.style.background = ''; 
+                                btn.style.boxShadow = '';
+                                btn.disabled = false; 
+                            }
+                            if (btnCancel) {
+                                btnCancel.style.display = 'none';
+                            }
+                            
+                            const allExamsMenu = document.querySelector('.sub-menu-item[data-technique="all"]') || document.querySelector('[data-target="tab-dashboard"]');
+                            if (allExamsMenu) {
+                                allExamsMenu.click();
+                            }
+                            
+                            try {
+                                addDoc(collection(db, "notifications"), {
+                                    toEmail: auth.currentUser.email,
+                                    title: "👑 Kích hoạt tài khoản PRO thành công",
+                                    message: "Cảm ơn bạn đã đồng hành cùng hệ thống. Tài khoản PRO đã được kích hoạt, mở khóa toàn bộ đề thi độc quyền và tiện ích giải thích chi tiết!",
+                                    status: "unread",
+                                    type: "system_broadcast",
+                                    timestamp: serverTimestamp()
+                                });
+                            } catch (err) {
+                                console.error("Lỗi khi tự động push thông báo:", err);
+                            }
+
+                            const existingModal = document.getElementById('vipSuccessModalCustom');
+                            if (existingModal) existingModal.remove();
+
+                            const popupHTML = `
+                                <div class="custom-modal-overlay" id="vipSuccessModalCustom" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); justify-content: center; align-items: center;">
+                                    <div class="custom-modal-content" style="max-width: 450px; background: #fff; border-radius: 16px; padding: 35px 25px; text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                                            <i class="fa-solid fa-crown" style="font-size: 2.5rem; color: white;"></i>
+                                        </div>
+                                        <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.6rem;">Nâng Cấp Thành Công!</h2>
+                                        <p style="color: #475569; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;">
+                                            Chào mừng bạn đến với hội viên <strong>PRO</strong>. Bạn đã mở khóa toàn bộ đặc quyền không giới hạn trên hệ thống.
+                                        </p>
+                                        <button id="closeVipSuccessBtn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
+                                            Khám phá ngay <i class="fa-solid fa-arrow-right ms-2"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                            document.body.insertAdjacentHTML('beforeend', popupHTML);
+                            
+                            const successModal = document.getElementById('vipSuccessModalCustom');
+                            const closeBtn = document.getElementById('closeVipSuccessBtn');
+                            
+                            const closeCustomModal = () => { if (successModal) successModal.remove(); };
+                            closeBtn.addEventListener('click', closeCustomModal);
+                            successModal.addEventListener('click', (e) => { if (e.target === successModal) closeCustomModal(); });
+                        }
                     }
-                    
                 } else {
                     setVipInactive();
                 }
