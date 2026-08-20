@@ -1,7 +1,8 @@
 // =========================================================================
-// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (ĐÃ FIX LỖI NULL/NaN)
+// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (ĐÃ FIX LỖI TĂNG GIẢM SIZE CHỮ)
 // =========================================================================
 export function initDisplaySettings() {
+    // 1. Tiêm style động hỗ trợ chế độ đọc Sepia (Không làm vỡ Dark Mode hiện tại)
     const dynamicStyle = document.createElement('style');
     dynamicStyle.innerHTML = `
         body.sepia-mode {
@@ -17,6 +18,7 @@ export function initDisplaySettings() {
     `;
     document.head.appendChild(dynamicStyle);
 
+    // 2. Tạo nút Cài đặt trên Header
     const headerActions = document.querySelector('.header-actions');
     if (!headerActions) return;
 
@@ -25,6 +27,7 @@ export function initDisplaySettings() {
     btnSettings.title = 'Tùy chỉnh giao diện làm bài';
     btnSettings.innerHTML = '<i class="fa-solid fa-font"></i>';
     
+    // 3. Tạo Panel Cài đặt động (Ẩn mặc định)
     const panel = document.createElement('div');
     panel.id = 'display-settings-panel';
     panel.style.cssText = 'position:absolute; top:65px; right:30px; background:var(--bg-panel); padding:15px; border-radius:10px; box-shadow:var(--shadow-md); display:none; z-index:1000; border:1px solid var(--border-color); color:var(--text-main); min-width:260px;';
@@ -64,6 +67,7 @@ export function initDisplaySettings() {
     headerActions.insertBefore(btnSettings, headerActions.firstChild);
     document.body.appendChild(panel);
 
+    // Xử lý Sự kiện đóng/mở Panel
     btnSettings.addEventListener('click', (e) => {
         e.stopPropagation();
         panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -72,13 +76,29 @@ export function initDisplaySettings() {
         if (!panel.contains(e.target) && !btnSettings.contains(e.target)) panel.style.display = 'none';
     });
 
+    // 4. Logic thay đổi Cỡ chữ (Sử dụng CSS Calc để ghi đè class cố định)
     let currentFontSize = 100;
     const updateFontSize = (val) => {
-        // CHỐT CHẶN BẢO VỆ CHỐNG LỖI NULL HAY NaN
         if (!val || isNaN(val)) val = 100;
         currentFontSize = val;
-        const quizBody = document.querySelector('.quiz-body');
-        if (quizBody) quizBody.style.fontSize = `${currentFontSize}%`;
+        
+        // Tiêm style động để nhân tỷ lệ trực tiếp vào số px gốc
+        let styleTag = document.getElementById('dynamic-font-style');
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'dynamic-font-style';
+            document.head.appendChild(styleTag);
+        }
+        
+        styleTag.innerHTML = `
+            .question-text { font-size: calc(20px * ${currentFontSize / 100}) !important; }
+            .option-item { font-size: calc(16px * ${currentFontSize / 100}) !important; }
+            @media (max-width: 768px) {
+                .question-text { font-size: calc(18px * ${currentFontSize / 100}) !important; }
+                .option-item { font-size: calc(15px * ${currentFontSize / 100}) !important; }
+            }
+        `;
+        
         localStorage.setItem('quiz_font_size', currentFontSize.toString());
     };
     
@@ -86,15 +106,17 @@ export function initDisplaySettings() {
     document.getElementById('btn-font-inc').onclick = () => updateFontSize(Math.min(150, currentFontSize + 10));
     document.getElementById('btn-font-reset').onclick = () => updateFontSize(100);
 
+    // 5. Logic thay đổi Phông chữ
     const selectFont = document.getElementById('select-font-family');
     selectFont.onchange = (e) => {
         const font = e.target.value;
-        if (font && font !== 'null') { // BẢO VỆ CHỐNG CHUỖI 'null'
+        if (font && font !== 'null') {
             document.body.style.fontFamily = font;
             localStorage.setItem('quiz_font_family', font);
         }
     };
 
+    // 6. Logic màu nền (Sepia vs Default)
     const applySepia = (isSepia) => {
         if (isSepia) {
             document.body.classList.add('sepia-mode');
@@ -114,6 +136,7 @@ export function initDisplaySettings() {
     document.getElementById('btn-bg-sepia').onclick = () => applySepia(true);
     document.getElementById('btn-bg-default').onclick = () => applySepia(false);
 
+    // Bắt sự kiện người dùng chủ động bấm lại nút Dark Mode thì tự tắt Sepia
     const themeBtn = document.getElementById('btn-theme-toggle');
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
@@ -122,7 +145,7 @@ export function initDisplaySettings() {
         });
     }
 
-    // KHÔI PHỤC AN TOÀN
+    // 7. Khôi phục Trạng thái từ LocalStorage an toàn
     const savedSize = localStorage.getItem('quiz_font_size');
     if (savedSize && savedSize !== 'null') updateFontSize(parseInt(savedSize));
     
