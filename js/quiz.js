@@ -127,6 +127,7 @@ onAuthStateChanged(auth, async (user) => {
                         }
                     }
                 }
+            }
         } catch (e) { console.error(e); }
 
         if (currentResultId) {
