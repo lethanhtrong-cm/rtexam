@@ -2,6 +2,72 @@ import { doc, getDoc, setDoc, addDoc, serverTimestamp, onSnapshot, collection, q
 import { signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { formatDate, setVipInactive, renderAuthInfo } from "../dashboard/dashboard-ui.js";
 
+export function initNotificationListener(auth, db) {
+    const user = auth.currentUser;
+    if (!user) return;
+    const userEmail = user.email;
+
+    const notifRef = collection(db, "notifications");
+    const q = query(notifRef, where("toEmail", "==", userEmail), limit(10));
+
+    onSnapshot(q, (snapshot) => {
+        const notifList = document.getElementById('notiListContainer');
+        const badgeCount = document.getElementById('notiBadgeCount');
+        
+        let unreadCount = 0;
+        let notifications = [];
+        window.userNotificationsData = {}; 
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const notif = { id: docSnap.id, ...data };
+            notifications.push(notif);
+            window.userNotificationsData[notif.id] = notif; 
+            if (data.status === 'unread') unreadCount++;
+        });
+
+        notifications.sort((a, b) => {
+            const timeA = a.timestamp ? (a.timestamp.toMillis ? a.timestamp.toMillis() : new Date(a.timestamp).getTime()) : 0;
+            const timeB = b.timestamp ? (b.timestamp.toMillis ? b.timestamp.toMillis() : new Date(b.timestamp).getTime()) : 0;
+            return timeB - timeA;
+        });
+
+        if (badgeCount) {
+            badgeCount.innerText = unreadCount;
+            badgeCount.style.display = unreadCount > 0 ? 'flex' : 'none'; 
+        }
+
+        if (notifList) {
+            notifList.innerHTML = '';
+            if (notifications.length === 0) {
+                notifList.innerHTML = '<div class="noti-empty">Bạn chưa có thông báo nào.</div>';
+                return;
+            }
+
+            notifications.forEach(notif => {
+                const isUnread = notif.status === 'unread';
+                const fw = isUnread ? 'bold' : 'normal';
+                
+                let icon = '💬';
+                if (notif.type === 'system_broadcast') icon = '📢';
+                if (notif.type === 'room_share' || notif.type === 'exam_share') icon = '🎯';
+                
+                notifList.innerHTML += `
+                    <div class="noti-item ${isUnread ? 'unread' : ''}" style="cursor: pointer;" data-notif-id="${notif.id}">
+                        <div class="noti-icon">${icon}</div>
+                        <div class="noti-content">
+                            <div class="noti-text" style="font-weight: ${fw}">${notif.title}</div>
+                            <div class="noti-time" style="color: #64748b; font-size: 0.85rem;">Nhấp để xem chi tiết</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }, (error) => {
+        console.error("Lỗi khi tải thông báo Realtime:", error);
+    });
+}
+
 function initPaymentStatusListener(user, db) {
     if (!user) return;
     
@@ -64,10 +130,7 @@ function fetchUserData(user, auth, db) {
                 if (currentUserData.isVip) {
                     let isExpired = false;
                     
-                    // =======================================================
-                    // ĐỒNG BỘ TRƯỜNG DỮ LIỆU VỚI ADMIN PANEL ĐỂ CHỐNG AUTO-REVERT
                     // Lấy dữ liệu từ vipExpirationDate (của Admin) hoặc vipEnd (của hệ thống cũ)
-                    // =======================================================
                     const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
                     const expiryField = currentUserData.vipExpirationDate || currentUserData.vipEnd;
                     
@@ -81,14 +144,14 @@ function fetchUserData(user, auth, db) {
                         expiryDateObj = expiryField.toDate ? expiryField.toDate() : new Date(expiryField);
                         
                         // Kiểm tra thời hạn an toàn, tránh lỗi NaN
-                if (!isNaN(expiryDateObj.getTime()) && expiryDateObj.getTime() < Date.now()) {
-                    isExpired = true;
-                }
+                        if (!isNaN(expiryDateObj.getTime()) && expiryDateObj.getTime() < Date.now()) {
+                            isExpired = true;
+                        }
                     }
 
                     if (isExpired) {
                         currentUserData.isVip = false;
-                        setDoc(userDocRef, { isVip: false }, { merge: true }).catch(err => console.error(err));
+                        // ĐÃ XÓA LỆNH GHI ĐÈ DATABASE Ở ĐÂY ĐỂ TRÁNH LỖI TỰ ĐỘNG HẠ CẤP KHI ĐỒNG HỒ CLIENT SAI
                         setVipInactive();
                         resolve(currentUserData);
                         return; 
@@ -203,6 +266,7 @@ export async function executeAuthUI(user, auth, db) {
     renderAuthInfo(user);
     const currentUserData = await fetchUserData(user, auth, db);
     
+    initNotificationListener(auth, db);
     initPaymentStatusListener(user, db); 
     
     try {
@@ -220,9 +284,6 @@ export async function executeAuthUI(user, auth, db) {
         document.dispatchEvent(authReadyEvent);
     }
 
-    // ==========================================================
-    // BẮT CỜ TỪ TRANG QUIZ ĐỂ TỰ ĐỘNG CHUYỂN TAB VIP
-    // ==========================================================
     if (sessionStorage.getItem('triggerUpgradeTab') === 'true') {
         sessionStorage.removeItem('triggerUpgradeTab'); 
         setTimeout(() => {
