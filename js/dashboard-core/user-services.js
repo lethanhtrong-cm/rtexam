@@ -130,7 +130,10 @@ function fetchUserData(user, auth, db) {
                 if (currentUserData.isVip) {
                     let isExpired = false;
                     
+                    // =======================================================
+                    // ĐỒNG BỘ TRƯỜNG DỮ LIỆU VỚI ADMIN PANEL ĐỂ CHỐNG AUTO-REVERT
                     // Lấy dữ liệu từ vipExpirationDate (của Admin) hoặc vipEnd (của hệ thống cũ)
+                    // =======================================================
                     const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
                     const expiryField = currentUserData.vipExpirationDate || currentUserData.vipEnd;
                     
@@ -151,7 +154,7 @@ function fetchUserData(user, auth, db) {
 
                     if (isExpired) {
                         currentUserData.isVip = false;
-                        // Đã gỡ bỏ lệnh setDoc tự động hạ cấp VIP để bảo vệ dữ liệu trên Server
+                        // LỆNH TỰ ĐỘNG GHI ĐÈ DATABASE CỦA CLIENT ĐÃ BỊ XÓA BỎ HOÀN TOÀN TẠI ĐÂY
                         setVipInactive();
                         resolve(currentUserData);
                         return; 
@@ -284,6 +287,9 @@ export async function executeAuthUI(user, auth, db) {
         document.dispatchEvent(authReadyEvent);
     }
 
+    // ==========================================================
+    // BẮT CỜ TỪ TRANG QUIZ ĐỂ TỰ ĐỘNG CHUYỂN TAB VIP
+    // ==========================================================
     if (sessionStorage.getItem('triggerUpgradeTab') === 'true') {
         sessionStorage.removeItem('triggerUpgradeTab'); 
         setTimeout(() => {
