@@ -469,11 +469,8 @@ async function executeSubmit() {
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
-            const ud = (await getDoc(userRef)).data() || {};
-            const newTotal = (ud.totalScore || 0) + finalScore;
-            const newCount = (ud.examCount || 0) + 1;
-            await updateDoc(userRef, { examStatus: 'idle', totalScore: newTotal, examCount: newCount, avgScore: parseFloat((newTotal / newCount).toFixed(2)) });
-        } catch (err) { console.error(err); }
+            await updateDoc(userRef, { examStatus: 'idle' });
+        } catch (err) {}
     }
 
     renderAll(); 
@@ -747,31 +744,20 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
         }
     }
 
-    // ==========================================================
-    // LOGIC: ĐỔI TÊN NÚT BẤM DỰA TRÊN TRẠNG THÁI VIP
-    // ==========================================================
-    const btnExplain = document.getElementById('btn-modal-explain');
+   // ==========================================================
+// LOGIC: CHẶN VÀ ĐIỀU HƯỚNG KHI BẤM NÚT XEM LẠI TRONG MODAL
+// ==========================================================
+document.getElementById('btn-modal-explain').onclick = () => { 
     if (isCurrentUserVip) {
-        btnExplain.innerText = "Xem lại ĐÁP ÁN và GIẢI THÍCH";
-        btnExplain.removeAttribute("style");
+        closeModal(); 
+        openReviewModal(finalScore, finalCorrectCount, finalTotal); 
     } else {
-        btnExplain.innerHTML = '<div style="line-height:1.2"><i class="fa-solid fa-lock"></i> Xem lại ĐÁP ÁN và GIẢI THÍCH</div><div style="font-size:0.85rem; margin-top:5px; color:#fef08a">(Cần nâng cấp PRO)</div>';
-        btnExplain.style.cssText = "background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); display:flex; flex-direction:column; padding:10px; box-shadow: 0 4px 12px rgba(239,68,68,0.4); border:none;";
+        alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
+        // [THÊM MỚI 1 DÒNG]: Lưu cờ báo hiệu chuyển tab VIP vào bộ nhớ tạm
+        sessionStorage.setItem('triggerUpgradeTab', 'true');
+        redirect('dashboard.html');
     }
-
-    // ==========================================================
-    // LOGIC: CHẶN VÀ ĐIỀU HƯỚNG KHI BẤM NÚT XEM LẠI TRONG MODAL
-    // ==========================================================
-    btnExplain.onclick = () => { 
-        if (isCurrentUserVip) {
-            closeModal(); 
-            openReviewModal(finalScore, finalCorrectCount, finalTotal); 
-        } else {
-            alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
-            sessionStorage.setItem('triggerUpgradeTab', 'true');
-            redirect('dashboard.html');
-        }
-    };
+};
 
     resetFeedbackUI(); 
     modal.classList.add('active');
