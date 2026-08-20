@@ -4,7 +4,8 @@ import {
     GoogleAuthProvider, signInWithPopup, setPersistence, 
     browserLocalPersistence, browserSessionPersistence, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// THÊM: Import hàm getDoc để kiểm tra tồn tại
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
 // PHẦN 1: HỆ THỐNG LOAD MODULE (HTML LOADER)
@@ -99,11 +100,11 @@ document.addEventListener('click', async (e) => {
     // 1. Xử lý click từ Navbar để cuộn trang mượt mà và chuyển Tab Form tương ứng
     if (e.target.closest('.nav-auth-trigger')) {
         const triggerBtn = e.target.closest('.nav-auth-trigger');
-        const targetTab = triggerBtn.getAttribute('data-tab'); // 'login' hoặc 'register'
+        const targetTab = triggerBtn.getAttribute('data-tab'); 
         
         const authSection = document.getElementById('hero-auth-section');
         if (authSection) {
-            const yOffset = -80; // Trừ hao chiều cao navbar
+            const yOffset = -80; 
             const y = authSection.getBoundingClientRect().top + window.scrollY + yOffset;
             window.scrollTo({ top: y, behavior: 'smooth' });
         }
@@ -155,6 +156,7 @@ document.addEventListener('click', async (e) => {
         setLoadingBtn(btn, true, 'Đang đăng ký...');
         createUserWithEmailAndPassword(auth, email, password)
             .then(async (userCredential) => {
+                // Đăng ký mới chắc chắn chưa có profile nên chỉ cần gọi setDoc
                 await setDoc(doc(db, "users", userCredential.user.uid), { email: email, isVip: false });
                 showMsg('register-msg', '✅ Đăng ký thành công! Đang vào hệ thống...', 'success');
                 window.location.href = 'dashboard.html';
@@ -193,7 +195,13 @@ document.addEventListener('click', async (e) => {
         setPersistence(auth, persistenceType)
             .then(() => signInWithEmailAndPassword(auth, email, password))
             .then(async (userCredential) => { 
-                await setDoc(doc(db, "users", userCredential.user.uid), { email: userCredential.user.email, isVip: false }, { merge: true });
+                // [ĐÃ SỬA] Kỹ thuật bảo vệ cấu trúc VIP: Chỉ khởi tạo nếu profile không tồn tại
+                const userRef = doc(db, "users", userCredential.user.uid);
+                const userSnap = await getDoc(userRef);
+                if (!userSnap.exists()) {
+                    await setDoc(userRef, { email: userCredential.user.email, isVip: false });
+                }
+                
                 const redirectUrl = localStorage.getItem('redirectAfterLogin');
                 if (redirectUrl) {
                     localStorage.removeItem('redirectAfterLogin');
@@ -225,7 +233,13 @@ document.addEventListener('click', async (e) => {
         setPersistence(auth, persistenceType)
             .then(() => signInWithPopup(auth, new GoogleAuthProvider()))
             .then(async (result) => { 
-                await setDoc(doc(db, "users", result.user.uid), { email: result.user.email, isVip: false }, { merge: true });
+                // [ĐÃ SỬA] Kỹ thuật bảo vệ cấu trúc VIP: Chỉ khởi tạo nếu profile không tồn tại
+                const userRef = doc(db, "users", result.user.uid);
+                const userSnap = await getDoc(userRef);
+                if (!userSnap.exists()) {
+                    await setDoc(userRef, { email: result.user.email, isVip: false });
+                }
+
                 const redirectUrl = localStorage.getItem('redirectAfterLogin');
                 if (redirectUrl) {
                     localStorage.removeItem('redirectAfterLogin');
