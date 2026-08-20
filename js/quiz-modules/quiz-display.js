@@ -90,11 +90,11 @@ export function initDisplaySettings() {
             document.head.appendChild(styleTag);
         }
         
-        // Đã bổ sung các thuộc tính ngăn chặn ngắt dọc từ (word-break: normal) cho mọi thẻ con
+        // Fix ngắt ngang từ: Bắt buộc đẩy nguyên chữ xuống dòng nếu thiếu không gian
         styleTag.innerHTML = `
             .question-text, .option-item, .question-text *, .option-item * { 
-                word-break: normal !important; 
-                overflow-wrap: break-word !important; 
+                word-break: keep-all !important; 
+                overflow-wrap: normal !important; 
                 hyphens: none !important; 
             }
             .question-text { font-size: calc(20px * ${currentFontSize / 100}) !important; }
