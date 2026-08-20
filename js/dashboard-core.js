@@ -12,10 +12,10 @@ import { initStatistics } from "./dashboard-core/stats.js";
 import { initRoomModals } from "./dashboard-core/rooms.js";
 import { initRandomExam } from "./dashboard-core/random-exam.js";
 import { initDOMListeners } from "./dashboard-core/dom-listeners.js";
-import { executeAuthUI, initNotificationListener } from "./dashboard-core/user-services.js";
+import { executeAuthUI } from "./dashboard-core/user-services.js";
 
 // RE-EXPORT ĐỂ BẢO TOÀN KIẾN TRÚC CHO CÁC FILE KHÁC (exam-data.js, exam-modals.js...)
-export { app, auth, db, safeRedirect, formatDate, switchTab, initNotificationListener };
+export { app, auth, db, safeRedirect, formatDate, switchTab };
 
 let isComponentsLoaded = false;
 let currentUserInstance = null; 
