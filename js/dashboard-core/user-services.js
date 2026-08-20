@@ -127,11 +127,8 @@ function fetchUserData(user, auth, db) {
                     if (elTopbarAvatar) elTopbarAvatar.src = currentUserData.avatarBase64; 
                 }
 
+                // TIN TƯỞNG 100% VÀO TRẠNG THÁI isVip TỪ DATABASE (ĐƯỢC QUẢN LÝ BỞI ADMIN)
                 if (currentUserData.isVip) {
-                    // =======================================================
-                    // CHỈ RENDER DỮ LIỆU. QUYỀN KIỂM SOÁT VIP ĐƯỢC GIAO TOÀN BỘ CHO ADMIN.
-                    // Client không còn tự động kiểm tra thời hạn hay tự động hạ cấp nữa.
-                    // =======================================================
                     const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
                     const expiryField = currentUserData.vipExpirationDate || currentUserData.vipEnd;
                     
@@ -272,9 +269,6 @@ export async function executeAuthUI(user, auth, db) {
         document.dispatchEvent(authReadyEvent);
     }
 
-    // ==========================================================
-    // BẮT CỜ TỪ TRANG QUIZ ĐỂ TỰ ĐỘNG CHUYỂN TAB VIP
-    // ==========================================================
     if (sessionStorage.getItem('triggerUpgradeTab') === 'true') {
         sessionStorage.removeItem('triggerUpgradeTab'); 
         setTimeout(() => {
