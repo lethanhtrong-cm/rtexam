@@ -3,7 +3,8 @@
 // QUẢN LÝ LOGIC NGHIỆP VỤ: NÚT BẤM, XUẤT EXCEL, BULK ACTIONS
 // ==========================================
 import { db, showToast } from '../admin-core.js';
-import { doc, updateDoc, query, where, getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// [ĐÃ SỬA]: Import thêm setDoc
+import { doc, updateDoc, setDoc, query, where, getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { userState } from './admin-users-data.js';
 import { renderUserList, updateBulkActionBar } from './admin-users-ui.js';
 import { handleViewHistory } from './admin-history.js';
@@ -168,7 +169,7 @@ async function handleToggleVip(userId, currentVipStatus) {
         vipEnd: null
     };
 
-    // 1. CẬP NHẬT TRẠNG THÁI LOCAL NGAY LẬP TỨC (Optimistic UI Update)
+    // 1. CẬP TRẠNG THÁI LOCAL NGAY LẬP TỨC (Optimistic UI Update)
     u.isVip = newVipStatus;
     u.statusKey = newVipStatus ? 'vip' : 'normal';
     
@@ -191,7 +192,9 @@ async function handleToggleVip(userId, currentVipStatus) {
     try {
         // 2. Tiến hành đẩy dữ liệu lên Firestore
         const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, updates);
+        
+        // [ĐÃ SỬA]: Dùng setDoc + merge: true để chống văng lỗi nếu User chưa có Data Profile
+        await setDoc(userRef, updates, { merge: true });
         
         if (newVipStatus) {
             try {
@@ -237,7 +240,8 @@ async function handleToggleBan(userId, currentBannedStatus) {
 
     try {
         const userRef = doc(db, "users", userId);
-        await updateDoc(userRef, { isBanned: newBannedStatus });
+        // [ĐÃ SỬA]: Dùng setDoc + merge: true để tự tạo document nếu chưa tồn tại
+        await setDoc(userRef, { isBanned: newBannedStatus }, { merge: true });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
@@ -321,7 +325,8 @@ export async function handleBulkAction(actionType) {
             u.statusKey = updates.isBanned ? 'banned' : (u.isVip ? 'vip' : 'normal');
         }
 
-        promises.push(updateDoc(doc(db, "users", id), updates));
+        // [ĐÃ SỬA]: Dùng setDoc + merge: true cho Bulk Action
+        promises.push(setDoc(doc(db, "users", id), updates, { merge: true }));
     });
 
     // 2. Vẽ lại UI ngay lập tức
