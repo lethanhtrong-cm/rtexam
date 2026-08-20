@@ -150,9 +150,8 @@ export async function exportUserHistoryToExcel(email) {
         showToast("Xuất Excel thành công!", "success");
 
     } catch (error) {
-        console.error("Lỗi cập nhật VIP:", error);
-        const msg = error.code === 'resource-exhausted' ? "LỖI: Đã hết Quota Firebase ngày hôm nay!" : "Lỗi mạng! Đang khôi phục lại trạng thái cũ...";
-        showToast(msg, "error");
+        console.error("Lỗi khi xuất Excel:", error);
+        showToast("Có lỗi xảy ra trong quá trình xuất Excel.", "error");
     }
 }
 
@@ -189,20 +188,25 @@ async function handleToggleVip(userId, currentVipStatus) {
         await updateDoc(userRef, updates);
         
         if (newVipStatus) {
-            const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
-            const snapshot = await getDocs(q);
-            const paymentPromises = [];
-            snapshot.forEach((docSnap) => {
-                paymentPromises.push(updateDoc(docSnap.ref, { status: "completed" }));
-            });
-            await Promise.all(paymentPromises);
+            try {
+                const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
+                const snapshot = await getDocs(q);
+                const paymentPromises = [];
+                snapshot.forEach((docSnap) => {
+                    paymentPromises.push(updateDoc(docSnap.ref, { status: "completed" }));
+                });
+                await Promise.all(paymentPromises);
+            } catch (err) {
+                console.warn("Bỏ qua lỗi BloomFilter của payment_requests:", err);
+            }
         }
         
         showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
         
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
-        showToast("Lỗi mạng! Đang khôi phục lại trạng thái cũ...", "error");
+        const msg = error.code === 'resource-exhausted' ? "LỖI: Đã hết Quota Firebase ngày hôm nay!" : "Lỗi mạng! Đang khôi phục lại trạng thái cũ...";
+        showToast(msg, "error");
         
         // 3. Rollback (Hoàn tác) nếu có lỗi mạng xảy ra
         u.isVip = currentVipStatus;
