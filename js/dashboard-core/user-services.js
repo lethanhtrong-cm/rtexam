@@ -128,11 +128,9 @@ function fetchUserData(user, auth, db) {
                 }
 
                 if (currentUserData.isVip) {
-                    let isExpired = false;
-                    
                     // =======================================================
-                    // ĐỒNG BỘ TRƯỜNG DỮ LIỆU VỚI ADMIN PANEL ĐỂ CHỐNG AUTO-REVERT
-                    // Lấy dữ liệu từ vipExpirationDate (của Admin) hoặc vipEnd (của hệ thống cũ)
+                    // CHỈ RENDER DỮ LIỆU. QUYỀN KIỂM SOÁT VIP ĐƯỢC GIAO TOÀN BỘ CHO ADMIN.
+                    // Client không còn tự động kiểm tra thời hạn hay tự động hạ cấp nữa.
                     // =======================================================
                     const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
                     const expiryField = currentUserData.vipExpirationDate || currentUserData.vipEnd;
@@ -145,19 +143,6 @@ function fetchUserData(user, auth, db) {
                     let expiryDateObj = null;
                     if (expiryField) {
                         expiryDateObj = expiryField.toDate ? expiryField.toDate() : new Date(expiryField);
-                        
-                        // Kiểm tra thời hạn an toàn, tránh lỗi NaN
-                        if (!isNaN(expiryDateObj.getTime()) && expiryDateObj.getTime() < Date.now()) {
-                            isExpired = true;
-                        }
-                    }
-
-                    if (isExpired) {
-                        currentUserData.isVip = false;
-                        // LỆNH TỰ ĐỘNG GHI ĐÈ DATABASE CỦA CLIENT ĐÃ BỊ XÓA BỎ HOÀN TOÀN TẠI ĐÂY
-                        setVipInactive();
-                        resolve(currentUserData);
-                        return; 
                     }
                     
                     const elVipStatusBadge = document.getElementById("vipStatusBadge");
