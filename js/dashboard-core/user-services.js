@@ -151,7 +151,7 @@ function fetchUserData(user, auth, db) {
 
                     if (isExpired) {
                         currentUserData.isVip = false;
-                        // ĐÃ XÓA LỆNH GHI ĐÈ DATABASE Ở ĐÂY ĐỂ TRÁNH LỖI TỰ ĐỘNG HẠ CẤP KHI ĐỒNG HỒ CLIENT SAI
+                        // Đã gỡ bỏ lệnh setDoc tự động hạ cấp VIP để bảo vệ dữ liệu trên Server
                         setVipInactive();
                         resolve(currentUserData);
                         return; 
