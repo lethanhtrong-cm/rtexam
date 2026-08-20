@@ -29,6 +29,8 @@ let isShowExplanation = false;
 let isNavigating = false; 
 let isAntiCheatEnabled = false;
 
+let isCurrentUserVip = false;
+
 let timerInterval;
 let examDuration = 15 * 60; 
 let timeRemaining = examDuration;
@@ -105,12 +107,28 @@ async function returnToLobbyOrDashboard() {
     else redirect('dashboard.html');
 }
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (!user || user.isAnonymous) {
         localStorage.setItem('redirectAfterLogin', window.location.href);
         redirect('index.html');
     } else {
         currentUser = user;
+        
+        try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                const ud = userDoc.data();
+                if (ud.isVip) {
+                    const expiryField = ud.vipExpirationDate || ud.vipEnd;
+                    if (expiryField) {
+                        const vipEnd = expiryField.toDate ? expiryField.toDate() : new Date(expiryField);
+                        if (vipEnd.getTime() > Date.now()) {
+                            isCurrentUserVip = true;
+                        }
+                    }
+                }
+        } catch (e) { console.error(e); }
+
         if (currentResultId) {
             loadReviewMode(currentResultId);
         } else if (currentExamId) {
@@ -172,7 +190,7 @@ async function loadExamDataAndQuestions() {
 async function initExamState() {
     isSubmitted = false;
     isShowExplanation = false;
-    resetAntiCheatWarning(); // Chuyển logic reset vào trong Module
+    resetAntiCheatWarning(); 
     
     const hasDraft = loadDraft();
     if (!hasDraft) {
@@ -211,6 +229,12 @@ async function initExamState() {
 }
 
 async function loadReviewMode(resultId) {
+    if (!isCurrentUserVip) {
+        alert("Tính năng Xem lại bài làm và giải thích chi tiết chỉ dành cho Tài khoản PRO!");
+        returnToLobbyOrDashboard();
+        return;
+    }
+
     document.getElementById('skeleton-container').classList.add('active');
     document.getElementById('real-content').classList.add('hidden');
 
@@ -447,8 +471,11 @@ async function executeSubmit() {
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
-            await updateDoc(userRef, { examStatus: 'idle' });
-        } catch (err) {}
+            const ud = (await getDoc(userRef)).data() || {};
+            const newTotal = (ud.totalScore || 0) + finalScore;
+            const newCount = (ud.examCount || 0) + 1;
+            await updateDoc(userRef, { examStatus: 'idle', totalScore: newTotal, examCount: newCount, avgScore: parseFloat((newTotal / newCount).toFixed(2)) });
+        } catch (err) { console.error(err); }
     }
 
     renderAll(); 
@@ -462,7 +489,6 @@ async function executeSubmit() {
             savedAnswers: userAnswers, timeSpent: timeSpent, timestamp: new Date().toISOString() 
         });
 
-        // TÍNH NĂNG MỚI: Chỉ cộng 1 lượt thi nếu làm trên 75% số câu hỏi
         const answeredCount = Object.keys(userAnswers).length;
         if (finalTotal > 0 && (answeredCount / finalTotal) >= 0.75) {
             const examDocRef = doc(db, "exams", currentExamId);
@@ -723,6 +749,32 @@ function showResultModal(correctCount, total, score, xp = 0, isRetake = false, i
         }
     }
 
+    // ==========================================================
+    // LOGIC: ĐỔI TÊN NÚT BẤM DỰA TRÊN TRẠNG THÁI VIP
+    // ==========================================================
+    const btnExplain = document.getElementById('btn-modal-explain');
+    if (isCurrentUserVip) {
+        btnExplain.innerText = "Xem lại ĐÁP ÁN và GIẢI THÍCH";
+        btnExplain.removeAttribute("style");
+    } else {
+        btnExplain.innerHTML = '<div style="line-height:1.2"><i class="fa-solid fa-lock"></i> Xem lại ĐÁP ÁN và GIẢI THÍCH</div><div style="font-size:0.85rem; margin-top:5px; color:#fef08a">(Cần nâng cấp PRO)</div>';
+        btnExplain.style.cssText = "background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); display:flex; flex-direction:column; padding:10px; box-shadow: 0 4px 12px rgba(239,68,68,0.4); border:none;";
+    }
+
+    // ==========================================================
+    // LOGIC: CHẶN VÀ ĐIỀU HƯỚNG KHI BẤM NÚT XEM LẠI TRONG MODAL
+    // ==========================================================
+    btnExplain.onclick = () => { 
+        if (isCurrentUserVip) {
+            closeModal(); 
+            openReviewModal(finalScore, finalCorrectCount, finalTotal); 
+        } else {
+            alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
+            sessionStorage.setItem('triggerUpgradeTab', 'true');
+            redirect('dashboard.html');
+        }
+    };
+
     resetFeedbackUI(); 
     modal.classList.add('active');
 }
@@ -732,7 +784,16 @@ function closeModal() { document.getElementById('result-modal').classList.remove
 document.getElementById('btn-modal-dashboard-modal').onclick = () => returnToLobbyOrDashboard();
 document.getElementById('btn-back-dashboard').onclick = () => returnToLobbyOrDashboard();
 document.getElementById('btn-modal-retry').onclick = () => { closeModal(); initExamState(); };
-document.getElementById('btn-modal-explain').onclick = () => { closeModal(); openReviewModal(finalScore, finalCorrectCount, finalTotal); };
+
+document.getElementById('btn-modal-explain').onclick = () => { 
+    if (isCurrentUserVip) {
+        closeModal(); 
+        openReviewModal(finalScore, finalCorrectCount, finalTotal); 
+    } else {
+        alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
+        redirect('dashboard.html');
+    }
+};
 
 // =========================================================================
 // QUẢN LÝ GIAO DIỆN CÂU HỎI
@@ -775,7 +836,6 @@ function renderQuestion() {
     const options = questionData.options || [];
 
     document.getElementById('question-badge').innerText = `Câu ${currentIndex + 1}`;
-    // CHỐNG GIAN LẬN: Mã này tự động gọi hàm obfuscateText từ quiz-anti-cheat.js
     document.getElementById('question-text').innerHTML = obfuscateText(questionText, isSubmitted, isShowExplanation);
     
     const container = document.getElementById('options-container');
