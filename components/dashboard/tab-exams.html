@@ -1,88 +1,92 @@
-<div class="quick-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; width: 100%;">
-    <div class="quick-stat-card stat-card-completed">
-        <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
-        <div class="stat-info">
-            <span class="stat-label">Đã hoàn thành</span>
-            <h3 id="statCompletedExams" class="stat-value"><span class="skeleton-loader stat-skeleton-text"></span></h3>
-        </div>
-    </div>
-    <div class="quick-stat-card stat-card-avg">
-        <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
-        <div class="stat-info">
-            <span class="stat-label">Điểm trung bình</span>
-            <h3 id="statAvgScore" class="stat-value"><span class="skeleton-loader stat-skeleton-text"></span></h3>
-        </div>
-    </div>
-    
-    <!-- THẺ TỔNG ĐIỂM TÍCH LŨY MỚI THÊM -->
-    <div class="quick-stat-card stat-card-xp">
-        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;"><i class="fa-solid fa-star"></i></div>
-        <div class="stat-info">
-            <span class="stat-label">Điểm tích lũy XP</span>
-            <h3 id="statTotalXP" class="stat-value"><span class="skeleton-loader stat-skeleton-text"></span></h3>
-        </div>
-    </div>
-
-    <div class="quick-stat-card stat-card-account">
-        <div class="stat-icon"><i class="fa-solid fa-user-shield"></i></div>
-        <div class="stat-info">
-            <span class="stat-label">Thứ hạng của bạn</span>
-            <h3 id="statAccountStatus" class="stat-value"><span class="skeleton-loader stat-skeleton-text"></span></h3>
-        </div>
-    </div>
-</div>
-
-<!-- KHỐI TÌM KIẾM VÀ BỘ LỌC ĐÃ ĐƯỢC GỘP CHUNG -->
-<div class="action-bar" style="padding: 12px 20px; margin-bottom: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%;">
-        
-        <!-- Thanh tìm kiếm được làm rộng ra (flex: 1) -->
-        <div class="action-search" style="flex: 1; min-width: 280px;">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm..." style="width: 100%;">
-        </div>
-
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
-            <div class="filter-group">
-                <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
-                <div class="pill-group" id="levelFilter">
-                    <button class="pill-btn active" data-level="all">Tất cả</button>
-                    <button class="pill-btn" data-level="Khó">Khó</button>
-                    <button class="pill-btn" data-level="Trung bình">Trung bình</button>
-                    <button class="pill-btn" data-level="Dễ">Dễ</button>
-                </div>
+<!-- ĐÃ THÊM: Bọc khối Thống kê và khối Lọc vào chung một thẻ div có class sticky -->
+<div class="sticky-toolbar-wrapper">
+    <div class="quick-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; width: 100%;">
+        <div class="quick-stat-card stat-card-completed">
+            <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Đã hoàn thành</span>
+                <h3 id="statCompletedExams" class="stat-value"><span class="skeleton-loader stat-skeleton-text"></span></h3>
             </div>
-            <div class="filter-group">
-                <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
-                <div class="pill-group" id="timeFilter">
-                    <button class="pill-btn active" data-time="all">Tất cả</button>
-                    <button class="pill-btn" data-time="15">15 phút</button>
-                    <button class="pill-btn" data-time="30">30 phút</button>
-                    <button class="pill-btn" data-time="45">45 phút</button>
-                </div>
+        </div>
+        <div class="quick-stat-card stat-card-avg">
+            <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Điểm trung bình</span>
+                <h3 id="statAvgScore" class="stat-value"><span class="skeleton-loader stat-skeleton-text"></span></h3>
             </div>
         </div>
         
-        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-            <div class="sort-wrapper">
-                <i class="fa-solid fa-sort-amount-down"></i>
-                <select id="sortFilter" class="modern-select">
-                    <option value="newest">Mới nhất</option>
-                    <option value="highest_rating">Đánh giá cao nhất</option>
-                    <option value="most_attempts">Lượt thi nhiều nhất</option>
-                    <option value="only_vip">Chỉ hiện đề PRO</option>
-                    <option value="only_free">Chỉ hiện đề Miễn phí</option>
-                </select>
+        <!-- THẺ TỔNG ĐIỂM TÍCH LŨY MỚI THÊM -->
+        <div class="quick-stat-card stat-card-xp">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;"><i class="fa-solid fa-star"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Điểm tích lũy XP</span>
+                <h3 id="statTotalXP" class="stat-value"><span class="skeleton-loader stat-skeleton-text"></span></h3>
+            </div>
+        </div>
+
+        <div class="quick-stat-card stat-card-account">
+            <div class="stat-icon"><i class="fa-solid fa-user-shield"></i></div>
+            <div class="stat-info">
+                <span class="stat-label">Thứ hạng của bạn</span>
+                <h3 id="statAccountStatus" class="stat-value"><span class="skeleton-loader stat-skeleton-text"></span></h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHỐI TÌM KIẾM VÀ BỘ LỌC ĐÃ ĐƯỢC GỘP CHUNG -->
+    <div class="action-bar" style="padding: 12px 20px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%;">
+            
+            <!-- Thanh tìm kiếm được làm rộng ra (flex: 1) -->
+            <div class="action-search" style="flex: 1; min-width: 280px;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="Nhập mã đề cần tìm..." style="width: 100%;">
+            </div>
+
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+                <div class="filter-group">
+                    <span class="filter-label"><i class="fa-solid fa-layer-group"></i> Cấp độ:</span>
+                    <div class="pill-group" id="levelFilter">
+                        <button class="pill-btn active" data-level="all">Tất cả</button>
+                        <button class="pill-btn" data-level="Khó">Khó</button>
+                        <button class="pill-btn" data-level="Trung bình">Trung bình</button>
+                        <button class="pill-btn" data-level="Dễ">Dễ</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <span class="filter-label"><i class="fa-solid fa-stopwatch"></i> Thời gian:</span>
+                    <div class="pill-group" id="timeFilter">
+                        <button class="pill-btn active" data-time="all">Tất cả</button>
+                        <button class="pill-btn" data-time="15">15 phút</button>
+                        <button class="pill-btn" data-time="30">30 phút</button>
+                        <button class="pill-btn" data-time="45">45 phút</button>
+                    </div>
+                </div>
             </div>
             
-            <div class="view-toggle-group" id="viewToggleGroup">
-                <button id="btn-view-grid" class="view-btn active" data-view="grid"><i class="fa-solid fa-border-all"></i></button>
-                <button id="btn-view-list" class="view-btn" data-view="list"><i class="fa-solid fa-list"></i></button>
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div class="sort-wrapper">
+                    <i class="fa-solid fa-sort-amount-down"></i>
+                    <select id="sortFilter" class="modern-select">
+                        <option value="newest">Mới nhất</option>
+                        <option value="highest_rating">Đánh giá cao nhất</option>
+                        <option value="most_attempts">Lượt thi nhiều nhất</option>
+                        <option value="only_vip">Chỉ hiện đề PRO</option>
+                        <option value="only_free">Chỉ hiện đề Miễn phí</option>
+                    </select>
+                </div>
+                
+                <div class="view-toggle-group" id="viewToggleGroup">
+                    <button id="btn-view-grid" class="view-btn active" data-view="grid"><i class="fa-solid fa-border-all"></i></button>
+                    <button id="btn-view-list" class="view-btn" data-view="list"><i class="fa-solid fa-list"></i></button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Vùng chứa danh sách đề thi (Nằm ngoài khối sticky để cuộn tự do) -->
 <div id="examListContainer" class="grid-view">
     <div class="course-card-skeleton"><div class="skeleton-loader sk-badge"></div><div class="skeleton-loader sk-title"></div></div>
 </div>
