@@ -1,5 +1,5 @@
 // =========================================================================
-// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (ĐÃ FIX LỖI TĂNG GIẢM SIZE CHỮ)
+// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (ĐÃ FIX LỖI TĂNG GIẢM SIZE CHỮ VÀ NGẮT TỪ)
 // =========================================================================
 export function initDisplaySettings() {
     // 1. Tiêm style động hỗ trợ chế độ đọc Sepia (Không làm vỡ Dark Mode hiện tại)
@@ -76,7 +76,7 @@ export function initDisplaySettings() {
         if (!panel.contains(e.target) && !btnSettings.contains(e.target)) panel.style.display = 'none';
     });
 
-    // 4. Logic thay đổi Cỡ chữ (Sử dụng CSS Calc để ghi đè class cố định)
+    // 4. Logic thay đổi Cỡ chữ (Sử dụng CSS Calc để ghi đè class cố định và fix cắt chữ)
     let currentFontSize = 100;
     const updateFontSize = (val) => {
         if (!val || isNaN(val)) val = 100;
@@ -90,7 +90,13 @@ export function initDisplaySettings() {
             document.head.appendChild(styleTag);
         }
         
+        // Đã bổ sung các thuộc tính ngăn chặn ngắt dọc từ (word-break: normal) cho mọi thẻ con
         styleTag.innerHTML = `
+            .question-text, .option-item, .question-text *, .option-item * { 
+                word-break: normal !important; 
+                overflow-wrap: break-word !important; 
+                hyphens: none !important; 
+            }
             .question-text { font-size: calc(20px * ${currentFontSize / 100}) !important; }
             .option-item { font-size: calc(16px * ${currentFontSize / 100}) !important; }
             @media (max-width: 768px) {
