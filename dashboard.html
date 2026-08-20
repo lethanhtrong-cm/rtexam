@@ -7,6 +7,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="./css/dashboard.css">
+
+    <!-- CSS Tùy chỉnh: Cố định thanh thống kê và bộ lọc đề thi -->
+    <style>
+        .sticky-toolbar-wrapper {
+            position: sticky;
+            top: 70px; /* Bù trừ khoảng cách với thanh Topbar phía trên */
+            z-index: 90; /* Đảm bảo khối này luôn nổi lên trên các thẻ đề thi khi cuộn */
+            background-color: #f8fafc; /* Đồng bộ màu nền để không bị chữ đè lộn xộn */
+            padding-bottom: 10px; /* Tạo khoảng trống hở một chút so với card đề thi */
+        }
+    </style>
 </head>
 <body>
 
