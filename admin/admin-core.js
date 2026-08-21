@@ -77,30 +77,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// VÁ LỖI: Load HTML an toàn, tự tạo thẻ container nếu bị thiếu trên DOM
+// VÁ LỖI: Thêm khối kiểm tra phần tử (container) tồn tại trước khi gán innerHTML
 async function loadComponent(elementId, filePath) {
     try {
         const response = await fetch(filePath);
         if (!response.ok) throw new Error(`Lỗi HTTP status: ${response.status}`);
         const html = await response.text();
-        
-        let container = document.getElementById(elementId);
-        if (!container) {
-            container = document.createElement('div');
-            container.id = elementId;
-            document.body.appendChild(container);
+        const container = document.getElementById(elementId);
+        if (container) {
+            container.innerHTML = html;
         }
-        
-        container.innerHTML = html;
     } catch (error) {
         console.error(`Không thể tải component ${filePath}:`, error);
     }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // VÁ LỖI: Bỏ qua kiểm tra rỗng, luôn luôn tải để cung cấp DOM cho các file JS khác
-    await loadComponent('sidebar-container', './components/sidebar.html');
-    await loadComponent('modals-container', './components/modal.html');
+    // VÁ LỖI: Chỉ tải nội dung file html vào khi thẻ container đang rỗng
+    const sidebar = document.getElementById('sidebar-container');
+    if (sidebar && sidebar.innerHTML.trim() === '') {
+        await loadComponent('sidebar-container', './components/sidebar.html');
+    }
+
+    const modals = document.getElementById('modals-container');
+    if (modals && modals.innerHTML.trim() === '') {
+        await loadComponent('modals-container', './components/modal.html');
+    }
 
     initSidebarEvents();
     initModalEvents();
@@ -177,6 +179,7 @@ function initAuthEvents() {
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
             signOut(auth).then(() => {
+                // F5 lại trang để kích hoạt màn hình khóa
                 window.location.reload(); 
             }).catch((error) => {
                 showToast("Lỗi khi đăng xuất: " + error.message, "error");
