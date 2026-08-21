@@ -556,7 +556,7 @@
             const tbody = document.getElementById('recent-exams-body');
             if (!tbody) return;
 
-            const q = query(collection(db, "results"), orderBy("createdAt", "desc"), limit(20));
+            const q = query(collection(db, "results"), orderBy("timestamp", "desc"), limit(20));
             onSnapshot(q, (snapshot) => {
                 tbody.innerHTML = '';
                 if (snapshot.empty) {
