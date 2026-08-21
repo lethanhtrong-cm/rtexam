@@ -77,16 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// VÁ LỖI: Thêm khối kiểm tra phần tử (container) tồn tại trước khi gán innerHTML
 async function loadComponent(elementId, filePath) {
     try {
         const response = await fetch(filePath);
         if (!response.ok) throw new Error(`Lỗi HTTP status: ${response.status}`);
         const html = await response.text();
-        const container = document.getElementById(elementId);
-        if (container) {
-            container.innerHTML = html;
+        
+        let container = document.getElementById(elementId);
+        if (!container) {
+            container = document.createElement('div');
+            container.id = elementId;
+            document.body.appendChild(container);
         }
+        
+        container.innerHTML = html;
     } catch (error) {
         console.error(`Không thể tải component ${filePath}:`, error);
     }
