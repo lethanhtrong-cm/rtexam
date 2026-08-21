@@ -44,38 +44,45 @@ export function initQuizUI(db, ctx, actions) {
         const questionText = questionData.text || "Câu hỏi không có nội dung";
         const options = questionData.options || [];
 
-        document.getElementById('question-badge').innerText = `Câu ${ctx.currentIndex + 1}`;
-        document.getElementById('question-text').innerHTML = obfuscateText(questionText, ctx.isSubmitted, ctx.isShowExplanation);
+        const badge = document.getElementById('question-badge');
+        if (badge) badge.innerText = `Câu ${ctx.currentIndex + 1}`;
+        
+        const textContainer = document.getElementById('question-text');
+        if (textContainer) textContainer.innerHTML = obfuscateText(questionText, ctx.isSubmitted, ctx.isShowExplanation);
         
         const container = document.getElementById('options-container');
-        container.innerHTML = ''; 
+        if (container) {
+            container.innerHTML = ''; 
+            options.forEach((opt, idx) => {
+                const div = document.createElement('div');
+                let extraClasses = '';
+                
+                if (ctx.isSubmitted) extraClasses += ' disabled';
+                if (ctx.userAnswers[ctx.currentIndex] === idx) extraClasses += ' selected';
 
-        options.forEach((opt, idx) => {
-            const div = document.createElement('div');
-            let extraClasses = '';
-            
-            if (ctx.isSubmitted) extraClasses += ' disabled';
-            if (ctx.userAnswers[ctx.currentIndex] === idx) extraClasses += ' selected';
-
-            div.className = 'option-item' + extraClasses;
-            div.innerHTML = `<div class="option-label">${['A','B','C','D', 'E', 'F'][idx]}</div><div>${obfuscateText(opt, ctx.isSubmitted, ctx.isShowExplanation)}</div>`;
-            
-            div.onclick = () => handleOptionSelect(idx);
-            container.appendChild(div);
-        });
+                div.className = 'option-item' + extraClasses;
+                div.innerHTML = `<div class="option-label">${['A','B','C','D', 'E', 'F'][idx]}</div><div>${obfuscateText(opt, ctx.isSubmitted, ctx.isShowExplanation)}</div>`;
+                
+                div.onclick = () => handleOptionSelect(idx);
+                container.appendChild(div);
+            });
+        }
 
         const btnFlag = document.getElementById('btn-flag');
-        if (ctx.flaggedQuestions[ctx.currentIndex]) {
-            btnFlag.classList.add('active');
-            btnFlag.innerHTML = '<i class="fa-solid fa-flag"></i> Bỏ đánh dấu';
-        } else {
-            btnFlag.classList.remove('active');
-            btnFlag.innerHTML = '<i class="fa-regular fa-flag"></i> Đánh dấu';
+        if (btnFlag) {
+            if (ctx.flaggedQuestions[ctx.currentIndex]) {
+                btnFlag.classList.add('active');
+                btnFlag.innerHTML = '<i class="fa-solid fa-flag"></i> Bỏ đánh dấu';
+            } else {
+                btnFlag.classList.remove('active');
+                btnFlag.innerHTML = '<i class="fa-regular fa-flag"></i> Đánh dấu';
+            }
         }
     }
 
     function renderPalette() {
         const container = document.getElementById('palette-container');
+        if (!container) return;
         container.innerHTML = '';
         
         ctx.questions.forEach((q, idx) => {
@@ -97,16 +104,26 @@ export function initQuizUI(db, ctx, actions) {
         if (progressBar) progressBar.style.width = `${progressPercent}%`;
     }
 
-    document.getElementById('btn-flag').onclick = () => {
-        if (ctx.isSubmitted) return;
-        ctx.flaggedQuestions[ctx.currentIndex] = !ctx.flaggedQuestions[ctx.currentIndex];
-        actions.saveDraft(); 
-        renderQuestion();
-        renderPalette();
-    };
+    const btnFlag = document.getElementById('btn-flag');
+    if (btnFlag) {
+        btnFlag.onclick = () => {
+            if (ctx.isSubmitted) return;
+            ctx.flaggedQuestions[ctx.currentIndex] = !ctx.flaggedQuestions[ctx.currentIndex];
+            actions.saveDraft(); 
+            renderQuestion();
+            renderPalette();
+        };
+    }
 
-    document.getElementById('btn-prev').onclick = () => { if(ctx.currentIndex > 0) { ctx.currentIndex--; actions.saveDraft(); renderAll(); } };
-    document.getElementById('btn-next').onclick = () => { if(ctx.currentIndex < ctx.questions.length - 1) { ctx.currentIndex++; actions.saveDraft(); renderAll(); } };
+    const btnPrev = document.getElementById('btn-prev');
+    if (btnPrev) {
+        btnPrev.onclick = () => { if(ctx.currentIndex > 0) { ctx.currentIndex--; actions.saveDraft(); renderAll(); } };
+    }
+    
+    const btnNext = document.getElementById('btn-next');
+    if (btnNext) {
+        btnNext.onclick = () => { if(ctx.currentIndex < ctx.questions.length - 1) { ctx.currentIndex++; actions.saveDraft(); renderAll(); } };
+    }
 
     document.addEventListener('keydown', (e) => {
         if (ctx.questions.length === 0 || document.activeElement.tagName === 'TEXTAREA') return;
@@ -129,14 +146,25 @@ export function initQuizUI(db, ctx, actions) {
         
         if (!isAutoSubmit) {
             const confirmModal = document.getElementById('confirm-submit-modal');
-            document.getElementById('confirm-submit-text').innerText = `Bạn đã hoàn thành ${answeredCount}/${total} câu hỏi.\nBạn có chắc chắn muốn nộp bài lúc này?`;
+            if (!confirmModal) { actions.executeSubmit(); return; } // Fallback an toàn nếu Modal bị thiếu
+            
+            const confirmText = document.getElementById('confirm-submit-text');
+            if (confirmText) confirmText.innerText = `Bạn đã hoàn thành ${answeredCount}/${total} câu hỏi.\nBạn có chắc chắn muốn nộp bài lúc này?`;
+            
             confirmModal.classList.add('active');
             
-            document.getElementById('btn-confirm-submit').onclick = () => {
-                confirmModal.classList.remove('active');
-                actions.executeSubmit();
-            };
-            document.getElementById('btn-cancel-submit').onclick = () => { confirmModal.classList.remove('active'); };
+            const btnConfirmSubmit = document.getElementById('btn-confirm-submit');
+            if (btnConfirmSubmit) {
+                btnConfirmSubmit.onclick = () => {
+                    confirmModal.classList.remove('active');
+                    actions.executeSubmit();
+                };
+            }
+            
+            const btnCancelSubmit = document.getElementById('btn-cancel-submit');
+            if (btnCancelSubmit) {
+                btnCancelSubmit.onclick = () => { confirmModal.classList.remove('active'); };
+            }
         } else {
             showToast("Hệ thống đang tự động thu bài!");
             actions.executeSubmit();
@@ -150,6 +178,8 @@ export function initQuizUI(db, ctx, actions) {
     function openReviewModal(score, correctCount, total) {
         const modal = document.getElementById('reviewExamModal');
         const contentArea = document.getElementById('reviewContentArea');
+        if (!modal || !contentArea) return;
+
         modal.classList.add('active');
 
         let html = `
@@ -242,25 +272,35 @@ export function initQuizUI(db, ctx, actions) {
         reportingQuestionText = qText;
         
         let previewText = qText.length > 70 ? qText.substring(0, 70) + '...' : qText;
-        document.getElementById('reportQuestionTextPreview').innerText = previewText;
-        document.getElementById('reportErrorType').value = 'Sai đáp án';
-        document.getElementById('reportDescription').value = '';
-        document.getElementById('reportQuestionModal').classList.add('active');
+        const textPreview = document.getElementById('reportQuestionTextPreview');
+        if (textPreview) textPreview.innerText = previewText;
+        
+        const typeInput = document.getElementById('reportErrorType');
+        if (typeInput) typeInput.value = 'Sai đáp án';
+        
+        const descInput = document.getElementById('reportDescription');
+        if (descInput) descInput.value = '';
+        
+        document.getElementById('reportQuestionModal')?.classList.add('active');
     }
 
-    document.getElementById('btnCancelReport').addEventListener('click', () => { document.getElementById('reportQuestionModal').classList.remove('active'); });
+    document.getElementById('btnCancelReport')?.addEventListener('click', () => { 
+        document.getElementById('reportQuestionModal')?.classList.remove('active'); 
+    });
 
-    document.getElementById('btnSubmitReport').addEventListener('click', async () => {
+    document.getElementById('btnSubmitReport')?.addEventListener('click', async () => {
         if (!ctx.currentUser) { showToast("Bạn cần đăng nhập để gửi báo cáo!"); return; }
         
-        const errorType = document.getElementById('reportErrorType').value;
-        const description = document.getElementById('reportDescription').value.trim();
+        const errorType = document.getElementById('reportErrorType')?.value || 'Khác';
+        const description = document.getElementById('reportDescription')?.value.trim() || '';
         
         if (!description) { showToast("Vui lòng nhập mô tả chi tiết lỗi!"); return; }
         
         const btnSubmit = document.getElementById('btnSubmitReport');
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+        if (btnSubmit) {
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+        }
         
         try {
             await addDoc(collection(db, "reported_questions"), {
@@ -270,18 +310,19 @@ export function initQuizUI(db, ctx, actions) {
             });
             
             showToast("Đã gửi báo cáo lỗi. Xin cảm ơn sự đóng góp của bạn!");
-            document.getElementById('reportQuestionModal').classList.remove('active');
+            document.getElementById('reportQuestionModal')?.classList.remove('active');
         } catch (error) {
             showToast("Đã xảy ra lỗi khi gửi dữ liệu. Vui lòng thử lại sau!");
         } finally {
-            btnSubmit.disabled = false;
-            btnSubmit.innerText = "Gửi Báo Cáo";
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = "Gửi Báo Cáo";
+            }
         }
     });
 
     let selectedStars = 0;
     const stars = document.querySelectorAll('#star-rating span');
-
     stars.forEach(star => {
         star.onclick = () => {
             selectedStars = parseInt(star.getAttribute('data-value'));
@@ -292,116 +333,142 @@ export function initQuizUI(db, ctx, actions) {
         };
     });
 
-    document.getElementById('btn-submit-feedback').onclick = async () => {
-        if (selectedStars === 0) { showToast("Vui lòng chọn số sao để đánh giá!"); return; }
-        const text = document.getElementById('feedback-text').value;
-        const btn = document.getElementById('btn-submit-feedback');
-        btn.innerText = "Đang gửi..."; btn.disabled = true;
+    const btnSubmitFeedback = document.getElementById('btn-submit-feedback');
+    if (btnSubmitFeedback) {
+        btnSubmitFeedback.onclick = async () => {
+            if (selectedStars === 0) { showToast("Vui lòng chọn số sao để đánh giá!"); return; }
+            const text = document.getElementById('feedback-text')?.value || "";
+            
+            btnSubmitFeedback.innerText = "Đang gửi..."; 
+            btnSubmitFeedback.disabled = true;
 
-        try {
-            await addDoc(collection(db, "feedbacks"), {
-                examId: ctx.currentExamId, email: ctx.currentUser.email, rating: selectedStars, comment: text, timestamp: new Date().toISOString()
-            });
-            document.getElementById('feedback-section').style.display = 'none';
-            document.getElementById('feedback-thankyou').style.display = 'block';
-        } catch (error) {
-            showToast("Lỗi khi gửi đánh giá. Vui lòng thử lại!");
-            btn.innerText = "Gửi Đánh Giá"; btn.disabled = false;
-        }
-    };
+            try {
+                await addDoc(collection(db, "feedbacks"), {
+                    examId: ctx.currentExamId, email: ctx.currentUser.email, rating: selectedStars, comment: text, timestamp: new Date().toISOString()
+                });
+                const fSection = document.getElementById('feedback-section');
+                const fThanks = document.getElementById('feedback-thankyou');
+                if(fSection) fSection.style.display = 'none';
+                if(fThanks) fThanks.style.display = 'block';
+            } catch (error) {
+                showToast("Lỗi khi gửi đánh giá. Vui lòng thử lại!");
+                btnSubmitFeedback.innerText = "Gửi Đánh Giá"; 
+                btnSubmitFeedback.disabled = false;
+            }
+        };
+    }
 
     function resetFeedbackUI() {
-        document.getElementById('feedback-section').style.display = 'block';
-        document.getElementById('feedback-thankyou').style.display = 'none';
+        const fSection = document.getElementById('feedback-section');
+        const fThanks = document.getElementById('feedback-thankyou');
+        if (fSection) fSection.style.display = 'block';
+        if (fThanks) fThanks.style.display = 'none';
+        
         selectedStars = 0;
         stars.forEach(s => s.classList.remove('active'));
-        document.getElementById('feedback-text').value = '';
-        const btn = document.getElementById('btn-submit-feedback');
-        btn.innerText = "Gửi Đánh Giá"; btn.disabled = false;
+        
+        const fText = document.getElementById('feedback-text');
+        if(fText) fText.value = '';
+        
+        if(btnSubmitFeedback) {
+            btnSubmitFeedback.innerText = "Gửi Đánh Giá"; 
+            btnSubmitFeedback.disabled = false;
+        }
     }
 
     function showResultModal(correctCount, total, score, xp = 0, isRetake = false, isNewRecord = false, attendanceBonus = 0) {
         const modal = document.getElementById('result-modal');
-        document.getElementById('modal-score-text').innerText = score;
-        document.getElementById('modal-correct-text').innerText = `${correctCount}/${total}`;
+        if (!modal) return;
+        
+        const scoreTxt = document.getElementById('modal-score-text');
+        if(scoreTxt) scoreTxt.innerText = score;
+        
+        const correctTxt = document.getElementById('modal-correct-text');
+        if(correctTxt) correctTxt.innerText = `${correctCount}/${total}`;
         
         const percentage = total > 0 ? (correctCount / total) * 100 : 0;
         const scoreCircle = document.getElementById('modal-score-circle');
-        scoreCircle.style.background = `conic-gradient(#10b981 ${percentage}%, #d1fae5 ${percentage}%)`;
+        if (scoreCircle) scoreCircle.style.background = `conic-gradient(#10b981 ${percentage}%, #d1fae5 ${percentage}%)`;
 
         let xpDisplay = document.getElementById('modal-xp-display');
-        if (!xpDisplay) {
+        if (!xpDisplay && scoreCircle && scoreCircle.parentNode) {
             xpDisplay = document.createElement('div');
             xpDisplay.id = 'modal-xp-display';
             xpDisplay.style.cssText = "margin-top: 15px; font-weight: bold; font-size: 1.1rem; padding: 5px 15px; border-radius: 20px; display: inline-block; box-shadow: 0 2px 5px rgba(0,0,0,0.05);";
-            if (scoreCircle && scoreCircle.parentNode) {
-                scoreCircle.parentNode.insertBefore(xpDisplay, scoreCircle.nextSibling);
-            }
+            scoreCircle.parentNode.insertBefore(xpDisplay, scoreCircle.nextSibling);
         }
         
-        xpDisplay.style.display = 'inline-block';
-        
-        let totalXPShow = xp + attendanceBonus;
-        let attText = attendanceBonus > 0 ? " + Điểm danh" : "";
-        
-        if (!isRetake) {
-            xpDisplay.innerHTML = `🌟 +${totalXPShow} XP${attendanceBonus > 0 ? ' (Gồm Điểm danh)' : ''}`;
-            xpDisplay.style.color = "#ea580c";
-            xpDisplay.style.background = "#ffedd5";
-        } else {
-            if (isNewRecord && xp > 0) {
-                xpDisplay.innerHTML = `🔥 +${totalXPShow} XP (Vượt kỷ lục${attText})`;
+        if (xpDisplay) {
+            xpDisplay.style.display = 'inline-block';
+            let totalXPShow = xp + attendanceBonus;
+            let attText = attendanceBonus > 0 ? " + Điểm danh" : "";
+            
+            if (!isRetake) {
+                xpDisplay.innerHTML = `🌟 +${totalXPShow} XP${attendanceBonus > 0 ? ' (Gồm Điểm danh)' : ''}`;
                 xpDisplay.style.color = "#ea580c";
                 xpDisplay.style.background = "#ffedd5";
             } else {
-                xpDisplay.innerHTML = `💡 +${totalXPShow} XP (Chuyên cần${attText})`;
-                xpDisplay.style.color = "#059669"; 
-                xpDisplay.style.background = "#d1fae5";
+                if (isNewRecord && xp > 0) {
+                    xpDisplay.innerHTML = `🔥 +${totalXPShow} XP (Vượt kỷ lục${attText})`;
+                    xpDisplay.style.color = "#ea580c";
+                    xpDisplay.style.background = "#ffedd5";
+                } else {
+                    xpDisplay.innerHTML = `💡 +${totalXPShow} XP (Chuyên cần${attText})`;
+                    xpDisplay.style.color = "#059669"; 
+                    xpDisplay.style.background = "#d1fae5";
+                }
             }
         }
 
         const btnExplain = document.getElementById('btn-modal-explain');
-        if (ctx.isCurrentUserVip) {
-            btnExplain.innerText = "Xem lại ĐÁP ÁN và GIẢI THÍCH";
-            btnExplain.removeAttribute("style");
-        } else {
-            btnExplain.innerHTML = '<div style="line-height:1.2"><i class="fa-solid fa-lock"></i> Xem lại ĐÁP ÁN và GIẢI THÍCH</div><div style="font-size:0.85rem; margin-top:5px; color:#fef08a">(Cần nâng cấp PRO)</div>';
-            btnExplain.style.cssText = "background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); display:flex; flex-direction:column; padding:10px; box-shadow: 0 4px 12px rgba(239,68,68,0.4); border:none;";
-        }
-
-        btnExplain.onclick = () => { 
+        if (btnExplain) {
             if (ctx.isCurrentUserVip) {
-                closeModal(); 
-                openReviewModal(score, correctCount, total); 
+                btnExplain.innerText = "Xem lại ĐÁP ÁN và GIẢI THÍCH";
+                btnExplain.removeAttribute("style");
             } else {
-                alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
-                sessionStorage.setItem('triggerUpgradeTab', 'true');
-                redirect('dashboard.html');
+                btnExplain.innerHTML = '<div style="line-height:1.2"><i class="fa-solid fa-lock"></i> Xem lại ĐÁP ÁN và GIẢI THÍCH</div><div style="font-size:0.85rem; margin-top:5px; color:#fef08a">(Cần nâng cấp PRO)</div>';
+                btnExplain.style.cssText = "background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); display:flex; flex-direction:column; padding:10px; box-shadow: 0 4px 12px rgba(239,68,68,0.4); border:none;";
             }
-        };
+
+            btnExplain.onclick = () => { 
+                if (ctx.isCurrentUserVip) {
+                    closeModal(); 
+                    openReviewModal(score, correctCount, total); 
+                } else {
+                    alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
+                    sessionStorage.setItem('triggerUpgradeTab', 'true');
+                    redirect('dashboard.html');
+                }
+            };
+        }
 
         resetFeedbackUI(); 
         modal.classList.add('active');
     }
 
-    function closeModal() { document.getElementById('result-modal').classList.remove('active'); }
+    function closeModal() { 
+        document.getElementById('result-modal')?.classList.remove('active'); 
+    }
 
-    document.getElementById('closeReviewModalBtn').addEventListener('click', () => {
-        document.getElementById('reviewExamModal').classList.remove('active');
+    document.getElementById('closeReviewModalBtn')?.addEventListener('click', () => {
+        document.getElementById('reviewExamModal')?.classList.remove('active');
         if (ctx.currentResultId) actions.returnToLobbyOrDashboard();
-        else document.getElementById('result-modal').classList.add('active');
+        else document.getElementById('result-modal')?.classList.add('active');
     });
 
-    document.getElementById('reviewExamModal').addEventListener('click', (e) => {
+    document.getElementById('reviewExamModal')?.addEventListener('click', (e) => {
         if (e.target.id === 'reviewExamModal') {
             document.getElementById('reviewExamModal').classList.remove('active');
             if (ctx.currentResultId) actions.returnToLobbyOrDashboard();
-            else document.getElementById('result-modal').classList.add('active');
+            else document.getElementById('result-modal')?.classList.add('active');
         }
     });
 
-    document.getElementById('btn-modal-dashboard-modal').onclick = () => actions.returnToLobbyOrDashboard();
-    document.getElementById('btn-modal-retry').onclick = () => { closeModal(); actions.initExamState(); };
+    const btnDashModal = document.getElementById('btn-modal-dashboard-modal');
+    if (btnDashModal) btnDashModal.onclick = () => actions.returnToLobbyOrDashboard();
+    
+    const btnRetry = document.getElementById('btn-modal-retry');
+    if (btnRetry) btnRetry.onclick = () => { closeModal(); actions.initExamState(); };
 
     // Trả về các hàm Controller (quiz.js) cần dùng
     return {
