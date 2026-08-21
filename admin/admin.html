@@ -174,6 +174,28 @@
                         <canvas id="chart-tech" style="max-width: 100%; max-height: 220px;"></canvas>
                     </div>
                 </div>
+
+                <!-- TÍNH NĂNG MỚI: DANH SÁCH 20 LƯỢT THI GẦN NHẤT -->
+                <h2 style="font-size: 1.25rem; color: #1e293b; margin-top: 30px; margin-bottom: 15px;">⚡ 20 Lượt Thi Gần Nhất</h2>
+                <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                    <div class="table-container" style="border: none; border-radius: 0; max-height: 450px; overflow-y: auto;">
+                        <table class="admin-table" style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                                <tr>
+                                    <th width="10%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">STT</th>
+                                    <th width="30%" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Tài khoản</th>
+                                    <th width="20%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Mã đề</th>
+                                    <th width="20%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Điểm số</th>
+                                    <th width="20%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Thời gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-exams-body">
+                                <tr><td colspan="5" class="loading-text" style="text-align: center; padding: 20px; color: #64748b;">Đang kết nối tải danh sách lượt thi...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </section>
 
             <section id="tab-exam-list" class="content-section">
@@ -436,7 +458,6 @@
                             <option value="MRI">MRI</option>
                             <option value="CT">CT</option>
                             <option value="X quang">X quang</option>
-                            <option value="Thuốc tương phản">Thuốc tương phản</option>
                             <option value="Hỗn hợp">Hỗn hợp</option>
                         </select>
                     </div>
@@ -525,5 +546,53 @@
     <script type="module" src="./admin-ai.js"></script>
     <script type="module" src="./admin-dashboard.js"></script>
     <script type="module" src="./admin-report.js"></script>
+
+    <!-- SCRIPT XỬ LÝ 20 LƯỢT THI GẦN NHẤT TRÊN DASHBOARD -->
+    <script type="module">
+        import { db } from './firebase-config.js';
+        import { collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        document.addEventListener('componentsLoaded', () => {
+            const tbody = document.getElementById('recent-exams-body');
+            if (!tbody) return;
+
+            const q = query(collection(db, "results"), orderBy("createdAt", "desc"), limit(20));
+            onSnapshot(q, (snapshot) => {
+                tbody.innerHTML = '';
+                if (snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Chưa có lượt thi nào trên hệ thống.</td></tr>';
+                    return;
+                }
+                let stt = 1;
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    let timeStr = 'Không rõ';
+                    let rawTime = data.createdAt || data.timestamp;
+                    if (rawTime) {
+                        const dateObj = (typeof rawTime.toDate === 'function') ? rawTime.toDate() : new Date(rawTime);
+                        if (!isNaN(dateObj.getTime())) {
+                            timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                        }
+                    }
+                    const score = data.score !== undefined ? data.score : 'N/A';
+                    const examCode = data.examId || data.examCode || 'Không rõ';
+                    const email = data.email || 'Ẩn danh';
+
+                    tbody.innerHTML += `
+                        <tr style="transition: background 0.2s; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                            <td class="text-center" style="padding: 12px; color: #475569;">${stt++}</td>
+                            <td style="padding: 12px;"><strong style="color: #0f172a; font-size: 14px;">${email}</strong></td>
+                            <td class="text-center" style="padding: 12px;"><span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px;">${examCode}</span></td>
+                            <td class="text-center" style="padding: 12px;"><strong style="color: #10b981; font-size: 15px;">${score}</strong></td>
+                            <td class="text-center" style="padding: 12px; color: #64748b; font-size: 13px;">${timeStr}</td>
+                        </tr>
+                    `;
+                });
+            }, (error) => {
+                console.error("Lỗi tải 20 lượt thi gần nhất:", error);
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #ef4444;">❌ Lỗi kết nối để tải dữ liệu.</td></tr>';
+            });
+        });
+    </script>
 </body>
 </html>
