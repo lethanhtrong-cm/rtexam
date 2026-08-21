@@ -254,10 +254,13 @@ document.addEventListener('componentsLoaded', () => {
         });
     }
 
-    document.getElementById("closeEditPropertiesModal").onclick = () => {
-        document.getElementById("edit-properties-modal").style.display = "none";
-    };
-    document.getElementById("closeFeedbackModal").onclick = () => {
-        document.getElementById("feedback-modal").style.display = "none";
-    };
+    const closeEditBtn = document.getElementById("closeEditPropertiesModal");
+if (closeEditBtn) {
+    closeEditBtn.onclick = () => document.getElementById("edit-properties-modal").style.display = "none";
+}
+
+const closeFbBtn = document.getElementById("closeFeedbackModal");
+if (closeFbBtn) {
+    closeFbBtn.onclick = () => document.getElementById("feedback-modal").style.display = "none";
+}
 });
