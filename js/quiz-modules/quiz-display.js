@@ -1,5 +1,5 @@
 // =========================================================================
-// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (FIX TRIỆT ĐỂ LỖI FONT VÀ CẮT CHỮ)
+// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (ĐÃ XÓA TÍNH NĂNG ĐỔI SIZE CHỮ)
 // =========================================================================
 export function initDisplaySettings() {
     // 1. Tiêm style động hỗ trợ chế độ đọc Sepia
@@ -25,7 +25,7 @@ export function initDisplaySettings() {
     const btnSettings = document.createElement('button');
     btnSettings.className = 'btn-header btn-theme';
     btnSettings.title = 'Tùy chỉnh giao diện làm bài';
-    btnSettings.innerHTML = '<i class="fa-solid fa-font"></i>';
+    btnSettings.innerHTML = '<i class="fa-solid fa-sliders"></i>';
     
     // 3. Tạo Panel Cài đặt động (Ẩn mặc định)
     const panel = document.createElement('div');
@@ -35,15 +35,6 @@ export function initDisplaySettings() {
     panel.innerHTML = `
         <div style="font-weight:bold; margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px; font-size:16px;">
             <i class="fa-solid fa-sliders"></i> Tùy chỉnh hiển thị
-        </div>
-        
-        <div style="margin-bottom:12px;">
-            <label style="font-size:14px; font-weight:600; display:block; margin-bottom:6px; color:var(--text-muted);">Cỡ chữ:</label>
-            <div style="display:flex; gap:6px;">
-                <button id="btn-font-dec" style="flex:1; padding:6px; cursor:pointer; background:var(--bg-body); color:var(--text-main); border:1px solid var(--border-color); border-radius:4px; font-weight:bold;">A -</button>
-                <button id="btn-font-reset" style="flex:1; padding:6px; cursor:pointer; background:var(--bg-body); color:var(--text-main); border:1px solid var(--border-color); border-radius:4px; font-weight:bold;">Chuẩn</button>
-                <button id="btn-font-inc" style="flex:1; padding:6px; cursor:pointer; background:var(--bg-body); color:var(--text-main); border:1px solid var(--border-color); border-radius:4px; font-weight:bold;">A +</button>
-            </div>
         </div>
         
         <div style="margin-bottom:12px;">
@@ -77,13 +68,10 @@ export function initDisplaySettings() {
     });
 
     // Khởi tạo các giá trị từ LocalStorage để bảo toàn trạng thái
-    let currentFontSize = parseInt(localStorage.getItem('quiz_font_size'));
-    if (!currentFontSize || isNaN(currentFontSize)) currentFontSize = 100;
-
     let currentFontFamily = localStorage.getItem('quiz_font_family');
     if (!currentFontFamily || currentFontFamily === 'null') currentFontFamily = 'inherit';
 
-    // 4. HÀM TỔNG HỢP: Tiêm CSS động cho cả Font và Size để ghi đè mọi thiết lập gốc
+    // 4. HÀM TỔNG HỢP: Tiêm CSS động cho Font
     const applyDynamicStyles = () => {
         let styleTag = document.getElementById('dynamic-font-style');
         if (!styleTag) {
@@ -101,8 +89,7 @@ export function initDisplaySettings() {
             `;
         }
 
-        // Dùng CSS calc với đơn vị EM để scale đều thay vì pixel tuyệt đối
-        // Khóa hoàn toàn khả năng tự động bẻ ngang âm tiết của trình duyệt
+        // Khóa hoàn toàn khả năng tự động bẻ ngang âm tiết của trình duyệt (Fix gãy chữ)
         styleTag.innerHTML = `
             ${fontRule}
             
@@ -114,32 +101,13 @@ export function initDisplaySettings() {
                 white-space: normal !important;
                 hyphens: none !important; 
             }
-            
-            .question-text { font-size: calc(1.25em * ${currentFontSize / 100}) !important; }
-            .option-item { font-size: calc(1em * ${currentFontSize / 100}) !important; }
-            
-            @media (max-width: 768px) {
-                .question-text { font-size: calc(1.125em * ${currentFontSize / 100}) !important; }
-                .option-item { font-size: calc(0.9375em * ${currentFontSize / 100}) !important; }
-            }
         `;
     };
 
     // Áp dụng ngay khi vừa tải xong file
     applyDynamicStyles();
 
-    // 5. Logic thay đổi Cỡ chữ
-    const updateFontSize = (val) => {
-        currentFontSize = val;
-        localStorage.setItem('quiz_font_size', currentFontSize.toString());
-        applyDynamicStyles();
-    };
-    
-    document.getElementById('btn-font-dec').onclick = () => updateFontSize(Math.max(80, currentFontSize - 10));
-    document.getElementById('btn-font-inc').onclick = () => updateFontSize(Math.min(150, currentFontSize + 10));
-    document.getElementById('btn-font-reset').onclick = () => updateFontSize(100);
-
-    // 6. Logic thay đổi Phông chữ
+    // 5. Logic thay đổi Phông chữ
     const selectFont = document.getElementById('select-font-family');
     if (selectFont) {
         selectFont.value = currentFontFamily;
@@ -150,7 +118,7 @@ export function initDisplaySettings() {
         };
     }
 
-    // 7. Logic màu nền (Sepia vs Default)
+    // 6. Logic màu nền (Sepia vs Default)
     const applySepia = (isSepia) => {
         if (isSepia) {
             document.body.classList.add('sepia-mode');
@@ -178,7 +146,7 @@ export function initDisplaySettings() {
         });
     }
 
-    // Khôi phục trạng thái Màu nền
+    // 7. Khôi phục trạng thái Màu nền
     const savedBg = localStorage.getItem('quiz_bg_mode');
     if (savedBg === 'sepia') applySepia(true);
 }
