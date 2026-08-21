@@ -1,5 +1,5 @@
 // =========================================================================
-// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (ĐÃ FIX LỖI TĂNG GIẢM SIZE CHỮ VÀ NGẮT TỪ)
+// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (FIX LỖI CẮT CHỮ BẰNG RELATIVE EM)
 // =========================================================================
 export function initDisplaySettings() {
     // 1. Tiêm style động hỗ trợ chế độ đọc Sepia (Không làm vỡ Dark Mode hiện tại)
@@ -76,13 +76,16 @@ export function initDisplaySettings() {
         if (!panel.contains(e.target) && !btnSettings.contains(e.target)) panel.style.display = 'none';
     });
 
-    // 4. Logic thay đổi Cỡ chữ (Sử dụng CSS Calc để ghi đè class cố định và fix cắt chữ)
+    // 4. Logic thay đổi Cỡ chữ (Dùng EM để fix bug rendering ngắt chữ)
     let currentFontSize = 100;
     const updateFontSize = (val) => {
         if (!val || isNaN(val)) val = 100;
         currentFontSize = val;
         
-        // Tiêm style động để nhân tỷ lệ trực tiếp vào số px gốc
+        // Cấp phần trăm kích thước trực tiếp cho thẻ body chứa nó
+        const quizBody = document.querySelector('.quiz-body');
+        if (quizBody) quizBody.style.fontSize = `${currentFontSize}%`;
+        
         let styleTag = document.getElementById('dynamic-font-style');
         if (!styleTag) {
             styleTag = document.createElement('style');
@@ -90,20 +93,19 @@ export function initDisplaySettings() {
             document.head.appendChild(styleTag);
         }
         
-        // Khắc phục triệt để lỗi ngắt từ (chữ) bị gãy giữa chừng
+        // Ghi đè pixel cố định bằng EM. Trình duyệt sẽ tự scale cực mượt mà không gãy chữ
         styleTag.innerHTML = `
-            .question-text, .option-item, .question-text *, .option-item * { 
+            .question-text, .option-item { 
                 word-break: normal !important; 
-                word-wrap: break-word !important; 
-                overflow-wrap: break-word !important; 
-                line-break: strict !important;
-                hyphens: none !important; 
+                overflow-wrap: normal !important; 
+                white-space: normal !important; 
             }
-            .question-text { font-size: calc(20px * ${currentFontSize / 100}) !important; }
-            .option-item { font-size: calc(16px * ${currentFontSize / 100}) !important; }
+            .question-text { font-size: 1.25em !important; } /* Tương đương 20px base */
+            .option-item { font-size: 1em !important; } /* Tương đương 16px base */
+            
             @media (max-width: 768px) {
-                .question-text { font-size: calc(18px * ${currentFontSize / 100}) !important; }
-                .option-item { font-size: calc(15px * ${currentFontSize / 100}) !important; }
+                .question-text { font-size: 1.125em !important; } /* Tương đương 18px */
+                .option-item { font-size: 0.9375em !important; } /* Tương đương 15px */
             }
         `;
         
