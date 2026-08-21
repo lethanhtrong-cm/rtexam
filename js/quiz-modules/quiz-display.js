@@ -1,8 +1,8 @@
 // =========================================================================
-// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (FIX LỖI CẮT CHỮ BẰNG RELATIVE EM)
+// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (FIX TRIỆT ĐỂ LỖI FONT VÀ CẮT CHỮ)
 // =========================================================================
 export function initDisplaySettings() {
-    // 1. Tiêm style động hỗ trợ chế độ đọc Sepia (Không làm vỡ Dark Mode hiện tại)
+    // 1. Tiêm style động hỗ trợ chế độ đọc Sepia
     const dynamicStyle = document.createElement('style');
     dynamicStyle.innerHTML = `
         body.sepia-mode {
@@ -76,57 +76,81 @@ export function initDisplaySettings() {
         if (!panel.contains(e.target) && !btnSettings.contains(e.target)) panel.style.display = 'none';
     });
 
-    // 4. Logic thay đổi Cỡ chữ (Dùng EM để fix bug rendering ngắt chữ)
-    let currentFontSize = 100;
-    const updateFontSize = (val) => {
-        if (!val || isNaN(val)) val = 100;
-        currentFontSize = val;
-        
-        // Cấp phần trăm kích thước trực tiếp cho thẻ body chứa nó
-        const quizBody = document.querySelector('.quiz-body');
-        if (quizBody) quizBody.style.fontSize = `${currentFontSize}%`;
-        
+    // Khởi tạo các giá trị từ LocalStorage để bảo toàn trạng thái
+    let currentFontSize = parseInt(localStorage.getItem('quiz_font_size'));
+    if (!currentFontSize || isNaN(currentFontSize)) currentFontSize = 100;
+
+    let currentFontFamily = localStorage.getItem('quiz_font_family');
+    if (!currentFontFamily || currentFontFamily === 'null') currentFontFamily = 'inherit';
+
+    // 4. HÀM TỔNG HỢP: Tiêm CSS động cho cả Font và Size để ghi đè mọi thiết lập gốc
+    const applyDynamicStyles = () => {
         let styleTag = document.getElementById('dynamic-font-style');
         if (!styleTag) {
             styleTag = document.createElement('style');
             styleTag.id = 'dynamic-font-style';
             document.head.appendChild(styleTag);
         }
-        
-        // Ghi đè pixel cố định bằng EM. Trình duyệt sẽ tự scale cực mượt mà không gãy chữ
+
+        let fontRule = '';
+        if (currentFontFamily !== 'inherit') {
+            fontRule = `
+                body, .quiz-body, .question-text, .option-item, .question-text *, .option-item *, p, div, span {
+                    font-family: ${currentFontFamily} !important;
+                }
+            `;
+        }
+
+        // Dùng CSS calc với đơn vị EM để scale đều thay vì pixel tuyệt đối
+        // Khóa hoàn toàn khả năng tự động bẻ ngang âm tiết của trình duyệt
         styleTag.innerHTML = `
-            .question-text, .option-item { 
-                word-break: normal !important; 
+            ${fontRule}
+            
+            .question-text, .option-item, .question-text *, .option-item * { 
+                word-break: keep-all !important; 
+                word-wrap: normal !important; 
                 overflow-wrap: normal !important; 
-                white-space: normal !important; 
+                line-break: strict !important;
+                white-space: normal !important;
+                hyphens: none !important; 
             }
-            .question-text { font-size: 1.25em !important; } /* Tương đương 20px base */
-            .option-item { font-size: 1em !important; } /* Tương đương 16px base */
+            
+            .question-text { font-size: calc(1.25em * ${currentFontSize / 100}) !important; }
+            .option-item { font-size: calc(1em * ${currentFontSize / 100}) !important; }
             
             @media (max-width: 768px) {
-                .question-text { font-size: 1.125em !important; } /* Tương đương 18px */
-                .option-item { font-size: 0.9375em !important; } /* Tương đương 15px */
+                .question-text { font-size: calc(1.125em * ${currentFontSize / 100}) !important; }
+                .option-item { font-size: calc(0.9375em * ${currentFontSize / 100}) !important; }
             }
         `;
-        
+    };
+
+    // Áp dụng ngay khi vừa tải xong file
+    applyDynamicStyles();
+
+    // 5. Logic thay đổi Cỡ chữ
+    const updateFontSize = (val) => {
+        currentFontSize = val;
         localStorage.setItem('quiz_font_size', currentFontSize.toString());
+        applyDynamicStyles();
     };
     
     document.getElementById('btn-font-dec').onclick = () => updateFontSize(Math.max(80, currentFontSize - 10));
     document.getElementById('btn-font-inc').onclick = () => updateFontSize(Math.min(150, currentFontSize + 10));
     document.getElementById('btn-font-reset').onclick = () => updateFontSize(100);
 
-    // 5. Logic thay đổi Phông chữ
+    // 6. Logic thay đổi Phông chữ
     const selectFont = document.getElementById('select-font-family');
-    selectFont.onchange = (e) => {
-        const font = e.target.value;
-        if (font && font !== 'null') {
-            document.body.style.fontFamily = font;
-            localStorage.setItem('quiz_font_family', font);
-        }
-    };
+    if (selectFont) {
+        selectFont.value = currentFontFamily;
+        selectFont.onchange = (e) => {
+            currentFontFamily = e.target.value;
+            localStorage.setItem('quiz_font_family', currentFontFamily);
+            applyDynamicStyles();
+        };
+    }
 
-    // 6. Logic màu nền (Sepia vs Default)
+    // 7. Logic màu nền (Sepia vs Default)
     const applySepia = (isSepia) => {
         if (isSepia) {
             document.body.classList.add('sepia-mode');
@@ -146,7 +170,6 @@ export function initDisplaySettings() {
     document.getElementById('btn-bg-sepia').onclick = () => applySepia(true);
     document.getElementById('btn-bg-default').onclick = () => applySepia(false);
 
-    // Bắt sự kiện người dùng chủ động bấm lại nút Dark Mode thì tự tắt Sepia
     const themeBtn = document.getElementById('btn-theme-toggle');
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
@@ -155,16 +178,7 @@ export function initDisplaySettings() {
         });
     }
 
-    // 7. Khôi phục Trạng thái từ LocalStorage an toàn
-    const savedSize = localStorage.getItem('quiz_font_size');
-    if (savedSize && savedSize !== 'null') updateFontSize(parseInt(savedSize));
-    
-    const savedFont = localStorage.getItem('quiz_font_family');
-    if (savedFont && savedFont !== 'null') {
-        selectFont.value = savedFont;
-        document.body.style.fontFamily = savedFont;
-    }
-
+    // Khôi phục trạng thái Màu nền
     const savedBg = localStorage.getItem('quiz_bg_mode');
     if (savedBg === 'sepia') applySepia(true);
 }
