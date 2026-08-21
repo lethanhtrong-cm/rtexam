@@ -90,11 +90,13 @@ export function initDisplaySettings() {
             document.head.appendChild(styleTag);
         }
         
-        // Fix ngắt ngang từ: Bắt buộc đẩy nguyên chữ xuống dòng nếu thiếu không gian
+        // Khắc phục triệt để lỗi ngắt từ (chữ) bị gãy giữa chừng
         styleTag.innerHTML = `
             .question-text, .option-item, .question-text *, .option-item * { 
-                word-break: keep-all !important; 
-                overflow-wrap: normal !important; 
+                word-break: normal !important; 
+                word-wrap: break-word !important; 
+                overflow-wrap: break-word !important; 
+                line-break: strict !important;
                 hyphens: none !important; 
             }
             .question-text { font-size: calc(20px * ${currentFontSize / 100}) !important; }
