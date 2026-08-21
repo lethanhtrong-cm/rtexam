@@ -126,7 +126,7 @@ export function initQuizUI(db, ctx, actions) {
     }
 
     document.addEventListener('keydown', (e) => {
-        if (ctx.questions.length === 0 || document.activeElement.tagName === 'TEXTAREA') return;
+        if (ctx.questions.length === 0 || (document.activeElement && document.activeElement.tagName === 'TEXTAREA')) return;
         const key = e.key;
         if (key === 'ArrowLeft') { if(ctx.currentIndex > 0) { ctx.currentIndex--; actions.saveDraft(); renderAll(); } } 
         else if (key === 'ArrowRight') { if(ctx.currentIndex < ctx.questions.length - 1) { ctx.currentIndex++; actions.saveDraft(); renderAll(); } } 
@@ -146,7 +146,7 @@ export function initQuizUI(db, ctx, actions) {
         
         if (!isAutoSubmit) {
             const confirmModal = document.getElementById('confirm-submit-modal');
-            if (!confirmModal) { actions.executeSubmit(); return; } // Fallback an toàn nếu Modal bị thiếu
+            if (!confirmModal) { actions.executeSubmit(); return; }
             
             const confirmText = document.getElementById('confirm-submit-text');
             if (confirmText) confirmText.innerText = `Bạn đã hoàn thành ${answeredCount}/${total} câu hỏi.\nBạn có chắc chắn muốn nộp bài lúc này?`;
@@ -281,45 +281,52 @@ export function initQuizUI(db, ctx, actions) {
         const descInput = document.getElementById('reportDescription');
         if (descInput) descInput.value = '';
         
-        document.getElementById('reportQuestionModal')?.classList.add('active');
+        const repModal = document.getElementById('reportQuestionModal');
+        if (repModal) repModal.classList.add('active');
     }
 
-    document.getElementById('btnCancelReport')?.addEventListener('click', () => { 
-        document.getElementById('reportQuestionModal')?.classList.remove('active'); 
-    });
+    const btnCancelReport = document.getElementById('btnCancelReport');
+    if (btnCancelReport) {
+        btnCancelReport.addEventListener('click', () => { 
+            const repModal = document.getElementById('reportQuestionModal');
+            if (repModal) repModal.classList.remove('active'); 
+        });
+    }
 
-    document.getElementById('btnSubmitReport')?.addEventListener('click', async () => {
-        if (!ctx.currentUser) { showToast("Bạn cần đăng nhập để gửi báo cáo!"); return; }
-        
-        const errorType = document.getElementById('reportErrorType')?.value || 'Khác';
-        const description = document.getElementById('reportDescription')?.value.trim() || '';
-        
-        if (!description) { showToast("Vui lòng nhập mô tả chi tiết lỗi!"); return; }
-        
-        const btnSubmit = document.getElementById('btnSubmitReport');
-        if (btnSubmit) {
-            btnSubmit.disabled = true;
-            btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
-        }
-        
-        try {
-            await addDoc(collection(db, "reported_questions"), {
-                examId: ctx.currentExamId, questionId: reportingQuestionId, questionText: reportingQuestionText,
-                reportedBy: ctx.currentUser.email, errorType: errorType, description: description,
-                status: "pending", timestamp: serverTimestamp()
-            });
+    const btnSubmitReport = document.getElementById('btnSubmitReport');
+    if (btnSubmitReport) {
+        btnSubmitReport.addEventListener('click', async () => {
+            if (!ctx.currentUser) { showToast("Bạn cần đăng nhập để gửi báo cáo!"); return; }
             
-            showToast("Đã gửi báo cáo lỗi. Xin cảm ơn sự đóng góp của bạn!");
-            document.getElementById('reportQuestionModal')?.classList.remove('active');
-        } catch (error) {
-            showToast("Đã xảy ra lỗi khi gửi dữ liệu. Vui lòng thử lại sau!");
-        } finally {
-            if (btnSubmit) {
-                btnSubmit.disabled = false;
-                btnSubmit.innerText = "Gửi Báo Cáo";
+            const typeInput = document.getElementById('reportErrorType');
+            const errorType = typeInput ? typeInput.value : 'Khác';
+            
+            const descInput = document.getElementById('reportDescription');
+            const description = descInput ? descInput.value.trim() : '';
+            
+            if (!description) { showToast("Vui lòng nhập mô tả chi tiết lỗi!"); return; }
+            
+            btnSubmitReport.disabled = true;
+            btnSubmitReport.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+            
+            try {
+                await addDoc(collection(db, "reported_questions"), {
+                    examId: ctx.currentExamId, questionId: reportingQuestionId, questionText: reportingQuestionText,
+                    reportedBy: ctx.currentUser.email, errorType: errorType, description: description,
+                    status: "pending", timestamp: serverTimestamp()
+                });
+                
+                showToast("Đã gửi báo cáo lỗi. Xin cảm ơn sự đóng góp của bạn!");
+                const repModal = document.getElementById('reportQuestionModal');
+                if (repModal) repModal.classList.remove('active');
+            } catch (error) {
+                showToast("Đã xảy ra lỗi khi gửi dữ liệu. Vui lòng thử lại sau!");
+            } finally {
+                btnSubmitReport.disabled = false;
+                btnSubmitReport.innerText = "Gửi Báo Cáo";
             }
-        }
-    });
+        });
+    }
 
     let selectedStars = 0;
     const stars = document.querySelectorAll('#star-rating span');
@@ -337,7 +344,9 @@ export function initQuizUI(db, ctx, actions) {
     if (btnSubmitFeedback) {
         btnSubmitFeedback.onclick = async () => {
             if (selectedStars === 0) { showToast("Vui lòng chọn số sao để đánh giá!"); return; }
-            const text = document.getElementById('feedback-text')?.value || "";
+            
+            const fbText = document.getElementById('feedback-text');
+            const text = fbText ? fbText.value : "";
             
             btnSubmitFeedback.innerText = "Đang gửi..."; 
             btnSubmitFeedback.disabled = true;
@@ -447,22 +456,38 @@ export function initQuizUI(db, ctx, actions) {
     }
 
     function closeModal() { 
-        document.getElementById('result-modal')?.classList.remove('active'); 
+        const mod = document.getElementById('result-modal');
+        if (mod) mod.classList.remove('active'); 
     }
 
-    document.getElementById('closeReviewModalBtn')?.addEventListener('click', () => {
-        document.getElementById('reviewExamModal')?.classList.remove('active');
-        if (ctx.currentResultId) actions.returnToLobbyOrDashboard();
-        else document.getElementById('result-modal')?.classList.add('active');
-    });
+    const closeRevBtn = document.getElementById('closeReviewModalBtn');
+    if (closeRevBtn) {
+        closeRevBtn.addEventListener('click', () => {
+            const revMod = document.getElementById('reviewExamModal');
+            if (revMod) revMod.classList.remove('active');
+            if (ctx.currentResultId) {
+                actions.returnToLobbyOrDashboard();
+            } else {
+                const resMod = document.getElementById('result-modal');
+                if (resMod) resMod.classList.add('active');
+            }
+        });
+    }
 
-    document.getElementById('reviewExamModal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'reviewExamModal') {
-            document.getElementById('reviewExamModal').classList.remove('active');
-            if (ctx.currentResultId) actions.returnToLobbyOrDashboard();
-            else document.getElementById('result-modal')?.classList.add('active');
-        }
-    });
+    const revExamModal = document.getElementById('reviewExamModal');
+    if (revExamModal) {
+        revExamModal.addEventListener('click', (e) => {
+            if (e.target.id === 'reviewExamModal') {
+                revExamModal.classList.remove('active');
+                if (ctx.currentResultId) {
+                    actions.returnToLobbyOrDashboard();
+                } else {
+                    const resMod = document.getElementById('result-modal');
+                    if (resMod) resMod.classList.add('active');
+                }
+            }
+        });
+    }
 
     const btnDashModal = document.getElementById('btn-modal-dashboard-modal');
     if (btnDashModal) btnDashModal.onclick = () => actions.returnToLobbyOrDashboard();
