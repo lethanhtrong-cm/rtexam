@@ -181,8 +181,10 @@ export function renderExams() {
         if (State.currentTechnique === 'all') {
             groups.push(
                 { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
-                { mainCategory: null, title: "✨ Đề Mới", data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5) },
-                { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && ((State.completedExams[exam.id].score / (State.completedExams[exam.id].total || 1)) * 10) < 7).slice(0, 5) }
+                // ĐÃ SỬA: Đổi slice(0, 5) thành slice(0, 10) để hiển thị tối đa 10 đề mới
+                { mainCategory: null, title: "✨ Đề Mới", data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10) },
+                // ĐÃ SỬA: Sửa lại logic điểm số, chỉ lấy những đề đã làm có điểm chuẩn < 7
+                { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && State.completedExams[exam.id].score < 7).slice(0, 10) }
             );
         } else if (['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(State.currentTechnique)) {
             groups.push({ mainCategory: null, title: `⭐ Đề HOT ${State.currentTechnique}`, data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) });
