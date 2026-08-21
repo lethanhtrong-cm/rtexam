@@ -1,6 +1,6 @@
 import { signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, setDoc, deleteDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Tìm dòng số 3 và thay thế bằng dòng dưới đây:
+// ĐÃ SỬA: Bổ sung thêm getDoc, arrayUnion, increment để phục vụ tính năng Voucher
+import { doc, setDoc, deleteDoc, updateDoc, serverTimestamp, getDoc, arrayUnion, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { switchTab, showNotificationModal } from "../dashboard/dashboard-ui.js";
 
 export function initDOMListeners(auth, db) {
@@ -188,6 +188,89 @@ export function initDOMListeners(auth, db) {
             } else {
                 alert("Đường dẫn phòng thi/đề thi không hợp lệ!");
             }
+            return;
+        }
+
+        // ==========================================
+        // ĐÃ THÊM: XỬ LÝ NHẬP MÃ VOUCHER VIP
+        // ==========================================
+        if (e.target.closest('#btnApplyVoucher')) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const inputEl = document.getElementById('inputVoucherCode');
+            const msgEl = document.getElementById('voucherMessage');
+            const btn = e.target.closest('#btnApplyVoucher');
+            const voucherCode = inputEl.value.trim().toUpperCase();
+
+            if (!voucherCode) {
+                msgEl.style.display = 'block';
+                msgEl.style.color = '#ef4444';
+                msgEl.innerText = "Vui lòng nhập mã voucher!";
+                return;
+            }
+
+            if (!auth || !auth.currentUser) {
+                alert("Vui lòng đăng nhập để sử dụng voucher!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Xử lý...';
+            msgEl.style.display = 'none';
+
+            // Dùng hàm bọc async để xử lý Firebase đồng bộ
+            (async () => {
+                try {
+                    const voucherRef = doc(db, "vouchers", voucherCode);
+                    const voucherSnap = await getDoc(voucherRef);
+
+                    if (!voucherSnap.exists()) throw new Error("Mã voucher không tồn tại!");
+
+                    const vData = voucherSnap.data();
+                    const now = Date.now();
+
+                    // Xác thực điều kiện ngặt nghèo
+                    if (!vData.isActive) throw new Error("Mã voucher này đã bị khóa!");
+                    if (vData.startDate && now < vData.startDate) throw new Error("Mã voucher chưa đến thời gian sử dụng!");
+                    if (vData.endDate && now > vData.endDate) throw new Error("Mã voucher đã hết hạn!");
+                    if (vData.maxUses && vData.usedCount >= vData.maxUses) throw new Error("Mã voucher đã đạt giới hạn số lượt sử dụng!");
+                    if (vData.usedBy && vData.usedBy.includes(auth.currentUser.uid)) throw new Error("Bạn đã sử dụng mã này rồi!");
+
+                    // Tính thời gian VIP
+                    const durationMs = (vData.durationDays || 30) * 24 * 60 * 60 * 1000;
+                    const vipExpirationDate = now + durationMs;
+
+                    // Tiến hành cập nhật User lên VIP
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                        isVip: true,
+                        vipActivationDate: now,
+                        vipExpirationDate: vipExpirationDate
+                    });
+
+                    // Cập nhật tăng số lượt dùng Voucher
+                    await updateDoc(voucherRef, {
+                        usedCount: increment(1),
+                        usedBy: arrayUnion(auth.currentUser.uid)
+                    });
+
+                    msgEl.style.display = 'block';
+                    msgEl.style.color = '#10b981';
+                    msgEl.innerText = "🎉 Kích hoạt VIP thành công! Đang tải lại hệ thống...";
+                    inputEl.value = '';
+                    
+                    // Tải lại trang để hệ thống render giao diện VIP mới
+                    setTimeout(() => window.location.reload(), 2000);
+
+                } catch (error) {
+                    msgEl.style.display = 'block';
+                    msgEl.style.color = '#ef4444';
+                    msgEl.innerText = error.message || "Lỗi xử lý, vui lòng thử lại!";
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Áp dụng';
+                }
+            })();
             return;
         }
     });
