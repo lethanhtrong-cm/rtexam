@@ -7,7 +7,7 @@ import { updateExamProperties, toggleExamVip, deleteExam, viewFeedback, viewExam
 export function loadExamList() {
     if (appState.listenersInitialized) return;
     appState.listenersInitialized = true;
-    
+
     const container = document.getElementById('exam-list-body');
     if (container) container.innerHTML = '<div class="loading-text">⏳ Đang thiết lập kết nối thời gian thực (Real-time) để tối ưu Quota...</div>';
 
@@ -151,15 +151,15 @@ function initFilterChangeListeners() {
             const stickyWrapper = document.createElement('div');
             stickyWrapper.id = 'exam-sticky-wrapper';
             stickyWrapper.style.cssText = 'position: sticky; top: 60px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px; border-bottom: 1px solid #e2e8f0;';
-            
+
             searchWrapper.parentNode.insertBefore(stickyWrapper, searchWrapper);
             stickyWrapper.appendChild(searchWrapper);
             stickyWrapper.appendChild(filterRow);
-            
+
             filterRow.style.position = 'static';
             filterRow.style.marginTop = '15px';
         }
-        
+
         if (!sortSelect) {
             const sortCol = document.createElement('div');
             sortCol.className = 'filter-col-50';
@@ -227,14 +227,14 @@ document.addEventListener('componentsLoaded', () => {
                 const description = decodeURIComponent(dataset.description || ""); 
                 return openEditPropertiesModal(dataset.examid, dataset.examname, dataset.technique, dataset.time, dataset.level, description);
             }
-            
+
             const editContentBtn = e.target.closest('.btn-edit-content');
             if (editContentBtn) {
                 const examId = editContentBtn.dataset.examid;
                 window.open(`admin-edit-exam.html?examId=${examId}`, '_blank');
                 return;
             }
-            
+
             const historyBtn = e.target.closest('.btn-view-history');
             if (historyBtn) {
                 return viewExamHistory(historyBtn.dataset.examid);
@@ -242,25 +242,25 @@ document.addEventListener('componentsLoaded', () => {
 
             const vipBtn = e.target.closest('.toggle-vip');
             if (vipBtn) return toggleExamVip(vipBtn.dataset.examid, vipBtn.dataset.vip === "true");
-            
+
             const antiCheatBtn = e.target.closest('.toggle-anticheat');
             if (antiCheatBtn) return toggleAntiCheat(antiCheatBtn.dataset.examid, antiCheatBtn.dataset.state === "true");
-            
+
             const feedbackBtn = e.target.closest('.btn-view-feedback');
             if (feedbackBtn) return viewFeedback(feedbackBtn.dataset.examid);
-            
+
             const deleteBtn = e.target.closest('.btn-delete');
             if (deleteBtn) return deleteExam(deleteBtn.dataset.examid, deleteBtn);
         });
     }
 
     const closeEditBtn = document.getElementById("closeEditPropertiesModal");
-if (closeEditBtn) {
-    closeEditBtn.onclick = () => document.getElementById("edit-properties-modal").style.display = "none";
-}
+    if (closeEditBtn) {
+        closeEditBtn.onclick = () => document.getElementById("edit-properties-modal").style.display = "none";
+    }
 
-const closeFbBtn = document.getElementById("closeFeedbackModal");
-if (closeFbBtn) {
-    closeFbBtn.onclick = () => document.getElementById("feedback-modal").style.display = "none";
-}
+    const closeFbBtn = document.getElementById("closeFeedbackModal");
+    if (closeFbBtn) {
+        closeFbBtn.onclick = () => document.getElementById("feedback-modal").style.display = "none";
+    }
 });
