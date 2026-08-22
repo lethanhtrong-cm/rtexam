@@ -77,14 +77,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// VÁ LỖI: Thêm khối kiểm tra phần tử (container) tồn tại trước khi gán innerHTML
+// VÁ LỖI CỐT LÕI: Load HTML an toàn và bảo vệ các Modal nhúng sẵn
 async function loadComponent(elementId, filePath) {
     try {
-        const response = await fetch(filePath);
-        if (!response.ok) throw new Error(`Lỗi HTTP status: ${response.status}`);
-        const html = await response.text();
-        const container = document.getElementById(elementId);
-        if (container) {
+        let container = document.getElementById(elementId);
+        if (!container) {
+            container = document.createElement('div');
+            container.id = elementId;
+            document.body.appendChild(container);
+        }
+        
+        // BẢO VỆ: Nếu thẻ container trống rỗng thì mới tải HTML từ bên ngoài vào.
+        // Nếu trong file admin.html đã chứa code sẵn (chứa Form Sửa), thì KHÔNG GHI ĐÈ để tránh mất Form.
+        if (container.innerHTML.trim() === '') {
+            const response = await fetch(filePath);
+            if (!response.ok) throw new Error(`Lỗi HTTP status: ${response.status}`);
+            const html = await response.text();
             container.innerHTML = html;
         }
     } catch (error) {
@@ -93,16 +101,8 @@ async function loadComponent(elementId, filePath) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // VÁ LỖI: Chỉ tải nội dung file html vào khi thẻ container đang rỗng
-    const sidebar = document.getElementById('sidebar-container');
-    if (sidebar && sidebar.innerHTML.trim() === '') {
-        await loadComponent('sidebar-container', './components/sidebar.html');
-    }
-
-    const modals = document.getElementById('modals-container');
-    if (modals && modals.innerHTML.trim() === '') {
-        await loadComponent('modals-container', './components/modal.html');
-    }
+    await loadComponent('sidebar-container', './components/sidebar.html');
+    await loadComponent('modals-container', './components/modal.html');
 
     initSidebarEvents();
     initModalEvents();
@@ -179,7 +179,6 @@ function initAuthEvents() {
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
             signOut(auth).then(() => {
-                // F5 lại trang để kích hoạt màn hình khóa
                 window.location.reload(); 
             }).catch((error) => {
                 showToast("Lỗi khi đăng xuất: " + error.message, "error");
