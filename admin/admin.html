@@ -176,7 +176,11 @@
                     <h2 style="font-size: 1.25rem; color: #1e293b; margin: 0;">⚡ 50 Lượt Thi Gần Nhất</h2>
                     
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <!-- MỚI: BỘ LỌC LOẠI TÀI KHOẢN -->
+                        <!-- NÚT TẢI LẠI THỦ CÔNG -->
+                        <button id="btn-refresh-recent" class="btn-modern-action" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 12.5px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(16,185,129,0.2);" onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <i class="fa-solid fa-rotate"></i> Tải lại
+                        </button>
+                        
                         <select id="filter-recent-type" style="padding: 6px 12px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; color: #475569; font-weight: 600; cursor: pointer; background: #fff;">
                             <option value="all">Tất cả tài khoản</option>
                             <option value="vip">Chỉ tài khoản VIP</option>
@@ -197,7 +201,6 @@
                         <table class="admin-table" style="width: 100%; border-collapse: collapse;">
                             <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
                                 <tr>
-                                    <!-- THÊM CỘT THAO TÁC -->
                                     <th width="5%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">STT</th>
                                     <th width="30%" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Tài khoản</th>
                                     <th width="15%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Mã đề</th>
@@ -744,6 +747,20 @@
                     currentRecentTypeFilter = e.target.value;
                     recentCurrentPage = 1;
                     renderRecentExams();
+                });
+            }
+
+            const btnRefreshRecent = document.getElementById('btn-refresh-recent');
+            if (btnRefreshRecent) {
+                btnRefreshRecent.addEventListener('click', () => {
+                    btnRefreshRecent.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+                    btnRefreshRecent.disabled = true;
+                    
+                    setTimeout(() => {
+                        renderRecentExams();
+                        btnRefreshRecent.innerHTML = '<i class="fa-solid fa-rotate"></i> Tải lại';
+                        btnRefreshRecent.disabled = false;
+                    }, 500);
                 });
             }
 
