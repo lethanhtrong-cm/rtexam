@@ -617,7 +617,7 @@ function injectCertificateTemplate() {
             <div style="z-index: 1; display: flex; justify-content: space-between; align-items: flex-end; width: 100%; padding: 0 40px; margin-top: 15px;">
                 <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 10px;">
                     <p id="cert-date" style="margin: 0; font-size: 1rem; color: #475569; font-weight: bold;">Ngày --/--/----</p>
-                    <p style="margin: 0; font-size: 0.9rem; color: #64748b;">Ngày cấp</p>
+                    <p style="margin: 0; font-size: 0.9rem; color: #64748b;"></p>
                 </div>
                 
                 <div style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px;">
