@@ -606,19 +606,32 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        // Áp dụng Flex-wrap để các nút tự rớt dòng nếu thiếu khoảng trống
+        // CẤU HÌNH LẠI BỐ CỤC: Bật flex-wrap để tự xuống dòng
         toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
         
-        // Tạo một Group để nhóm toàn bộ các nút Action lại với nhau
+        // Ép phần tử chứa thanh tìm kiếm chiếm 100% chiều ngang hàng 1
+        const searchContainer = document.querySelector('.search-user-container');
+        if (searchContainer) {
+            searchContainer.style.flex = '1 1 100%';
+            searchContainer.style.width = '100%';
+            const sInput = document.getElementById('searchInput');
+            if (sInput) sInput.style.width = '100%';
+        }
+
+        // Tạo khung (Action Group) gom các nút và 2 bộ lọc lại để nó luôn liền kề nhau trên hàng 2
         let actionGroup = document.getElementById('toolbar-btn-group');
         if (!actionGroup) {
             actionGroup = document.createElement('div');
             actionGroup.id = 'toolbar-btn-group';
-            actionGroup.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; align-items: center;';
+            actionGroup.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%;';
             toolbar.appendChild(actionGroup);
+
+            // Gắp 2 bộ lọc thả vào đầu của Khối hàng 2
+            const sortSelect = document.getElementById('sortSelect');
+            if (sortSelect) actionGroup.appendChild(sortSelect);
+            if (filterSelect) actionGroup.appendChild(filterSelect);
         }
 
-        // Định dạng CSS dùng chung cho các nút để trông thon gọn hơn
         const baseBtnCSS = 'color: white; border: none; padding: 9px 14px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 6px;';
 
         if (!document.getElementById('btnRefreshUsers')) {
