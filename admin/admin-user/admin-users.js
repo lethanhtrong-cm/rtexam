@@ -22,8 +22,17 @@ document.addEventListener('componentsLoaded', () => {
     // 1. Tải danh sách gốc lần đầu
     fetchAllUserData(false, dataCallbacks);
 
-    // 2. Lắng nghe cập nhật thanh toán CK Realtime
-    initRealtimePaymentListener(() => renderUserList());
+    // 2. Lắng nghe cập nhật thanh toán CK Realtime và cập nhật Chuông thông báo Sidebar
+    initRealtimePaymentListener(() => {
+        const badge = document.getElementById('pending-vip-badge');
+        if (badge && userState.pendingVIPRequests) {
+            const count = userState.pendingVIPRequests.size;
+            badge.innerText = count;
+            // Nếu có người chờ duyệt thì hiện huy hiệu đỏ, nếu không thì ẩn đi
+            badge.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+        renderUserList();
+    });
 
     // 3. Kích hoạt giao diện UI (Tìm kiếm, Bộ lọc Dropdown, Nút Cập nhật, Nút Thông báo Hàng loạt)
     initUserInterfaceEvents(
