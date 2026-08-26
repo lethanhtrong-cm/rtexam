@@ -4,7 +4,6 @@
 </div>
 <nav class="sidebar-menu">
 
-    <!-- Bảng Điều Khiển không còn bật mặc định -->
     <div class="menu-group">
         <button class="menu-parent">
             <span class="parent-title">📊 Bảng Điều Khiển</span>
@@ -47,7 +46,6 @@
         </div>
     </div>
 
-    <!-- THÊM MỚI: NHÓM QUẢN LÝ ĐỀ NGẪU NHIÊN -->
     <div class="menu-group">
         <button class="menu-parent">
             <span class="parent-title">🎲 Quản Lý Đề Ngẫu Nhiên</span>
@@ -60,26 +58,21 @@
         </div>
     </div>
 
-    <!-- Nhóm Quản Lý Người Dùng được bật và mở (active, open, show) mặc định -->
     <div class="menu-group">
         <button class="menu-parent open">
             <span class="parent-title">👥 Quản Lý Người Dùng</span>
             <span class="arrow-icon">▼</span>
         </button>
-        <!-- CHÈN NÚT VOUCHER VÀO ĐÂY -->
-            <button class="menu-item" data-target="tab-vouchers" data-title="Quản Lý Mã Voucher Nâng Cấp VIP">
-                🎟️ Quản lý mã Voucher
-            </button>
+        <button class="menu-item" data-target="tab-vouchers" data-title="Quản Lý Mã Voucher Nâng Cấp VIP">
+            🎟️ Quản lý mã Voucher
+        </button>
         <div class="submenu show">
             <button class="menu-item active" data-target="tab-user-list" data-title="Danh Sách Thành Viên & Cấp Quyền VIP">
                 📄 Danh sách người dùng
             </button>
-            <button class="menu-item" data-target="tab-payments" data-title="Lịch Sử Yêu Cầu Chờ Duyệt VIP">
-                ⏳ Chờ xác nhận
-            </button>
-            <!-- THÊM TAB MỚI: CHỜ XÁC NHẬN CHUYỂN KHOẢN -->
-            <button class="menu-item" data-target="tab-user-list" data-filter="pending_vip" data-title="Danh Sách Học Viên Chờ Xác Nhận Thanh Toán">
-                ⏳ Chờ xác nhận 
+            <!-- THAY ĐỔI: SỬA LẠI TÊN TAB VÀ LOGIC LỌC TÀI KHOẢN ĐÃ TỪNG GỬI YÊU CẦU -->
+            <button class="menu-item" data-target="tab-user-list" data-filter="has_payment" data-title="Danh Sách Lịch Sử Yêu Cầu Chuyển Khoản">
+                💳 Lịch sử báo CK 
                 <span id="pending-vip-badge" style="display:none; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:10.5px; margin-left:6px; font-weight:bold; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">0</span>
             </button>
         </div>
