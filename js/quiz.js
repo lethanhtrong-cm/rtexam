@@ -101,7 +101,7 @@ function loadDraft() {
         userAnswers = draft.userAnswers || {};
         flaggedQuestions = draft.flaggedQuestions || {};
         if (draft.timeRemaining !== undefined) timeRemaining = draft.timeRemaining;
-        if (draft.currentIndex !== undefined) currentIndex = draft.currentIndex;
+        if (draft.currentIndex !== undefined) currentIndex = currentIndex = draft.currentIndex;
         return true;
     }
     return false;
@@ -148,7 +148,7 @@ onAuthStateChanged(auth, async (user) => {
             loadReviewMode(currentResultId);
         } else if (currentExamId) {
             const titleElement = document.getElementById('quiz-title-display');
-            if (titleElement) titleElement.innerText = `Bài thi: ${currentExamId}`;
+            if (titleElement) titleElement.innerHTML = `<i class="fa-solid fa-brain me-2" style="color: #fbbf24; font-size: 1.2em; vertical-align: middle;"></i>Bài thi: ${currentExamId}`;
             
             if (currentMode === 'flashcard') loadFlashcardMode();
             else loadExamDataAndQuestions();
@@ -273,7 +273,7 @@ async function loadReviewMode(resultId) {
         updateAntiCheatStateHelper(); 
 
         const titleDisplay = document.getElementById('quiz-title-display');
-        if (titleDisplay) titleDisplay.innerText = `Xem lại bài thi: ${currentExamId}`;
+        if (titleDisplay) titleDisplay.innerHTML = `<i class="fa-solid fa-brain me-2" style="color: #fbbf24; font-size: 1.2em; vertical-align: middle;"></i>Xem lại bài thi: ${currentExamId}`;
         
         const timerBox = document.getElementById('timer-container-box');
         if(timerBox) timerBox.style.display = 'none'; 
@@ -539,36 +539,6 @@ async function executeSubmit() {
     }
 
     // ==========================================
-    // BỔ SUNG LOGIC CHỨNG NHẬN TRỰC TIẾP TỪ ĐÂY
-    // ĐIỀU KIỆN: SỐ ĐIỂM > 8 BẤT CHẤP ĐỘ KHÓ
-    // ==========================================
-    if (finalScore > 8) {
-        setTimeout(() => {
-            const modalContent = document.querySelector('#result-modal .modal-content') || document.querySelector('#result-modal > div') || document.getElementById('result-modal');
-            
-            if (modalContent && !document.getElementById('btn-download-cert')) {
-                // Tạo nút tải chứng nhận
-                const certBtn = document.createElement('button');
-                certBtn.id = 'btn-download-cert';
-                certBtn.innerHTML = '<i class="fa-solid fa-award"></i> Tải Chứng Nhận Xuất Sắc';
-                certBtn.style.cssText = "background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 1.05rem; transition: 0.2s;";
-                
-                certBtn.onmouseover = () => certBtn.style.transform = 'translateY(-2px)';
-                certBtn.onmouseout = () => certBtn.style.transform = 'translateY(0)';
-                
-                certBtn.onclick = () => {
-                    const userName = currentUser.displayName || currentUser.email.split('@')[0];
-                    downloadCertificate(userName, currentExamId, finalScore);
-                };
-                
-                // Tiêm vào dưới cùng của nội dung Modal
-                modalContent.appendChild(certBtn);
-            }
-        }, 600); // Đợi modal của quizUI render xong mới gắn nút vào
-    }
-}
-
-// ==========================================
     // BỔ SUNG LOGIC CHỨNG NHẬN TRỰC TIẾP TỪ ĐÂY
     // ĐIỀU KIỆN: SỐ ĐIỂM > 8 VÀ PHẢI LÀ TÀI KHOẢN VIP
     // ==========================================
