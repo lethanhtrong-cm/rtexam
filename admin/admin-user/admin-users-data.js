@@ -5,13 +5,16 @@
 // ==========================================
 import { db } from '../admin-core.js';
 import { 
-    collection, onSnapshot, doc, updateDoc, query, where, getDocs
+    collection, onSnapshot, doc, updateDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { renderPaymentHistory } from './admin-users-ui.js';
 
 // 1. TRẠNG THÁI DÙNG CHUNG (SINGLE SOURCE OF TRUTH)
 export const userState = {
     cachedUsers: [],
     pendingVIPRequests: new Set(),
+    allPaymentUIDs: new Set(), // THÊM MỚI: Lưu toàn bộ UID đã từng CK
+    cachedPaymentRequests: [], // THÊM MỚI: Lưu mảng data lịch sử CK
     isUserListLoaded: false,
     isLeaderboardLoaded: false,
     globalLeaderboardStats: {},
@@ -36,13 +39,30 @@ export function formatDateTime(timestamp) {
 export function initRealtimePaymentListener(onDataUpdated) {
     onSnapshot(collection(db, "payment_requests"), (snapshot) => {
         userState.pendingVIPRequests.clear();
+        userState.allPaymentUIDs.clear();
+        userState.cachedPaymentRequests = [];
+
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
+            data.id = docSnap.id;
+            
+            // Lưu vào mảng và tập hợp tổng
+            userState.cachedPaymentRequests.push(data);
+            userState.allPaymentUIDs.add(data.uid);
+
             if (data.status === "pending") {
                 userState.pendingVIPRequests.add(data.uid);
             }
         });
 
+        // Sắp xếp lịch sử thanh toán: Mới nhất lên đầu
+        userState.cachedPaymentRequests.sort((a, b) => {
+            const tA = a.timestamp ? (typeof a.timestamp.toDate === 'function' ? a.timestamp.toDate().getTime() : new Date(a.timestamp).getTime()) : 0;
+            const tB = b.timestamp ? (typeof b.timestamp.toDate === 'function' ? b.timestamp.toDate().getTime() : new Date(b.timestamp).getTime()) : 0;
+            return tB - tA;
+        });
+
+        // Cập nhật chuông thông báo (badge) trên Sidebar
         const badge = document.getElementById('pending-vip-badge');
         if (badge) {
             if (userState.pendingVIPRequests.size > 0) {
@@ -52,6 +72,9 @@ export function initRealtimePaymentListener(onDataUpdated) {
                 badge.style.display = 'none';
             }
         }
+
+        // Gọi hàm render bảng Lịch sử thanh toán bên UI
+        renderPaymentHistory();
 
         if (userState.isUserListLoaded && typeof onDataUpdated === 'function') {
             onDataUpdated();
@@ -78,10 +101,6 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
         let promises = [getDocs(collection(db, "users"))];
         let leaderboardIndex = -1;
 
-        // GIẢI PHÁP TỐI ƯU QUOTA FIREBASE:
-        // Đã loại bỏ Promise gọi getDocs(collection(db, "results")) tại đây.
-        // Bảng results có số lượng document khổng lồ, việc gọi toàn bộ sẽ lập tức làm cạn Quota.
-        
         if (!userState.isLeaderboardLoaded || forceRefresh) {
             promises.push(getDocs(collection(db, "users_leaderboard")));
             leaderboardIndex = promises.length - 1;
@@ -111,7 +130,6 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
             
             const totalTokensUsed = user.totalTokensUsed || 0;
 
-            // ĐTB tạm thời đọc từ document của user (nếu có update sau này từ Client) hoặc mặc định là 0 để bảo vệ Quota.
             const finalAvgScore = user.avgScore || 0;
             const finalXp = userState.globalLeaderboardStats[userId] || 0;
 
@@ -153,6 +171,9 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
         userState.isUserListLoaded = true;
         userState.selectedUserIds.clear();
         
+        // Gọi lại renderPaymentHistory để lấy thông tin Email thực tế từ danh sách User vừa tải xong
+        renderPaymentHistory();
+
         if (onSuccess) onSuccess(true); 
 
     } catch (error) {
