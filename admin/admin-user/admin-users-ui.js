@@ -129,12 +129,16 @@ export function injectTableHeadersAndToolbar() {
         };
     }
 
-    let insertTarget = table.closest('.table-container') || table;
-    if (insertTarget && !document.getElementById('bulk-action-bar')) {
+    // TỐI ƯU CỐ ĐỊNH TOOLBAR: Chèn Bulk Action Bar trực tiếp vào Toolbar chính thay vì để ngoài
+    const toolbar = document.querySelector('.toolbar-user-modern');
+    if (toolbar) {
+        // Đã loại bỏ position: sticky để thanh toolbar trượt theo trang
+        toolbar.style.cssText += 'background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
         
-        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #ffffff; padding: 16px 24px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #8b5cf6; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.25); flex-wrap: wrap; gap: 12px; position: relative; z-index: 105;';
+        // Thêm width: 100% và order: 99 để chiếm hàng cuối cùng trong Flex Container của Toolbar
+        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 18px; border-radius: 10px; width: 100%; border: 2px solid #8b5cf6; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.15); flex-wrap: wrap; gap: 12px; order: 99; margin-top: 5px;';
         bulkBar.innerHTML = `
             <div style="font-weight: 600; color: #1e3a8a; font-size: 14px;">
                 Đã chọn: <span id="bulk-selected-count" style="color: #ef4444; font-size: 16px;">0</span> tài khoản
@@ -145,7 +149,7 @@ export function injectTableHeadersAndToolbar() {
                 <button id="btnBulkBan" class="btn-modern-action" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-ban"></i> Khóa Loạt</button>
             </div>
         `;
-        insertTarget.parentNode.insertBefore(bulkBar, insertTarget);
+        toolbar.appendChild(bulkBar);
     }
 }
 
@@ -606,24 +610,23 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        // TẠO WRAPPER CỐ ĐỊNH CẢ STATS VÀ TOOLBAR
-        const statsContainer = document.querySelector('#tab-user-list .stats-container');
-        let stickyWrapper = document.getElementById('user-sticky-header-wrapper');
+        // TẠO WRAPPER ĐỂ CỐ ĐỊNH CHUNG CẢ THỐNG KÊ VÀ TOOLBAR LÊN ĐỈNH
+        const tabUserList = document.getElementById('tab-user-list');
+        const statsContainer = tabUserList ? tabUserList.querySelector('.stats-container') : null;
         
-        if (!stickyWrapper && statsContainer) {
-            stickyWrapper = document.createElement('div');
-            stickyWrapper.id = 'user-sticky-header-wrapper';
-            // Đặt top: 60px (dưới Topbar), background trùng màu nền để che bảng khi cuộn
-            stickyWrapper.style.cssText = 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 10px 0 10px 0; margin-top: -10px; border-bottom: 1px solid #e2e8f0;';
-            
-            statsContainer.parentNode.insertBefore(stickyWrapper, statsContainer);
-            stickyWrapper.appendChild(statsContainer);
-            stickyWrapper.appendChild(toolbar);
+        if (statsContainer && !document.getElementById('user-top-sticky-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.id = 'user-top-sticky-wrapper';
+            wrapper.style.cssText = 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 15px 0 10px 0; margin-top: -15px; margin-bottom: 15px; border-bottom: 1px solid #cbd5e1;';
+            statsContainer.parentNode.insertBefore(wrapper, statsContainer);
+            wrapper.appendChild(statsContainer);
+            wrapper.appendChild(toolbar);
             
             statsContainer.style.marginBottom = '15px';
+            toolbar.style.cssText += 'display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;';
+        } else if (!document.getElementById('user-top-sticky-wrapper')) {
+            toolbar.style.cssText += 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
         }
-
-        toolbar.style.cssText += 'display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;';
         
         const searchContainer = document.querySelector('.search-user-container');
         if (searchContainer) {
