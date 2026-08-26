@@ -131,7 +131,9 @@ export function injectTableHeadersAndToolbar() {
 
     // TỐI ƯU CỐ ĐỊNH TOOLBAR: Chèn Bulk Action Bar trực tiếp vào Toolbar chính thay vì để ngoài
     const toolbar = document.querySelector('.toolbar-user-modern');
-    if (toolbar && !document.getElementById('bulk-action-bar')) {
+    if (toolbar) {
+        // Đã loại bỏ position: sticky để thanh toolbar trượt theo trang
+        toolbar.style.cssText += 'background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
         
