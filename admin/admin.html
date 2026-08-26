@@ -554,7 +554,7 @@
     <!-- SCRIPT HIỂN THỊ DANH SÁCH 50 LƯỢT THI GẦN NHẤT & CÓ PHÂN TRANG -->
     <script type="module">
         import { db } from './firebase-config.js';
-        import { collection, query, orderBy, limit, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('componentsLoaded', () => {
             const tbody = document.getElementById('recent-exams-body');
@@ -566,19 +566,20 @@
             let recentCurrentPage = 1;
             const recentItemsPerPage = 10;
             
-            // Map độc lập dùng để lưu trạng thái VIP của người dùng (Giúp hiển thị icon chuẩn xác ngay lập tức)
+            // Map độc lập dùng để lưu trạng thái VIP
             let vipStatusMap = new Set();
 
-            // Truy vấn trực tiếp lấy danh sách VIP để không phụ thuộc vào tiến trình tải tab khác
-            getDocs(collection(db, "users")).then(snap => {
+            // Luồng độc lập: Lắng nghe realtime danh sách User để có thông tin VIP 100% chuẩn xác
+            onSnapshot(collection(db, "users"), (snap) => {
+                vipStatusMap.clear();
                 snap.forEach(docSnap => {
                     const u = docSnap.data();
                     if (u.isVip && u.email) {
                         vipStatusMap.add(u.email.toLowerCase());
                     }
                 });
-                renderRecentExams(); // Tự động vẽ lại bảng khi đã có dữ liệu VIP
-            }).catch(err => console.error("Lỗi tải thông tin VIP:", err));
+                if (allRecentResults.length > 0) renderRecentExams();
+            });
 
             const renderRecentExams = () => {
                 tbody.innerHTML = '';
@@ -588,14 +589,14 @@
                     return;
                 }
 
-                // Tối ưu thuật toán mốc thời gian để tuyệt đối không lệch múi giờ
+                // Cấu trúc thời gian chuẩn tránh lệch múi giờ
                 const now = new Date();
-                const startOfToday = new Date(now);
-                startOfToday.setHours(0, 0, 0, 0); // Về đúng 00:00:00 của hôm nay
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const startOfTodayMs = startOfToday.getTime();
                 
-                const startOfYesterdayMs = startOfTodayMs - 24 * 60 * 60 * 1000; // 00:00:00 của hôm qua
-                const startOf3DaysAgoMs = startOfTodayMs - 3 * 24 * 60 * 60 * 1000;
+                // Trừ đi số mili-giây của 1 ngày (86,400,000)
+                const startOfYesterdayMs = startOfTodayMs - 86400000;
+                const startOf3DaysAgoMs = startOfTodayMs - 3 * 86400000;
 
                 // 1. Lọc dữ liệu theo thời gian
                 const filtered = allRecentResults.filter(data => {
@@ -609,7 +610,7 @@
                     if (!ms) return false;
 
                     if (currentRecentFilter === '0') return ms >= startOfTodayMs;
-                    // Lọc hôm qua: Từ 00:00 hôm qua đến trước 00:00 hôm nay
+                    // Lọc hôm qua: Từ đầu ngày hôm qua đến sát đầu ngày hôm nay
                     if (currentRecentFilter === '1') return ms >= startOfYesterdayMs && ms < startOfTodayMs; 
                     if (currentRecentFilter === '3') return ms >= startOf3DaysAgoMs;
                     
@@ -617,7 +618,7 @@
                 });
 
                 if (filtered.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Không có lượt thi nào khớp với bộ lọc thời gian này.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #ef4444; font-weight: bold;">Dữ liệu trống: Không có ai thi trong khoảng thời gian này.</td></tr>';
                     paginationContainer.innerHTML = '';
                     return;
                 }
@@ -646,20 +647,21 @@
                     const examCode = data.examId || data.examCode || 'Không rõ';
                     const email = data.email || 'Ẩn danh';
 
-                    // Lấy trạng thái VIP từ biến Map độc lập để đảm bảo luôn hiển thị ngay lập tức
-                    const isVip = email && vipStatusMap.has(email.toLowerCase());
+                    // Lấy trạng thái VIP
+                    const isVip = email && email !== 'Ẩn danh' && vipStatusMap.has(email.toLowerCase());
 
-                    const vipIcon = isVip 
-                        ? `<i class="fa-solid fa-crown" style="color: #f59e0b; margin-left: 6px; font-size: 13px;" title="Tài khoản VIP"></i>` 
-                        : `<i class="fa-solid fa-user" style="color: #94a3b8; margin-left: 6px; font-size: 13px;" title="Tài khoản Thường"></i>`;
+                    // Dùng Huy Hiệu (Badge) độc lập vẽ bằng HTML/CSS để đảm bảo hiển thị 100%
+                    const vipBadge = isVip 
+                        ? `<span style="background: #fef08a; color: #a16207; font-size: 10.5px; font-weight: 800; padding: 3px 6px; border-radius: 6px; margin-left: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: nowrap;">VIP 👑</span>`
+                        : `<span style="background: #f1f5f9; color: #64748b; font-size: 10.5px; font-weight: 700; padding: 3px 6px; border-radius: 6px; margin-left: 8px; border: 1px solid #e2e8f0; white-space: nowrap;">Thường 👤</span>`;
 
                     tbody.innerHTML += `
                         <tr style="transition: background 0.2s; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                             <td class="text-center" style="padding: 12px; color: #475569;">${stt++}</td>
                             <td style="padding: 12px;">
-                                <div style="display: flex; align-items: center; gap: 6px;">
+                                <div style="display: flex; align-items: center;">
                                     <strong style="color: #0f172a; font-size: 14px; word-break: break-all;">${email}</strong>
-                                    ${vipIcon}
+                                    ${vipBadge}
                                 </div>
                             </td>
                             <td class="text-center" style="padding: 12px;"><span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px;">${examCode}</span></td>
