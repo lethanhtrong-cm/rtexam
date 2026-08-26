@@ -181,7 +181,6 @@
                         <button class="pill-btn" data-days="3">3 ngày qua</button>
                     </div>
                 </div>
-                <!-- BỎ MAX-HEIGHT VÀ OVERFLOW ĐỂ BẢNG KHÔNG CUỘN MÀ HIỂN THỊ TRỌN 10 DÒNG -->
                 <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                     <div class="table-container" style="border: none; border-radius: 0;">
                         <table class="admin-table" style="width: 100%; border-collapse: collapse;">
@@ -199,7 +198,6 @@
                             </tbody>
                         </table>
                     </div>
-                    <!-- VÙNG CHỨA CÁC NÚT PHÂN TRANG -->
                     <div id="recent-exams-pagination" style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 15px; border-top: 1px solid #e2e8f0; background: #fff;"></div>
                 </div>
             </section>
@@ -556,8 +554,7 @@
     <!-- SCRIPT HIỂN THỊ DANH SÁCH 50 LƯỢT THI GẦN NHẤT & CÓ PHÂN TRANG -->
     <script type="module">
         import { db } from './firebase-config.js';
-        import { collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { userState } from './admin-user/admin-users-data.js';
+        import { collection, query, orderBy, limit, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('componentsLoaded', () => {
             const tbody = document.getElementById('recent-exams-body');
@@ -568,6 +565,20 @@
             let currentRecentFilter = 'all';
             let recentCurrentPage = 1;
             const recentItemsPerPage = 10;
+            
+            // Map độc lập dùng để lưu trạng thái VIP của người dùng (Giúp hiển thị icon chuẩn xác ngay lập tức)
+            let vipStatusMap = new Set();
+
+            // Truy vấn trực tiếp lấy danh sách VIP để không phụ thuộc vào tiến trình tải tab khác
+            getDocs(collection(db, "users")).then(snap => {
+                snap.forEach(docSnap => {
+                    const u = docSnap.data();
+                    if (u.isVip && u.email) {
+                        vipStatusMap.add(u.email.toLowerCase());
+                    }
+                });
+                renderRecentExams(); // Tự động vẽ lại bảng khi đã có dữ liệu VIP
+            }).catch(err => console.error("Lỗi tải thông tin VIP:", err));
 
             const renderRecentExams = () => {
                 tbody.innerHTML = '';
@@ -577,10 +588,14 @@
                     return;
                 }
 
+                // Tối ưu thuật toán mốc thời gian để tuyệt đối không lệch múi giờ
                 const now = new Date();
-                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-                const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
-                const startOf3DaysAgo = startOfToday - 3 * 24 * 60 * 60 * 1000;
+                const startOfToday = new Date(now);
+                startOfToday.setHours(0, 0, 0, 0); // Về đúng 00:00:00 của hôm nay
+                const startOfTodayMs = startOfToday.getTime();
+                
+                const startOfYesterdayMs = startOfTodayMs - 24 * 60 * 60 * 1000; // 00:00:00 của hôm qua
+                const startOf3DaysAgoMs = startOfTodayMs - 3 * 24 * 60 * 60 * 1000;
 
                 // 1. Lọc dữ liệu theo thời gian
                 const filtered = allRecentResults.filter(data => {
@@ -593,15 +608,16 @@
                     }
                     if (!ms) return false;
 
-                    if (currentRecentFilter === '0') return ms >= startOfToday;
-                    if (currentRecentFilter === '1') return ms >= startOfYesterday && ms < startOfToday;
-                    if (currentRecentFilter === '3') return ms >= startOf3DaysAgo;
+                    if (currentRecentFilter === '0') return ms >= startOfTodayMs;
+                    // Lọc hôm qua: Từ 00:00 hôm qua đến trước 00:00 hôm nay
+                    if (currentRecentFilter === '1') return ms >= startOfYesterdayMs && ms < startOfTodayMs; 
+                    if (currentRecentFilter === '3') return ms >= startOf3DaysAgoMs;
                     
                     return true;
                 });
 
                 if (filtered.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Không có lượt thi nào khớp với bộ lọc.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Không có lượt thi nào khớp với bộ lọc thời gian này.</td></tr>';
                     paginationContainer.innerHTML = '';
                     return;
                 }
@@ -630,11 +646,8 @@
                     const examCode = data.examId || data.examCode || 'Không rõ';
                     const email = data.email || 'Ẩn danh';
 
-                    let isVip = false;
-                    if (userState && userState.cachedUsers) {
-                        const u = userState.cachedUsers.find(user => user.email === email);
-                        if (u && u.isVip) isVip = true;
-                    }
+                    // Lấy trạng thái VIP từ biến Map độc lập để đảm bảo luôn hiển thị ngay lập tức
+                    const isVip = email && vipStatusMap.has(email.toLowerCase());
 
                     const vipIcon = isVip 
                         ? `<i class="fa-solid fa-crown" style="color: #f59e0b; margin-left: 6px; font-size: 13px;" title="Tài khoản VIP"></i>` 
@@ -709,16 +722,6 @@
                 });
             });
             
-            // Cơ chế chờ dữ liệu User load xong để hiển thị chính xác Icon VIP (Kiểm tra mỗi 0.5 giây)
-            let checkAttempts = 0;
-            const checkUsersInterval = setInterval(() => {
-                if (userState && userState.cachedUsers && userState.cachedUsers.length > 0) {
-                    renderRecentExams();
-                    clearInterval(checkUsersInterval);
-                }
-                checkAttempts++;
-                if (checkAttempts > 20) clearInterval(checkUsersInterval); // Hủy kiểm tra sau 10 giây nếu mạng quá lag
-            }, 500);
         });
     </script>
 </body>
