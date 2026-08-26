@@ -172,7 +172,15 @@
                     </div>
                 </div>
 
-                <h2 style="font-size: 1.25rem; color: #1e293b; margin-top: 30px; margin-bottom: 15px;">⚡ 20 Lượt Thi Gần Nhất</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h2 style="font-size: 1.25rem; color: #1e293b; margin: 0;">⚡ 50 Lượt Thi Gần Nhất</h2>
+                    <div class="pill-container" id="filter-recent-time-pills" style="display: flex; gap: 8px;">
+                        <button class="pill-btn active" data-days="all">Tất cả</button>
+                        <button class="pill-btn" data-days="0">Hôm nay</button>
+                        <button class="pill-btn" data-days="1">Hôm qua</button>
+                        <button class="pill-btn" data-days="3">3 ngày qua</button>
+                    </div>
+                </div>
                 <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                     <div class="table-container" style="border: none; border-radius: 0; max-height: 450px; overflow-y: auto;">
                         <table class="admin-table" style="width: 100%; border-collapse: collapse;">
@@ -368,7 +376,6 @@
                 </div>
             </section>
 
-            <!-- BỔ SUNG TAB XEM LỊCH SỬ CHỜ DUYỆT -->
             <section id="tab-payments" class="content-section">
                 <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px;">
                     <div style="padding: 20px; background: #fff; border-bottom: 1px solid #e2e8f0;">
@@ -543,24 +550,55 @@
     <script type="module" src="./admin-dashboard.js"></script>
     <script type="module" src="./admin-report.js"></script>
 
+    <!-- SCRIPT HIỂN THỊ DANH SÁCH 50 LƯỢT THI GẦN NHẤT & BỘ LỌC -->
     <script type="module">
         import { db } from './firebase-config.js';
         import { collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { userState } from './admin-user/admin-users-data.js';
 
         document.addEventListener('componentsLoaded', () => {
             const tbody = document.getElementById('recent-exams-body');
             if (!tbody) return;
 
-            const q = query(collection(db, "results"), orderBy("timestamp", "desc"), limit(20));
-            onSnapshot(q, (snapshot) => {
+            let allRecentResults = [];
+            let currentRecentFilter = 'all';
+
+            const renderRecentExams = () => {
                 tbody.innerHTML = '';
-                if (snapshot.empty) {
+                if (allRecentResults.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Chưa có lượt thi nào trên hệ thống.</td></tr>';
                     return;
                 }
+
+                const now = new Date();
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
+                const startOf3DaysAgo = startOfToday - 3 * 24 * 60 * 60 * 1000;
+
+                const filtered = allRecentResults.filter(data => {
+                    if (currentRecentFilter === 'all') return true;
+                    
+                    let rawTime = data.createdAt || data.timestamp;
+                    let ms = 0;
+                    if (rawTime) {
+                        ms = (typeof rawTime.toDate === 'function') ? rawTime.toDate().getTime() : new Date(rawTime).getTime();
+                    }
+                    if (!ms) return false;
+
+                    if (currentRecentFilter === '0') return ms >= startOfToday;
+                    if (currentRecentFilter === '1') return ms >= startOfYesterday && ms < startOfToday;
+                    if (currentRecentFilter === '3') return ms >= startOf3DaysAgo;
+                    
+                    return true;
+                });
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Không có lượt thi nào khớp với bộ lọc.</td></tr>';
+                    return;
+                }
+
                 let stt = 1;
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
+                filtered.forEach(data => {
                     let timeStr = 'Không rõ';
                     let rawTime = data.createdAt || data.timestamp;
                     if (rawTime) {
@@ -573,19 +611,57 @@
                     const examCode = data.examId || data.examCode || 'Không rõ';
                     const email = data.email || 'Ẩn danh';
 
+                    let isVip = false;
+                    if (userState && userState.cachedUsers) {
+                        const u = userState.cachedUsers.find(user => user.email === email);
+                        if (u && u.isVip) isVip = true;
+                    }
+
+                    const vipIcon = isVip 
+                        ? `<i class="fa-solid fa-crown" style="color: #f59e0b; margin-left: 6px; font-size: 13px;" title="Tài khoản VIP"></i>` 
+                        : `<i class="fa-solid fa-user" style="color: #94a3b8; margin-left: 6px; font-size: 13px;" title="Tài khoản Thường"></i>`;
+
                     tbody.innerHTML += `
                         <tr style="transition: background 0.2s; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                             <td class="text-center" style="padding: 12px; color: #475569;">${stt++}</td>
-                            <td style="padding: 12px;"><strong style="color: #0f172a; font-size: 14px;">${email}</strong></td>
+                            <td style="padding: 12px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <strong style="color: #0f172a; font-size: 14px; word-break: break-all;">${email}</strong>
+                                    ${vipIcon}
+                                </div>
+                            </td>
                             <td class="text-center" style="padding: 12px;"><span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px;">${examCode}</span></td>
                             <td class="text-center" style="padding: 12px;"><strong style="color: #10b981; font-size: 15px;">${score}</strong></td>
                             <td class="text-center" style="padding: 12px; color: #64748b; font-size: 13px;">${timeStr}</td>
                         </tr>
                     `;
                 });
+            };
+
+            const q = query(collection(db, "results"), orderBy("timestamp", "desc"), limit(50));
+            onSnapshot(q, (snapshot) => {
+                allRecentResults = [];
+                snapshot.forEach(docSnap => {
+                    allRecentResults.push(docSnap.data());
+                });
+                renderRecentExams();
             }, (error) => {
-                console.error("Lỗi tải 20 lượt thi gần nhất:", error);
+                console.error("Lỗi tải lượt thi gần nhất:", error);
                 tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #ef4444;">❌ Lỗi kết nối để tải dữ liệu.</td></tr>';
+            });
+
+            const timePills = document.querySelectorAll('#filter-recent-time-pills .pill-btn');
+            timePills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    timePills.forEach(btn => btn.classList.remove('active'));
+                    pill.classList.add('active');
+                    currentRecentFilter = pill.getAttribute('data-days');
+                    renderRecentExams();
+                });
+            });
+            
+            document.addEventListener('usersDataLoaded', () => {
+                if (allRecentResults.length > 0) renderRecentExams();
             });
         });
     </script>
