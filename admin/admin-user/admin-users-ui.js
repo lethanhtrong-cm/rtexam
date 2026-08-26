@@ -129,12 +129,14 @@ export function injectTableHeadersAndToolbar() {
         };
     }
 
-    let insertTarget = table.closest('.table-container') || table;
-    if (insertTarget && !document.getElementById('bulk-action-bar')) {
+    // TỐI ƯU CỐ ĐỊNH TOOLBAR: Chèn Bulk Action Bar trực tiếp vào Toolbar chính thay vì để ngoài
+    const toolbar = document.querySelector('.toolbar-user-modern');
+    if (toolbar && !document.getElementById('bulk-action-bar')) {
         const bulkBar = document.createElement('div');
         bulkBar.id = 'bulk-action-bar';
         
-        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #ffffff; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #8b5cf6; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.25); flex-wrap: wrap; gap: 12px; position: sticky; top: 140px; z-index: 85;';
+        // Thêm width: 100% và order: 99 để chiếm hàng cuối cùng trong Flex Container của Toolbar
+        bulkBar.style.cssText = 'display: none; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 18px; border-radius: 10px; width: 100%; border: 2px solid #8b5cf6; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.15); flex-wrap: wrap; gap: 12px; order: 99; margin-top: 5px;';
         bulkBar.innerHTML = `
             <div style="font-weight: 600; color: #1e3a8a; font-size: 14px;">
                 Đã chọn: <span id="bulk-selected-count" style="color: #ef4444; font-size: 16px;">0</span> tài khoản
@@ -145,7 +147,7 @@ export function injectTableHeadersAndToolbar() {
                 <button id="btnBulkBan" class="btn-modern-action" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12.5px;"><i class="fa-solid fa-ban"></i> Khóa Loạt</button>
             </div>
         `;
-        insertTarget.parentNode.insertBefore(bulkBar, insertTarget);
+        toolbar.appendChild(bulkBar);
     }
 }
 
@@ -628,7 +630,6 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             if (filterSelect) actionGroup.appendChild(filterSelect);
         }
 
-        // Định dạng lại các nút nhỏ gọn hơn
         const baseBtnCSS = 'color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 12.5px; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 5px;';
 
         if (!document.getElementById('btnRefreshUsers')) {
