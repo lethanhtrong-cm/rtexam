@@ -4,8 +4,6 @@
 // ==========================================
 import { userState, formatDateTime } from './admin-users-data.js';
 import { getCostBadgeHtml } from './admin-billing.js';
-import { db } from '../admin-core.js';
-import { collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export function injectTableHeadersAndToolbar() {
     const table = document.querySelector('#usersTableBody').closest('table');
@@ -86,11 +84,15 @@ export function injectTableHeadersAndToolbar() {
         const onlineOpt = filterSelect.querySelector('option[value="online"]');
         if (onlineOpt) onlineOpt.remove();
 
-        if (!filterSelect.querySelector('option[value="pending_vip"]')) {
-            const pendingOption = document.createElement('option');
-            pendingOption.value = 'pending_vip';
-            pendingOption.innerText = 'Chờ xác nhận CK';
-            filterSelect.appendChild(pendingOption);
+        const pendingOpt = filterSelect.querySelector('option[value="pending_vip"]');
+        if (pendingOpt) pendingOpt.remove();
+
+        // THAY ĐỔI THÀNH BỘ LỌC TẤT CẢ NGƯỜI ĐÃ TỪNG THANH TOÁN
+        if (!filterSelect.querySelector('option[value="has_payment"]')) {
+            const paymentOption = document.createElement('option');
+            paymentOption.value = 'has_payment';
+            paymentOption.innerText = 'Đã từng báo chuyển khoản';
+            filterSelect.appendChild(paymentOption);
         }
     }
 
@@ -159,6 +161,52 @@ export function updateBulkActionBar() {
     }
 }
 
+// =========================================================================
+// RENDER BẢNG CHI TIẾT LỊCH SỬ THANH TOÁN (TAB MỚI)
+// =========================================================================
+export function renderPaymentHistory() {
+    const tbody = document.getElementById('payment-history-body');
+    if (!tbody) return;
+
+    let html = '';
+    let stt = 1;
+    
+    if (userState.cachedPaymentRequests.length === 0) {
+        html = '<tr><td colspan="5" class="empty-message text-center" style="padding: 20px;">Chưa có yêu cầu nâng cấp nào.</td></tr>';
+    } else {
+        userState.cachedPaymentRequests.forEach(data => {
+            const u = userState.cachedUsers.find(user => user.userId === data.uid);
+            const email = (u && u.email) ? u.email : (data.email || data.uid);
+            
+            let timeStr = 'Không rõ';
+            if (data.timestamp) {
+                const dateObj = (typeof data.timestamp.toDate === 'function') ? data.timestamp.toDate() : new Date(data.timestamp);
+                timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            }
+            
+            const statusHtml = data.status === "pending" 
+                ? `<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đang chờ duyệt</span>`
+                : `<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đã xử lý</span>`;
+                
+            // Nút duyệt dùng chung class .btn-toggle-vip của bảng User để tự kích hoạt logic xử lý bên File Action mà không cần viết lại sự kiện click
+            const actionHtml = data.status === "pending"
+                ? `<button class="btn-modern-action btn-toggle-vip" data-id="${data.uid}" data-vip="false" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-check"></i> Duyệt VIP ngay</button>`
+                : `<span style="color: #94a3b8; font-size: 12px;"><i class="fa-solid fa-check-double"></i> Hoàn tất</span>`;
+                
+            html += `
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                    <td class="text-center" style="padding: 12px;">${stt++}</td>
+                    <td style="padding: 12px;"><strong style="color: #0f172a;">${email}</strong></td>
+                    <td class="text-center" style="padding: 12px; color: #64748b; font-size: 13px;">${timeStr}</td>
+                    <td class="text-center" style="padding: 12px;">${statusHtml}</td>
+                    <td class="text-center" style="padding: 12px;">${actionHtml}</td>
+                </tr>
+            `;
+        });
+    }
+    tbody.innerHTML = html;
+}
+
 export function renderUserList() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
@@ -179,8 +227,9 @@ export function renderUserList() {
         let matchStatus = false;
         if (userState.currentFilterStatus === "all") {
             matchStatus = true;
-        } else if (userState.currentFilterStatus === "pending_vip") { 
-            matchStatus = userState.pendingVIPRequests.has(user.userId);
+        } else if (userState.currentFilterStatus === "has_payment") { 
+            // HIỆU LỰC LỌC MỚI: Chỉ lấy những người nằm trong mảng allPaymentUIDs
+            matchStatus = userState.allPaymentUIDs.has(user.userId);
         } else {
             matchStatus = (user.statusKey === userState.currentFilterStatus);
         }
@@ -452,9 +501,7 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             toolbar.appendChild(notifyAllBtn);
         }
 
-        // ==============================================================
-        // TÍNH NĂNG MỚI: NÚT ĐỒNG BỘ ĐIỂM TRUNG BÌNH CŨ (CHẠY 1 LẦN)
-        // ==============================================================
+        // TÍNH NĂNG MỚI: NÚT ĐỒNG BỘ ĐIỂM TRUNG BÌNH CŨ
         if (!document.getElementById('btnSyncOldData')) {
             const syncBtn = document.createElement('button');
             syncBtn.id = 'btnSyncOldData';
@@ -464,13 +511,12 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             syncBtn.onmouseover = () => syncBtn.style.transform = 'translateY(-2px)';
             syncBtn.onmouseout = () => syncBtn.style.transform = 'translateY(0)';
             syncBtn.onclick = async () => {
-                if(!confirm("Hệ thống sẽ chạy một lệnh quét toàn bộ dữ liệu lịch sử để tính lại Điểm Trung Bình và lưu vào bảng Users. Quá trình này tiêu tốn một ít Quota nhưng chỉ cần chạy 1 LẦN DUY NHẤT. Bạn có muốn tiếp tục?")) return;
+                if(!confirm("Hệ thống sẽ chạy lệnh quét toàn bộ dữ liệu lịch sử để tính lại Điểm Trung Bình. Quá trình này tiêu tốn một ít Quota nhưng chỉ cần chạy 1 LẦN DUY NHẤT. Bạn có muốn tiếp tục?")) return;
                 
                 syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
                 syncBtn.disabled = true;
                 
                 try {
-                    // 1. Quét toàn bộ lịch sử điểm (results)
                     const resultsSnap = await getDocs(collection(db, "results"));
                     const stats = {};
                     resultsSnap.forEach(r => {
@@ -481,7 +527,6 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
                         stats[d.email].count += 1;
                     });
                     
-                    // 2. Tính toán lại và ghi chèn vào bảng users
                     const usersSnap = await getDocs(collection(db, "users"));
                     const promises = [];
                     usersSnap.forEach(u => {
