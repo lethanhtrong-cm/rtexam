@@ -606,10 +606,8 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        // CẤU HÌNH LẠI BỐ CỤC: Bật flex-wrap để tự xuống dòng
         toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
         
-        // Ép phần tử chứa thanh tìm kiếm chiếm 100% chiều ngang hàng 1
         const searchContainer = document.querySelector('.search-user-container');
         if (searchContainer) {
             searchContainer.style.flex = '1 1 100%';
@@ -618,21 +616,20 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             if (sInput) sInput.style.width = '100%';
         }
 
-        // Tạo khung (Action Group) gom các nút và 2 bộ lọc lại để nó luôn liền kề nhau trên hàng 2
         let actionGroup = document.getElementById('toolbar-btn-group');
         if (!actionGroup) {
             actionGroup = document.createElement('div');
             actionGroup.id = 'toolbar-btn-group';
-            actionGroup.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%;';
+            actionGroup.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%;';
             toolbar.appendChild(actionGroup);
 
-            // Gắp 2 bộ lọc thả vào đầu của Khối hàng 2
             const sortSelect = document.getElementById('sortSelect');
             if (sortSelect) actionGroup.appendChild(sortSelect);
             if (filterSelect) actionGroup.appendChild(filterSelect);
         }
 
-        const baseBtnCSS = 'color: white; border: none; padding: 9px 14px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 6px;';
+        // Định dạng lại các nút nhỏ gọn hơn
+        const baseBtnCSS = 'color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 12.5px; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 5px;';
 
         if (!document.getElementById('btnRefreshUsers')) {
             const refreshBtn = document.createElement('button');
@@ -657,7 +654,7 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             notifyAllBtn.id = 'btnNotifyAll';
             notifyAllBtn.className = 'btn-modern-action';
             notifyAllBtn.style.cssText = `background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); ${baseBtnCSS}`;
-            notifyAllBtn.innerHTML = '<i class="fa-solid fa-bell-ring"></i> Gửi TB Toàn Hệ Thống';
+            notifyAllBtn.innerHTML = '<i class="fa-solid fa-bell-ring"></i> Gửi Thông Báo';
             notifyAllBtn.onmouseover = () => notifyAllBtn.style.transform = 'translateY(-2px)';
             notifyAllBtn.onmouseout = () => notifyAllBtn.style.transform = 'translateY(0)';
             notifyAllBtn.onclick = () => {
@@ -671,7 +668,7 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             syncBtn.id = 'btnSyncOldData';
             syncBtn.className = 'btn-modern-action';
             syncBtn.style.cssText = `background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); ${baseBtnCSS}`;
-            syncBtn.innerHTML = '<i class="fa-solid fa-database"></i> Đồng bộ ĐTB Cũ';
+            syncBtn.innerHTML = '<i class="fa-solid fa-database"></i> Đồng bộ ĐTB';
             syncBtn.onmouseover = () => syncBtn.style.transform = 'translateY(-2px)';
             syncBtn.onmouseout = () => syncBtn.style.transform = 'translateY(0)';
             syncBtn.onclick = async () => {
@@ -712,7 +709,7 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
                     console.error(e);
                     alert("Lỗi đồng bộ: " + e.message);
                 } finally {
-                    syncBtn.innerHTML = '<i class="fa-solid fa-database"></i> Đồng bộ ĐTB Cũ';
+                    syncBtn.innerHTML = '<i class="fa-solid fa-database"></i> Đồng bộ ĐTB';
                     syncBtn.disabled = false;
                 }
             };
@@ -724,7 +721,7 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             exportUsersBtn.id = 'btnExportFilteredUsers';
             exportUsersBtn.className = 'btn-modern-action';
             exportUsersBtn.style.cssText = `background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); ${baseBtnCSS}`;
-            exportUsersBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Xuất Excel DS Lọc';
+            exportUsersBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Excel DS Lọc';
             exportUsersBtn.onmouseover = () => exportUsersBtn.style.transform = 'translateY(-2px)';
             exportUsersBtn.onmouseout = () => exportUsersBtn.style.transform = 'translateY(0)';
             exportUsersBtn.onclick = exportFilteredUsersToExcel;
@@ -736,7 +733,7 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             exportBtn.id = 'btnExportPaymentsMain';
             exportBtn.className = 'btn-modern-action';
             exportBtn.style.cssText = `background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%); ${baseBtnCSS}`;
-            exportBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Xuất Excel Báo CK';
+            exportBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Excel Báo CK';
             exportBtn.onmouseover = () => exportBtn.style.transform = 'translateY(-2px)';
             exportBtn.onmouseout = () => exportBtn.style.transform = 'translateY(0)';
             exportBtn.onclick = exportPaymentHistoryToExcel;
