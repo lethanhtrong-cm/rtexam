@@ -537,6 +537,115 @@ async function executeSubmit() {
     } catch (error) {
         quizUI.showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
     }
+
+    // ==========================================
+    // BỔ SUNG LOGIC CHỨNG NHẬN TRỰC TIẾP TỪ ĐÂY
+    // ĐIỀU KIỆN: SỐ ĐIỂM > 8 BẤT CHẤP ĐỘ KHÓ
+    // ==========================================
+    if (finalScore > 8) {
+        setTimeout(() => {
+            const modalContent = document.querySelector('#result-modal .modal-content') || document.querySelector('#result-modal > div') || document.getElementById('result-modal');
+            
+            if (modalContent && !document.getElementById('btn-download-cert')) {
+                // Tạo nút tải chứng nhận
+                const certBtn = document.createElement('button');
+                certBtn.id = 'btn-download-cert';
+                certBtn.innerHTML = '<i class="fa-solid fa-award"></i> Tải Chứng Nhận Xuất Sắc';
+                certBtn.style.cssText = "background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 1.05rem; transition: 0.2s;";
+                
+                certBtn.onmouseover = () => certBtn.style.transform = 'translateY(-2px)';
+                certBtn.onmouseout = () => certBtn.style.transform = 'translateY(0)';
+                
+                certBtn.onclick = () => {
+                    const userName = currentUser.displayName || currentUser.email.split('@')[0];
+                    downloadCertificate(userName, currentExamId, finalScore);
+                };
+                
+                // Tiêm vào dưới cùng của nội dung Modal
+                modalContent.appendChild(certBtn);
+            }
+        }, 600); // Đợi modal của quizUI render xong mới gắn nút vào
+    }
+}
+
+// =========================================================================
+// MODULE CHỨNG NHẬN ĐIỆN TỬ (TỰ ĐỘNG INJECT VÀ XỬ LÝ ẢNH)
+// =========================================================================
+function loadHtml2Canvas() {
+    if (typeof window.html2canvas === 'undefined') {
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        document.head.appendChild(script);
+    }
+}
+loadHtml2Canvas(); // Tải sẵn thư viện vào bộ nhớ khi mở trang thi
+
+function injectCertificateTemplate() {
+    if (document.getElementById('certificate-template')) return;
+    const certHtml = `
+        <div id="certificate-template" style="position: absolute; left: -9999px; top: 0; width: 800px; height: 565px; background: linear-gradient(135deg, #f8fafc, #e2e8f0); padding: 40px; text-align: center; color: #1e293b; font-family: 'Times New Roman', serif; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 15px solid #084298;">
+            <div style="width: 100px; height: 100px; background: #fff; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; align-items: center; justify-content: center; border: 3px solid #fbbf24;">
+                <i class="fa-solid fa-stethoscope" style="font-size: 2.5rem; color: #084298;"></i>
+            </div>
+            <h1 style="font-size: 2.5rem; color: #b45309; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 2px;">Chứng Nhận Xuất Sắc</h1>
+            <p style="font-size: 1.2rem; color: #475569; margin-bottom: 25px;">Hệ thống trân trọng chứng nhận học viên</p>
+            <h2 id="cert-user-name" style="font-size: 3rem; margin: 0 0 20px 0; color: #0f172a; font-style: italic;">Tên Học Viên</h2>
+            <p style="font-size: 1.1rem; color: #334155; line-height: 1.6; padding: 0 50px;">
+                Đã hoàn thành xuất sắc bài thi 
+                <strong id="cert-exam-name" style="color: #084298;">Tên Đề Thi</strong><br>
+                với số điểm <strong id="cert-score" style="color: #dc2626; font-size: 1.4rem;">10/10</strong>
+            </p>
+            <div style="display: flex; justify-content: space-between; width: 100%; padding: 0 60px; margin-top: 40px;">
+                <div style="text-align: center;">
+                    <p id="cert-date" style="margin: 0; font-size: 1rem; color: #475569; font-weight: bold;">Ngày --/--/----</p>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #64748b;">Ngày cấp</p>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-family: 'Brush Script MT', cursive; font-size: 1.5rem; color: #084298; opacity: 0.8; margin-bottom: 5px;">MedQuiz Pro</div>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #64748b;">Xác nhận hệ thống</p>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', certHtml);
+}
+
+async function downloadCertificate(userName, examName, score) {
+    injectCertificateTemplate();
+    
+    document.getElementById('cert-user-name').innerText = userName;
+    document.getElementById('cert-exam-name').innerText = examName;
+    document.getElementById('cert-score').innerText = `${score}/10`;
+    
+    const today = new Date();
+    document.getElementById('cert-date').innerText = `Ngày ${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+
+    const certElement = document.getElementById('certificate-template');
+    
+    try {
+        // Tạm đưa element vào viewport nhưng giấu sau z-index để chụp ảnh
+        certElement.style.left = '0';
+        certElement.style.zIndex = '-9999';
+
+        if(typeof window.html2canvas !== 'function') {
+            showToast("Đang tải bộ xử lý ảnh, vui lòng thử lại trong vài giây!");
+            return;
+        }
+
+        const canvas = await window.html2canvas(certElement, { scale: 2, useCORS: true });
+        const imgData = canvas.toDataURL('image/png');
+        
+        const link = document.createElement('a');
+        link.download = `Chung_Nhan_${userName.replace(/\s+/g, '_')}.png`;
+        link.href = imgData;
+        link.click();
+        
+    } catch (err) {
+        console.error("Lỗi xuất chứng nhận: ", err);
+        alert("Có lỗi xảy ra khi tạo chứng nhận!");
+    } finally {
+        certElement.style.left = '-9999px'; // Trả về vị trí tàng hình
+    }
 }
 
 // =========================================================================
