@@ -228,9 +228,6 @@ export function exportFilteredUsersToExcel() {
     }
 }
 
-// =========================================================================
-// XUẤT EXCEL CHO BẢNG LỊCH SỬ CHUYỂN KHOẢN (ĐÃ CẬP NHẬT THÊM THỜI GIAN DUYỆT)
-// =========================================================================
 export function exportPaymentHistoryToExcel() {
     if (!userState.cachedPaymentRequests || userState.cachedPaymentRequests.length === 0) {
         alert("Chưa có dữ liệu lịch sử chuyển khoản để xuất Excel!");
@@ -241,7 +238,6 @@ export function exportPaymentHistoryToExcel() {
         const u = userState.cachedUsers.find(user => user.userId === data.uid);
         const email = (u && u.email) ? u.email : (data.email || data.uid);
         
-        // Quét thêm các trường thời gian dự phòng nếu database cũ không có timestamp
         const rawTime = data.timestamp || data.createdAt || data.date;
         let timeStr = 'Không rõ';
         if (rawTime) {
@@ -251,7 +247,6 @@ export function exportPaymentHistoryToExcel() {
             }
         }
         
-        // Lấy thời gian đã được admin phê duyệt VIP (vipActivationDate)
         let approveTimeStr = '---';
         if (data.status !== "pending") {
             if (u && u.vipActivationDate) {
@@ -301,7 +296,7 @@ export function renderPaymentHistory() {
             const btn = document.createElement('button');
             btn.id = 'btnExportPayments';
             btn.className = 'btn-modern-action';
-            btn.style.cssText = 'position: absolute; right: 20px; top: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16,185,129,0.2);';
+            btn.style.cssText = 'position: absolute; right: 20px; top: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16,185,129,0.2); font-size: 13px;';
             btn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Xuất Excel';
             btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
             btn.onmouseout = () => btn.style.transform = 'translateY(0)';
@@ -321,7 +316,6 @@ export function renderPaymentHistory() {
             const u = userState.cachedUsers.find(user => user.userId === data.uid);
             const email = (u && u.email) ? u.email : (data.email || data.uid);
             
-            // Xử lý chống lỗi 'Không rõ' tương tự trên giao diện Web
             const rawTime = data.timestamp || data.createdAt || data.date;
             let timeStr = 'Không rõ';
             if (rawTime) {
@@ -612,13 +606,26 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px;';
+        // Áp dụng Flex-wrap để các nút tự rớt dòng nếu thiếu khoảng trống
+        toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
         
+        // Tạo một Group để nhóm toàn bộ các nút Action lại với nhau
+        let actionGroup = document.getElementById('toolbar-btn-group');
+        if (!actionGroup) {
+            actionGroup = document.createElement('div');
+            actionGroup.id = 'toolbar-btn-group';
+            actionGroup.style.cssText = 'display: flex; flex-wrap: wrap; gap: 8px; align-items: center;';
+            toolbar.appendChild(actionGroup);
+        }
+
+        // Định dạng CSS dùng chung cho các nút để trông thon gọn hơn
+        const baseBtnCSS = 'color: white; border: none; padding: 9px 14px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 6px;';
+
         if (!document.getElementById('btnRefreshUsers')) {
             const refreshBtn = document.createElement('button');
             refreshBtn.id = 'btnRefreshUsers';
             refreshBtn.className = 'btn-modern-action';
-            refreshBtn.style.cssText = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); margin-right: 10px;';
+            refreshBtn.style.cssText = `background: linear-gradient(135deg, #10b981 0%, #059669 100%); ${baseBtnCSS}`;
             refreshBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Cập Nhật';
             refreshBtn.onmouseover = () => refreshBtn.style.transform = 'translateY(-2px)';
             refreshBtn.onmouseout = () => refreshBtn.style.transform = 'translateY(0)';
@@ -629,28 +636,28 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
                 refreshBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Cập Nhật';
                 refreshBtn.disabled = false;
             };
-            toolbar.appendChild(refreshBtn);
+            actionGroup.appendChild(refreshBtn);
         }
 
         if (!document.getElementById('btnNotifyAll')) {
             const notifyAllBtn = document.createElement('button');
             notifyAllBtn.id = 'btnNotifyAll';
             notifyAllBtn.className = 'btn-modern-action';
-            notifyAllBtn.style.cssText = 'background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);';
+            notifyAllBtn.style.cssText = `background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); ${baseBtnCSS}`;
             notifyAllBtn.innerHTML = '<i class="fa-solid fa-bell-ring"></i> Gửi TB Toàn Hệ Thống';
             notifyAllBtn.onmouseover = () => notifyAllBtn.style.transform = 'translateY(-2px)';
             notifyAllBtn.onmouseout = () => notifyAllBtn.style.transform = 'translateY(0)';
             notifyAllBtn.onclick = () => {
                 if(typeof openNotifyCallback === 'function') openNotifyCallback('ALL');
             };
-            toolbar.appendChild(notifyAllBtn);
+            actionGroup.appendChild(notifyAllBtn);
         }
 
         if (!document.getElementById('btnSyncOldData')) {
             const syncBtn = document.createElement('button');
             syncBtn.id = 'btnSyncOldData';
             syncBtn.className = 'btn-modern-action';
-            syncBtn.style.cssText = 'background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); margin-left: 10px;';
+            syncBtn.style.cssText = `background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); ${baseBtnCSS}`;
             syncBtn.innerHTML = '<i class="fa-solid fa-database"></i> Đồng bộ ĐTB Cũ';
             syncBtn.onmouseover = () => syncBtn.style.transform = 'translateY(-2px)';
             syncBtn.onmouseout = () => syncBtn.style.transform = 'translateY(0)';
@@ -696,31 +703,31 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
                     syncBtn.disabled = false;
                 }
             };
-            toolbar.appendChild(syncBtn);
+            actionGroup.appendChild(syncBtn);
         }
 
         if (!document.getElementById('btnExportFilteredUsers')) {
             const exportUsersBtn = document.createElement('button');
             exportUsersBtn.id = 'btnExportFilteredUsers';
             exportUsersBtn.className = 'btn-modern-action';
-            exportUsersBtn.style.cssText = 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); margin-left: 10px;';
+            exportUsersBtn.style.cssText = `background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); ${baseBtnCSS}`;
             exportUsersBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Xuất Excel DS Lọc';
             exportUsersBtn.onmouseover = () => exportUsersBtn.style.transform = 'translateY(-2px)';
             exportUsersBtn.onmouseout = () => exportUsersBtn.style.transform = 'translateY(0)';
             exportUsersBtn.onclick = exportFilteredUsersToExcel;
-            toolbar.appendChild(exportUsersBtn);
+            actionGroup.appendChild(exportUsersBtn);
         }
 
         if (!document.getElementById('btnExportPaymentsMain')) {
             const exportBtn = document.createElement('button');
             exportBtn.id = 'btnExportPaymentsMain';
             exportBtn.className = 'btn-modern-action';
-            exportBtn.style.cssText = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); margin-left: 10px;';
+            exportBtn.style.cssText = `background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%); ${baseBtnCSS}`;
             exportBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Xuất Excel Báo CK';
             exportBtn.onmouseover = () => exportBtn.style.transform = 'translateY(-2px)';
             exportBtn.onmouseout = () => exportBtn.style.transform = 'translateY(0)';
             exportBtn.onclick = exportPaymentHistoryToExcel;
-            toolbar.appendChild(exportBtn);
+            actionGroup.appendChild(exportBtn);
         }
     }
 }
