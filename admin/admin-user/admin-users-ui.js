@@ -4,6 +4,8 @@
 // ==========================================
 import { userState, formatDateTime } from './admin-users-data.js';
 import { getCostBadgeHtml } from './admin-billing.js';
+import { db } from '../admin-core.js';
+import { collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export function injectTableHeadersAndToolbar() {
     const table = document.querySelector('#usersTableBody').closest('table');
@@ -162,11 +164,74 @@ export function updateBulkActionBar() {
 }
 
 // =========================================================================
+// XUẤT EXCEL CHO BẢNG LỊCH SỬ CHUYỂN KHOẢN
+// =========================================================================
+export function exportPaymentHistoryToExcel() {
+    if (!userState.cachedPaymentRequests || userState.cachedPaymentRequests.length === 0) {
+        alert("Chưa có dữ liệu lịch sử chuyển khoản để xuất Excel!");
+        return;
+    }
+
+    const dataToExport = userState.cachedPaymentRequests.map((data, index) => {
+        const u = userState.cachedUsers.find(user => user.userId === data.uid);
+        const email = (u && u.email) ? u.email : (data.email || data.uid);
+        
+        let timeStr = 'Không rõ';
+        if (data.timestamp) {
+            const dateObj = (typeof data.timestamp.toDate === 'function') ? data.timestamp.toDate() : new Date(data.timestamp);
+            timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+        }
+        
+        return {
+            "STT": index + 1,
+            "Tài Khoản / Email": email,
+            "Thời Gian Báo Cáo": timeStr,
+            "Trạng Thái": data.status === "pending" ? "Đang chờ duyệt" : "Đã xử lý"
+        };
+    });
+
+    try {
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "LichSuChuyenKhoan");
+        
+        // Tự động căn chỉnh độ rộng cột
+        worksheet['!cols'] = [{wch: 5}, {wch: 35}, {wch: 25}, {wch: 20}];
+        
+        XLSX.writeFile(workbook, "Danh_Sach_Bao_Cao_Chuyen_Khoan.xlsx");
+    } catch (error) {
+        console.error("Lỗi xuất Excel:", error);
+        alert("Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại!");
+    }
+}
+
+// =========================================================================
 // RENDER BẢNG CHI TIẾT LỊCH SỬ THANH TOÁN (TAB MỚI)
 // =========================================================================
 export function renderPaymentHistory() {
     const tbody = document.getElementById('payment-history-body');
     if (!tbody) return;
+
+    // Tự động chèn Nút Xuất Excel vào Header của bảng Lịch sử nếu chưa có
+    const paymentSection = document.getElementById('tab-payments');
+    if (paymentSection && !document.getElementById('btnExportPayments')) {
+        const titleEl = paymentSection.querySelector('.card-title');
+        if (titleEl && titleEl.parentNode) {
+            const headerDiv = titleEl.parentNode;
+            headerDiv.style.position = 'relative'; // Tạo điểm neo cho nút button
+            
+            const btn = document.createElement('button');
+            btn.id = 'btnExportPayments';
+            btn.className = 'btn-modern-action';
+            btn.style.cssText = 'position: absolute; right: 20px; top: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(16,185,129,0.2);';
+            btn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Xuất Excel';
+            btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
+            btn.onmouseout = () => btn.style.transform = 'translateY(0)';
+            btn.onclick = exportPaymentHistoryToExcel;
+            
+            headerDiv.appendChild(btn);
+        }
+    }
 
     let html = '';
     let stt = 1;
