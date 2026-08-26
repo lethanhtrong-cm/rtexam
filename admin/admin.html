@@ -174,27 +174,40 @@
 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                     <h2 style="font-size: 1.25rem; color: #1e293b; margin: 0;">⚡ 50 Lượt Thi Gần Nhất</h2>
-                    <div class="pill-container" id="filter-recent-time-pills" style="display: flex; gap: 8px;">
-                        <button class="pill-btn active" data-days="all">Tất cả</button>
-                        <button class="pill-btn" data-days="0">Hôm nay</button>
-                        <button class="pill-btn" data-days="1">Hôm qua</button>
-                        <button class="pill-btn" data-days="3">3 ngày qua</button>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <!-- MỚI: BỘ LỌC LOẠI TÀI KHOẢN -->
+                        <select id="filter-recent-type" style="padding: 6px 12px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; font-size: 13px; color: #475569; font-weight: 600; cursor: pointer; background: #fff;">
+                            <option value="all">Tất cả tài khoản</option>
+                            <option value="vip">Chỉ tài khoản VIP</option>
+                            <option value="normal">Tài khoản Thường</option>
+                        </select>
+                        
+                        <div class="pill-container" id="filter-recent-time-pills" style="display: flex; gap: 8px;">
+                            <button class="pill-btn active" data-days="all">Tất cả</button>
+                            <button class="pill-btn" data-days="0">Hôm nay</button>
+                            <button class="pill-btn" data-days="1">Hôm qua</button>
+                            <button class="pill-btn" data-days="3">3 ngày qua</button>
+                        </div>
                     </div>
                 </div>
+
                 <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                     <div class="table-container" style="border: none; border-radius: 0;">
                         <table class="admin-table" style="width: 100%; border-collapse: collapse;">
                             <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
                                 <tr>
-                                    <th width="10%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">STT</th>
+                                    <!-- THÊM CỘT THAO TÁC -->
+                                    <th width="5%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">STT</th>
                                     <th width="30%" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Tài khoản</th>
-                                    <th width="20%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Mã đề</th>
-                                    <th width="20%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Điểm số</th>
+                                    <th width="15%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Mã đề</th>
+                                    <th width="15%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Điểm số</th>
                                     <th width="20%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Thời gian</th>
+                                    <th width="15%" class="text-center" style="padding: 12px; border-bottom: 2px solid #cbd5e1; color: #475569; font-weight: 600;">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody id="recent-exams-body">
-                                <tr><td colspan="5" class="loading-text" style="text-align: center; padding: 20px; color: #64748b;">Đang kết nối tải danh sách lượt thi...</td></tr>
+                                <tr><td colspan="6" class="loading-text" style="text-align: center; padding: 20px; color: #64748b;">Đang kết nối tải danh sách lượt thi...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -551,10 +564,10 @@
     <script type="module" src="./admin-dashboard.js"></script>
     <script type="module" src="./admin-report.js"></script>
 
-    <!-- SCRIPT HIỂN THỊ DANH SÁCH 50 LƯỢT THI GẦN NHẤT & CÓ PHÂN TRANG -->
+    <!-- SCRIPT HIỂN THỊ DANH SÁCH 50 LƯỢT THI GẦN NHẤT CÓ XÓA, LỌC VÀ VIP -->
     <script type="module">
         import { db } from './firebase-config.js';
-        import { collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { collection, query, orderBy, limit, onSnapshot, getDocs, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         document.addEventListener('componentsLoaded', () => {
             const tbody = document.getElementById('recent-exams-body');
@@ -563,13 +576,12 @@
 
             let allRecentResults = [];
             let currentRecentFilter = 'all';
+            let currentRecentTypeFilter = 'all'; 
             let recentCurrentPage = 1;
             const recentItemsPerPage = 10;
             
-            // Map độc lập dùng để lưu trạng thái VIP
             let vipStatusMap = new Set();
 
-            // Luồng độc lập: Lắng nghe realtime danh sách User để có thông tin VIP 100% chuẩn xác
             onSnapshot(collection(db, "users"), (snap) => {
                 vipStatusMap.clear();
                 snap.forEach(docSnap => {
@@ -584,41 +596,47 @@
             const renderRecentExams = () => {
                 tbody.innerHTML = '';
                 if (allRecentResults.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Chưa có lượt thi nào trên hệ thống.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Chưa có lượt thi nào trên hệ thống.</td></tr>';
                     paginationContainer.innerHTML = '';
                     return;
                 }
 
-                // Cấu trúc thời gian chuẩn tránh lệch múi giờ
                 const now = new Date();
                 const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const startOfTodayMs = startOfToday.getTime();
-                
-                // Trừ đi số mili-giây của 1 ngày (86,400,000)
                 const startOfYesterdayMs = startOfTodayMs - 86400000;
                 const startOf3DaysAgoMs = startOfTodayMs - 3 * 86400000;
 
-                // 1. Lọc dữ liệu theo thời gian
+                // 1. Lọc theo Thời gian và Loại tài khoản (VIP/Thường)
                 const filtered = allRecentResults.filter(data => {
-                    if (currentRecentFilter === 'all') return true;
-                    
-                    let rawTime = data.createdAt || data.timestamp;
-                    let ms = 0;
-                    if (rawTime) {
-                        ms = (typeof rawTime.toDate === 'function') ? rawTime.toDate().getTime() : new Date(rawTime).getTime();
+                    // Lọc theo mốc thời gian
+                    let timePassed = true;
+                    if (currentRecentFilter !== 'all') {
+                        let rawTime = data.createdAt || data.timestamp;
+                        let ms = 0;
+                        if (rawTime) ms = (typeof rawTime.toDate === 'function') ? rawTime.toDate().getTime() : new Date(rawTime).getTime();
+                        
+                        if (!ms) timePassed = false;
+                        else if (currentRecentFilter === '0') timePassed = ms >= startOfTodayMs;
+                        else if (currentRecentFilter === '1') timePassed = ms >= startOfYesterdayMs && ms < startOfTodayMs; 
+                        else if (currentRecentFilter === '3') timePassed = ms >= startOf3DaysAgoMs;
+                        else timePassed = false;
                     }
-                    if (!ms) return false;
+                    if (!timePassed) return false;
 
-                    if (currentRecentFilter === '0') return ms >= startOfTodayMs;
-                    // Lọc hôm qua: Từ đầu ngày hôm qua đến sát đầu ngày hôm nay
-                    if (currentRecentFilter === '1') return ms >= startOfYesterdayMs && ms < startOfTodayMs; 
-                    if (currentRecentFilter === '3') return ms >= startOf3DaysAgoMs;
+                    // Lọc theo Loại Tài Khoản
+                    if (currentRecentTypeFilter !== 'all') {
+                        const email = data.email || 'Ẩn danh';
+                        const isVip = email !== 'Ẩn danh' && vipStatusMap.has(email.toLowerCase());
+                        if (currentRecentTypeFilter === 'vip' && !isVip) return false;
+                        if (currentRecentTypeFilter === 'normal' && isVip) return false;
+                    }
                     
                     return true;
                 });
 
                 if (filtered.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #ef4444; font-weight: bold;">Dữ liệu trống: Không có ai thi trong khoảng thời gian này.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-message" style="text-align: center; padding: 20px; color: #ef4444; font-weight: bold;">Dữ liệu trống: Không có bản ghi nào khớp với điều kiện lọc.</td></tr>';
                     paginationContainer.innerHTML = '';
                     return;
                 }
@@ -632,7 +650,7 @@
                 const endIndex = startIndex + recentItemsPerPage;
                 const paginated = filtered.slice(startIndex, endIndex);
 
-                // 3. Render nội dung bảng
+                // 3. Render nội dung
                 let stt = startIndex + 1;
                 paginated.forEach(data => {
                     let timeStr = 'Không rõ';
@@ -647,10 +665,7 @@
                     const examCode = data.examId || data.examCode || 'Không rõ';
                     const email = data.email || 'Ẩn danh';
 
-                    // Lấy trạng thái VIP
-                    const isVip = email && email !== 'Ẩn danh' && vipStatusMap.has(email.toLowerCase());
-
-                    // Dùng Huy Hiệu (Badge) độc lập vẽ bằng HTML/CSS để đảm bảo hiển thị 100%
+                    const isVip = email !== 'Ẩn danh' && vipStatusMap.has(email.toLowerCase());
                     const vipBadge = isVip 
                         ? `<span style="background: #fef08a; color: #a16207; font-size: 10.5px; font-weight: 800; padding: 3px 6px; border-radius: 6px; margin-left: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: nowrap;">VIP 👑</span>`
                         : `<span style="background: #f1f5f9; color: #64748b; font-size: 10.5px; font-weight: 700; padding: 3px 6px; border-radius: 6px; margin-left: 8px; border: 1px solid #e2e8f0; white-space: nowrap;">Thường 👤</span>`;
@@ -667,11 +682,14 @@
                             <td class="text-center" style="padding: 12px;"><span style="background: #eff6ff; color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 12px;">${examCode}</span></td>
                             <td class="text-center" style="padding: 12px;"><strong style="color: #10b981; font-size: 15px;">${score}</strong></td>
                             <td class="text-center" style="padding: 12px; color: #64748b; font-size: 13px;">${timeStr}</td>
+                            <td class="text-center" style="padding: 12px;">
+                                <button class="btn-delete-recent" data-id="${data.id}" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;" title="Xóa lượt thi này" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"><i class="fa-solid fa-trash"></i></button>
+                            </td>
                         </tr>
                     `;
                 });
 
-                // 4. Render khu vực phân trang (Nút chuyển trang)
+                // 4. Render phân trang
                 if (totalPages > 1) {
                     let pageHtml = `
                         <button id="btn-recent-prev" class="btn-modern-action" style="padding: 6px 16px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: ${recentCurrentPage === 1 ? 'not-allowed' : 'pointer'}; opacity: ${recentCurrentPage === 1 ? '0.5' : '1'}; transition: 0.2s;"><i class="fa-solid fa-arrow-left"></i> Trước</button>
@@ -684,16 +702,10 @@
                     const btnNext = document.getElementById('btn-recent-next');
 
                     if (btnPrev && recentCurrentPage > 1) {
-                        btnPrev.addEventListener('click', () => {
-                            recentCurrentPage--;
-                            renderRecentExams();
-                        });
+                        btnPrev.addEventListener('click', () => { recentCurrentPage--; renderRecentExams(); });
                     }
                     if (btnNext && recentCurrentPage < totalPages) {
-                        btnNext.addEventListener('click', () => {
-                            recentCurrentPage++;
-                            renderRecentExams();
-                        });
+                        btnNext.addEventListener('click', () => { recentCurrentPage++; renderRecentExams(); });
                     }
                 } else {
                     paginationContainer.innerHTML = '';
@@ -704,12 +716,14 @@
             onSnapshot(q, (snapshot) => {
                 allRecentResults = [];
                 snapshot.forEach(docSnap => {
-                    allRecentResults.push(docSnap.data());
+                    const d = docSnap.data();
+                    d.id = docSnap.id; // Gắn ID để xóa
+                    allRecentResults.push(d);
                 });
                 renderRecentExams();
             }, (error) => {
                 console.error("Lỗi tải lượt thi gần nhất:", error);
-                tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #ef4444;">❌ Lỗi kết nối để tải dữ liệu.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-message" style="text-align: center; padding: 20px; color: #ef4444;">❌ Lỗi kết nối để tải dữ liệu.</td></tr>';
             });
 
             // Lắng nghe sự kiện đổi bộ lọc
@@ -719,11 +733,42 @@
                     timePills.forEach(btn => btn.classList.remove('active'));
                     pill.classList.add('active');
                     currentRecentFilter = pill.getAttribute('data-days');
-                    recentCurrentPage = 1; // Nhảy về trang 1 khi đổi bộ lọc
+                    recentCurrentPage = 1; 
                     renderRecentExams();
                 });
             });
-            
+
+            const typeSelect = document.getElementById('filter-recent-type');
+            if (typeSelect) {
+                typeSelect.addEventListener('change', (e) => {
+                    currentRecentTypeFilter = e.target.value;
+                    recentCurrentPage = 1;
+                    renderRecentExams();
+                });
+            }
+
+            // Lắng nghe nút XÓA thống kê
+            tbody.addEventListener('click', async (e) => {
+                const deleteBtn = e.target.closest('.btn-delete-recent');
+                if (deleteBtn) {
+                    const docId = deleteBtn.getAttribute('data-id');
+                    if (confirm('Hệ thống cảnh báo: Bạn có chắc chắn muốn xóa lượt thi này? Dữ liệu đã xóa không thể khôi phục!')) {
+                        deleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                        deleteBtn.style.opacity = '0.7';
+                        deleteBtn.style.pointerEvents = 'none';
+                        try {
+                            await deleteDoc(doc(db, "results", docId));
+                            // UI sẽ tự cập nhật do hàm onSnapshot được kích hoạt tự động
+                        } catch(err) {
+                            console.error("Lỗi khi xóa lượt thi:", err);
+                            alert("Đã xảy ra lỗi, không thể xóa lượt thi này. Hãy kiểm tra console!");
+                            deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                            deleteBtn.style.opacity = '1';
+                            deleteBtn.style.pointerEvents = 'auto';
+                        }
+                    }
+                }
+            });
         });
     </script>
 </body>
