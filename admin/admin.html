@@ -10,7 +10,6 @@
     
     <link rel="stylesheet" href="./css/admin.css">
 
-    <!-- BỔ SUNG: KHỐI CSS TỐI ƯU HÓA GIAO DIỆN MOBILE VÀ MÀN HÌNH KHÓA LOGIN -->
     <style id="mobile-admin-optimization">
         * { box-sizing: border-box !important; }
         html, body { max-width: 100vw; overflow-x: hidden; margin: 0; padding: 0; }
@@ -40,11 +39,9 @@
         .btn-google-login:hover { background: #f8fafc; border-color: #94a3b8; transform: translateY(-2px); }
         .btn-google-login img { width: 24px; height: 24px; }
         
-        /* LỚP KHÓA GIAO DIỆN CHÍNH */
         body.admin-locked > *:not(#admin-login-overlay) { filter: blur(5px); pointer-events: none; user-select: none; }
         body.admin-locked { overflow: hidden; }
 
-        /* Cấu hình cơ bản cho nút Menu Mobile */
         #mobile-menu-btn {
             display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px;
             font-size: 1.6rem; color: #0f172a; cursor: pointer; margin-right: 12px;
@@ -245,7 +242,7 @@
                         <button id="btn-download-template" class="btn btn-template">⬇️ Tải File Excel Mẫu</button>
                     </div>
                     <div class="card" style="flex: 2; margin-bottom: 0;">
-                        <h2 class="card-title"><span class="step-badge green">2</span> &nbsp; Nạp Dữ Luệu Vào Hệ Thống</h2>
+                        <h2 class="card-title"><span class="step-badge green">2</span> &nbsp; Nạp Dữ Liệu Vào Hệ Thống</h2>
                         <div class="file-upload-wrapper">
                             <input type="file" id="excel-file" class="file-input" accept=".xlsx, .xls">
                             <div class="file-upload-icon">📁</div>
@@ -371,7 +368,32 @@
                 </div>
             </section>
 
-            <!-- BỔ SUNG TAB VOUCHER MỚI VÀO ĐÂY -->
+            <!-- BỔ SUNG TAB XEM LỊCH SỬ CHỜ DUYỆT -->
+            <section id="tab-payments" class="content-section">
+                <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px;">
+                    <div style="padding: 20px; background: #fff; border-bottom: 1px solid #e2e8f0;">
+                        <h2 class="card-title" style="margin:0;"><i class="fa-solid fa-file-invoice-dollar" style="color: #f59e0b;"></i> Lịch Sử Báo Cáo Chuyển Khoản</h2>
+                        <p class="card-description" style="margin-top:5px; margin-bottom:0;">Danh sách học viên đã click nút "Đã Chuyển Khoản" trên hệ thống chờ Admin phê duyệt.</p>
+                    </div>
+                    <div class="table-container" style="border: none; border-radius: 0; max-height: 600px; overflow-y: auto;">
+                        <table class="admin-table">
+                            <thead style="position: sticky; top: 0; z-index: 10;">
+                                <tr>
+                                    <th width="5%" class="text-center">STT</th>
+                                    <th width="35%">Tài Khoản / Email</th>
+                                    <th width="25%" class="text-center">Thời Gian Gửi</th>
+                                    <th width="15%" class="text-center">Trạng Thái</th>
+                                    <th width="20%" class="text-center">Hành Động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payment-history-body">
+                                <tr><td colspan="5" class="loading-text text-center">Đang tải dữ liệu chờ duyệt...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <section id="tab-vouchers" class="content-section">
                 <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
                     <div class="card" style="flex: 1; min-width: 300px;">
@@ -488,7 +510,6 @@
         </div>
     </main>
 
-    <!-- Script điều khiển logic Toggle Sidebar Mobile -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const menuBtn = document.getElementById('mobile-menu-btn');
@@ -517,7 +538,7 @@
     <script type="module" src="./admin-core.js"></script>
     <script type="module" src="./admin-exam/index.js"></script>
     <script type="module" src="./admin-user/admin-users.js"></script>
-    <script type="module" src="./admin-vouchers.js"></script> <!-- CHÈN SCRIPT XỬ LÝ VOUCHER -->
+    <script type="module" src="./admin-vouchers.js"></script> 
     <script type="module" src="./admin-ai.js"></script>
     <script type="module" src="./admin-dashboard.js"></script>
     <script type="module" src="./admin-report.js"></script>
