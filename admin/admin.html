@@ -181,8 +181,9 @@
                         <button class="pill-btn" data-days="3">3 ngày qua</button>
                     </div>
                 </div>
+                <!-- BỎ MAX-HEIGHT VÀ OVERFLOW ĐỂ BẢNG KHÔNG CUỘN MÀ HIỂN THỊ TRỌN 10 DÒNG -->
                 <div class="card" style="padding: 0; overflow: hidden; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                    <div class="table-container" style="border: none; border-radius: 0; max-height: 450px; overflow-y: auto;">
+                    <div class="table-container" style="border: none; border-radius: 0;">
                         <table class="admin-table" style="width: 100%; border-collapse: collapse;">
                             <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
                                 <tr>
@@ -198,6 +199,8 @@
                             </tbody>
                         </table>
                     </div>
+                    <!-- VÙNG CHỨA CÁC NÚT PHÂN TRANG -->
+                    <div id="recent-exams-pagination" style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 15px; border-top: 1px solid #e2e8f0; background: #fff;"></div>
                 </div>
             </section>
 
@@ -550,7 +553,7 @@
     <script type="module" src="./admin-dashboard.js"></script>
     <script type="module" src="./admin-report.js"></script>
 
-    <!-- SCRIPT HIỂN THỊ DANH SÁCH 50 LƯỢT THI GẦN NHẤT & BỘ LỌC -->
+    <!-- SCRIPT HIỂN THỊ DANH SÁCH 50 LƯỢT THI GẦN NHẤT & CÓ PHÂN TRANG -->
     <script type="module">
         import { db } from './firebase-config.js';
         import { collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -558,15 +561,19 @@
 
         document.addEventListener('componentsLoaded', () => {
             const tbody = document.getElementById('recent-exams-body');
+            const paginationContainer = document.getElementById('recent-exams-pagination');
             if (!tbody) return;
 
             let allRecentResults = [];
             let currentRecentFilter = 'all';
+            let recentCurrentPage = 1;
+            const recentItemsPerPage = 10;
 
             const renderRecentExams = () => {
                 tbody.innerHTML = '';
                 if (allRecentResults.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Chưa có lượt thi nào trên hệ thống.</td></tr>';
+                    paginationContainer.innerHTML = '';
                     return;
                 }
 
@@ -575,6 +582,7 @@
                 const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
                 const startOf3DaysAgo = startOfToday - 3 * 24 * 60 * 60 * 1000;
 
+                // 1. Lọc dữ liệu theo thời gian
                 const filtered = allRecentResults.filter(data => {
                     if (currentRecentFilter === 'all') return true;
                     
@@ -594,11 +602,22 @@
 
                 if (filtered.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #64748b;">Không có lượt thi nào khớp với bộ lọc.</td></tr>';
+                    paginationContainer.innerHTML = '';
                     return;
                 }
 
-                let stt = 1;
-                filtered.forEach(data => {
+                // 2. Tính toán phân trang
+                const totalPages = Math.ceil(filtered.length / recentItemsPerPage);
+                if (recentCurrentPage < 1) recentCurrentPage = 1;
+                if (recentCurrentPage > totalPages) recentCurrentPage = totalPages;
+
+                const startIndex = (recentCurrentPage - 1) * recentItemsPerPage;
+                const endIndex = startIndex + recentItemsPerPage;
+                const paginated = filtered.slice(startIndex, endIndex);
+
+                // 3. Render nội dung bảng
+                let stt = startIndex + 1;
+                paginated.forEach(data => {
                     let timeStr = 'Không rõ';
                     let rawTime = data.createdAt || data.timestamp;
                     if (rawTime) {
@@ -636,6 +655,34 @@
                         </tr>
                     `;
                 });
+
+                // 4. Render khu vực phân trang (Nút chuyển trang)
+                if (totalPages > 1) {
+                    let pageHtml = `
+                        <button id="btn-recent-prev" class="btn-modern-action" style="padding: 6px 16px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: ${recentCurrentPage === 1 ? 'not-allowed' : 'pointer'}; opacity: ${recentCurrentPage === 1 ? '0.5' : '1'}; transition: 0.2s;"><i class="fa-solid fa-arrow-left"></i> Trước</button>
+                        <span style="font-size: 14px; font-weight: 600; color: #475569; padding: 0 10px;">Trang ${recentCurrentPage} / ${totalPages}</span>
+                        <button id="btn-recent-next" class="btn-modern-action" style="padding: 6px 16px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: ${recentCurrentPage === totalPages ? 'not-allowed' : 'pointer'}; opacity: ${recentCurrentPage === totalPages ? '0.5' : '1'}; transition: 0.2s;">Tiếp <i class="fa-solid fa-arrow-right"></i></button>
+                    `;
+                    paginationContainer.innerHTML = pageHtml;
+
+                    const btnPrev = document.getElementById('btn-recent-prev');
+                    const btnNext = document.getElementById('btn-recent-next');
+
+                    if (btnPrev && recentCurrentPage > 1) {
+                        btnPrev.addEventListener('click', () => {
+                            recentCurrentPage--;
+                            renderRecentExams();
+                        });
+                    }
+                    if (btnNext && recentCurrentPage < totalPages) {
+                        btnNext.addEventListener('click', () => {
+                            recentCurrentPage++;
+                            renderRecentExams();
+                        });
+                    }
+                } else {
+                    paginationContainer.innerHTML = '';
+                }
             };
 
             const q = query(collection(db, "results"), orderBy("timestamp", "desc"), limit(50));
@@ -650,19 +697,28 @@
                 tbody.innerHTML = '<tr><td colspan="5" class="empty-message" style="text-align: center; padding: 20px; color: #ef4444;">❌ Lỗi kết nối để tải dữ liệu.</td></tr>';
             });
 
+            // Lắng nghe sự kiện đổi bộ lọc
             const timePills = document.querySelectorAll('#filter-recent-time-pills .pill-btn');
             timePills.forEach(pill => {
                 pill.addEventListener('click', () => {
                     timePills.forEach(btn => btn.classList.remove('active'));
                     pill.classList.add('active');
                     currentRecentFilter = pill.getAttribute('data-days');
+                    recentCurrentPage = 1; // Nhảy về trang 1 khi đổi bộ lọc
                     renderRecentExams();
                 });
             });
             
-            document.addEventListener('usersDataLoaded', () => {
-                if (allRecentResults.length > 0) renderRecentExams();
-            });
+            // Cơ chế chờ dữ liệu User load xong để hiển thị chính xác Icon VIP (Kiểm tra mỗi 0.5 giây)
+            let checkAttempts = 0;
+            const checkUsersInterval = setInterval(() => {
+                if (userState && userState.cachedUsers && userState.cachedUsers.length > 0) {
+                    renderRecentExams();
+                    clearInterval(checkUsersInterval);
+                }
+                checkAttempts++;
+                if (checkAttempts > 20) clearInterval(checkUsersInterval); // Hủy kiểm tra sau 10 giây nếu mạng quá lag
+            }, 500);
         });
     </script>
 </body>
