@@ -608,7 +608,23 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
+        // TẠO WRAPPER ĐỂ CỐ ĐỊNH CHUNG CẢ THỐNG KÊ VÀ TOOLBAR LÊN ĐỈNH
+        const tabUserList = document.getElementById('tab-user-list');
+        const statsContainer = tabUserList ? tabUserList.querySelector('.stats-container') : null;
+        
+        if (statsContainer && !document.getElementById('user-top-sticky-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.id = 'user-top-sticky-wrapper';
+            wrapper.style.cssText = 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 15px 0 10px 0; margin-top: -15px; margin-bottom: 15px; border-bottom: 1px solid #cbd5e1;';
+            statsContainer.parentNode.insertBefore(wrapper, statsContainer);
+            wrapper.appendChild(statsContainer);
+            wrapper.appendChild(toolbar);
+            
+            statsContainer.style.marginBottom = '15px';
+            toolbar.style.cssText += 'display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;';
+        } else if (!document.getElementById('user-top-sticky-wrapper')) {
+            toolbar.style.cssText += 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
+        }
         
         const searchContainer = document.querySelector('.search-user-container');
         if (searchContainer) {
