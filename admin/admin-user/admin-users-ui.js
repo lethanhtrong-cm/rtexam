@@ -162,9 +162,6 @@ export function updateBulkActionBar() {
     }
 }
 
-// =========================================================================
-// XUẤT EXCEL DANH SÁCH LỌC HIỆN TẠI (TÍNH NĂNG MỚI)
-// =========================================================================
 export function exportFilteredUsersToExcel() {
     if (!userState.cachedUsers || userState.cachedUsers.length === 0) {
         alert("Chưa có dữ liệu học viên để xuất Excel!");
@@ -232,7 +229,7 @@ export function exportFilteredUsersToExcel() {
 }
 
 // =========================================================================
-// XUẤT EXCEL CHO BẢNG LỊCH SỬ CHUYỂN KHOẢN
+// XUẤT EXCEL CHO BẢNG LỊCH SỬ CHUYỂN KHOẢN (ĐÃ CẬP NHẬT THÊM THỜI GIAN DUYỆT)
 // =========================================================================
 export function exportPaymentHistoryToExcel() {
     if (!userState.cachedPaymentRequests || userState.cachedPaymentRequests.length === 0) {
@@ -244,16 +241,34 @@ export function exportPaymentHistoryToExcel() {
         const u = userState.cachedUsers.find(user => user.userId === data.uid);
         const email = (u && u.email) ? u.email : (data.email || data.uid);
         
+        // Quét thêm các trường thời gian dự phòng nếu database cũ không có timestamp
+        const rawTime = data.timestamp || data.createdAt || data.date;
         let timeStr = 'Không rõ';
-        if (data.timestamp) {
-            const dateObj = (typeof data.timestamp.toDate === 'function') ? data.timestamp.toDate() : new Date(data.timestamp);
-            timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+        if (rawTime) {
+            const dateObj = (typeof rawTime.toDate === 'function') ? rawTime.toDate() : new Date(rawTime);
+            if (!isNaN(dateObj.getTime())) {
+                timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            }
+        }
+        
+        // Lấy thời gian đã được admin phê duyệt VIP (vipActivationDate)
+        let approveTimeStr = '---';
+        if (data.status !== "pending") {
+            if (u && u.vipActivationDate) {
+                const actDate = (typeof u.vipActivationDate.toDate === 'function') ? u.vipActivationDate.toDate() : new Date(u.vipActivationDate);
+                if (!isNaN(actDate.getTime())) {
+                    approveTimeStr = actDate.toLocaleDateString('vi-VN') + ' ' + actDate.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                }
+            } else {
+                approveTimeStr = 'Đã duyệt (Gói cũ)';
+            }
         }
         
         return {
             "STT": index + 1,
             "Tài Khoản / Email": email,
             "Thời Gian Báo Cáo": timeStr,
+            "Thời Gian Phê Duyệt": approveTimeStr,
             "Trạng Thái": data.status === "pending" ? "Đang chờ duyệt" : "Đã xử lý"
         };
     });
@@ -263,7 +278,7 @@ export function exportPaymentHistoryToExcel() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "LichSuChuyenKhoan");
         
-        worksheet['!cols'] = [{wch: 5}, {wch: 35}, {wch: 25}, {wch: 20}];
+        worksheet['!cols'] = [{wch: 5}, {wch: 35}, {wch: 22}, {wch: 22}, {wch: 18}];
         
         XLSX.writeFile(workbook, "Danh_Sach_Bao_Cao_Chuyen_Khoan.xlsx");
     } catch (error) {
@@ -306,10 +321,14 @@ export function renderPaymentHistory() {
             const u = userState.cachedUsers.find(user => user.userId === data.uid);
             const email = (u && u.email) ? u.email : (data.email || data.uid);
             
+            // Xử lý chống lỗi 'Không rõ' tương tự trên giao diện Web
+            const rawTime = data.timestamp || data.createdAt || data.date;
             let timeStr = 'Không rõ';
-            if (data.timestamp) {
-                const dateObj = (typeof data.timestamp.toDate === 'function') ? data.timestamp.toDate() : new Date(data.timestamp);
-                timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            if (rawTime) {
+                const dateObj = (typeof rawTime.toDate === 'function') ? rawTime.toDate() : new Date(rawTime);
+                if (!isNaN(dateObj.getTime())) {
+                    timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                }
             }
             
             const statusHtml = data.status === "pending" 
@@ -627,7 +646,6 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             toolbar.appendChild(notifyAllBtn);
         }
 
-        // ĐỒNG BỘ ĐTB
         if (!document.getElementById('btnSyncOldData')) {
             const syncBtn = document.createElement('button');
             syncBtn.id = 'btnSyncOldData';
@@ -681,7 +699,6 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             toolbar.appendChild(syncBtn);
         }
 
-        // TÍNH NĂNG MỚI: NÚT XUẤT EXCEL DANH SÁCH LỌC (Cho tab Người dùng)
         if (!document.getElementById('btnExportFilteredUsers')) {
             const exportUsersBtn = document.createElement('button');
             exportUsersBtn.id = 'btnExportFilteredUsers';
@@ -694,7 +711,6 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             toolbar.appendChild(exportUsersBtn);
         }
 
-        // NÚT XUẤT EXCEL BÁO CK (Cho Tab Lịch sử CK)
         if (!document.getElementById('btnExportPaymentsMain')) {
             const exportBtn = document.createElement('button');
             exportBtn.id = 'btnExportPaymentsMain';
