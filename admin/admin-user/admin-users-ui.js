@@ -89,7 +89,6 @@ export function injectTableHeadersAndToolbar() {
         const pendingOpt = filterSelect.querySelector('option[value="pending_vip"]');
         if (pendingOpt) pendingOpt.remove();
 
-        // THAY ĐỔI THÀNH BỘ LỌC TẤT CẢ NGƯỜI ĐÃ TỪNG THANH TOÁN
         if (!filterSelect.querySelector('option[value="has_payment"]')) {
             const paymentOption = document.createElement('option');
             paymentOption.value = 'has_payment';
@@ -164,6 +163,75 @@ export function updateBulkActionBar() {
 }
 
 // =========================================================================
+// XUẤT EXCEL DANH SÁCH LỌC HIỆN TẠI (TÍNH NĂNG MỚI)
+// =========================================================================
+export function exportFilteredUsersToExcel() {
+    if (!userState.cachedUsers || userState.cachedUsers.length === 0) {
+        alert("Chưa có dữ liệu học viên để xuất Excel!");
+        return;
+    }
+
+    let sortedUsers = [...userState.cachedUsers];
+    if (userState.currentSortMethod === "newest") {
+        sortedUsers.sort((a, b) => b.createdAtMs - a.createdAtMs);
+    } else if (userState.currentSortMethod === "avgScore") {
+        sortedUsers.sort((a, b) => b.avgScore - a.avgScore);
+    } else if (userState.currentSortMethod === "xp") {
+        sortedUsers.sort((a, b) => b.xp - a.xp);
+    }
+
+    const filteredUsers = sortedUsers.filter(user => {
+        const matchSearch = !userState.currentSearchQuery || user.email.toLowerCase().includes(userState.currentSearchQuery);
+        let matchStatus = false;
+        if (userState.currentFilterStatus === "all") {
+            matchStatus = true;
+        } else if (userState.currentFilterStatus === "has_payment") { 
+            matchStatus = userState.allPaymentUIDs.has(user.userId);
+        } else {
+            matchStatus = (user.statusKey === userState.currentFilterStatus);
+        }
+        return matchSearch && matchStatus;
+    });
+
+    if (filteredUsers.length === 0) {
+        alert("Danh sách lọc hiện tại đang trống, không có dữ liệu để xuất!");
+        return;
+    }
+
+    const dataToExport = filteredUsers.map((user, index) => {
+        let statusText = "Thường";
+        if (user.isBanned) statusText = "Bị khóa";
+        else if (user.isVip) statusText = "VIP";
+
+        let regDate = user.createdAt ? formatDateTime(user.createdAt) : '---';
+
+        return {
+            "STT": index + 1,
+            "Email": user.email,
+            "Trạng Thái": statusText,
+            "Điểm Trung Bình": user.avgScore ? user.avgScore.toFixed(2) : 0,
+            "Kinh Nghiệm (XP)": Math.round(user.xp || 0),
+            "Đang Online": user.isOnline ? "Có" : "Không",
+            "Đang Thi": user.examStatus === 'testing' ? "Có" : "Không",
+            "Ngày Đăng Ký": regDate
+        };
+    });
+
+    try {
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachHocVien");
+        
+        worksheet['!cols'] = [{wch: 5}, {wch: 35}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 15}, {wch: 25}];
+        
+        XLSX.writeFile(workbook, "Danh_Sach_Hoc_Vien_Da_Loc.xlsx");
+    } catch (error) {
+        console.error("Lỗi xuất Excel:", error);
+        alert("Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại!");
+    }
+}
+
+// =========================================================================
 // XUẤT EXCEL CHO BẢNG LỊCH SỬ CHUYỂN KHOẢN
 // =========================================================================
 export function exportPaymentHistoryToExcel() {
@@ -195,7 +263,6 @@ export function exportPaymentHistoryToExcel() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "LichSuChuyenKhoan");
         
-        // Tự động căn chỉnh độ rộng cột
         worksheet['!cols'] = [{wch: 5}, {wch: 35}, {wch: 25}, {wch: 20}];
         
         XLSX.writeFile(workbook, "Danh_Sach_Bao_Cao_Chuyen_Khoan.xlsx");
@@ -205,20 +272,16 @@ export function exportPaymentHistoryToExcel() {
     }
 }
 
-// =========================================================================
-// RENDER BẢNG CHI TIẾT LỊCH SỬ THANH TOÁN (TAB MỚI)
-// =========================================================================
 export function renderPaymentHistory() {
     const tbody = document.getElementById('payment-history-body');
     if (!tbody) return;
 
-    // Tự động chèn Nút Xuất Excel vào Header của bảng Lịch sử nếu chưa có
     const paymentSection = document.getElementById('tab-payments');
     if (paymentSection && !document.getElementById('btnExportPayments')) {
         const titleEl = paymentSection.querySelector('.card-title');
         if (titleEl && titleEl.parentNode) {
             const headerDiv = titleEl.parentNode;
-            headerDiv.style.position = 'relative'; // Tạo điểm neo cho nút button
+            headerDiv.style.position = 'relative'; 
             
             const btn = document.createElement('button');
             btn.id = 'btnExportPayments';
@@ -253,7 +316,6 @@ export function renderPaymentHistory() {
                 ? `<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đang chờ duyệt</span>`
                 : `<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đã xử lý</span>`;
                 
-            // Nút duyệt dùng chung class .btn-toggle-vip của bảng User để tự kích hoạt logic xử lý bên File Action mà không cần viết lại sự kiện click
             const actionHtml = data.status === "pending"
                 ? `<button class="btn-modern-action btn-toggle-vip" data-id="${data.uid}" data-vip="false" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-check"></i> Duyệt VIP ngay</button>`
                 : `<span style="color: #94a3b8; font-size: 12px;"><i class="fa-solid fa-check-double"></i> Hoàn tất</span>`;
@@ -293,7 +355,6 @@ export function renderUserList() {
         if (userState.currentFilterStatus === "all") {
             matchStatus = true;
         } else if (userState.currentFilterStatus === "has_payment") { 
-            // HIỆU LỰC LỌC MỚI: Chỉ lấy những người nằm trong mảng allPaymentUIDs
             matchStatus = userState.allPaymentUIDs.has(user.userId);
         } else {
             matchStatus = (user.statusKey === userState.currentFilterStatus);
@@ -566,7 +627,7 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
             toolbar.appendChild(notifyAllBtn);
         }
 
-        // TÍNH NĂNG MỚI: NÚT ĐỒNG BỘ ĐIỂM TRUNG BÌNH CŨ
+        // ĐỒNG BỘ ĐTB
         if (!document.getElementById('btnSyncOldData')) {
             const syncBtn = document.createElement('button');
             syncBtn.id = 'btnSyncOldData';
@@ -618,6 +679,32 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
                 }
             };
             toolbar.appendChild(syncBtn);
+        }
+
+        // TÍNH NĂNG MỚI: NÚT XUẤT EXCEL DANH SÁCH LỌC (Cho tab Người dùng)
+        if (!document.getElementById('btnExportFilteredUsers')) {
+            const exportUsersBtn = document.createElement('button');
+            exportUsersBtn.id = 'btnExportFilteredUsers';
+            exportUsersBtn.className = 'btn-modern-action';
+            exportUsersBtn.style.cssText = 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); margin-left: 10px;';
+            exportUsersBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Xuất Excel DS Lọc';
+            exportUsersBtn.onmouseover = () => exportUsersBtn.style.transform = 'translateY(-2px)';
+            exportUsersBtn.onmouseout = () => exportUsersBtn.style.transform = 'translateY(0)';
+            exportUsersBtn.onclick = exportFilteredUsersToExcel;
+            toolbar.appendChild(exportUsersBtn);
+        }
+
+        // NÚT XUẤT EXCEL BÁO CK (Cho Tab Lịch sử CK)
+        if (!document.getElementById('btnExportPaymentsMain')) {
+            const exportBtn = document.createElement('button');
+            exportBtn.id = 'btnExportPaymentsMain';
+            exportBtn.className = 'btn-modern-action';
+            exportBtn.style.cssText = 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); margin-left: 10px;';
+            exportBtn.innerHTML = '<i class="fa-solid fa-file-excel"></i> Xuất Excel Báo CK';
+            exportBtn.onmouseover = () => exportBtn.style.transform = 'translateY(-2px)';
+            exportBtn.onmouseout = () => exportBtn.style.transform = 'translateY(0)';
+            exportBtn.onclick = exportPaymentHistoryToExcel;
+            toolbar.appendChild(exportBtn);
         }
     }
 }
