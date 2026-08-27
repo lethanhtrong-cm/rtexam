@@ -442,6 +442,56 @@ export function initQuizUI(db, ctx, actions) {
             };
         }
 
+        // ==========================================
+        // MODULE CẤU TRÚC LẠI NÚT VÀ CHỨNG NHẬN
+        // ==========================================
+        const btnRetry = document.getElementById('btn-modal-retry');
+        const btnDashModal = document.getElementById('btn-modal-dashboard-modal');
+        
+        // Nhóm "Làm lại" và "Phòng chờ" vào chung 1 hàng (chia đôi)
+        let btnRow = document.getElementById('modal-btn-row');
+        if (!btnRow && btnRetry && btnDashModal) {
+            const parent = btnRetry.parentNode;
+            btnRow = document.createElement('div');
+            btnRow.id = 'modal-btn-row';
+            btnRow.style.cssText = "display: flex; gap: 10px; width: 100%; margin-top: 10px;";
+            
+            // Xóa margin cũ, setup flex chia đôi
+            btnRetry.style.flex = '1'; btnRetry.style.margin = '0'; btnRetry.style.padding = '12px 10px'; btnRetry.style.whiteSpace = 'nowrap';
+            btnDashModal.style.flex = '1'; btnDashModal.style.margin = '0'; btnDashModal.style.padding = '12px 10px'; btnDashModal.style.whiteSpace = 'nowrap';
+            
+            parent.insertBefore(btnRow, btnRetry);
+            btnRow.appendChild(btnRetry);
+            btnRow.appendChild(btnDashModal);
+        }
+
+        // Chèn nút Tải Chứng Nhận LÊN TRÊN hàng nút gộp kia
+        let certBtn = document.getElementById('btn-download-cert');
+        if (score > 8 && ctx.isCurrentUserVip) {
+            if (!certBtn && btnRow) {
+                certBtn = document.createElement('button');
+                certBtn.id = 'btn-download-cert';
+                certBtn.innerHTML = '<i class="fa-solid fa-award"></i> Tải Chứng Nhận Xuất Sắc';
+                certBtn.style.cssText = "background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; width: 100%; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 1.05rem; transition: 0.2s;";
+                
+                certBtn.onmouseover = () => certBtn.style.transform = 'translateY(-2px)';
+                certBtn.onmouseout = () => certBtn.style.transform = 'translateY(0)';
+                
+                // Gọi hành động downloadCert truyền từ file quiz.js sang
+                certBtn.onclick = () => {
+                    if (actions.downloadCert) actions.downloadCert(score);
+                };
+                
+                // Chèn lên ngay sát trên cái div btnRow
+                btnRow.parentNode.insertBefore(certBtn, btnRow);
+            } else if (certBtn) {
+                certBtn.style.display = 'flex';
+            }
+        } else {
+            // Ẩn đi nếu thi lại bị rớt điểm hoặc hết VIP
+            if (certBtn) certBtn.style.display = 'none';
+        }
+
         resetFeedbackUI(); 
         modal.classList.add('active');
     }
