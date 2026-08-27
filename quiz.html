@@ -246,6 +246,21 @@
         .btn-fc-nav:hover:not(:disabled) { background: #8b5cf6; color: white; border-color: #8b5cf6; transform: scale(1.1); }
         .btn-fc-nav:disabled { opacity: 0.3; cursor: not-allowed; }
         .fc-progress { font-weight: 800; color: var(--text-main); font-size: 1.1rem; background: var(--bg-body); padding: 8px 20px; border-radius: 20px; border: 1px solid var(--border-color); }
+
+        /* ================= CSS THU GỌN MODAL CHO MÀN HÌNH CHIỀU CAO THẤP ================= */
+        @media (max-height: 850px) {
+            #result-modal .modal-content { padding: 20px !important; }
+            .modal-title { margin-bottom: 10px !important; font-size: 20px !important; }
+            .score-circle { width: 90px !important; height: 90px !important; margin: 0 auto 10px auto !important; }
+            .score-circle-inner { width: 75px !important; height: 75px !important; }
+            .score-number { font-size: 24px !important; }
+            .modal-stats { margin-bottom: 15px !important; font-size: 14px !important; }
+            .feedback-section { margin-bottom: 15px !important; padding: 10px !important; }
+            .feedback-section textarea { height: 50px !important; }
+            #modal-xp-display { font-size: 0.95rem !important; margin-top: 10px !important; padding: 4px 10px !important; }
+            .modal-actions { gap: 8px !important; }
+            .btn-modal { padding: 10px !important; font-size: 15px !important; }
+        }
     </style>
 </head>
 <body>
