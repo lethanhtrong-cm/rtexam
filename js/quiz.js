@@ -8,8 +8,7 @@ import { resetAntiCheatWarning, updateAntiCheatState, setupAntiCheatEvents } fro
 import { saveDraftToLocal, loadDraftFromLocal, clearDraftFromLocal } from './quiz-modules/quiz-draft.js';
 import { initDisplaySettings } from './quiz-modules/quiz-display.js';
 import { initQuizUI } from './quiz-modules/quiz-ui.js';
-// Import module chứng nhận
-import { loadHtml2Canvas, downloadCertificate } from './quiz-modules/quiz-certificate.js';
+import { downloadCertificate } from './quiz-modules/quiz-certificate.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
@@ -76,7 +75,12 @@ let quizUI = initQuizUI(db, {
     saveDraft,
     returnToLobbyOrDashboard,
     initExamState,
-    executeSubmit
+    executeSubmit,
+    downloadCert: (score) => {
+        // Hàm này sẽ được gọi từ quiz-ui.js khi user bấm nút Tải Chứng Nhận
+        const userName = currentUser.displayName || currentUser.email.split('@')[0];
+        downloadCertificate(userName, currentExamId, score);
+    }
 });
 
 const flashcardAPI = initFlashcard(db, () => ({
@@ -103,7 +107,7 @@ function loadDraft() {
         userAnswers = draft.userAnswers || {};
         flaggedQuestions = draft.flaggedQuestions || {};
         if (draft.timeRemaining !== undefined) timeRemaining = draft.timeRemaining;
-        if (draft.currentIndex !== undefined) currentIndex = currentIndex = draft.currentIndex;
+        if (draft.currentIndex !== undefined) currentIndex = draft.currentIndex;
         return true;
     }
     return false;
@@ -377,9 +381,6 @@ function getCurrentWeekKey() {
     return `xp_${now.getFullYear()}_W${weekNumber.toString().padStart(2, '0')}`;
 }
 
-// Load thư viện html2canvas sẵn
-loadHtml2Canvas();
-
 // =========================================================================
 // LOGIC TÍNH ĐIỂM, XP, NỘP BÀI VÀ GHI FIRESTORE
 // =========================================================================
@@ -541,35 +542,6 @@ async function executeSubmit() {
         quizUI.showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
     } catch (error) {
         quizUI.showResultModal(finalCorrectCount, finalTotal, finalScore, gainedXP, isRetake, isNewRecord, attendanceBonus);
-    }
-
-    // ==========================================
-    // BỔ SUNG LOGIC CHỨNG NHẬN TRỰC TIẾP TỪ ĐÂY
-    // ĐIỀU KIỆN: SỐ ĐIỂM > 8 VÀ PHẢI LÀ TÀI KHOẢN VIP
-    // ==========================================
-    if (finalScore > 8 && isCurrentUserVip) {
-        setTimeout(() => {
-            const modalContent = document.querySelector('#result-modal .modal-content') || document.querySelector('#result-modal > div') || document.getElementById('result-modal');
-            
-            if (modalContent && !document.getElementById('btn-download-cert')) {
-                // Tạo nút tải chứng nhận
-                const certBtn = document.createElement('button');
-                certBtn.id = 'btn-download-cert';
-                certBtn.innerHTML = '<i class="fa-solid fa-award"></i> Tải Chứng Nhận Xuất Sắc';
-                certBtn.style.cssText = "background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 1.05rem; transition: 0.2s;";
-                
-                certBtn.onmouseover = () => certBtn.style.transform = 'translateY(-2px)';
-                certBtn.onmouseout = () => certBtn.style.transform = 'translateY(0)';
-                
-                certBtn.onclick = () => {
-                    const userName = currentUser.displayName || currentUser.email.split('@')[0];
-                    downloadCertificate(userName, currentExamId, finalScore);
-                };
-                
-                // Tiêm vào dưới cùng của nội dung Modal
-                modalContent.appendChild(certBtn);
-            }
-        }, 600); 
     }
 }
 
