@@ -1,6 +1,5 @@
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showToast, redirect } from './quiz-utils.js';
-import { obfuscateText } from './quiz-anti-cheat.js';
 
 export function initQuizUI(db, ctx, actions) {
 
@@ -48,7 +47,8 @@ export function initQuizUI(db, ctx, actions) {
         if (badge) badge.innerText = `Câu ${ctx.currentIndex + 1}`;
         
         const textContainer = document.getElementById('question-text');
-        if (textContainer) textContainer.innerHTML = obfuscateText(questionText, ctx.isSubmitted, ctx.isShowExplanation);
+        // Render trực tiếp văn bản gốc, xóa bỏ hàm obfuscateText gây đứt gãy chữ
+        if (textContainer) textContainer.innerHTML = questionText;
         
         const container = document.getElementById('options-container');
         if (container) {
@@ -61,7 +61,8 @@ export function initQuizUI(db, ctx, actions) {
                 if (ctx.userAnswers[ctx.currentIndex] === idx) extraClasses += ' selected';
 
                 div.className = 'option-item' + extraClasses;
-                div.innerHTML = `<div class="option-label">${['A','B','C','D', 'E', 'F'][idx]}</div><div>${obfuscateText(opt, ctx.isSubmitted, ctx.isShowExplanation)}</div>`;
+                // Render trực tiếp tùy chọn đáp án, xóa bỏ obfuscateText
+                div.innerHTML = `<div class="option-label">${['A','B','C','D', 'E', 'F'][idx]}</div><div>${opt}</div>`;
                 
                 div.onclick = () => handleOptionSelect(idx);
                 container.appendChild(div);
