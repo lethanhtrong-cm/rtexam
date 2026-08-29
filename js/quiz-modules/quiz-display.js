@@ -1,5 +1,5 @@
 // =========================================================================
-// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (ĐÃ XÓA TÍNH NĂNG ĐỔI SIZE CHỮ)
+// MODULE: TÙY CHỈNH GIAO DIỆN HIỂN THỊ (ĐÃ XÓA TÍNH NĂNG ĐỔI SIZE CHỮ VÀ CSS GÂY LỖI NGẮT TỪ)
 // =========================================================================
 export function initDisplaySettings() {
     // 1. Tiêm style động hỗ trợ chế độ đọc Sepia
@@ -89,19 +89,8 @@ export function initDisplaySettings() {
             `;
         }
 
-        // Khóa hoàn toàn khả năng tự động bẻ ngang âm tiết của trình duyệt (Fix gãy chữ)
-        styleTag.innerHTML = `
-            ${fontRule}
-            
-            .question-text, .option-item, .question-text *, .option-item * { 
-                word-break: keep-all !important; 
-                word-wrap: normal !important; 
-                overflow-wrap: normal !important; 
-                line-break: strict !important;
-                white-space: normal !important;
-                hyphens: none !important; 
-            }
-        `;
+        // Đã xóa toàn bộ CSS can thiệp vào word-break để trả lại khả năng hiển thị tự nhiên của trình duyệt
+        styleTag.innerHTML = fontRule;
     };
 
     // Áp dụng ngay khi vừa tải xong file
