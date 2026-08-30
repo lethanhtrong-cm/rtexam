@@ -1,5 +1,5 @@
 import { auth, db } from "./dashboard-core.js";
-import { doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 document.addEventListener('ComponentsLoaded', () => {
 
@@ -148,7 +148,50 @@ document.addEventListener('ComponentsLoaded', () => {
         }
     }
 
-    if (btnAutoGenerate) btnAutoGenerate.addEventListener('click', toggleSidebar);
+    // Kiểm tra quyền PRO trước khi mở Sidebar Trợ lý AI
+    if (btnAutoGenerate) {
+        btnAutoGenerate.addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            // Nếu Sidebar đang mở thì cho phép đóng lại ngay lập tức
+            if (aiSidebar && aiSidebar.classList.contains('active')) {
+                toggleSidebar();
+                return;
+            }
+
+            if (!auth.currentUser) {
+                alert("Vui lòng đăng nhập để sử dụng Trợ lý AI!");
+                return;
+            }
+
+            try {
+                const btnOriginalText = btnAutoGenerate.innerHTML;
+                btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kiểm tra...';
+                
+                const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+                btnAutoGenerate.innerHTML = btnOriginalText;
+
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    
+                    // Phân quyền: Chỉ cấp PRO mới được dùng tính năng này
+                    if (userData.vipTier !== 'pro') {
+                        alert("Tính năng Trợ lý AI Học thuật chỉ dành riêng cho tài khoản PRO (50.000đ/tháng). Vui lòng nâng cấp để sử dụng!");
+                        return;
+                    }
+                    
+                    // Thỏa mãn điều kiện thì mở Sidebar
+                    toggleSidebar();
+                } else {
+                    alert("Không tìm thấy dữ liệu người dùng!");
+                }
+            } catch (error) {
+                console.error("Lỗi kiểm tra quyền truy cập AI:", error);
+                alert("Lỗi kiểm tra quyền. Vui lòng thử lại!");
+            }
+        });
+    }
+
     if (closeAiSidebarBtn) closeAiSidebarBtn.addEventListener('click', toggleSidebar);
 
     // Hàm chuyển đổi định dạng Markdown đơn giản
