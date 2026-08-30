@@ -35,7 +35,9 @@ let currentUser = null;
 let isShowExplanation = false;
 let isNavigating = false; 
 let isAntiCheatEnabled = false;
-let isCurrentUserVip = false;
+
+// ĐÃ SỬA: Thay thế isCurrentUserVip bằng currentUserVipTier để quản lý 3 hạng
+let currentUserVipTier = null; 
 
 let timerInterval;
 let examDuration = 15 * 60; 
@@ -66,7 +68,7 @@ let quizUI = initQuizUI(db, {
     get flaggedQuestions() { return flaggedQuestions; },
     get isSubmitted() { return isSubmitted; },
     get isShowExplanation() { return isShowExplanation; },
-    get isCurrentUserVip() { return isCurrentUserVip; },
+    get currentUserVipTier() { return currentUserVipTier; }, // Truyền biến Tier sang UI
     get currentUser() { return currentUser; },
     get currentExamId() { return currentExamId; },
     get currentResultId() { return currentResultId; },
@@ -138,12 +140,17 @@ onAuthStateChanged(auth, async (user) => {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
                 const ud = userDoc.data();
-                if (ud.isVip) {
+                
+                // ĐÃ SỬA: Map logic isVip cũ sang 'plus' để bảo toàn tính tương thích, sau đó kiểm tra thời hạn
+                let activeTier = ud.vipTier;
+                if (!activeTier && ud.isVip) activeTier = 'plus';
+
+                if (activeTier === 'plus' || activeTier === 'pro') {
                     const expiryField = ud.vipExpirationDate || ud.vipEnd;
                     if (expiryField) {
                         const vipEnd = expiryField.toDate ? expiryField.toDate() : new Date(expiryField);
                         if (vipEnd.getTime() > Date.now()) {
-                            isCurrentUserVip = true;
+                            currentUserVipTier = activeTier;
                         }
                     }
                 }
@@ -256,8 +263,9 @@ async function initExamState() {
 }
 
 async function loadReviewMode(resultId) {
-    if (!isCurrentUserVip) {
-        alert("Tính năng Xem lại bài làm và giải thích chi tiết chỉ dành cho Tài khoản PRO!");
+    // ĐÃ SỬA: Chặn chức năng nếu userTier không thuộc nhóm Plus hoặc Pro
+    if (!['plus', 'pro'].includes(currentUserVipTier)) {
+        alert("Tính năng Xem lại bài làm và giải thích chi tiết chỉ dành cho Gói Plus hoặc Pro!");
         returnToLobbyOrDashboard();
         return;
     }
