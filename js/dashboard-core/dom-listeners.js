@@ -251,8 +251,8 @@ export function initDOMListeners(auth, db) {
                     const durationMs = (vData.durationDays || 30) * 24 * 60 * 60 * 1000;
                     const vipExpirationDate = now + durationMs;
                     
-                    // Lấy loại gói từ Voucher (hoặc mặc định kích hoạt gói xịn nhất là PRO)
-                    const grantTier = vData.tier || 'pro'; 
+                    // Lấy loại gói từ Voucher (hoặc mặc định kích hoạt gói cơ bản là PLUS)
+                    const grantTier = vData.tier || 'plus'; 
 
                     await updateDoc(doc(db, "users", auth.currentUser.uid), {
                         vipTier: grantTier, // Gán kiến trúc 3 cấp mới
