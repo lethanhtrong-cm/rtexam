@@ -172,7 +172,7 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
             isVip: null 
         }, { merge: true });
 
-        // 2. TÌM VÀ CẬP NHẬT TRẠNG THÁI YÊU CẦU THÀNH COMPLETED (Sửa lỗi ID)
+        // 2. TÌM VÀ CẬP NHẬT TRẠNG THÁI YÊU CẦU THÀNH COMPLETED
         const q = query(collection(db, "payment_requests"), where("uid", "==", uid), where("status", "==", "pending"));
         const reqSnap = await getDocs(q);
         const reqPromises = [];
@@ -182,7 +182,7 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
                 approvedAt: serverTimestamp()
             }));
         });
-        await Promise.all(reqPromises); // Chạy cập nhật song song để xử lý nếu có nhiều request bị kẹt
+        await Promise.all(reqPromises); 
 
         // 3. Đẩy thông báo thành công cho người dùng
         await addDoc(collection(db, "notifications"), {
@@ -253,7 +253,7 @@ async function handleToggleVip(userId, targetTier) {
         const userRef = doc(db, "users", userId);
         await setDoc(userRef, updates, { merge: true });
 
-        // NẾU KÍCH HOẠT, XÓA LUÔN THÔNG BÁO CHỜ DUYỆT BÊN PAYMENT REQUESTS ĐỂ ẨN BADGE CẢNH BÁO
+        // NẾU KÍCH HOẠT, CẬP NHẬT THÔNG BÁO CHỜ DUYỆT BÊN PAYMENT REQUESTS ĐỂ ẨN BADGE CẢNH BÁO
         if (isActivating) {
             const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
             const reqSnap = await getDocs(q);
@@ -460,6 +460,30 @@ export function initUserActionEvents() {
     const paymentBody = document.getElementById('payment-history-body');
     if (paymentBody) {
         paymentBody.addEventListener('click', (e) => {
+            // NÚT XÓA BẢN GHI LỊCH SỬ CHUYỂN KHOẢN (MỚI THÊM)
+            const deletePaymentBtn = e.target.closest('.btn-delete-payment');
+            if (deletePaymentBtn) {
+                if (deletePaymentBtn.disabled) return;
+                const docId = deletePaymentBtn.dataset.id;
+                
+                if (confirm("Hệ thống cảnh báo: Bạn có chắc chắn muốn xóa bản ghi báo cáo chuyển khoản này không? Hành động này CHỈ xóa lịch sử báo cáo, KHÔNG ảnh hưởng đến quyền hay tài khoản của người dùng!")) {
+                    const originalHtml = deletePaymentBtn.innerHTML;
+                    deletePaymentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    deletePaymentBtn.disabled = true;
+                    
+                    deleteDoc(doc(db, "payment_requests", docId)).then(() => {
+                        showToast("Xóa bản ghi lịch sử chuyển khoản thành công!", "success");
+                    }).catch(err => {
+                        console.error("Lỗi xóa lịch sử thanh toán:", err);
+                        showToast("Lỗi hệ thống khi xóa bản ghi!", "error");
+                        deletePaymentBtn.innerHTML = originalHtml;
+                        deletePaymentBtn.disabled = false;
+                    });
+                }
+                return;
+            }
+
+            // XỬ LÝ NÚT DUYỆT GÓI
             const approveTierBtn = e.target.closest('.btn-approve-tier');
             if (approveTierBtn) {
                 if (approveTierBtn.disabled) return;
