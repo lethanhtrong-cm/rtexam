@@ -36,6 +36,7 @@ document.addEventListener('ComponentsLoaded', () => {
         sidebarHeader.style.display = 'flex';
         sidebarHeader.style.alignItems = 'center';
         sidebarHeader.style.flexWrap = 'nowrap';
+        sidebarHeader.style.gap = '15px'; // ĐÃ THÊM: Ép buộc luôn có khoảng trắng 15px giữa tiêu đề và huy hiệu
         
         Array.from(sidebarHeader.children).forEach(child => {
             if (child !== queryCounterUI && child !== closeAiSidebarBtn) {
