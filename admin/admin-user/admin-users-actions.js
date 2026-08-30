@@ -164,7 +164,6 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
         const durationMs = durationDays * 24 * 60 * 60 * 1000;
         const expirationDate = now + durationMs;
 
-        // 1. Cập nhật phân quyền vào collection 'users'
         await setDoc(doc(db, "users", uid), {
             vipTier: tierName,            
             vipActivationDate: now,
@@ -172,7 +171,6 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
             isVip: null 
         }, { merge: true });
 
-        // 2. TÌM VÀ CẬP NHẬT TRẠNG THÁI YÊU CẦU THÀNH COMPLETED
         const q = query(collection(db, "payment_requests"), where("uid", "==", uid), where("status", "==", "pending"));
         const reqSnap = await getDocs(q);
         const reqPromises = [];
@@ -184,7 +182,6 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
         });
         await Promise.all(reqPromises); 
 
-        // 3. Đẩy thông báo thành công cho người dùng
         await addDoc(collection(db, "notifications"), {
             toEmail: userEmail,
             title: `👑 Kích hoạt tài khoản ${tierName.toUpperCase()} thành công!`,
@@ -194,7 +191,6 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
             timestamp: serverTimestamp()
         });
 
-        // 4. Ghi đè Local State ngay lập tức để giao diện không bị giật lag
         const u = userState.cachedUsers.find(user => user.userId === uid);
         if (u) {
             u.vipTier = tierName;
@@ -230,7 +226,6 @@ async function handleToggleVip(userId, targetTier) {
     const prevAct = u.vipActivationDate;
     const prevExp = u.vipExpirationDate;
 
-    // CẬP NHẬT LOCAL NGAY LẬP TỨC 
     u.vipTier = updates.vipTier;
     u.statusKey = isActivating ? 'vip' : 'normal';
     
@@ -253,7 +248,6 @@ async function handleToggleVip(userId, targetTier) {
         const userRef = doc(db, "users", userId);
         await setDoc(userRef, updates, { merge: true });
 
-        // NẾU KÍCH HOẠT, CẬP NHẬT THÔNG BÁO CHỜ DUYỆT BÊN PAYMENT REQUESTS ĐỂ ẨN BADGE CẢNH BÁO
         if (isActivating) {
             const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
             const reqSnap = await getDocs(q);
@@ -382,7 +376,6 @@ export async function handleBulkAction(actionType) {
         promises.push((async () => {
             await setDoc(doc(db, "users", id), updates, { merge: true });
             
-            // Xử lý dọn dẹp payment_requests nếu là bật VIP
             if (isVipAction && newVipStatus) {
                 const q = query(collection(db, "payment_requests"), where("uid", "==", id), where("status", "==", "pending"));
                 const reqSnap = await getDocs(q);
@@ -438,9 +431,7 @@ export function initUserActionEvents() {
                 const originalHtml = vipBtn.innerHTML;
                 vipBtn.innerHTML = '⏳...';
                 
-                handleToggleVip(vipBtn.dataset.id, vipBtn.dataset.tier).finally(() => {
-                    // Logic mở khoá nút sẽ tự động thay đổi khi UI load lại
-                });
+                handleToggleVip(vipBtn.dataset.id, vipBtn.dataset.tier).finally(() => {});
                 return;
             }
 
@@ -454,13 +445,40 @@ export function initUserActionEvents() {
 
             const historyBtn = e.target.closest('.btn-history');
             if (historyBtn) return handleViewHistory(historyBtn.dataset.email);
+            
+            // XÓA TÀI KHOẢN KHỎI DANH SÁCH LỌC CHUYỂN KHOẢN
+            const deletePaymentRecordBtn = e.target.closest('.btn-delete-payment-record');
+            if (deletePaymentRecordBtn) {
+                if (deletePaymentRecordBtn.disabled) return;
+                const uid = deletePaymentRecordBtn.dataset.id;
+                
+                if (confirm("Hệ thống cảnh báo: Xóa lịch sử chuyển khoản sẽ làm tài khoản này biến mất khỏi danh sách lọc 'Đã từng báo chuyển khoản'. Vẫn tiếp tục?")) {
+                    const originalHtml = deletePaymentRecordBtn.innerHTML;
+                    deletePaymentRecordBtn.innerHTML = '⏳...';
+                    deletePaymentRecordBtn.disabled = true;
+                    
+                    const q = query(collection(db, "payment_requests"), where("uid", "==", uid));
+                    getDocs(q).then(snap => {
+                        const promises = [];
+                        snap.forEach(docSnap => promises.push(deleteDoc(docSnap.ref)));
+                        return Promise.all(promises);
+                    }).then(() => {
+                        showToast("Đã xóa lịch sử CK của tài khoản!", "success");
+                    }).catch(err => {
+                        console.error("Lỗi xóa lịch sử CK:", err);
+                        showToast("Lỗi hệ thống khi xóa lịch sử CK!", "error");
+                        deletePaymentRecordBtn.innerHTML = originalHtml;
+                        deletePaymentRecordBtn.disabled = false;
+                    });
+                }
+                return;
+            }
         });
     }
     
     const paymentBody = document.getElementById('payment-history-body');
     if (paymentBody) {
         paymentBody.addEventListener('click', (e) => {
-            // NÚT XÓA BẢN GHI LỊCH SỬ CHUYỂN KHOẢN (MỚI THÊM)
             const deletePaymentBtn = e.target.closest('.btn-delete-payment');
             if (deletePaymentBtn) {
                 if (deletePaymentBtn.disabled) return;
@@ -483,7 +501,6 @@ export function initUserActionEvents() {
                 return;
             }
 
-            // XỬ LÝ NÚT DUYỆT GÓI
             const approveTierBtn = e.target.closest('.btn-approve-tier');
             if (approveTierBtn) {
                 if (approveTierBtn.disabled) return;
