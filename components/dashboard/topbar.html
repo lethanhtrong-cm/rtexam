@@ -11,15 +11,20 @@
 
     <!-- KHU VỰC MENU ĐIỀU HƯỚNG TRUNG TÂM -->
     <nav class="topbar-center-menu" style="display: flex; gap: 12px; justify-content: center; align-items: center;">
-        <a href="#" id="btnAutoGenerate"><i class="fa-solid fa-robot"></i> Trợ lý AI</a>
+        <a href="#" id="btnAutoGenerate" class="ai-highlight-btn"><i class="fa-solid fa-wand-magic-sparkles" style="color: #fde047;"></i> Trợ lý AI Học thuật</a>
         <a href="#" id="btnRandomExam"><i class="fa-solid fa-dice" style="color: #fca5a5;"></i> Tạo đề ngẫu nhiên</a>
         <a href="#" id="topbarNavCreateRoom"><i class="fa-solid fa-users-viewfinder"></i> Tạo phòng</a>
         <a href="#" id="btnUploadExam"><i class="fa-solid fa-cloud-arrow-up"></i> Upload đề</a>
     </nav>
     
     <!-- KHU VỰC CHỨC NĂNG BÊN PHẢI -->
-    <div class="topbar-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 24px; flex: 1;">
+    <div class="topbar-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 20px; flex: 1;">
         
+        <!-- NÚT PHỤ MỞ NHANH AI BÊN PHẢI -->
+        <button id="btnQuickOpenAi" title="Mở nhanh Trợ lý AI" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.4); transition: 0.2s; flex-shrink: 0;">
+            <i class="fa-solid fa-robot" style="font-size: 1.1rem;"></i>
+        </button>
+
         <!-- Nút Nâng cấp VIP -->
         <div id="topbar-vip-container" style="display: flex; align-items: center; gap: 12px;">
             <span style="background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.5); color: #4ade80; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap;"><i class="fa-solid fa-paper-plane"></i> Free</span>
@@ -95,14 +100,26 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
-    /* Hiệu ứng nhấp nháy phát sáng nhẹ nhàng (Glow) dành riêng cho nút AI */
-    @keyframes elegantGlow {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); border-color: rgba(255, 255, 255, 0.5); }
-        50% { box-shadow: 0 0 14px 0 rgba(255, 255, 255, 0.45); border-color: rgba(255, 255, 255, 0.9); background-color: rgba(255, 255, 255, 0.2); }
+    /* NÚT TRỢ LÝ AI ĐƯỢC LÀM NỔI BẬT ĐẶC BIỆT */
+    .ai-highlight-btn {
+        background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.8) !important;
+        box-shadow: 0 0 15px rgba(124, 58, 237, 0.5);
+    }
+
+    /* Hiệu ứng nhấp nháy phát sáng mạnh mẽ cho nút AI */
+    @keyframes superGlow {
+        0%, 100% { box-shadow: 0 0 5px rgba(124, 58, 237, 0.4), 0 0 20px rgba(79, 70, 229, 0.3); transform: scale(1); }
+        50% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.8), 0 0 30px rgba(253, 224, 71, 0.5); transform: scale(1.03); }
     }
     
-    #btnAutoGenerate { animation: elegantGlow 2.5s infinite ease-in-out; }
-    #btnAutoGenerate:hover { animation: none; }
+    #btnAutoGenerate { animation: superGlow 3s infinite ease-in-out; }
+    #btnAutoGenerate:hover { animation: none; transform: translateY(-2px); }
+
+    #btnQuickOpenAi:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 15px rgba(139, 92, 246, 0.6);
+    }
 
     /* Hỗ trợ UI/UX Dropdown và hover state cũ */
     #notiDropdown.show, #userDropdown.show { display: block !important; }
@@ -178,7 +195,7 @@
             transform: none !important;
         }
         /* Phá hiệu ứng phát sáng của nút AI trên mobile để đồng bộ màu */
-        #btnAutoGenerate { animation: none !important; color: #8b5cf6 !important; }
+        #btnAutoGenerate { animation: none !important; color: #8b5cf6 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
     }
 
     /* 4. Siêu tối ưu cho màn hình Điện thoại (Dưới 576px) */
@@ -191,3 +208,12 @@
         .topbar-vip-badge { padding: 6px 10px !important; font-size: 0.8rem !important; }
     }
 </style>
+
+<!-- ĐÃ THÊM: Đoạn script nhỏ để kích hoạt nút mở nhanh AI đồng bộ với nút gốc -->
+<script>
+    document.getElementById('btnQuickOpenAi')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const mainAiBtn = document.getElementById('btnAutoGenerate');
+        if (mainAiBtn) mainAiBtn.click();
+    });
+</script>
