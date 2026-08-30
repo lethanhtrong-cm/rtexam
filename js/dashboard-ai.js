@@ -26,7 +26,6 @@ document.addEventListener('ComponentsLoaded', () => {
 
     const queryCounterUI = document.createElement('div');
     queryCounterUI.id = 'aiQueryCounterUI';
-    // ĐÃ SỬA: Thêm flex-shrink: 0; để chống ép khung làm rớt dòng chữ
     queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; margin-right: 15px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap; flex-shrink: 0;";
 
     if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
@@ -86,6 +85,31 @@ document.addEventListener('ComponentsLoaded', () => {
             }
         }
     }
+
+    // ==========================================
+    // ĐỒNG BỘ REAL-TIME TRẠNG THÁI TỪ FIREBASE
+    // ==========================================
+    document.addEventListener('authReady', (e) => {
+        const userData = e.detail.currentUserData;
+        if (!userData) return;
+        
+        const tier = userData.vipTier || 'free';
+        globalAiTier = tier; 
+        updateCharCounterUI(); 
+
+        let maxLimit = 1; 
+        if (tier === 'plus') maxLimit = 3;
+        if (tier === 'pro') maxLimit = Infinity;
+
+        let usedCount = 0;
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        if (userData.aiLastUsedDate === todayStr) {
+            usedCount = userData.aiDailyCount || 0;
+        }
+
+        const remaining = maxLimit - usedCount;
+        updateQueryCounterDisplay(remaining, maxLimit, tier);
+    });
 
     // ==========================================
     // TÍNH NĂNG: LƯU & TẢI LỊCH SỬ TRÒ CHUYỆN
@@ -160,7 +184,6 @@ document.addEventListener('ComponentsLoaded', () => {
             if (!isResizing) return;
             let newWidth = window.innerWidth - e.clientX;
             
-            // ĐÃ SỬA: Nâng mức tối thiểu lên 460px khi kéo thả để chống vỡ giao diện Header
             let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
             if (newWidth < minWidth) newWidth = minWidth;
             if (newWidth > window.innerWidth * 0.9) newWidth = window.innerWidth * 0.9;
@@ -184,7 +207,6 @@ document.addEventListener('ComponentsLoaded', () => {
     function toggleSidebar() {
         if (!aiSidebar) return;
         
-        // ĐÃ SỬA: Ép kích thước mặc định luôn đủ rộng (460px) khi vừa bật lên
         let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
         let currentWidth = aiSidebar.offsetWidth;
         
