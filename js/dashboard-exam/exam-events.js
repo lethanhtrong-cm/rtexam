@@ -12,16 +12,16 @@ export function setupFilterEvents() {
     const subMenuItems = document.querySelectorAll('.sub-menu-item');
 
     // Bằng khối code dưới đây (Thêm Debounce 300ms chống lag):
-let searchTimeout = null;
-if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            State.currentSearchQuery = e.target.value.toLowerCase();
-            renderExams();
-        }, 300);
-    });
-}
+    let searchTimeout = null;
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                State.currentSearchQuery = e.target.value.toLowerCase();
+                renderExams();
+            }, 300);
+        });
+    }
     if (levelPills) levelPills.forEach(pill => pill.addEventListener('click', (e) => { levelPills.forEach(p => p.classList.remove('active')); e.target.classList.add('active'); State.currentLevel = e.target.getAttribute('data-level'); renderExams(); }));
     if (timePills) timePills.forEach(pill => pill.addEventListener('click', (e) => { timePills.forEach(p => p.classList.remove('active')); e.target.classList.add('active'); State.currentTime = e.target.getAttribute('data-time'); renderExams(); }));
     if (sortFilter) sortFilter.addEventListener('change', () => renderExams());
@@ -31,7 +31,6 @@ if (searchInput) {
 
 export function setupToolbarEvents() {
     const btnOpenCreateRoom = document.getElementById('btnOpenCreateRoom');
-    const btnAutoGenerate = document.getElementById('btnAutoGenerate');
     const btnUploadExam = document.getElementById('btnUploadExam');
 
     if (btnOpenCreateRoom) {
@@ -48,52 +47,5 @@ export function setupToolbarEvents() {
         });
     }
 
-    if (btnAutoGenerate) {
-        btnAutoGenerate.addEventListener('click', async (e) => {
-            e.preventDefault(); 
-            if (!auth.currentUser) return alert("Vui lòng đăng nhập!");
-            const isVip = State.currentUserData && State.currentUserData.isVip;
-            if (!isVip) {
-                const originalHtml = btnAutoGenerate.innerHTML;
-                btnAutoGenerate.disabled = true;
-                btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kiểm tra quyền...';
-                try {
-                    const examsRef = collection(db, "exams");
-
-                    // TỐI ƯU 1 & 2: Dùng getCountFromServer đếm trực tiếp trên server
-                    const countQuery = query(
-                        examsRef, 
-                        where("creatorId", "==", auth.currentUser.uid),
-                        where("technique", "==", "AI Tự Động")
-                    );
-                    
-                    const snapshot = await getCountFromServer(countQuery);
-                    const aiCount = snapshot.data().count; 
-
-                    if (aiCount >= 5) {
-                        const modal = document.getElementById('aiGenerateModal');
-                        if (modal) { modal.classList.remove('active', 'show'); modal.style.display = 'none'; }
-                        if (typeof window.showLimitWarningPopup === 'function') window.showLimitWarningPopup(aiCount);
-                        return; 
-                    }
-                    const modal = document.getElementById('aiGenerateModal');
-                    if (modal) {
-                        modal.querySelectorAll('[value="Khó"]').forEach(el => { el.disabled = true; el.title = "Yêu cầu tài khoản PRO"; if (el.selected || el.checked) { const tb = modal.querySelector('[value="Trung bình"]'); if (tb) tb.selected = true; } });
-                    }
-                } catch (error) { console.error("Lỗi:", error); alert("Có lỗi xảy ra."); return; } 
-                finally { btnAutoGenerate.disabled = false; btnAutoGenerate.innerHTML = originalHtml; }
-            } else {
-                const modal = document.getElementById('aiGenerateModal');
-                if (modal) modal.querySelectorAll('[value="Khó"]').forEach(el => { el.disabled = false; el.removeAttribute('title'); });
-            }
-            const modal = document.getElementById('aiGenerateModal');
-            if (modal) { modal.classList.add('active'); modal.style.display = 'flex'; }
-        });
-    }
-
-    const closeAiModalBtn = document.getElementById('closeAiModalBtn');
-    if (closeAiModalBtn) closeAiModalBtn.addEventListener('click', () => { const m = document.getElementById('aiGenerateModal'); if(m) m.classList.remove('active'); });
-    const btnCancelAi = document.getElementById('btnCancelAi');
-    if (btnCancelAi) btnCancelAi.addEventListener('click', () => { const m = document.getElementById('aiGenerateModal'); if(m) m.classList.remove('active'); });
     if (btnUploadExam) btnUploadExam.addEventListener('click', () => alert("Tính năng Upload đề thi đang phát triển!"));
 }
