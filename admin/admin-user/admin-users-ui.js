@@ -44,7 +44,7 @@ export function injectTableHeadersAndToolbar() {
                 .mobile-action-bar { 
                     display: flex !important; 
                     flex-wrap: wrap; 
-                    gap: 8px; 
+                    gap: 6px; 
                     margin-top: 15px; 
                     padding-top: 15px; 
                     border-top: 1px dashed #cbd5e1; 
@@ -55,8 +55,8 @@ export function injectTableHeadersAndToolbar() {
                     flex: 1; 
                     min-width: 45%; 
                     justify-content: center; 
-                    padding: 10px !important; 
-                    font-size: 13px !important; 
+                    padding: 8px !important; 
+                    font-size: 12px !important; 
                 }
             }
         `;
@@ -419,8 +419,6 @@ export function renderUserList() {
 
     paginatedUsers.forEach(user => {
         let currentStt = stt++;
-        
-        // SỬA LỖI UI BADGE TRẠNG THÁI: Áp dụng icon FontAwesome màu sắc rõ rệt + inline-flex chống rớt dòng
         let statusBadgeHtml = '';
         if (user.isBanned) {
             statusBadgeHtml = `<span style="background: #fee2e2 !important; color: #dc2626 !important; padding: 5px 10px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 800 !important; border: 1px solid #fecaca !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; line-height: 1 !important;"><i class="fa-solid fa-ban" style="margin-right: 4px;"></i>Bị Khóa</span>`;
@@ -479,9 +477,11 @@ export function renderUserList() {
         datesHtml += `</div>`;
 
         const isVipTierActive = !!user.vipTier;
+        const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
+        const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
         
-        // SỬA LỖI UI CỤM NÚT ACTION: Ép display: inline-flex và flex-direction: row !important để chống bị dọc
-        const baseBtnStyle = "padding: 6px 10px !important; font-size: 11.5px !important; border-radius: 6px !important; display: inline-flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 5px !important; border: none !important; font-weight: 600 !important; cursor: pointer !important; transition: all 0.2s ease !important; color: white !important; white-space: nowrap !important; line-height: 1 !important;";
+        // TỐI ƯU CỰC KỲ AN TOÀN CHO CỤM NÚT BẤM (BỎ INLINE BLOCK, ÉP FLEX ROW CHO NÚT VÀ CỤM CHỨA)
+        const baseBtnStyle = "padding: 5px 9px !important; font-size: 11px !important; border-radius: 6px !important; display: inline-flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 4px !important; border: none !important; font-weight: 600 !important; cursor: pointer !important; transition: all 0.2s ease !important; color: white !important; white-space: nowrap !important; line-height: 1 !important;";
         
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
@@ -493,11 +493,11 @@ export function renderUserList() {
         let vipActionButtonsHtml = '';
         if (isVipTierActive) {
             if (user.vipTier === 'pro') {
-                const offStylePro = `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3); opacity: 0.9;`;
-                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePro}" ${hoverEffect} title="Đang ở gói PRO. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Hủy Gói</button>`;
+                const offStylePro = `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`;
+                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePro}" ${hoverEffect} title="Đang PRO. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Tắt Gói</button>`;
             } else {
-                const offStylePlus = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3); opacity: 0.9;`;
-                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePlus}" ${hoverEffect} title="Đang ở gói PLUS. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Hủy Gói</button>`;
+                const offStylePlus = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
+                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePlus}" ${hoverEffect} title="Đang PLUS. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Tắt Gói</button>`;
             }
         } else {
             const plusStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
@@ -571,7 +571,8 @@ export function renderUserList() {
                 ${statusBadgeHtml}
             </td>
             <td class="text-center desktop-action-td">
-                <div class="user-action-group" style="display: flex !important; flex-direction: row !important; gap: 6px !important; justify-content: center !important; flex-wrap: wrap !important;">
+                <!-- Ép cứng bố cục flex-direction: row để chống dồn nút dọc -->
+                <div class="user-action-group" style="display: flex !important; flex-direction: row !important; gap: 4px !important; justify-content: center !important; align-items: center !important; flex-wrap: wrap !important;">
                     ${actionButtonsHtml}
                 </div>
             </td>
