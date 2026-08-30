@@ -2,6 +2,24 @@ import { doc, getDoc, setDoc, addDoc, serverTimestamp, onSnapshot, collection, q
 import { signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { formatDate, setVipInactive, renderAuthInfo } from "../dashboard/dashboard-ui.js";
 
+// ============================================================================
+// HÀM MỚI BỔ SUNG ĐỂ GHI ĐÈ GIAO DIỆN FREE KHI HỆ THỐNG CŨ XÓA MẤT
+// ============================================================================
+function renderFreeBadgeUI() {
+    const topbarVipContainer = document.getElementById('topbar-vip-container');
+    if (topbarVipContainer) {
+        topbarVipContainer.style.display = 'flex';
+        topbarVipContainer.style.alignItems = 'center';
+        topbarVipContainer.style.gap = '12px';
+        topbarVipContainer.innerHTML = `
+            <span style="background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.4); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap;"><i class="fa-solid fa-paper-plane"></i> Free</span>
+            <button id="btnUpgradeHeader" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3); white-space: nowrap;">
+                <i class="fa-solid fa-crown"></i> <span>Nâng cấp Pro</span>
+            </button>
+        `;
+    }
+}
+
 export function initNotificationListener(auth, db) {
     const user = auth.currentUser;
     if (!user) return;
@@ -128,7 +146,6 @@ function fetchUserData(user, auth, db) {
                 }
 
                 // KIỂM TRA ĐIỀU KIỆN 3 HẠNG (THƯỜNG / PLUS / PRO)
-                // Hỗ trợ luồng cũ (isVip) bằng cách tạm ánh xạ sang 'plus' nếu hệ thống cũ chưa update triệt để
                 let activeTier = currentUserData.vipTier;
                 if (!activeTier && currentUserData.isVip) activeTier = 'plus';
 
@@ -154,6 +171,7 @@ function fetchUserData(user, auth, db) {
                     if (isExpired) {
                         setDoc(userDocRef, { vipTier: null, isVip: false }, { merge: true }).catch(err => console.error(err));
                         setVipInactive();
+                        renderFreeBadgeUI(); // ĐÃ SỬA: Ép render lại nút Free
                         currentUserData.vipTier = null;
                     } else {
                         // TẠO UI DỰA TRÊN TIER
@@ -252,9 +270,11 @@ function fetchUserData(user, auth, db) {
                     }
                 } else {
                     setVipInactive();
+                    renderFreeBadgeUI(); // ĐÃ SỬA: Ép render lại nút Free
                 }
             } else {
                 setVipInactive(); 
+                renderFreeBadgeUI(); // ĐÃ SỬA: Ép render lại nút Free
             }
             
             resolve(currentUserData);
@@ -262,6 +282,7 @@ function fetchUserData(user, auth, db) {
         }, (error) => {
             console.error("Lỗi khi lắng nghe dữ liệu user từ Firestore:", error);
             setVipInactive();
+            renderFreeBadgeUI(); // ĐÃ SỬA: Ép render lại nút Free
             resolve({ vipTier: null, isBanned: false, bookmarks: [] });
         });
     });
