@@ -164,21 +164,18 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
         const durationMs = durationDays * 24 * 60 * 60 * 1000;
         const expirationDate = now + durationMs;
 
-        // 1. Cập nhật phân quyền vào collection 'users'
         await setDoc(doc(db, "users", uid), {
             vipTier: tierName,            
             vipActivationDate: now,
             vipExpirationDate: expirationDate,
-            isVip: null // Dọn dẹp cờ cũ
+            isVip: null 
         }, { merge: true });
 
-        // 2. Cập nhật trạng thái completed thay vì xóa để lưu lịch sử
         await updateDoc(doc(db, "payment_requests", uid), {
             status: "completed",
             approvedAt: serverTimestamp()
         });
 
-        // 3. Đẩy thông báo thành công cho người dùng
         await addDoc(collection(db, "notifications"), {
             toEmail: userEmail,
             title: `👑 Kích hoạt tài khoản ${tierName.toUpperCase()} thành công!`,
@@ -188,7 +185,6 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
             timestamp: serverTimestamp()
         });
 
-        // Ghi đè Local State ngay lập tức để giao diện không bị giật lag
         const u = userState.cachedUsers.find(user => user.userId === uid);
         if (u) {
             u.vipTier = tierName;
@@ -205,25 +201,30 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
     }
 }
 
-// Bật tắt thủ công từ danh sách
-async function handleToggleVip(userId, isCurrentlyActive) {
+// ĐÃ SỬA: Thay vì nhận isCurrentlyActive, giờ nhận string targetTier
+async function handleToggleVip(userId, targetTier) {
     const u = userState.cachedUsers.find(user => user.userId === userId);
     if (!u) return;
 
-    const newVipStatus = !isCurrentlyActive;
+    const isActivating = targetTier !== 'none';
     
     let updates = { 
-        vipTier: newVipStatus ? 'plus' : null, // Mặc định kích tay là Plus
+        vipTier: isActivating ? targetTier : null,
         isVip: null,
         vipStart: null,
         vipEnd: null
     };
 
-    // 1. CẬP TRẠNG THÁI LOCAL NGAY LẬP TỨC 
+    const prevTier = u.vipTier;
+    const prevStatusKey = u.statusKey;
+    const prevAct = u.vipActivationDate;
+    const prevExp = u.vipExpirationDate;
+
+    // CẬP NHẬT LOCAL NGAY LẬP TỨC 
     u.vipTier = updates.vipTier;
-    u.statusKey = newVipStatus ? 'vip' : 'normal';
+    u.statusKey = isActivating ? 'vip' : 'normal';
     
-    if (newVipStatus) {
+    if (isActivating) {
         const now = Date.now();
         updates.vipActivationDate = now;
         updates.vipExpirationDate = now + (30 * 24 * 60 * 60 * 1000);
@@ -241,15 +242,16 @@ async function handleToggleVip(userId, isCurrentlyActive) {
     try {
         const userRef = doc(db, "users", userId);
         await setDoc(userRef, updates, { merge: true });
-        showToast(`Đã ${newVipStatus ? 'kích hoạt gói PLUS' : 'hủy quyền'} thành công!`, "success");
+        showToast(`Đã ${isActivating ? 'kích hoạt gói ' + targetTier.toUpperCase() : 'hủy quyền'} thành công!`, "success");
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         const msg = error.code === 'resource-exhausted' ? "LỖI: Đã hết Quota Firebase ngày hôm nay!" : "Lỗi mạng! Đang khôi phục lại trạng thái cũ...";
         showToast(msg, "error");
         
-        // 3. Rollback
-        u.vipTier = isCurrentlyActive ? 'plus' : null;
-        u.statusKey = isCurrentlyActive ? 'vip' : 'normal';
+        u.vipTier = prevTier;
+        u.statusKey = prevStatusKey;
+        u.vipActivationDate = prevAct;
+        u.vipExpirationDate = prevExp;
         renderUserList(); 
     }
 }
@@ -393,8 +395,13 @@ export function initUserActionEvents() {
             if (vipBtn) {
                 if (vipBtn.disabled) return;
                 vipBtn.disabled = true; 
-                vipBtn.innerHTML = '⏳ Đang xử lý...';
-                return handleToggleVip(vipBtn.dataset.id, vipBtn.dataset.vip === 'true');
+                const originalHtml = vipBtn.innerHTML;
+                vipBtn.innerHTML = '⏳...';
+                
+                handleToggleVip(vipBtn.dataset.id, vipBtn.dataset.tier).finally(() => {
+                    // Logic mở khoá nút sẽ tự động thay đổi khi UI load lại
+                });
+                return;
             }
 
             const banBtn = e.target.closest('.btn-toggle-ban');
