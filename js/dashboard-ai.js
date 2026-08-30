@@ -54,7 +54,6 @@ document.addEventListener('ComponentsLoaded', () => {
         }
     }
 
-    // Cập nhật lại UI nút bấm
     if (btnAutoGenerate) {
         btnAutoGenerate.innerHTML = '<i class="fa-solid fa-robot"></i> Trợ lý AI';
     }
@@ -63,7 +62,6 @@ document.addEventListener('ComponentsLoaded', () => {
     // TÍNH NĂNG: THAY ĐỔI KÍCH THƯỚC SIDEBAR
     // ==========================================
     if (aiSidebar) {
-        // Tạo thanh kéo (resizer) ở viền trái
         const resizer = document.createElement('div');
         resizer.style.width = '6px';
         resizer.style.height = '100%';
@@ -75,7 +73,6 @@ document.addEventListener('ComponentsLoaded', () => {
         resizer.style.zIndex = '10000';
         resizer.style.transition = 'background-color 0.2s';
         
-        // Hiệu ứng hover cho thanh kéo
         resizer.addEventListener('mouseenter', () => resizer.style.backgroundColor = '#cbd5e1');
         resizer.addEventListener('mouseleave', () => resizer.style.backgroundColor = 'transparent');
         
@@ -93,7 +90,6 @@ document.addEventListener('ComponentsLoaded', () => {
             if (!isResizing) return;
             let newWidth = window.innerWidth - e.clientX;
             
-            // Giới hạn độ rộng (tối thiểu 320px, tối đa 80% màn hình)
             if (newWidth < 320) newWidth = 320;
             if (newWidth > window.innerWidth * 0.8) newWidth = window.innerWidth * 0.8;
             
@@ -126,7 +122,6 @@ document.addEventListener('ComponentsLoaded', () => {
             aiSidebar.style.right = '0';
             if (mainContentWrap) mainContentWrap.style.marginRight = `${currentWidth}px`;
             
-            // Lần đầu tiên mở sidebar: Thêm mẹo và load lịch sử
             if (isFirstOpen) {
                 const hintDiv = document.createElement('div');
                 hintDiv.style.backgroundColor = '#e0f2fe';
@@ -140,20 +135,93 @@ document.addEventListener('ComponentsLoaded', () => {
                 hintDiv.innerHTML = '<i class="fa-solid fa-arrows-left-right" style="color: #0ea5e9; margin-right: 5px;"></i> <b>Mẹo nhỏ:</b> Bạn có thể nhấn giữ và kéo viền bên trái của cửa sổ này để thay đổi kích thước theo ý thích nhé!';
                 
                 aiChatBox.appendChild(hintDiv);
-                
-                // Tải lịch sử ngay sau khi hiển thị mẹo
                 loadChatHistory();
                 isFirstOpen = false;
             }
         }
     }
 
-    // Kiểm tra quyền PRO trước khi mở Sidebar Trợ lý AI
+    // ==========================================
+    // POPUP UI FUNCTIONS
+    // ==========================================
+    function showRemainingQueriesPopup(remaining, maxLimit, tier) {
+        const existingModal = document.getElementById('aiLimitInfoModal');
+        if (existingModal) existingModal.remove();
+
+        const popupHTML = `
+            <div class="custom-modal-overlay" id="aiLimitInfoModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); justify-content: center; align-items: center;">
+                <div class="custom-modal-content" style="max-width: 400px; width: 90%; background: #fff; border-radius: 16px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                    <div style="width: 60px; height: 60px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                        <i class="fa-solid fa-robot" style="font-size: 2rem; color: #3b82f6;"></i>
+                    </div>
+                    <h3 style="margin: 0 0 10px 0; color: #1e293b; font-size: 1.4rem;">Trợ lý AI Học thuật</h3>
+                    <p style="color: #475569; font-size: 1rem; margin-bottom: 20px;">
+                        Tài khoản <strong>${tier.toUpperCase()}</strong> của bạn còn <strong style="color: #2563eb; font-size: 1.2rem;">${remaining}</strong>/${maxLimit} lượt hỏi trong ngày hôm nay.
+                    </p>
+                    <div style="text-align: left; margin-bottom: 20px; font-size: 0.9rem; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <input type="checkbox" id="chkHideAiPopup" style="cursor: pointer; width: 16px; height: 16px;">
+                        <label for="chkHideAiPopup" style="cursor: pointer;">Không hiển thị lại thông báo này</label>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btnCancelAiPopup" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #475569; font-weight: 600; cursor: pointer; transition: 0.2s;">Hủy</button>
+                        <button id="btnContinueAiPopup" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #3b82f6; color: #fff; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);">Tiếp tục</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', popupHTML);
+
+        const modal = document.getElementById('aiLimitInfoModal');
+        document.getElementById('btnCancelAiPopup').onclick = () => modal.remove();
+        document.getElementById('btnContinueAiPopup').onclick = () => {
+            const isChecked = document.getElementById('chkHideAiPopup').checked;
+            if (isChecked) {
+                localStorage.setItem(`hideAiLimitPopup_${auth.currentUser.uid}`, 'true');
+            }
+            modal.remove();
+            toggleSidebar();
+        };
+    }
+
+    function showOutOfQueriesPopup(tier) {
+        const existingModal = document.getElementById('aiOutOfQueriesModal');
+        if (existingModal) existingModal.remove();
+
+        const popupHTML = `
+            <div class="custom-modal-overlay" id="aiOutOfQueriesModal" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); justify-content: center; align-items: center;">
+                <div class="custom-modal-content" style="max-width: 400px; width: 90%; background: #fff; border-radius: 16px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                    <div style="width: 60px; height: 60px; background: #fef2f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                        <i class="fa-solid fa-clock-rotate-left" style="font-size: 2rem; color: #ef4444;"></i>
+                    </div>
+                    <h3 style="margin: 0 0 10px 0; color: #1e293b; font-size: 1.4rem;">Đã hết lượt hỏi hôm nay</h3>
+                    <p style="color: #475569; font-size: 1rem; margin-bottom: 20px; line-height: 1.5;">
+                        Tài khoản <strong>${tier.toUpperCase()}</strong> đã dùng hết số lượt hỏi AI. Hệ thống sẽ cấp lại lượt mới vào ngày mai. Hãy nâng cấp gói PRO để sử dụng không giới hạn!
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btnCloseAiOutOfQueries" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #475569; font-weight: 600; cursor: pointer;">Đóng</button>
+                        <button id="btnUpgradeAiOutOfQueries" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);"><i class="fa-solid fa-crown"></i> Nâng cấp ngay</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', popupHTML);
+
+        const modal = document.getElementById('aiOutOfQueriesModal');
+        document.getElementById('btnCloseAiOutOfQueries').onclick = () => modal.remove();
+        document.getElementById('btnUpgradeAiOutOfQueries').onclick = () => {
+            modal.remove();
+            // Kích hoạt click vào nút Nâng Cấp trên thanh Topbar
+            document.getElementById('btnUpgradeHeader')?.click(); 
+        };
+    }
+
+    // ==========================================
+    // KIỂM TRA QUYỀN TRƯỚC KHI MỞ SIDEBAR
+    // ==========================================
     if (btnAutoGenerate) {
         btnAutoGenerate.addEventListener('click', async (e) => {
             e.preventDefault();
             
-            // Nếu Sidebar đang mở thì cho phép đóng lại ngay lập tức
             if (aiSidebar && aiSidebar.classList.contains('active')) {
                 toggleSidebar();
                 return;
@@ -164,37 +232,61 @@ document.addEventListener('ComponentsLoaded', () => {
                 return;
             }
 
+            const btnOriginalText = btnAutoGenerate.innerHTML;
+            btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kiểm tra...';
+
             try {
-                const btnOriginalText = btnAutoGenerate.innerHTML;
-                btnAutoGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kiểm tra...';
-                
                 const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
                 btnAutoGenerate.innerHTML = btnOriginalText;
 
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
+                    const tier = userData.vipTier || 'free';
                     
-                    // Phân quyền: Chỉ cấp PRO mới được dùng tính năng này
-                    if (userData.vipTier !== 'pro') {
-                        alert("Tính năng Trợ lý AI Học thuật chỉ dành riêng cho tài khoản PRO (50.000đ/tháng). Vui lòng nâng cấp để sử dụng!");
+                    // Thiết lập định mức
+                    let maxLimit = 1; 
+                    if (tier === 'plus') maxLimit = 3;
+                    if (tier === 'pro') maxLimit = Infinity;
+
+                    // Tính số lượt đã dùng hôm nay
+                    let usedCount = 0;
+                    const todayStr = new Date().toLocaleDateString('en-CA');
+                    if (userData.aiLastUsedDate === todayStr) {
+                        usedCount = userData.aiDailyCount || 0;
+                    }
+
+                    const remaining = maxLimit - usedCount;
+
+                    // Bỏ qua Popup nếu là PRO
+                    if (tier === 'pro') {
+                        toggleSidebar();
                         return;
                     }
-                    
-                    // Thỏa mãn điều kiện thì mở Sidebar
-                    toggleSidebar();
+
+                    // Xử lý nhánh Free / Plus
+                    if (remaining <= 0) {
+                        showOutOfQueriesPopup(tier);
+                    } else {
+                        const hidePopupPref = localStorage.getItem(`hideAiLimitPopup_${auth.currentUser.uid}`);
+                        if (hidePopupPref === 'true') {
+                            toggleSidebar();
+                        } else {
+                            showRemainingQueriesPopup(remaining, maxLimit, tier);
+                        }
+                    }
                 } else {
                     alert("Không tìm thấy dữ liệu người dùng!");
                 }
             } catch (error) {
-                console.error("Lỗi kiểm tra quyền truy cập AI:", error);
-                alert("Lỗi kiểm tra quyền. Vui lòng thử lại!");
+                console.error("Lỗi kiểm tra quyền hạn AI:", error);
+                btnAutoGenerate.innerHTML = btnOriginalText;
+                alert("Đã xảy ra lỗi kiểm tra hệ thống. Vui lòng thử lại!");
             }
         });
     }
 
     if (closeAiSidebarBtn) closeAiSidebarBtn.addEventListener('click', toggleSidebar);
 
-    // Hàm chuyển đổi định dạng Markdown đơn giản
     function parseMarkdown(text) {
         let html = text;
         html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
@@ -208,28 +300,23 @@ document.addEventListener('ComponentsLoaded', () => {
         return html;
     }
 
-    // Hàm render tin nhắn
     function appendMessage(sender, text) {
         if (!aiChatBox) return;
 
-        // Xử lý riêng cho AI để tách nút Copy xuống bên dưới
         if (sender === 'ai' && !text.includes('Đang suy nghĩ')) {
-            // Wrapper chứa cả khung chat và nút copy
             const wrapperDiv = document.createElement('div');
             wrapperDiv.style.display = 'flex';
             wrapperDiv.style.flexDirection = 'column';
-            wrapperDiv.style.alignSelf = 'flex-start'; // Căn lề trái
+            wrapperDiv.style.alignSelf = 'flex-start';
             wrapperDiv.style.maxWidth = '85%';
             wrapperDiv.style.marginBottom = '15px';
 
-            // Khung chat chính
             const msgDiv = document.createElement('div');
             msgDiv.className = `chat-message ${sender}`;
-            msgDiv.style.marginBottom = '4px'; // Khoảng cách nhỏ với nút Copy bên dưới
-            msgDiv.style.maxWidth = '100%'; // Chiếm hết bề ngang của wrapper
+            msgDiv.style.marginBottom = '4px'; 
+            msgDiv.style.maxWidth = '100%'; 
             msgDiv.innerHTML = parseMarkdown(text);
             
-            // Khu vực chứa nút chức năng (bên dưới ngoài khung chat)
             const actionRow = document.createElement('div');
             actionRow.style.paddingLeft = '5px';
             
@@ -253,9 +340,7 @@ document.addEventListener('ComponentsLoaded', () => {
 
             copyBtn.addEventListener('click', async () => {
                 try {
-                    // Loại bỏ hoàn toàn dấu sao (*) và dấu thăng (#) trước khi copy
                     const cleanText = text.replace(/[*#]/g, ''); 
-                    
                     await navigator.clipboard.writeText(cleanText); 
                     copyBtn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i> Đã chép';
                     setTimeout(() => {
@@ -266,15 +351,12 @@ document.addEventListener('ComponentsLoaded', () => {
                 }
             });
 
-            // Gắn vào Wrapper
             actionRow.appendChild(copyBtn);
             wrapperDiv.appendChild(msgDiv);
             wrapperDiv.appendChild(actionRow);
-            
             aiChatBox.appendChild(wrapperDiv);
 
         } else {
-            // Xử lý mặc định cho User hoặc thông báo "Đang suy nghĩ..."
             const msgDiv = document.createElement('div');
             msgDiv.className = `chat-message ${sender}`;
             msgDiv.innerHTML = text.replace(/\n/g, '<br>');
@@ -284,7 +366,9 @@ document.addEventListener('ComponentsLoaded', () => {
         aiChatBox.scrollTop = aiChatBox.scrollHeight;
     }
 
-    // Luồng Chat & Xử lý API
+    // ==========================================
+    // LUỒNG CHAT & CALL API
+    // ==========================================
     if (btnSendAi) {
         btnSendAi.addEventListener('click', async () => {
             const prompt = aiChatInput.value.trim();
@@ -295,8 +379,41 @@ document.addEventListener('ComponentsLoaded', () => {
                 return;
             }
 
+            btnSendAi.disabled = true;
+            let currentAiCount = 0;
+            let todayStr = new Date().toLocaleDateString('en-CA');
+            let isUserPro = false;
+            let maxLimit = 1; // Mặc định Free
+
+            try {
+                const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const tier = userData.vipTier || 'free';
+                    isUserPro = (tier === 'pro');
+                    
+                    if (tier === 'plus') maxLimit = 3;
+                    if (tier === 'pro') maxLimit = Infinity;
+                    
+                    if (!isUserPro) {
+                        const lastDate = userData.aiLastUsedDate || '';
+                        currentAiCount = (lastDate === todayStr) ? (userData.aiDailyCount || 0) : 0;
+                        
+                        // Chốt chặn cuối cùng nếu họ Bypass UI để chat
+                        if (currentAiCount >= maxLimit) {
+                            alert("Bạn đã hết lượt hỏi AI trong ngày hôm nay!");
+                            btnSendAi.disabled = false;
+                            return; 
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi kiểm tra quyền hạn AI:", err);
+            }
+
             appendMessage('user', prompt);
             aiChatInput.value = '';
+            btnSendAi.disabled = false;
 
             chatHistory.push({
                 role: "user",
@@ -322,8 +439,8 @@ document.addEventListener('ComponentsLoaded', () => {
                 if (loadingEl) loadingEl.parentNode.remove();
 
                 if (!response.ok) {
-                    chatHistory.pop(); // Xóa lỗi ra khỏi lịch sử
-                    saveChatHistory(); // Cập nhật lại
+                    chatHistory.pop(); 
+                    saveChatHistory(); 
                     const errorData = await response.text();
                     if (response.status === 429 || errorData.includes('RESOURCE_EXHAUSTED') || errorData.includes('depleted')) {
                         throw new Error("Hệ thống Trợ lý AI đang quá tải hoặc hết hạn mức tài nguyên trong ngày. Vui lòng thử lại sau!");
@@ -341,18 +458,26 @@ document.addEventListener('ComponentsLoaded', () => {
                     parts: [{ text: aiResponseText }]
                 });
 
-                // Giới hạn bộ nhớ: Chỉ giữ lại 6 tin nhắn (3 vòng hỏi-đáp) mới nhất để tiết kiệm chi phí API
                 if (chatHistory.length > 6) {
                     chatHistory = chatHistory.slice(-6);
                 }
 
-                saveChatHistory(); // Lưu ngay khi AI trả lời thành công
+                saveChatHistory(); 
 
+                // Ghi nhận Token & Tăng số đếm (Increment)
                 if (usedTokens > 0) {
                     try {
-                        await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                            totalTokensUsed: increment(usedTokens)
-                        });
+                        let updateData = { totalTokensUsed: increment(usedTokens) };
+                        if (!isUserPro) {
+                            updateData.aiDailyCount = currentAiCount + 1;
+                            updateData.aiLastUsedDate = todayStr;
+                        }
+                        await updateDoc(doc(db, "users", auth.currentUser.uid), updateData);
+                        
+                        // Đẩy cảnh báo nhắc nhở nếu đã chạm mức trần
+                        if (!isUserPro && (currentAiCount + 1 >= maxLimit)) {
+                            setTimeout(() => appendMessage('ai', "💡 *Ghi chú hệ thống: Bạn đã sử dụng hết lượt hỏi AI miễn phí trong ngày hôm nay.*"), 1000);
+                        }
                     } catch (tokenErr) {
                         console.warn("Chưa thể cập nhật Token cho User:", tokenErr);
                     }
