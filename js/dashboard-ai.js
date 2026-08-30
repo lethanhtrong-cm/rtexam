@@ -19,19 +19,17 @@ document.addEventListener('ComponentsLoaded', () => {
     // ==========================================
     // TÍNH NĂNG: BỘ ĐẾM KÝ TỰ & LƯỢT HỎI REAL-TIME
     // ==========================================
-    // 1. Khởi tạo bộ đếm ký tự (Vẫn giữ ở dưới ô chat)
     const charCounter = document.createElement('div');
     charCounter.id = 'aiCharCounter';
     charCounter.style.cssText = "font-size: 0.8rem; color: #64748b; text-align: right; margin-top: 6px; padding-right: 5px; display: none; font-weight: 600; transition: color 0.2s;";
     charCounter.innerText = "0/1000";
 
-    // 2. ĐÃ SỬA: Đưa huy hiệu trạng thái & số lượt lên Top Header của Sidebar
     const queryCounterUI = document.createElement('div');
     queryCounterUI.id = 'aiQueryCounterUI';
-    queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; margin-right: 15px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap;";
+    // ĐÃ SỬA: Thêm flex-shrink: 0; để chống ép khung làm rớt dòng chữ
+    queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; margin-right: 15px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap; flex-shrink: 0;";
 
     if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
-        // Chèn huy hiệu vào thanh Header, ngay trước nút Đóng X
         closeAiSidebarBtn.parentNode.insertBefore(queryCounterUI, closeAiSidebarBtn);
     }
     
@@ -62,20 +60,19 @@ document.addEventListener('ComponentsLoaded', () => {
         }
     }
 
-    // ĐÃ SỬA: Hàm cập nhật hiển thị Gói cước và Số lượt trên Header
     function updateQueryCounterDisplay(remaining, maxLimit, tier) {
         if (!queryCounterUI) return;
         queryCounterUI.style.display = 'flex';
         
-        let tierColor = '#4ade80'; // Xanh lá sáng cho Free
+        let tierColor = '#4ade80'; 
         let tierIcon = '<i class="fa-solid fa-paper-plane"></i>';
         
         if (tier === 'plus') { 
-            tierColor = '#60a5fa'; // Xanh dương sáng cho Plus
+            tierColor = '#60a5fa'; 
             tierIcon = '<i class="fa-solid fa-shield-halved"></i>'; 
         }
         if (tier === 'pro') { 
-            tierColor = '#fcd34d'; // Vàng sáng cho Pro
+            tierColor = '#fcd34d'; 
             tierIcon = '<i class="fa-solid fa-crown"></i>'; 
         }
 
@@ -163,8 +160,10 @@ document.addEventListener('ComponentsLoaded', () => {
             if (!isResizing) return;
             let newWidth = window.innerWidth - e.clientX;
             
-            if (newWidth < 320) newWidth = 320;
-            if (newWidth > window.innerWidth * 0.8) newWidth = window.innerWidth * 0.8;
+            // ĐÃ SỬA: Nâng mức tối thiểu lên 460px khi kéo thả để chống vỡ giao diện Header
+            let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
+            if (newWidth < minWidth) newWidth = minWidth;
+            if (newWidth > window.innerWidth * 0.9) newWidth = window.innerWidth * 0.9;
             
             aiSidebar.style.width = `${newWidth}px`;
             
@@ -184,7 +183,15 @@ document.addEventListener('ComponentsLoaded', () => {
     // Logic Đóng/Mở Slide-bar
     function toggleSidebar() {
         if (!aiSidebar) return;
-        const currentWidth = aiSidebar.offsetWidth || 400;
+        
+        // ĐÃ SỬA: Ép kích thước mặc định luôn đủ rộng (460px) khi vừa bật lên
+        let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
+        let currentWidth = aiSidebar.offsetWidth;
+        
+        if (!currentWidth || currentWidth < minWidth) {
+            currentWidth = minWidth;
+            aiSidebar.style.width = `${currentWidth}px`;
+        }
         
         if (aiSidebar.classList.contains('active')) {
             aiSidebar.classList.remove('active');
