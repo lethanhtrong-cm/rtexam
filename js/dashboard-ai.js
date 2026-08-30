@@ -82,7 +82,10 @@ document.addEventListener('ComponentsLoaded', () => {
 
                 if (!response.ok) {
                     const errorData = await response.text();
-                    throw new Error(`Lỗi gọi API (${response.status}): ${errorData}`);
+                    if (response.status === 429 || errorData.includes('RESOURCE_EXHAUSTED') || errorData.includes('depleted')) {
+                        throw new Error("Hệ thống Trợ lý AI đang quá tải hoặc hết hạn mức tài nguyên trong ngày. Vui lòng thử lại sau!");
+                    }
+                    throw new Error(`Lỗi hệ thống (${response.status}). Vui lòng liên hệ Admin.`);
                 }
 
                 const data = await response.json();
