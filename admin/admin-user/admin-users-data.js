@@ -13,12 +13,11 @@ import { renderPaymentHistory } from './admin-users-ui.js';
 export const userState = {
     cachedUsers: [],
     pendingVIPRequests: new Set(),
-    allPaymentUIDs: new Set(), // THÊM MỚI: Lưu toàn bộ UID đã từng CK
-    cachedPaymentRequests: [], // THÊM MỚI: Lưu mảng data lịch sử CK
+    allPaymentUIDs: new Set(),
+    cachedPaymentRequests: [], 
     isUserListLoaded: false,
     isLeaderboardLoaded: false,
     globalLeaderboardStats: {},
-    // Biến phục vụ UI & Hành động
     selectedUserIds: new Set(),
     currentSearchQuery: "",
     currentFilterStatus: "all",
@@ -62,7 +61,6 @@ export function initRealtimePaymentListener(onDataUpdated) {
             return tB - tA;
         });
 
-        // Cập nhật chuông thông báo (badge) trên Sidebar
         const badge = document.getElementById('pending-vip-badge');
         if (badge) {
             if (userState.pendingVIPRequests.size > 0) {
@@ -73,7 +71,6 @@ export function initRealtimePaymentListener(onDataUpdated) {
             }
         }
 
-        // Gọi hàm render bảng Lịch sử thanh toán bên UI
         renderPaymentHistory();
 
         if (userState.isUserListLoaded && typeof onDataUpdated === 'function') {
@@ -125,11 +122,18 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
             const user = docSnap.data();
             const userId = docSnap.id;
             const email = user.email || 'Chưa cập nhật';
-            const isVip = user.isVip || false;
             const isBanned = user.isBanned || false;
             
-            const totalTokensUsed = user.totalTokensUsed || 0;
+            // XỬ LÝ CHUYỂN ĐỔI LOGIC VIP -> PLUS/PRO
+            const isVipLegacy = user.isVip || false;
+            let vipTier = user.vipTier || null;
+            
+            // Nếu tài khoản đang là VIP cũ nhưng chưa có tier, ngầm định là "plus" để icon đổi tự động
+            if (!vipTier && isVipLegacy) {
+                vipTier = 'plus';
+            }
 
+            const totalTokensUsed = user.totalTokensUsed || 0;
             const finalAvgScore = user.avgScore || 0;
             const finalXp = userState.globalLeaderboardStats[userId] || 0;
 
@@ -141,16 +145,16 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
             let createdAtMs = (typeof createdAtRaw.toDate === 'function') ? createdAtRaw.toDate().getTime() : new Date(createdAtRaw).getTime();
 
             totalUsersCount++;
-            if (isVip) totalVipsCount++; 
+            if (vipTier) totalVipsCount++; 
 
             let statusKey = 'normal';
             if (isBanned) statusKey = 'banned';
-            else if (isVip) statusKey = 'vip';
+            else if (vipTier) statusKey = 'vip'; // Vẫn giữ statusKey là 'vip' để không hỏng bộ lọc cũ
 
             userState.cachedUsers.push({
                 userId: userId,
                 email: email,
-                isVip: isVip,
+                vipTier: vipTier, // Thêm biến vipTier
                 isBanned: isBanned,
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
@@ -171,7 +175,6 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
         userState.isUserListLoaded = true;
         userState.selectedUserIds.clear();
         
-        // Gọi lại renderPaymentHistory để lấy thông tin Email thực tế từ danh sách User vừa tải xong
         renderPaymentHistory();
 
         if (onSuccess) onSuccess(true); 
