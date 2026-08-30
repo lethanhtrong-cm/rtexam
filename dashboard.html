@@ -23,7 +23,8 @@
 
     <div id="topbar-container"></div>
 
-    <div class="layout-wrapper">
+    <!-- Thêm ID và Transition để xử lý hiệu ứng đẩy nội dung khi mở AI Sidebar -->
+    <div class="layout-wrapper" id="main-content-wrap" style="transition: margin-right 0.3s ease;">
         <div id="sidebar-container"></div>
 
         <div class="main-content">
@@ -177,6 +178,94 @@
             </div>
         </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- BẮT ĐẦU: KHUNG GIAO DIỆN TRỢ LÝ AI SIDEBAR -->
+    <!-- ========================================== -->
+    <style>
+        /* CSS cho thanh trượt và tin nhắn */
+        #aiSidebar {
+            position: fixed;
+            top: 0;
+            right: -400px; /* Giấu ra ngoài màn hình */
+            width: 400px;
+            height: 100vh;
+            background-color: #ffffff;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.15);
+            z-index: 9999;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        #aiSidebar.active {
+            right: 0; /* Trượt vào trong màn hình */
+        }
+
+        .chat-message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            line-height: 1.5;
+            font-size: 0.95rem;
+            word-wrap: break-word;
+        }
+
+        .chat-message.ai {
+            background-color: #f1f5f9;
+            color: #1e293b;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+
+        .chat-message.user {
+            background-color: #084298;
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-message.ai.error {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        /* Reponsive cho Mobile */
+        @media (max-width: 768px) {
+            #aiSidebar {
+                width: 100%;
+                right: -100%;
+            }
+        }
+    </style>
+
+    <div id="aiSidebar">
+        <!-- AI Header -->
+        <div style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #084298; color: white;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600;"><i class="fa-solid fa-robot"></i> Trợ lý AI Học Thuật</h3>
+            <button id="closeAiSidebarBtn" style="background: transparent; border: none; color: white; font-size: 1.4rem; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <!-- AI Chat Box (Khu vực tin nhắn) -->
+        <div id="aiChatBox" style="flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; background: #ffffff;">
+            <!-- Tin nhắn chào mừng mặc định -->
+            <div class="chat-message ai">
+                Chào bạn! Tôi là Trợ lý AI chuyên môn. Tôi có thể giúp bạn giải thích thuật ngữ, tra cứu thông số kỹ thuật, hoặc giải đáp các thắc mắc về y học. Bạn cần hỗ trợ gì?
+            </div>
+        </div>
+        
+        <!-- AI Input Area (Khu vực nhập liệu) -->
+        <div style="padding: 15px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; gap: 10px; align-items: flex-end;">
+            <textarea id="aiChatInput" placeholder="Nhập câu hỏi của bạn..." style="flex: 1; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; resize: none; height: 50px; outline: none; font-family: inherit; font-size: 0.95rem;"></textarea>
+            <button id="btnSendAi" style="background: #084298; color: white; border: none; padding: 0 15px; height: 50px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1.1rem;"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+    <!-- ========================================== -->
+    <!-- KẾT THÚC: KHUNG GIAO DIỆN TRỢ LÝ AI SIDEBAR-->
+    <!-- ========================================== -->
 
     <!-- SCRIPT XỬ LÝ ĐẨY DỮ LIỆU TIN NHẮN LÊN FIRESTORE -->
     <script type="module">
