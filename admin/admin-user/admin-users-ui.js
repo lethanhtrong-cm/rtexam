@@ -329,8 +329,8 @@ export function renderPaymentHistory() {
             }
             
             const statusHtml = data.status === "pending" 
-                ? `<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đang chờ duyệt</span>`
-                : `<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đã xử lý</span>`;
+                ? `<span style="background: #fef08a; color: #a16207; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đang chờ duyệt</span>`
+                : `<span style="background: #d1fae5; color: #059669; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đã xử lý</span>`;
             
             const reqTier = data.requestedTier ? data.requestedTier.toUpperCase() : 'PLUS';
             const tierBadgeHtml = reqTier === 'PRO'
@@ -419,18 +419,17 @@ export function renderUserList() {
 
     paginatedUsers.forEach(user => {
         let currentStt = stt++;
-        let badgeClass = 'badge-normal';
-        let badgeText = 'Thường';
-
+        
+        // SỬA LỖI UI BADGE TRẠNG THÁI: Áp dụng icon FontAwesome màu sắc rõ rệt + inline-flex chống rớt dòng
+        let statusBadgeHtml = '';
         if (user.isBanned) {
-            badgeClass = 'badge-banned';
-            badgeText = 'Bị Khóa';
+            statusBadgeHtml = `<span style="background: #fee2e2 !important; color: #dc2626 !important; padding: 5px 10px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 800 !important; border: 1px solid #fecaca !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; line-height: 1 !important;"><i class="fa-solid fa-ban" style="margin-right: 4px;"></i>Bị Khóa</span>`;
         } else if (user.vipTier === 'pro') {
-            badgeClass = 'badge-vip';
-            badgeText = 'PRO 👑';
+            statusBadgeHtml = `<span style="background: #ffedd5 !important; color: #b45309 !important; padding: 5px 10px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 800 !important; border: 1px solid #fed7aa !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; line-height: 1 !important;"><i class="fa-solid fa-crown" style="color: #f59e0b; margin-right: 4px;"></i>PRO</span>`;
         } else if (user.vipTier === 'plus') {
-            badgeClass = 'badge-vip'; 
-            badgeText = 'PLUS ✨';
+            statusBadgeHtml = `<span style="background: #e0f2fe !important; color: #0369a1 !important; padding: 5px 10px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 800 !important; border: 1px solid #bae6fd !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; line-height: 1 !important;"><i class="fa-solid fa-star" style="color: #0ea5e9; margin-right: 4px;"></i>PLUS</span>`;
+        } else {
+            statusBadgeHtml = `<span style="background: #f8fafc !important; color: #64748b !important; padding: 5px 10px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 700 !important; border: 1px solid #e2e8f0 !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; line-height: 1 !important;"><i class="fa-solid fa-user" style="color: #94a3b8; margin-right: 4px;"></i>Thường</span>`;
         }
 
         const firstLetter = user.email.charAt(0);
@@ -480,11 +479,10 @@ export function renderUserList() {
         datesHtml += `</div>`;
 
         const isVipTierActive = !!user.vipTier;
-        const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
-        const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
         
-        // ĐÃ SỬA: Thêm white-space: nowrap và flex-direction: row để giữ form ngang, tránh bị đè vỡ layout
-        const baseBtnStyle = "padding: 6px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: white; white-space: nowrap;";
+        // SỬA LỖI UI CỤM NÚT ACTION: Ép display: inline-flex và flex-direction: row !important để chống bị dọc
+        const baseBtnStyle = "padding: 6px 10px !important; font-size: 11.5px !important; border-radius: 6px !important; display: inline-flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 5px !important; border: none !important; font-weight: 600 !important; cursor: pointer !important; transition: all 0.2s ease !important; color: white !important; white-space: nowrap !important; line-height: 1 !important;";
+        
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
         const excelStyle = `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);`;
@@ -494,32 +492,37 @@ export function renderUserList() {
 
         let vipActionButtonsHtml = '';
         if (isVipTierActive) {
-            const offStyle = `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);`;
-            vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStyle}" ${hoverEffect}>❌ Tắt Gói</button>`;
+            if (user.vipTier === 'pro') {
+                const offStylePro = `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3); opacity: 0.9;`;
+                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePro}" ${hoverEffect} title="Đang ở gói PRO. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Hủy Gói</button>`;
+            } else {
+                const offStylePlus = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3); opacity: 0.9;`;
+                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePlus}" ${hoverEffect} title="Đang ở gói PLUS. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Hủy Gói</button>`;
+            }
         } else {
             const plusStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
             const proStyle = `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`;
             
             vipActionButtonsHtml = `
-                <button class="btn-user-action btn-user-vip-on btn-toggle-vip" data-id="${user.userId}" data-tier="plus" style="${plusStyle}" ${hoverEffect}>✨ Plus</button>
-                <button class="btn-user-action btn-user-vip-on btn-toggle-vip" data-id="${user.userId}" data-tier="pro" style="${proStyle}" ${hoverEffect}>👑 Pro</button>
+                <button class="btn-user-action btn-user-vip-on btn-toggle-vip" data-id="${user.userId}" data-tier="plus" style="${plusStyle}" ${hoverEffect}><i class="fa-solid fa-star"></i> Kích Plus</button>
+                <button class="btn-user-action btn-user-vip-on btn-toggle-vip" data-id="${user.userId}" data-tier="pro" style="${proStyle}" ${hoverEffect}><i class="fa-solid fa-crown"></i> Kích Pro</button>
             `;
         }
 
         let deleteCkBtn = '';
         if (userState.allPaymentUIDs.has(user.userId)) {
-            deleteCkBtn = `<button class="btn-user-action btn-delete-payment-record" data-id="${user.userId}" style="${baseBtnStyle} background: #fecaca; color: #dc2626; box-shadow: 0 2px 5px rgba(220,38,38,0.2);" ${hoverEffect} title="Xóa thông tin báo CK của tài khoản này"><i class="fa-solid fa-file-invoice-dollar"></i> Xóa CK</button>`;
+            deleteCkBtn = `<button class="btn-user-action btn-delete-payment-record" data-id="${user.userId}" style="${baseBtnStyle} background: #fecaca !important; color: #dc2626 !important; box-shadow: 0 2px 5px rgba(220,38,38,0.2) !important;" ${hoverEffect} title="Xóa thông tin báo CK của tài khoản này"><i class="fa-solid fa-file-invoice-dollar"></i> Xóa CK</button>`;
         }
 
         const isChecked = userState.selectedUserIds.has(user.userId) ? 'checked' : '';
 
         const actionButtonsHtml = `
-            <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi TB">🔔 Gửi</button>
+            <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi Thông Báo"><i class="fa-solid fa-bell"></i> Gửi</button>
             ${vipActionButtonsHtml}
-            <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
+            <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect} title="Xem Lịch sử"><i class="fa-solid fa-clipboard-list"></i> Lịch Sử</button>
             <button class="btn-user-action btn-export-excel" data-email="${user.email}" style="${excelStyle}" ${hoverEffect} title="Tải Excel Lịch sử & XP"><i class="fa-solid fa-file-excel"></i> Tải XP</button>
             ${deleteCkBtn}
-            <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
+            <button class="btn-user-action ${user.isBanned ? 'btn-user-unban' : 'btn-user-ban'} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${user.isBanned ? '<i class="fa-solid fa-unlock"></i> Mở Khóa' : '<i class="fa-solid fa-ban"></i> Khóa TK'}</button>
         `;
 
         const tr = document.createElement('tr');
@@ -539,7 +542,6 @@ export function renderUserList() {
                         <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; width: 35px; height: 35px; font-size: 16px;">
                             ${firstLetter}
                         </div>
-                        <span class="badge ${badgeClass}" style="padding: 3px 6px; font-size: 10px; margin-top: -3px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">${badgeText}</span>
                     </div>
                 </div>
             </td>
@@ -566,10 +568,10 @@ export function renderUserList() {
             </td>
             
             <td class="text-center desktop-status-td">
-                <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
+                ${statusBadgeHtml}
             </td>
             <td class="text-center desktop-action-td">
-                <div class="user-action-group" style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
+                <div class="user-action-group" style="display: flex !important; flex-direction: row !important; gap: 6px !important; justify-content: center !important; flex-wrap: wrap !important;">
                     ${actionButtonsHtml}
                 </div>
             </td>
