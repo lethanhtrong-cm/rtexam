@@ -12,8 +12,8 @@ import { renderPaymentHistory } from './admin-users-ui.js';
 // 1. TRẠNG THÁI DÙNG CHUNG (SINGLE SOURCE OF TRUTH)
 export const userState = {
     cachedUsers: [],
-    pendingVIPRequests: new Set(),
-    allPaymentUIDs: new Set(),
+    pendingVIPRequests: new Map(), // SỬA THÀNH MAP ĐỂ LƯU KÈM TÊN GÓI (PLUS/PRO)
+    allPaymentUIDs: new Set(), 
     cachedPaymentRequests: [], 
     isUserListLoaded: false,
     isLeaderboardLoaded: false,
@@ -50,7 +50,8 @@ export function initRealtimePaymentListener(onDataUpdated) {
             userState.allPaymentUIDs.add(data.uid);
 
             if (data.status === "pending") {
-                userState.pendingVIPRequests.add(data.uid);
+                // Lưu ID kèm theo tên gói người dùng đang yêu cầu (Mặc định là plus nếu ko có)
+                userState.pendingVIPRequests.set(data.uid, data.requestedTier || 'plus');
             }
         });
 
@@ -128,7 +129,6 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
             const isVipLegacy = user.isVip || false;
             let vipTier = user.vipTier || null;
             
-            // Nếu tài khoản đang là VIP cũ nhưng chưa có tier, ngầm định là "plus" để icon đổi tự động
             if (!vipTier && isVipLegacy) {
                 vipTier = 'plus';
             }
@@ -149,12 +149,12 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
 
             let statusKey = 'normal';
             if (isBanned) statusKey = 'banned';
-            else if (vipTier) statusKey = 'vip'; // Vẫn giữ statusKey là 'vip' để không hỏng bộ lọc cũ
+            else if (vipTier) statusKey = 'vip';
 
             userState.cachedUsers.push({
                 userId: userId,
                 email: email,
-                vipTier: vipTier, // Thêm biến vipTier
+                vipTier: vipTier,
                 isBanned: isBanned,
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
