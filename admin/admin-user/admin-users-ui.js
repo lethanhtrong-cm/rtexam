@@ -255,7 +255,7 @@ export function exportPaymentHistoryToExcel() {
                     approveTimeStr = actDate.toLocaleDateString('vi-VN') + ' ' + actDate.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
                 }
             } else {
-                approveTimeStr = 'Đã duyệt';
+                approveTimeStr = 'Đã duyệt (Gói cũ)';
             }
         }
         
@@ -337,12 +337,17 @@ export function renderPaymentHistory() {
                 ? `<span style="background: #ffedd5; color: #b45309; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">Gói PRO</span>`
                 : `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">Gói PLUS</span>`;
 
+            // BỔ SUNG NÚT XÓA BẢN GHI CHO CẢ 2 TRẠNG THÁI (ĐANG CHỜ / ĐÃ XỬ LÝ)
             const actionHtml = data.status === "pending"
-                ? `<div style="display:flex; gap:6px; justify-content:center;">
+                ? `<div style="display:flex; gap:6px; justify-content:center; align-items:center;">
                      <button class="btn-modern-action btn-approve-tier" data-id="${data.uid}" data-email="${email}" data-tier="plus" style="background: #0ea5e9; color: white; border: none; padding: 6px 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Duyệt cấp quyền Plus"><i class="fa-solid fa-check"></i> Plus</button>
                      <button class="btn-modern-action btn-approve-tier" data-id="${data.uid}" data-email="${email}" data-tier="pro" style="background: #f59e0b; color: white; border: none; padding: 6px 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Duyệt cấp quyền Pro"><i class="fa-solid fa-check"></i> Pro</button>
+                     <button class="btn-modern-action btn-delete-payment" data-id="${data.id}" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Xóa bản ghi này"><i class="fa-solid fa-trash"></i></button>
                    </div>`
-                : `<span style="color: #94a3b8; font-size: 12px;"><i class="fa-solid fa-check-double"></i> Hoàn tất</span>`;
+                : `<div style="display:flex; gap:6px; justify-content:center; align-items:center;">
+                     <span style="color: #94a3b8; font-size: 12px; margin-right: 5px;"><i class="fa-solid fa-check-double"></i> Hoàn tất</span>
+                     <button class="btn-modern-action btn-delete-payment" data-id="${data.id}" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Xóa bản ghi này"><i class="fa-solid fa-trash"></i></button>
+                   </div>`;
                 
             html += `
                 <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
@@ -434,7 +439,6 @@ export function renderUserList() {
         const scoreBadgeHtml = `<span style="font-size: 11px; color: #4338ca; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0e7ff; padding: 2px 6px; border-radius: 6px;" title="Điểm trung bình (ĐTB)"><i class="fa-solid fa-star"></i> ĐTB: ${user.avgScore.toFixed(2)}</span>`;
         const xpBadgeHtml = `<span style="font-size: 11px; color: #a16207; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef08a; padding: 2px 6px; border-radius: 6px;" title="Kinh nghiệm"><i class="fa-solid fa-bolt"></i> XP: ${Math.round(user.xp).toLocaleString()}</span>`;
 
-        // Lấy tên gói từ Map để hiển thị cảnh báo
         const pendingTier = userState.pendingVIPRequests.get(user.userId);
         const hasPendingRequest = !!pendingTier;
         let pendingBadge = '';
@@ -493,7 +497,6 @@ export function renderUserList() {
             const offStyle = `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);`;
             vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStyle}" ${hoverEffect}>❌ Tắt Gói</button>`;
         } else {
-            // HIỂN THỊ TÁCH BIỆT 2 NÚT PLUS/PRO NẾU CHƯA KÍCH HOẠT
             const plusStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
             const proStyle = `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`;
             
@@ -641,7 +644,22 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
+        const tabUserList = document.getElementById('tab-user-list');
+        const statsContainer = tabUserList ? tabUserList.querySelector('.stats-container') : null;
+        
+        if (statsContainer && !document.getElementById('user-top-sticky-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.id = 'user-top-sticky-wrapper';
+            wrapper.style.cssText = 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 15px 0 10px 0; margin-top: -15px; margin-bottom: 15px; border-bottom: 1px solid #cbd5e1;';
+            statsContainer.parentNode.insertBefore(wrapper, statsContainer);
+            wrapper.appendChild(statsContainer);
+            wrapper.appendChild(toolbar);
+            
+            statsContainer.style.marginBottom = '15px';
+            toolbar.style.cssText += 'display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;';
+        } else if (!document.getElementById('user-top-sticky-wrapper')) {
+            toolbar.style.cssText += 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
+        }
         
         const searchContainer = document.querySelector('.search-user-container');
         if (searchContainer) {
