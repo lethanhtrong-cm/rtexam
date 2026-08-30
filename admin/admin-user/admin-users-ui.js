@@ -338,14 +338,14 @@ export function renderPaymentHistory() {
                 : `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">Gói PLUS</span>`;
 
             const actionHtml = data.status === "pending"
-                ? `<div style="display:flex; gap:6px; justify-content:center; align-items:center;">
-                     <button class="btn-modern-action btn-approve-tier" data-id="${data.uid}" data-email="${email}" data-tier="plus" style="background: #0ea5e9; color: white; border: none; padding: 6px 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Duyệt cấp quyền Plus"><i class="fa-solid fa-check"></i> Plus</button>
-                     <button class="btn-modern-action btn-approve-tier" data-id="${data.uid}" data-email="${email}" data-tier="pro" style="background: #f59e0b; color: white; border: none; padding: 6px 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Duyệt cấp quyền Pro"><i class="fa-solid fa-check"></i> Pro</button>
-                     <button class="btn-modern-action btn-delete-payment" data-id="${data.id}" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Xóa bản ghi này"><i class="fa-solid fa-trash"></i></button>
+                ? `<div style="display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap: wrap;">
+                     <button class="btn-modern-action btn-approve-tier" data-id="${data.uid}" data-email="${email}" data-tier="plus" style="background: #0ea5e9; color: white; border: none; padding: 6px 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s; white-space: nowrap;" title="Duyệt cấp quyền Plus"><i class="fa-solid fa-check"></i> Plus</button>
+                     <button class="btn-modern-action btn-approve-tier" data-id="${data.uid}" data-email="${email}" data-tier="pro" style="background: #f59e0b; color: white; border: none; padding: 6px 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s; white-space: nowrap;" title="Duyệt cấp quyền Pro"><i class="fa-solid fa-check"></i> Pro</button>
+                     <button class="btn-modern-action btn-delete-payment" data-id="${data.id}" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s; white-space: nowrap;" title="Xóa bản ghi này"><i class="fa-solid fa-trash"></i></button>
                    </div>`
-                : `<div style="display:flex; gap:6px; justify-content:center; align-items:center;">
-                     <span style="color: #94a3b8; font-size: 12px; margin-right: 5px;"><i class="fa-solid fa-check-double"></i> Hoàn tất</span>
-                     <button class="btn-modern-action btn-delete-payment" data-id="${data.id}" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Xóa bản ghi này"><i class="fa-solid fa-trash"></i></button>
+                : `<div style="display:flex; gap:6px; justify-content:center; align-items:center; flex-wrap: wrap;">
+                     <span style="color: #94a3b8; font-size: 12px; margin-right: 5px; white-space: nowrap;"><i class="fa-solid fa-check-double"></i> Hoàn tất</span>
+                     <button class="btn-modern-action btn-delete-payment" data-id="${data.id}" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s; white-space: nowrap;" title="Xóa bản ghi này"><i class="fa-solid fa-trash"></i></button>
                    </div>`;
                 
             html += `
@@ -419,17 +419,18 @@ export function renderUserList() {
 
     paginatedUsers.forEach(user => {
         let currentStt = stt++;
-        
-        // CẬP NHẬT GIAO DIỆN HUY HIỆU (BADGE) VỚI MÀU SẮC PHÂN BIỆT RÕ RÀNG
-        let statusBadgeHtml = '';
+        let badgeClass = 'badge-normal';
+        let badgeText = 'Thường';
+
         if (user.isBanned) {
-            statusBadgeHtml = `<span style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; border: 1px solid #fecaca; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: inline-block;">Bị Khóa 🚫</span>`;
+            badgeClass = 'badge-banned';
+            badgeText = 'Bị Khóa';
         } else if (user.vipTier === 'pro') {
-            statusBadgeHtml = `<span style="background: #ffedd5; color: #b45309; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; border: 1px solid #fed7aa; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: inline-block;">PRO 👑</span>`;
+            badgeClass = 'badge-vip';
+            badgeText = 'PRO 👑';
         } else if (user.vipTier === 'plus') {
-            statusBadgeHtml = `<span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; border: 1px solid #bae6fd; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: inline-block;">PLUS ✨</span>`;
-        } else {
-            statusBadgeHtml = `<span style="background: #f8fafc; color: #64748b; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid #e2e8f0; display: inline-block;">Thường 👤</span>`;
+            badgeClass = 'badge-vip'; 
+            badgeText = 'PLUS ✨';
         }
 
         const firstLetter = user.email.charAt(0);
@@ -482,7 +483,8 @@ export function renderUserList() {
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
         const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
         
-        const baseBtnStyle = "padding: 6px 12px; font-size: 12.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: white;";
+        // ĐÃ SỬA: Thêm white-space: nowrap và flex-direction: row để giữ form ngang, tránh bị đè vỡ layout
+        const baseBtnStyle = "padding: 6px 10px; font-size: 12px; border-radius: 6px; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: white; white-space: nowrap;";
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
         const excelStyle = `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);`;
@@ -504,7 +506,6 @@ export function renderUserList() {
             `;
         }
 
-        // BỔ SUNG NÚT XÓA CHUYỂN KHOẢN NẾU TÀI KHOẢN NẰM TRONG DANH SÁCH LỌC
         let deleteCkBtn = '';
         if (userState.allPaymentUIDs.has(user.userId)) {
             deleteCkBtn = `<button class="btn-user-action btn-delete-payment-record" data-id="${user.userId}" style="${baseBtnStyle} background: #fecaca; color: #dc2626; box-shadow: 0 2px 5px rgba(220,38,38,0.2);" ${hoverEffect} title="Xóa thông tin báo CK của tài khoản này"><i class="fa-solid fa-file-invoice-dollar"></i> Xóa CK</button>`;
@@ -538,7 +539,7 @@ export function renderUserList() {
                         <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; width: 35px; height: 35px; font-size: 16px;">
                             ${firstLetter}
                         </div>
-                        ${statusBadgeHtml}
+                        <span class="badge ${badgeClass}" style="padding: 3px 6px; font-size: 10px; margin-top: -3px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">${badgeText}</span>
                     </div>
                 </div>
             </td>
@@ -565,10 +566,10 @@ export function renderUserList() {
             </td>
             
             <td class="text-center desktop-status-td">
-                ${statusBadgeHtml}
+                <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
             </td>
             <td class="text-center desktop-action-td">
-                <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <div class="user-action-group" style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
                     ${actionButtonsHtml}
                 </div>
             </td>
