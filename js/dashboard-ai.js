@@ -12,9 +12,48 @@ document.addEventListener('ComponentsLoaded', () => {
     const aiChatInput = document.getElementById('aiChatInput');
     const btnSendAi = document.getElementById('btnSendAi');
 
-    // Khởi tạo mảng lưu lịch sử trò chuyện
     let chatHistory = [];
     let isFirstOpen = true;
+    let globalAiTier = 'free'; // Biến toàn cục lưu trữ hạng tài khoản hiện tại cho module AI
+
+    // ==========================================
+    // TÍNH NĂNG: BỘ ĐẾM KÝ TỰ REAL-TIME
+    // ==========================================
+    const charCounter = document.createElement('div');
+    charCounter.id = 'aiCharCounter';
+    charCounter.style.cssText = "font-size: 0.8rem; color: #64748b; text-align: right; margin-top: 6px; padding-right: 5px; display: none; font-weight: 600; transition: color 0.2s;";
+    charCounter.innerText = "0/1000";
+    
+    if (aiChatInput && aiChatInput.parentNode) {
+        // Chèn bộ đếm ngay dưới ô nhập liệu
+        aiChatInput.parentNode.insertBefore(charCounter, aiChatInput.nextSibling);
+        
+        // Lắng nghe sự kiện gõ phím
+        aiChatInput.addEventListener('input', updateCharCounterUI);
+    }
+
+    function updateCharCounterUI() {
+        if (!aiChatInput || !charCounter) return;
+        const textLen = aiChatInput.value.trim().length;
+        
+        if (globalAiTier === 'pro') {
+            // PRO: Ẩn bộ đếm, không giới hạn
+            charCounter.style.display = 'none';
+            if (btnSendAi) btnSendAi.disabled = false;
+        } else {
+            // FREE / PLUS: Hiển thị bộ đếm và kiểm tra
+            charCounter.style.display = 'block';
+            if (textLen > 1000) {
+                charCounter.style.color = '#ef4444'; // Màu đỏ cảnh báo
+                charCounter.innerText = `${textLen}/1000 (Vượt giới hạn)`;
+                if (btnSendAi) btnSendAi.disabled = true; // Khóa nút gửi
+            } else {
+                charCounter.style.color = '#64748b'; // Màu xám bình thường
+                charCounter.innerText = `${textLen}/1000`;
+                if (btnSendAi) btnSendAi.disabled = false; // Mở khóa nút gửi
+            }
+        }
+    }
 
     // ==========================================
     // TÍNH NĂNG: LƯU & TẢI LỊCH SỬ TRÒ CHUYỆN
@@ -42,7 +81,6 @@ document.addEventListener('ComponentsLoaded', () => {
                     divider.innerHTML = '--- Lịch sử trò chuyện trước đó ---';
                     aiChatBox.appendChild(divider);
 
-                    // Khôi phục lại các tin nhắn cũ
                     parsed.forEach(msg => {
                         const sender = msg.role === 'user' ? 'user' : 'ai';
                         appendMessage(sender, msg.parts[0].text);
@@ -210,7 +248,6 @@ document.addEventListener('ComponentsLoaded', () => {
         document.getElementById('btnCloseAiOutOfQueries').onclick = () => modal.remove();
         document.getElementById('btnUpgradeAiOutOfQueries').onclick = () => {
             modal.remove();
-            // Kích hoạt click vào nút Nâng Cấp trên thanh Topbar
             document.getElementById('btnUpgradeHeader')?.click(); 
         };
     }
@@ -242,13 +279,13 @@ document.addEventListener('ComponentsLoaded', () => {
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
                     const tier = userData.vipTier || 'free';
-                    
-                    // Thiết lập định mức
+                    globalAiTier = tier; // Cập nhật biến toàn cục
+                    updateCharCounterUI(); // Cập nhật ngay bộ đếm ký tự
+
                     let maxLimit = 1; 
                     if (tier === 'plus') maxLimit = 3;
                     if (tier === 'pro') maxLimit = Infinity;
 
-                    // Tính số lượt đã dùng hôm nay
                     let usedCount = 0;
                     const todayStr = new Date().toLocaleDateString('en-CA');
                     if (userData.aiLastUsedDate === todayStr) {
@@ -257,13 +294,11 @@ document.addEventListener('ComponentsLoaded', () => {
 
                     const remaining = maxLimit - usedCount;
 
-                    // Bỏ qua Popup nếu là PRO
                     if (tier === 'pro') {
                         toggleSidebar();
                         return;
                     }
 
-                    // Xử lý nhánh Free / Plus
                     if (remaining <= 0) {
                         showOutOfQueriesPopup(tier);
                     } else {
@@ -379,19 +414,27 @@ document.addEventListener('ComponentsLoaded', () => {
                 return;
             }
 
+            // Chặn gửi nếu Free/Plus nhập quá giới hạn
+            if (globalAiTier !== 'pro' && prompt.length > 1000) {
+                alert("Câu hỏi của bạn quá dài (vượt quá 1.000 ký tự). Vui lòng tóm tắt lại nội dung để gửi!");
+                return;
+            }
+
             btnSendAi.disabled = true;
             let currentAiCount = 0;
             let todayStr = new Date().toLocaleDateString('en-CA');
             let isUserPro = false;
-            let maxLimit = 1; // Mặc định Free
+            let maxLimit = 1; 
 
             try {
                 const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
                     const tier = userData.vipTier || 'free';
-                    isUserPro = (tier === 'pro');
+                    globalAiTier = tier; // Cập nhật lại đề phòng user vừa nâng cấp
+                    updateCharCounterUI(); 
                     
+                    isUserPro = (tier === 'pro');
                     if (tier === 'plus') maxLimit = 3;
                     if (tier === 'pro') maxLimit = Infinity;
                     
@@ -399,7 +442,6 @@ document.addEventListener('ComponentsLoaded', () => {
                         const lastDate = userData.aiLastUsedDate || '';
                         currentAiCount = (lastDate === todayStr) ? (userData.aiDailyCount || 0) : 0;
                         
-                        // Chốt chặn cuối cùng nếu họ Bypass UI để chat
                         if (currentAiCount >= maxLimit) {
                             alert("Bạn đã hết lượt hỏi AI trong ngày hôm nay!");
                             btnSendAi.disabled = false;
@@ -413,6 +455,7 @@ document.addEventListener('ComponentsLoaded', () => {
 
             appendMessage('user', prompt);
             aiChatInput.value = '';
+            updateCharCounterUI(); // Reset bộ đếm về 0 sau khi gửi
             btnSendAi.disabled = false;
 
             chatHistory.push({
@@ -464,7 +507,6 @@ document.addEventListener('ComponentsLoaded', () => {
 
                 saveChatHistory(); 
 
-                // Ghi nhận Token & Tăng số đếm (Increment)
                 if (usedTokens > 0) {
                     try {
                         let updateData = { totalTokensUsed: increment(usedTokens) };
@@ -474,7 +516,6 @@ document.addEventListener('ComponentsLoaded', () => {
                         }
                         await updateDoc(doc(db, "users", auth.currentUser.uid), updateData);
                         
-                        // Đẩy cảnh báo nhắc nhở nếu đã chạm mức trần
                         if (!isUserPro && (currentAiCount + 1 >= maxLimit)) {
                             setTimeout(() => appendMessage('ai', "💡 *Ghi chú hệ thống: Bạn đã sử dụng hết lượt hỏi AI miễn phí trong ngày hôm nay.*"), 1000);
                         }
