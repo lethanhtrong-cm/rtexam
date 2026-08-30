@@ -1,201 +1,120 @@
 import { auth, db } from "./dashboard-core.js";
-// Bổ sung thêm hàm writeBatch để gộp giao dịch lưu dữ liệu
-import { doc, setDoc, collection, query, where, getCountFromServer, updateDoc, increment, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// =========================================================================
-// CHỜ GIAO DIỆN TẢI XONG MỚI GẮN SỰ KIỆN ĐỂ TRÁNH LỖI NULL
-// =========================================================================
 document.addEventListener('ComponentsLoaded', () => {
 
-    // 1. Khai báo DOM Elements
     const btnAutoGenerate = document.getElementById('btnAutoGenerate');
-    const aiGenerateModal = document.getElementById('aiGenerateModal');
-    const closeAiModalBtn = document.getElementById('closeAiModalBtn');
-    const btnCancelAi = document.getElementById('btnCancelAi');
-    const btnSubmitAiGenerate = document.getElementById('btnSubmitAiGenerate');
+    const mainContentWrap = document.getElementById('main-content-wrap'); // Đảm bảo bạn bọc toàn bộ body vào thẻ id này
+    
+    // Yêu cầu bạn bổ sung các DOM này vào HTML
+    const aiSidebar = document.getElementById('aiSidebar');
+    const closeAiSidebarBtn = document.getElementById('closeAiSidebarBtn');
+    const aiChatBox = document.getElementById('aiChatBox');
+    const aiChatInput = document.getElementById('aiChatInput');
+    const btnSendAi = document.getElementById('btnSendAi');
 
-    const aiFormArea = document.getElementById('aiFormArea');
-    const aiLoadingSpinner = document.getElementById('aiLoadingSpinner');
-    const aiSuccessArea = document.getElementById('aiSuccessArea');
-    const aiModalFooter = document.getElementById('aiModalFooter');
-
-    const aiPromptInput = document.getElementById('aiPromptInput');
-    const aiQuestionCount = document.getElementById('aiQuestionCount');
-    const aiDifficulty = document.getElementById('aiDifficulty');
-    const generatedAiExamCode = document.getElementById('generatedAiExamCode');
-
-    const btnCancelGoToQuiz = document.getElementById('btnCancelGoToQuiz');
-    const btnGoToQuiz = document.getElementById('btnGoToQuiz');
-
-    let currentGeneratedExamId = null;
-
-    // 2. Hàm Reset Form về trạng thái ban đầu
-    function resetAiForm() {
-        if (aiPromptInput) aiPromptInput.value = '';
-        if (aiQuestionCount) aiQuestionCount.value = '10';
-        if (aiDifficulty) aiDifficulty.value = 'medium'; 
-        
-        if (aiFormArea) aiFormArea.style.display = 'block';
-        if (aiLoadingSpinner) aiLoadingSpinner.style.display = 'none';
-        if (aiSuccessArea) aiSuccessArea.style.display = 'none';
-        
-        if (aiModalFooter) aiModalFooter.style.display = 'flex';
-    }
-
-    // 3. Sự kiện Đóng/Mở Modal
+    // Cập nhật lại UI nút bấm
     if (btnAutoGenerate) {
-        btnAutoGenerate.addEventListener('click', () => {
-            aiGenerateModal.classList.add('active');
-            resetAiForm();
-        });
+        btnAutoGenerate.innerHTML = '<i class="fa-solid fa-robot"></i> Trợ lý AI';
     }
 
-    const closeAiModal = () => aiGenerateModal.classList.remove('active');
-    if (closeAiModalBtn) closeAiModalBtn.addEventListener('click', closeAiModal);
-    if (btnCancelAi) btnCancelAi.addEventListener('click', closeAiModal);
-
-    if (aiGenerateModal) {
-        aiGenerateModal.addEventListener('click', (e) => {
-            if (e.target === aiGenerateModal) closeAiModal();
-        });
+    // Logic Đóng/Mở Slide-bar (Push Content)
+    function toggleSidebar() {
+        if (!aiSidebar) return;
+        if (aiSidebar.classList.contains('active')) {
+            aiSidebar.classList.remove('active');
+            aiSidebar.style.right = '-400px';
+            if (mainContentWrap) mainContentWrap.style.marginRight = '0';
+        } else {
+            aiSidebar.classList.add('active');
+            aiSidebar.style.right = '0';
+            if (mainContentWrap) mainContentWrap.style.marginRight = '400px';
+        }
     }
 
-    // =========================================================================
-    // 4. LOGIC GỌI API (VERCEL) & LƯU VÀO FIRESTORE (SỬ DỤNG BATCH WRITE)
-    // =========================================================================
-    if (btnSubmitAiGenerate) {
-        btnSubmitAiGenerate.addEventListener('click', async () => {
-            const prompt = aiPromptInput.value.trim();
-            const questionCount = aiQuestionCount.value;
-            const difficulty = aiDifficulty.value;
+    if (btnAutoGenerate) btnAutoGenerate.addEventListener('click', toggleSidebar);
+    if (closeAiSidebarBtn) closeAiSidebarBtn.addEventListener('click', toggleSidebar);
 
-            if (!prompt) {
-                alert("Vui lòng nhập chủ đề hoặc tài liệu cần tạo đề!");
-                return;
-            }
+    // Hàm render tin nhắn
+    function appendMessage(sender, text) {
+        if (!aiChatBox) return;
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${sender}`; // CSS cần định dạng 'user' và 'ai'
+        
+        // Render đơn giản (Nên dùng thư viện marked.js để render Markdown trên thực tế)
+        msgDiv.innerHTML = text.replace(/\n/g, '<br>');
+        
+        aiChatBox.appendChild(msgDiv);
+        aiChatBox.scrollTop = aiChatBox.scrollHeight;
+    }
+
+    // Luồng Chat & Xử lý API
+    if (btnSendAi) {
+        btnSendAi.addEventListener('click', async () => {
+            const prompt = aiChatInput.value.trim();
+            if (!prompt) return;
 
             if (!auth.currentUser) {
-                alert("Vui lòng đăng nhập để sử dụng tính năng AI!");
+                alert("Vui lòng đăng nhập để sử dụng Trợ lý AI!");
                 return;
             }
 
-            aiFormArea.style.display = 'none';
-            aiModalFooter.style.display = 'none';
-            aiLoadingSpinner.style.display = 'block';
+            appendMessage('user', prompt);
+            aiChatInput.value = '';
+
+            const loadingId = 'loading-' + Date.now();
+            appendMessage('ai', `<span id="${loadingId}"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang suy nghĩ...</span>`);
 
             try {
-                // GỌI API VERCEL
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         promptText: prompt,
-                        questionCount: questionCount,
-                        difficulty: difficulty
+                        action: 'chat' // Kích hoạt nhánh xử lý văn bản
                     })
                 });
 
-                // LẤY SỐ TOKEN TỪ HEADER DO BACKEND TRẢ VỀ
                 const usedTokens = parseInt(response.headers.get('X-Token-Usage')) || 0; 
+                
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.parentNode.remove();
 
                 if (!response.ok) {
                     const errorData = await response.text();
                     throw new Error(`Lỗi gọi API (${response.status}): ${errorData}`);
                 }
 
-                const questions = await response.json();
-                
-                if (!Array.isArray(questions) || questions.length === 0) {
-                    throw new Error("AI không tạo được câu hỏi nào hoặc dữ liệu trả về bị sai cấu trúc.");
-                }
+                const data = await response.json();
+                appendMessage('ai', data.response || "Lỗi không nhận được phản hồi.");
 
-                // ĐẾM SỐ LƯỢNG ĐỀ AI ĐÃ TẠO ĐỂ ĐÁNH SỐ THỨ TỰ THAY VÌ RANDOM
-                const qCount = query(collection(db, "exams"), where("technique", "==", "AI Tự Động"));
-                const snapshot = await getCountFromServer(qCount);
-                const aiCount = snapshot.data().count + 1;
-                // Định dạng số thành 3 chữ số, VD: AI-001, AI-015
-                const formattedNumber = aiCount.toString().padStart(3, '0');
-                currentGeneratedExamId = "AI-" + formattedNumber;
-
-                // KHỞI TẠO BATCH ĐỂ GỘP GIAO DỊCH LƯU DỮ LIỆU
-                const batch = writeBatch(db);
-
-                // LƯU CÂU HỎI VÀO BATCH
-                questions.forEach((q, i) => {
-                    const questionId = `${currentGeneratedExamId}-Q${i + 1}`;
-                    const questionRef = doc(db, "questions", questionId);
-                    batch.set(questionRef, {
-                        examId: currentGeneratedExamId,
-                        text: q.text || q.questionText || q.question || q.content || "Lỗi: AI không có nội dung",
-                        options: q.options || q.answers || [],
-                        correctAnswer: q.correctAnswer !== undefined ? q.correctAnswer : (q.correct || 0),
-                        explanation: q.explanation || "Không có giải thích chi tiết",
-                        order: i + 1
-                    });
-                });
-
-                // GHI THÔNG TIN ĐỀ THI VÀO BATCH
-                const examRef = doc(db, "exams", currentGeneratedExamId);
-                batch.set(examRef, {
-                    id: currentGeneratedExamId,
-                    technique: "AI Tự Động",
-                    level: difficulty === 'easy' ? 'Dễ' : (difficulty === 'hard' ? 'Khó' : 'Trung bình'),
-                    timeLimit: parseInt(questionCount), 
-                    createdAt: Date.now(),
-                    isVip: false,
-                    attemptCount: 0,
-                    creatorId: auth.currentUser.uid,
-                    isPublic: false,
-                    tokenUsed: usedTokens
-                });
-
-                // THỰC THI BATCH (Lưu đồng thời tất cả, đảm bảo an toàn dữ liệu)
-                await batch.commit();
-
-                // CỘNG DỒN CHI PHÍ TOKEN VÀO TÀI KHOẢN (Giữ nguyên try-catch độc lập để tránh crash nếu Rules chặn)
+                // Vẫn giữ cơ chế lưu số Token đã dùng
                 if (usedTokens > 0) {
                     try {
                         await updateDoc(doc(db, "users", auth.currentUser.uid), {
                             totalTokensUsed: increment(usedTokens)
                         });
                     } catch (tokenErr) {
-                        console.warn("Chưa thể cập nhật Token cho User (Có thể do Rules Firebase):", tokenErr);
+                        console.warn("Chưa thể cập nhật Token cho User:", tokenErr);
                     }
                 }
 
-                // HIỂN THỊ GIAO DIỆN CHÚC MỪNG
-                aiLoadingSpinner.style.display = 'none';
-                aiSuccessArea.style.display = 'block';
-                generatedAiExamCode.textContent = currentGeneratedExamId;
-
             } catch (error) {
-                console.error("Lỗi tạo đề thi AI:", error);
-                alert("Đã xảy ra lỗi trong quá trình tạo đề bằng AI: " + error.message);
-                resetAiForm(); 
+                console.error("Lỗi AI Chat:", error);
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.parentNode.remove();
+                appendMessage('ai error', "Lỗi kết nối AI: " + error.message);
             }
         });
-    }
 
-    // =========================================================================
-    // 5. SỰ KIỆN Ở MÀN HÌNH CHÚC MỪNG (LƯU ĐỀ & THI NGAY)
-    // =========================================================================
-    if (btnCancelGoToQuiz) {
-        btnCancelGoToQuiz.addEventListener('click', () => {
-            closeAiModal();
-            if (typeof window.loadAggregatedExamData === 'function') {
-                window.loadAggregatedExamData();
-            } else {
-                location.reload(); 
-            }
-        });
+        // Hỗ trợ nhấn Enter để gửi
+        if (aiChatInput) {
+            aiChatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    btnSendAi.click();
+                }
+            });
+        }
     }
-
-    if (btnGoToQuiz) {
-        btnGoToQuiz.addEventListener('click', () => {
-            // ĐẨY NGƯỜI DÙNG SANG TAB MỚI KHI BẤM "BẮT ĐẦU THI NGAY"
-            const targetUrl = `quiz.html?examId=${currentGeneratedExamId}`;
-            window.open(targetUrl, '_blank');
-        });
-    }
-
 });
