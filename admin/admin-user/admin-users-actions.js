@@ -3,8 +3,7 @@
 // QUẢN LÝ LOGIC NGHIỆP VỤ: NÚT BẤM, XUẤT EXCEL, BULK ACTIONS
 // ==========================================
 import { db, showToast } from '../admin-core.js';
-// [ĐÃ SỬA]: Import thêm setDoc
-import { doc, updateDoc, setDoc, query, where, getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, setDoc, query, where, getDocs, collection, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { userState } from './admin-users-data.js';
 import { renderUserList, updateBulkActionBar } from './admin-users-ui.js';
 import { handleViewHistory } from './admin-history.js';
@@ -156,21 +155,72 @@ export async function exportUserHistoryToExcel(email) {
     }
 }
 
-async function handleToggleVip(userId, currentVipStatus) {
+// ==============================================================
+// HÀM DUYỆT GÓI MỚI (TỪ LỊCH SỬ THANH TOÁN)
+// ==============================================================
+async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
+    try {
+        const now = Date.now();
+        const durationMs = durationDays * 24 * 60 * 60 * 1000;
+        const expirationDate = now + durationMs;
+
+        // 1. Cập nhật phân quyền vào collection 'users'
+        await setDoc(doc(db, "users", uid), {
+            vipTier: tierName,            
+            vipActivationDate: now,
+            vipExpirationDate: expirationDate,
+            isVip: null // Dọn dẹp cờ cũ
+        }, { merge: true });
+
+        // 2. Cập nhật trạng thái completed thay vì xóa để lưu lịch sử
+        await updateDoc(doc(db, "payment_requests", uid), {
+            status: "completed",
+            approvedAt: serverTimestamp()
+        });
+
+        // 3. Đẩy thông báo thành công cho người dùng
+        await addDoc(collection(db, "notifications"), {
+            toEmail: userEmail,
+            title: `👑 Kích hoạt tài khoản ${tierName.toUpperCase()} thành công!`,
+            message: `Admin đã xác nhận thanh toán. Gói ${tierName.toUpperCase()} của bạn đã được mở khóa với đầy đủ đặc quyền.`,
+            status: "unread",
+            type: "system_broadcast",
+            timestamp: serverTimestamp()
+        });
+
+        // Ghi đè Local State ngay lập tức để giao diện không bị giật lag
+        const u = userState.cachedUsers.find(user => user.userId === uid);
+        if (u) {
+            u.vipTier = tierName;
+            u.statusKey = 'vip';
+            u.vipActivationDate = now;
+            u.vipExpirationDate = expirationDate;
+        }
+
+        showToast(`Đã duyệt thành công gói ${tierName.toUpperCase()} cho ${userEmail}`, "success");
+        renderUserList();
+    } catch (error) {
+        console.error("Lỗi khi duyệt nâng cấp cho user:", error);
+        showToast("Lỗi hệ thống: " + error.message, "error");
+    }
+}
+
+// Bật tắt thủ công từ danh sách
+async function handleToggleVip(userId, isCurrentlyActive) {
     const u = userState.cachedUsers.find(user => user.userId === userId);
     if (!u) return;
 
-    const newVipStatus = !currentVipStatus;
+    const newVipStatus = !isCurrentlyActive;
     
-    // Tích hợp dọn dẹp biến cũ vĩnh viễn khỏi Database
     let updates = { 
-        isVip: newVipStatus,
+        vipTier: newVipStatus ? 'plus' : null, // Mặc định kích tay là Plus
+        isVip: null,
         vipStart: null,
         vipEnd: null
     };
 
-    // 1. CẬP TRẠNG THÁI LOCAL NGAY LẬP TỨC (Optimistic UI Update)
-    u.isVip = newVipStatus;
+    // 1. CẬP TRẠNG THÁI LOCAL NGAY LẬP TỨC 
+    u.vipTier = updates.vipTier;
     u.statusKey = newVipStatus ? 'vip' : 'normal';
     
     if (newVipStatus) {
@@ -186,40 +236,20 @@ async function handleToggleVip(userId, currentVipStatus) {
         u.vipExpirationDate = null;
     }
 
-    // Vẽ lại UI lập tức để khóa trạng thái mới, chống xung đột Realtime Listener
     renderUserList();
 
     try {
-        // 2. Tiến hành đẩy dữ liệu lên Firestore
         const userRef = doc(db, "users", userId);
-        
-        // [ĐÃ SỬA]: Dùng setDoc + merge: true để chống văng lỗi nếu User chưa có Data Profile
         await setDoc(userRef, updates, { merge: true });
-        
-        if (newVipStatus) {
-            try {
-                const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
-                const snapshot = await getDocs(q);
-                const paymentPromises = [];
-                snapshot.forEach((docSnap) => {
-                    paymentPromises.push(updateDoc(docSnap.ref, { status: "completed" }));
-                });
-                await Promise.all(paymentPromises);
-            } catch (err) {
-                console.warn("Bỏ qua lỗi BloomFilter của payment_requests:", err);
-            }
-        }
-        
-        showToast(`Đã ${newVipStatus ? 'kích hoạt' : 'hủy quyền'} tài khoản VIP thành công!`, "success");
-        
+        showToast(`Đã ${newVipStatus ? 'kích hoạt gói PLUS' : 'hủy quyền'} thành công!`, "success");
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
         const msg = error.code === 'resource-exhausted' ? "LỖI: Đã hết Quota Firebase ngày hôm nay!" : "Lỗi mạng! Đang khôi phục lại trạng thái cũ...";
         showToast(msg, "error");
         
-        // 3. Rollback (Hoàn tác) nếu có lỗi mạng xảy ra
-        u.isVip = currentVipStatus;
-        u.statusKey = currentVipStatus ? 'vip' : 'normal';
+        // 3. Rollback
+        u.vipTier = isCurrentlyActive ? 'plus' : null;
+        u.statusKey = isCurrentlyActive ? 'vip' : 'normal';
         renderUserList(); 
     }
 }
@@ -233,23 +263,20 @@ async function handleToggleBan(userId, currentBannedStatus) {
 
     const newBannedStatus = !currentBannedStatus;
 
-    // Optimistic Update
     u.isBanned = newBannedStatus;
-    u.statusKey = newBannedStatus ? 'banned' : (u.isVip ? 'vip' : 'normal');
+    u.statusKey = newBannedStatus ? 'banned' : (u.vipTier ? 'vip' : 'normal');
     renderUserList();
 
     try {
         const userRef = doc(db, "users", userId);
-        // [ĐÃ SỬA]: Dùng setDoc + merge: true để tự tạo document nếu chưa tồn tại
         await setDoc(userRef, { isBanned: newBannedStatus }, { merge: true });
         showToast(`Đã thực thi lệnh ${currentBannedStatus ? 'mở khóa' : 'khóa'} tài khoản thành công!`, "success");
     } catch (error) {
         console.error("Lỗi thay đổi trạng thái khóa:", error);
         showToast("Lỗi mạng! Khôi phục trạng thái...", "error");
         
-        // Rollback
         u.isBanned = currentBannedStatus;
-        u.statusKey = currentBannedStatus ? 'banned' : (u.isVip ? 'vip' : 'normal');
+        u.statusKey = currentBannedStatus ? 'banned' : (u.vipTier ? 'vip' : 'normal');
         renderUserList(); 
     }
 }
@@ -278,7 +305,7 @@ export async function handleBulkAction(actionType) {
     let isVipAction = false, isBanAction = false;
 
     if (actionType === 'vip') {
-        if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái VIP cho ${count} tài khoản đã chọn?`)) return;
+        if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái gói cước (Thường <-> Plus) cho ${count} tài khoản đã chọn?`)) return;
         isVipAction = true;
     } else if (actionType === 'ban') {
         if(!confirm(`Bạn có chắc muốn ĐẢO NGƯỢC trạng thái KHÓA cho ${count} tài khoản đã chọn?`)) return;
@@ -288,17 +315,17 @@ export async function handleBulkAction(actionType) {
     isProcessingBulk = true;
     const promises = [];
 
-    // 1. Áp dụng Optimistic Update cho hàng loạt tài khoản
     userState.selectedUserIds.forEach(id => {
         const u = userState.cachedUsers.find(user => user.userId === id);
         if (!u) return;
         
         let updates = {};
         if (isVipAction) {
-            const newVipStatus = !u.isVip;
-            updates.isVip = newVipStatus;
+            const isCurrentlyActive = !!u.vipTier;
+            const newVipStatus = !isCurrentlyActive;
             
-            // Tích hợp dọn dẹp biến cũ vĩnh viễn khỏi Database
+            updates.vipTier = newVipStatus ? 'plus' : null;
+            updates.isVip = null;
             updates.vipStart = null;
             updates.vipEnd = null;
             
@@ -311,8 +338,7 @@ export async function handleBulkAction(actionType) {
                 updates.vipExpirationDate = null;
             }
 
-            // Ghi đè Local State
-            u.isVip = newVipStatus;
+            u.vipTier = updates.vipTier;
             u.statusKey = newVipStatus ? 'vip' : 'normal';
             u.vipActivationDate = updates.vipActivationDate;
             u.vipExpirationDate = updates.vipExpirationDate;
@@ -320,16 +346,13 @@ export async function handleBulkAction(actionType) {
 
         if (isBanAction) {
             updates.isBanned = !u.isBanned;
-            // Ghi đè Local State
             u.isBanned = updates.isBanned;
-            u.statusKey = updates.isBanned ? 'banned' : (u.isVip ? 'vip' : 'normal');
+            u.statusKey = updates.isBanned ? 'banned' : (u.vipTier ? 'vip' : 'normal');
         }
 
-        // [ĐÃ SỬA]: Dùng setDoc + merge: true cho Bulk Action
         promises.push(setDoc(doc(db, "users", id), updates, { merge: true }));
     });
 
-    // 2. Vẽ lại UI ngay lập tức
     renderUserList();
 
     try {
@@ -386,8 +409,29 @@ export function initUserActionEvents() {
             if (historyBtn) return handleViewHistory(historyBtn.dataset.email);
         });
     }
+    
+    const paymentBody = document.getElementById('payment-history-body');
+    if (paymentBody) {
+        paymentBody.addEventListener('click', (e) => {
+            const approveTierBtn = e.target.closest('.btn-approve-tier');
+            if (approveTierBtn) {
+                if (approveTierBtn.disabled) return;
+                approveTierBtn.disabled = true;
+                const originalHtml = approveTierBtn.innerHTML;
+                approveTierBtn.innerHTML = '⏳...';
+                
+                approveUserUpgrade(
+                    approveTierBtn.dataset.id,
+                    approveTierBtn.dataset.email,
+                    approveTierBtn.dataset.tier
+                ).finally(() => {
+                    approveTierBtn.disabled = false;
+                    approveTierBtn.innerHTML = originalHtml;
+                });
+            }
+        });
+    }
 
-    // Bắt sự kiện Click cho thanh công cụ Bulk Actions (Event Delegation)
     document.addEventListener('click', (e) => {
         if (e.target.closest('#btnBulkVip')) return handleBulkAction('vip');
         if (e.target.closest('#btnBulkBan')) return handleBulkAction('ban');
