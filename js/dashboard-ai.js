@@ -14,6 +14,45 @@ document.addEventListener('ComponentsLoaded', () => {
 
     // Khởi tạo mảng lưu lịch sử trò chuyện
     let chatHistory = [];
+    let isFirstOpen = true;
+
+    // ==========================================
+    // TÍNH NĂNG: LƯU & TẢI LỊCH SỬ TRÒ CHUYỆN
+    // ==========================================
+    const getHistoryKey = () => auth.currentUser ? `ai_chat_history_${auth.currentUser.uid}` : 'ai_chat_history_guest';
+    
+    function saveChatHistory() {
+        localStorage.setItem(getHistoryKey(), JSON.stringify(chatHistory));
+    }
+
+    function loadChatHistory() {
+        const saved = localStorage.getItem(getHistoryKey());
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    chatHistory = parsed;
+                    
+                    const divider = document.createElement('div');
+                    divider.style.textAlign = 'center';
+                    divider.style.margin = '15px 0';
+                    divider.style.fontSize = '0.85rem';
+                    divider.style.color = '#94a3b8';
+                    divider.style.fontStyle = 'italic';
+                    divider.innerHTML = '--- Lịch sử trò chuyện trước đó ---';
+                    aiChatBox.appendChild(divider);
+
+                    // Khôi phục lại các tin nhắn cũ
+                    parsed.forEach(msg => {
+                        const sender = msg.role === 'user' ? 'user' : 'ai';
+                        appendMessage(sender, msg.parts[0].text);
+                    });
+                }
+            } catch(e) { 
+                console.error("Lỗi tải lịch sử chat:", e); 
+            }
+        }
+    }
 
     // Cập nhật lại UI nút bấm
     if (btnAutoGenerate) {
@@ -21,7 +60,7 @@ document.addEventListener('ComponentsLoaded', () => {
     }
 
     // ==========================================
-    // TÍNH NĂNG 1: THAY ĐỔI KÍCH THƯỚC SIDEBAR
+    // TÍNH NĂNG: THAY ĐỔI KÍCH THƯỚC SIDEBAR
     // ==========================================
     if (aiSidebar) {
         // Tạo thanh kéo (resizer) ở viền trái
@@ -47,12 +86,11 @@ document.addEventListener('ComponentsLoaded', () => {
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
             document.body.style.cursor = 'col-resize';
-            e.preventDefault(); // Ngăn hiện tượng bôi đen text khi kéo chuột
+            e.preventDefault(); 
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-            // Tính toán độ rộng mới = Tổng chiều rộng màn hình - Tọa độ X của chuột
             let newWidth = window.innerWidth - e.clientX;
             
             // Giới hạn độ rộng (tối thiểu 320px, tối đa 80% màn hình)
@@ -61,7 +99,6 @@ document.addEventListener('ComponentsLoaded', () => {
             
             aiSidebar.style.width = `${newWidth}px`;
             
-            // Nếu đang mở, đẩy mainContentWrap theo kích thước mới
             if (aiSidebar.classList.contains('active') && mainContentWrap) {
                 mainContentWrap.style.marginRight = `${newWidth}px`;
             }
@@ -75,20 +112,39 @@ document.addEventListener('ComponentsLoaded', () => {
         });
     }
 
-    // Logic Đóng/Mở Slide-bar cập nhật theo chiều rộng động
+    // Logic Đóng/Mở Slide-bar
     function toggleSidebar() {
         if (!aiSidebar) return;
-        // Lấy chiều rộng hiện tại (hoặc 400 mặc định)
         const currentWidth = aiSidebar.offsetWidth || 400;
         
         if (aiSidebar.classList.contains('active')) {
             aiSidebar.classList.remove('active');
-            aiSidebar.style.right = `-${currentWidth + 20}px`; // Đẩy ra ngoài màn hình
+            aiSidebar.style.right = `-${currentWidth + 20}px`; 
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
         } else {
             aiSidebar.classList.add('active');
             aiSidebar.style.right = '0';
             if (mainContentWrap) mainContentWrap.style.marginRight = `${currentWidth}px`;
+            
+            // Lần đầu tiên mở sidebar: Thêm mẹo và load lịch sử
+            if (isFirstOpen) {
+                const hintDiv = document.createElement('div');
+                hintDiv.style.backgroundColor = '#e0f2fe';
+                hintDiv.style.color = '#0369a1';
+                hintDiv.style.padding = '12px 16px';
+                hintDiv.style.margin = '10px 20px 20px 20px'; 
+                hintDiv.style.borderRadius = '8px';
+                hintDiv.style.fontSize = '0.85rem';
+                hintDiv.style.lineHeight = '1.4';
+                hintDiv.style.border = '1px solid #bae6fd';
+                hintDiv.innerHTML = '<i class="fa-solid fa-arrows-left-right" style="color: #0ea5e9; margin-right: 5px;"></i> <b>Mẹo nhỏ:</b> Bạn có thể nhấn giữ và kéo viền bên trái của cửa sổ này để thay đổi kích thước theo ý thích nhé!';
+                
+                aiChatBox.appendChild(hintDiv);
+                
+                // Tải lịch sử ngay sau khi hiển thị mẹo
+                loadChatHistory();
+                isFirstOpen = false;
+            }
         }
     }
 
@@ -114,21 +170,16 @@ document.addEventListener('ComponentsLoaded', () => {
         if (!aiChatBox) return;
         const msgDiv = document.createElement('div');
         msgDiv.className = `chat-message ${sender}`;
-        msgDiv.style.position = 'relative'; // Cần thiết để neo nút Copy
+        msgDiv.style.position = 'relative'; 
         
-        // Chỉ xử lý với tin nhắn hoàn thiện của AI
         if (sender === 'ai' && !text.includes('Đang suy nghĩ')) {
             msgDiv.innerHTML = parseMarkdown(text);
-            msgDiv.style.paddingRight = '35px'; // Tránh chữ đè lên nút copy
+            msgDiv.style.paddingRight = '35px'; 
             
-            // ==========================================
-            // TÍNH NĂNG 2: NÚT COPY CHO AI
-            // ==========================================
             const copyBtn = document.createElement('button');
             copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
             copyBtn.title = "Sao chép câu trả lời";
             
-            // Chỉnh style trực tiếp cho nút copy
             Object.assign(copyBtn.style, {
                 position: 'absolute',
                 top: '8px',
@@ -144,16 +195,10 @@ document.addEventListener('ComponentsLoaded', () => {
             copyBtn.addEventListener('mouseenter', () => copyBtn.style.color = '#084298');
             copyBtn.addEventListener('mouseleave', () => copyBtn.style.color = '#64748b');
 
-            // Xử lý sự kiện khi bấm Copy
             copyBtn.addEventListener('click', async () => {
                 try {
-                    // Copy văn bản text thô ban đầu (chưa bị biến thành thẻ HTML)
                     await navigator.clipboard.writeText(text); 
-                    
-                    // Đổi icon thành dấu Check để báo thành công
                     copyBtn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i>';
-                    
-                    // Trả lại icon cũ sau 2 giây
                     setTimeout(() => {
                         copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
                     }, 2000);
@@ -185,11 +230,11 @@ document.addEventListener('ComponentsLoaded', () => {
             appendMessage('user', prompt);
             aiChatInput.value = '';
 
-            // Cập nhật câu hỏi vào lịch sử (chuẩn cấu trúc API Gemini)
             chatHistory.push({
                 role: "user",
                 parts: [{ text: prompt }]
             });
+            saveChatHistory(); // Lưu ngay khi người dùng gửi
 
             const loadingId = 'loading-' + Date.now();
             appendMessage('ai', `<span id="${loadingId}"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang suy nghĩ...</span>`);
@@ -198,7 +243,6 @@ document.addEventListener('ComponentsLoaded', () => {
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    // Gửi toàn bộ mảng lịch sử thay vì 1 câu prompt đơn
                     body: JSON.stringify({
                         history: chatHistory
                     })
@@ -210,8 +254,8 @@ document.addEventListener('ComponentsLoaded', () => {
                 if (loadingEl) loadingEl.parentNode.remove();
 
                 if (!response.ok) {
-                    // Nếu lỗi, rút câu vừa hỏi ra khỏi lịch sử để tránh làm hỏng luồng chat
-                    chatHistory.pop();
+                    chatHistory.pop(); // Xóa lỗi ra khỏi lịch sử
+                    saveChatHistory(); // Cập nhật lại
                     const errorData = await response.text();
                     if (response.status === 429 || errorData.includes('RESOURCE_EXHAUSTED') || errorData.includes('depleted')) {
                         throw new Error("Hệ thống Trợ lý AI đang quá tải hoặc hết hạn mức tài nguyên trong ngày. Vui lòng thử lại sau!");
@@ -224,13 +268,12 @@ document.addEventListener('ComponentsLoaded', () => {
                 
                 appendMessage('ai', aiResponseText);
 
-                // Lưu câu trả lời của AI vào lịch sử để duy trì mạch truyện
                 chatHistory.push({
                     role: "model",
                     parts: [{ text: aiResponseText }]
                 });
+                saveChatHistory(); // Lưu ngay khi AI trả lời thành công
 
-                // Vẫn giữ cơ chế lưu số Token đã dùng
                 if (usedTokens > 0) {
                     try {
                         await updateDoc(doc(db, "users", auth.currentUser.uid), {
@@ -249,7 +292,6 @@ document.addEventListener('ComponentsLoaded', () => {
             }
         });
 
-        // Hỗ trợ nhấn Enter để gửi
         if (aiChatInput) {
             aiChatInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
