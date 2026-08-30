@@ -435,6 +435,10 @@ export function renderUserList() {
         const scoreBadgeHtml = `<span style="font-size: 11px; color: #4338ca; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0e7ff; padding: 2px 6px; border-radius: 6px;" title="Điểm trung bình (ĐTB)"><i class="fa-solid fa-star"></i> ĐTB: ${user.avgScore.toFixed(2)}</span>`;
         const xpBadgeHtml = `<span style="font-size: 11px; color: #a16207; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef08a; padding: 2px 6px; border-radius: 6px;" title="Kinh nghiệm"><i class="fa-solid fa-bolt"></i> XP: ${Math.round(user.xp).toLocaleString()}</span>`;
 
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const displayAiCount = (user.aiLastUsedDate === todayStr) ? user.aiDailyCount : 0;
+        const aiBadgeHtml = `<span style="font-size: 11px; color: #0284c7; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0f2fe; padding: 2px 6px; border-radius: 6px;" title="Số lượt AI đã dùng hôm nay"><i class="fa-solid fa-robot"></i> AI: ${displayAiCount}</span>`;
+
         const pendingTier = userState.pendingVIPRequests.get(user.userId);
         const hasPendingRequest = !!pendingTier;
         let pendingBadge = '';
@@ -556,7 +560,7 @@ export function renderUserList() {
                     <div style="flex: 1; min-width: 0;">
                         <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
                             <span style="word-break: break-all;">${user.email}</span> 
-                            ${scoreBadgeHtml} ${xpBadgeHtml} ${pendingBadge} ${costBadgeHtml}
+                            ${scoreBadgeHtml} ${xpBadgeHtml} ${aiBadgeHtml} ${pendingBadge} ${costBadgeHtml}
                         </div>
                         ${datesHtml}
                     </div>
