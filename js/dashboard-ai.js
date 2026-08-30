@@ -1,5 +1,5 @@
 import { auth, db } from "./dashboard-core.js";
-import { doc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, increment, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 document.addEventListener('ComponentsLoaded', () => {
 
@@ -28,8 +28,21 @@ document.addEventListener('ComponentsLoaded', () => {
     queryCounterUI.id = 'aiQueryCounterUI';
     queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; margin-right: 15px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap; flex-shrink: 0;";
 
+    // ĐÃ SỬA: Chèn và ép tiêu đề Sidebar luôn nằm trên 1 hàng ngang
     if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
-        closeAiSidebarBtn.parentNode.insertBefore(queryCounterUI, closeAiSidebarBtn);
+        const sidebarHeader = closeAiSidebarBtn.parentNode;
+        sidebarHeader.insertBefore(queryCounterUI, closeAiSidebarBtn);
+        
+        sidebarHeader.style.display = 'flex';
+        sidebarHeader.style.alignItems = 'center';
+        sidebarHeader.style.flexWrap = 'nowrap';
+        
+        Array.from(sidebarHeader.children).forEach(child => {
+            if (child !== queryCounterUI && child !== closeAiSidebarBtn) {
+                child.style.whiteSpace = 'nowrap';
+                child.style.flexShrink = '0';
+            }
+        });
     }
     
     if (aiChatInput && aiChatInput.parentNode) {
@@ -89,26 +102,36 @@ document.addEventListener('ComponentsLoaded', () => {
     // ==========================================
     // ĐỒNG BỘ REAL-TIME TRẠNG THÁI TỪ FIREBASE
     // ==========================================
+    let unsubscribeUser = null;
+
     document.addEventListener('authReady', (e) => {
-        const userData = e.detail.currentUserData;
-        if (!userData) return;
+        const user = e.detail.user || auth.currentUser;
+        if (!user) return;
         
-        const tier = userData.vipTier || 'free';
-        globalAiTier = tier; 
-        updateCharCounterUI(); 
+        if (unsubscribeUser) unsubscribeUser(); // Hủy lắng nghe cũ nếu có
+        
+        // ĐÃ SỬA: Dùng onSnapshot để lắng nghe thay đổi Real-time
+        unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                const tier = userData.vipTier || 'free';
+                globalAiTier = tier; 
+                updateCharCounterUI(); 
 
-        let maxLimit = 1; 
-        if (tier === 'plus') maxLimit = 3;
-        if (tier === 'pro') maxLimit = Infinity;
+                let maxLimit = 1; 
+                if (tier === 'plus') maxLimit = 3;
+                if (tier === 'pro') maxLimit = Infinity;
 
-        let usedCount = 0;
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        if (userData.aiLastUsedDate === todayStr) {
-            usedCount = userData.aiDailyCount || 0;
-        }
+                let usedCount = 0;
+                const todayStr = new Date().toLocaleDateString('en-CA');
+                if (userData.aiLastUsedDate === todayStr) {
+                    usedCount = userData.aiDailyCount || 0;
+                }
 
-        const remaining = maxLimit - usedCount;
-        updateQueryCounterDisplay(remaining, maxLimit, tier);
+                const remaining = maxLimit - usedCount;
+                updateQueryCounterDisplay(remaining, maxLimit, tier);
+            }
+        });
     });
 
     // ==========================================
