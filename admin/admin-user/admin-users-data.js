@@ -134,6 +134,8 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
             }
 
             const totalTokensUsed = user.totalTokensUsed || 0;
+            const aiDailyCount = user.aiDailyCount || 0;           // DÒNG THÊM MỚI
+            const aiLastUsedDate = user.aiLastUsedDate || '';      // DÒNG THÊM MỚI
             const finalAvgScore = user.avgScore || 0;
             const finalXp = userState.globalLeaderboardStats[userId] || 0;
 
@@ -158,6 +160,8 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
                 isBanned: isBanned,
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
+                aiDailyCount: aiDailyCount,          // DÒNG THÊM MỚI
+                aiLastUsedDate: aiLastUsedDate,      // DÒNG THÊM MỚI
                 avgScore: finalAvgScore, 
                 xp: finalXp, 
                 createdAtMs: createdAtMs, 
