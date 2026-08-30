@@ -423,20 +423,21 @@ export function initQuizUI(db, ctx, actions) {
 
         const btnExplain = document.getElementById('btn-modal-explain');
         if (btnExplain) {
-            if (ctx.isCurrentUserVip) {
+            // ĐÃ SỬA: Chấp nhận cả gói Plus và gói Pro
+            if (['plus', 'pro'].includes(ctx.currentUserVipTier)) {
                 btnExplain.innerText = "Xem lại ĐÁP ÁN và GIẢI THÍCH";
                 btnExplain.removeAttribute("style");
             } else {
-                btnExplain.innerHTML = '<div style="line-height:1.2"><i class="fa-solid fa-lock"></i> Xem lại ĐÁP ÁN và GIẢI THÍCH</div><div style="font-size:0.85rem; margin-top:5px; color:#fef08a">(Cần nâng cấp PRO)</div>';
+                btnExplain.innerHTML = '<div style="line-height:1.2"><i class="fa-solid fa-lock"></i> Xem lại ĐÁP ÁN và GIẢI THÍCH</div><div style="font-size:0.85rem; margin-top:5px; color:#fef08a">(Cần nâng cấp gói Plus/Pro)</div>';
                 btnExplain.style.cssText = "background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); display:flex; flex-direction:column; padding:10px; box-shadow: 0 4px 12px rgba(239,68,68,0.4); border:none;";
             }
 
             btnExplain.onclick = () => { 
-                if (ctx.isCurrentUserVip) {
+                if (['plus', 'pro'].includes(ctx.currentUserVipTier)) {
                     closeModal(); 
                     openReviewModal(score, correctCount, total); 
                 } else {
-                    alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản PRO. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
+                    alert("Tính năng Xem lại bài làm và Giải thích chi tiết chỉ dành cho Tài khoản Plus hoặc Pro. Hệ thống sẽ chuyển hướng đến trang Nâng cấp.");
                     sessionStorage.setItem('triggerUpgradeTab', 'true');
                     redirect('dashboard.html');
                 }
@@ -468,7 +469,8 @@ export function initQuizUI(db, ctx, actions) {
 
         // Chèn nút Tải Chứng Nhận LÊN TRÊN hàng nút gộp kia
         let certBtn = document.getElementById('btn-download-cert');
-        if (score > 8 && ctx.isCurrentUserVip) {
+        // ĐÃ SỬA: Chấp nhận cả gói Plus và gói Pro
+        if (score > 8 && ['plus', 'pro'].includes(ctx.currentUserVipTier)) {
             if (!certBtn && btnRow) {
                 certBtn = document.createElement('button');
                 certBtn.id = 'btn-download-cert';
