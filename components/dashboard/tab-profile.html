@@ -1,87 +1,108 @@
 <div class="profile-grid-layout">
     <div class="profile-column">
         
-        <!-- CARD 1: THÔNG TIN CHUNG & QUYỀN LỢI ĐƯỢC GỘP CHUNG -->
+        <!-- CARD 1: THÔNG TIN CHUNG & QUYỀN LỢI TÁI CẤU TRÚC GỌN GÀNG -->
         <div class="card">
-            <h3><i class="fa-solid fa-address-card"></i> Thông tin chung</h3>
+            <h3 style="margin-top: 0; margin-bottom: 20px; color: #1e293b; display: flex; align-items: center; gap: 10px; font-size: 1.25rem;">
+                <i class="fa-solid fa-address-card" style="color: #3b82f6;"></i> Tổng quan tài khoản
+            </h3>
             
-            <!-- Phần 1: Thông tin cá nhân -->
-            <div class="profile-container" style="margin-bottom: 20px;">
-                <div class="profile-avatar">
-                    <img id="profileTabAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar">
-                </div>
-                <div class="profile-info">
-                    <p><strong>Tên hiển thị:</strong> <span id="profileTabName">Đang tải...</span></p>
-                    <p><strong>Email:</strong> <span id="profileTabEmail">Đang tải...</span></p>
-                    <p>
-                        <strong>Trạng thái VIP:</strong> 
-                        <span id="vipStatusBadge" class="status-badge status-unactive">Đang kiểm tra...</span>
-                    </p>
-                    <p><strong>Ngày kích hoạt:</strong> <span id="vipStartDate">Không xác định</span></p>
-                    <p><strong>Ngày hết hạn:</strong> <span id="vipEndDate">Không xác định</span></p>
-                </div>
-            </div>
-
-            <!-- Phần 2: Quyền lợi gói cước (Ngăn cách bởi nét đứt) -->
-            <div style="border-top: 1px dashed #cbd5e1; padding-top: 20px;">
-                <h4 style="margin: 0 0 12px 0; color: #334155; font-size: 1.05rem;"><i class="fa-solid fa-gift" style="color: #10b981;"></i> Quyền lợi hiện tại</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch;">
                 
-                <!-- Trạng thái Gói Free -->
-                <div id="benefits-free" style="display: block;">
-                    <h5 style="color: #64748b; margin: 0 0 10px 0; font-size: 0.95rem;">Gói tài khoản: <span style="color: #475569; font-weight: 700;">FREE</span></h5>
-                    <ul style="list-style: none; padding: 0; margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.5;">
-                        <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-                            <i class="fa-solid fa-check" style="color: #10b981; margin-top: 4px;"></i> 
-                            <span>Làm đề không giới hạn.</span>
-                        </li>
-                        <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; color: #94a3b8;">
-                            <i class="fa-solid fa-minus" style="margin-top: 4px;"></i> 
-                            <span>Xem lại đáp án, giải thích & lịch sử (Cần nâng cấp).</span>
-                        </li>
-                        <li style="display: flex; align-items: flex-start; gap: 8px; color: #94a3b8;">
-                            <i class="fa-solid fa-minus" style="margin-top: 4px;"></i> 
-                            <span>Trợ lý AI hỗ trợ tra cứu thông tin (Cần nâng cấp).</span>
-                        </li>
-                    </ul>
+                <!-- Nửa Trái: Thông tin cá nhân -->
+                <div style="flex: 1.2; min-width: 320px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 20px;">
+                    <div class="profile-avatar" style="flex-shrink: 0;">
+                        <img id="profileTabAvatar" src="https://ui-avatars.com/api/?name=User&background=0056b3&color=fff" alt="Avatar" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.06);">
+                    </div>
+                    
+                    <div class="profile-info" style="flex: 1; display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;">
+                            <span style="color: #64748b; font-size: 0.9rem; font-weight: 500;">Tên hiển thị:</span>
+                            <span id="profileTabName" style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">Đang tải...</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;">
+                            <span style="color: #64748b; font-size: 0.9rem; font-weight: 500;">Email:</span>
+                            <span id="profileTabEmail" style="font-weight: 600; color: #334155; font-size: 0.9rem;">Đang tải...</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;">
+                            <span style="color: #64748b; font-size: 0.9rem; font-weight: 500;">Trạng thái VIP:</span>
+                            <span id="vipStatusBadge" class="status-badge status-unactive" style="padding: 3px 10px; font-size: 0.75rem;">Đang kiểm tra...</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;">
+                            <span style="color: #64748b; font-size: 0.9rem; font-weight: 500;">Ngày kích hoạt:</span>
+                            <span id="vipStartDate" style="font-weight: 600; color: #334155; font-size: 0.9rem;">Không xác định</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #64748b; font-size: 0.9rem; font-weight: 500;">Ngày hết hạn:</span>
+                            <span id="vipEndDate" style="font-weight: 600; color: #334155; font-size: 0.9rem;">Không xác định</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Trạng thái Gói Plus -->
-                <div id="benefits-plus" style="display: none; background: #eff6ff; padding: 15px; border-radius: 8px; border: 1px solid #bfdbfe;">
-                    <h5 style="color: #1d4ed8; margin: 0 0 10px 0; font-size: 0.95rem;">Gói tài khoản: <span style="font-weight: 800;">PLUS</span></h5>
-                    <ul style="list-style: none; padding: 0; margin: 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.5;">
-                        <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-                            <i class="fa-solid fa-check" style="color: #3b82f6; margin-top: 4px;"></i> 
-                            <span>Làm đề không giới hạn.</span>
-                        </li>
-                        <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-                            <i class="fa-solid fa-check" style="color: #3b82f6; margin-top: 4px;"></i> 
-                            <span>Xem lại đáp án, giải thích & lịch sử đầy đủ.</span>
-                        </li>
-                        <li style="display: flex; align-items: flex-start; gap: 8px; color: #94a3b8;">
-                            <i class="fa-solid fa-minus" style="margin-top: 4px;"></i> 
-                            <span>Trợ lý AI tra cứu (Cần nâng cấp Pro).</span>
-                        </li>
-                    </ul>
-                </div>
+                <!-- Nửa Phải: Quyền lợi gói cước -->
+                <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
+                    <h4 style="margin: 0 0 12px 0; color: #334155; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-gift" style="color: #10b981;"></i> Quyền lợi hiện tại
+                    </h4>
+                    
+                    <!-- Trạng thái Gói Free -->
+                    <div id="benefits-free" style="display: block; background: #f1f5f9; padding: 18px; border-radius: 12px; border: 1px solid #e2e8f0; height: 100%;">
+                        <h5 style="color: #64748b; margin: 0 0 12px 0; font-size: 0.95rem;">Gói tài khoản: <span style="color: #475569; font-weight: 800;">FREE</span></h5>
+                        <ul style="list-style: none; padding: 0; margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.6;">
+                            <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                                <i class="fa-solid fa-check" style="color: #10b981; margin-top: 5px;"></i> 
+                                <span>Làm đề không giới hạn.</span>
+                            </li>
+                            <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; color: #94a3b8;">
+                                <i class="fa-solid fa-minus" style="margin-top: 5px;"></i> 
+                                <span>Xem lại đáp án, giải thích & lịch sử.</span>
+                            </li>
+                            <li style="display: flex; align-items: flex-start; gap: 8px; color: #94a3b8;">
+                                <i class="fa-solid fa-minus" style="margin-top: 5px;"></i> 
+                                <span>Trợ lý AI hỗ trợ tra cứu thông tin.</span>
+                            </li>
+                        </ul>
+                    </div>
 
-                <!-- Trạng thái Gói Pro -->
-                <div id="benefits-pro" style="display: none; background: #fff7ed; padding: 15px; border-radius: 8px; border: 1px solid #fed7aa;">
-                    <h5 style="color: #c2410c; margin: 0 0 10px 0; font-size: 0.95rem;">Gói tài khoản: <span style="font-weight: 800;">PRO</span> <i class="fa-solid fa-crown" style="color: #f59e0b;"></i></h5>
-                    <ul style="list-style: none; padding: 0; margin: 0; color: #9a3412; font-size: 0.9rem; line-height: 1.5;">
-                        <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-                            <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 4px;"></i> 
-                            <span>Làm đề không giới hạn.</span>
-                        </li>
-                        <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-                            <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 4px;"></i> 
-                            <span>Xem lại đáp án, giải thích & lịch sử đầy đủ.</span>
-                        </li>
-                        <li style="display: flex; align-items: flex-start; gap: 8px;">
-                            <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 4px;"></i> 
-                            <span>Trợ lý AI hỗ trợ tra cứu thông tin chuyên sâu.</span>
-                        </li>
-                    </ul>
+                    <!-- Trạng thái Gói Plus -->
+                    <div id="benefits-plus" style="display: none; background: #eff6ff; padding: 18px; border-radius: 12px; border: 1px solid #bfdbfe; height: 100%;">
+                        <h5 style="color: #1d4ed8; margin: 0 0 12px 0; font-size: 0.95rem;">Gói tài khoản: <span style="font-weight: 800;">PLUS</span></h5>
+                        <ul style="list-style: none; padding: 0; margin: 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.6;">
+                            <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                                <i class="fa-solid fa-check" style="color: #3b82f6; margin-top: 5px;"></i> 
+                                <span>Làm đề không giới hạn.</span>
+                            </li>
+                            <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                                <i class="fa-solid fa-check" style="color: #3b82f6; margin-top: 5px;"></i> 
+                                <span>Xem lại đáp án, giải thích & lịch sử đầy đủ.</span>
+                            </li>
+                            <li style="display: flex; align-items: flex-start; gap: 8px; color: #94a3b8;">
+                                <i class="fa-solid fa-minus" style="margin-top: 5px;"></i> 
+                                <span>Trợ lý AI tra cứu chuyên sâu.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Trạng thái Gói Pro -->
+                    <div id="benefits-pro" style="display: none; background: #fff7ed; padding: 18px; border-radius: 12px; border: 1px solid #fed7aa; height: 100%;">
+                        <h5 style="color: #c2410c; margin: 0 0 12px 0; font-size: 0.95rem;">Gói tài khoản: <span style="font-weight: 800;">PRO</span> <i class="fa-solid fa-crown" style="color: #f59e0b;"></i></h5>
+                        <ul style="list-style: none; padding: 0; margin: 0; color: #9a3412; font-size: 0.9rem; line-height: 1.6;">
+                            <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                                <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 5px;"></i> 
+                                <span>Làm đề không giới hạn.</span>
+                            </li>
+                            <li style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                                <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 5px;"></i> 
+                                <span>Xem lại đáp án, giải thích & lịch sử đầy đủ.</span>
+                            </li>
+                            <li style="display: flex; align-items: flex-start; gap: 8px;">
+                                <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 5px;"></i> 
+                                <span>Trợ lý AI hỗ trợ tra cứu thông tin chuyên sâu.</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
+                
             </div>
         </div>
 
@@ -110,7 +131,7 @@
                 <div class="form-group">
                     <label for="inputAvatarFile">Tải lên ảnh đại diện:</label>
                     <input type="file" id="inputAvatarFile" accept="image/*">
-                    <small style="display: block; color: #666; margin-top: 5px;">Ảnh sẽ được nén tự động xuống 200x200 pixel.</small>
+                    <small style="display: block; color: #64748b; margin-top: 6px; font-size: 0.85rem;">* Ảnh sẽ được nén tự động xuống 200x200 pixel.</small>
                 </div>
                 <button type="submit" id="btnUpdateProfile" class="btn-primary">Lưu thay đổi</button>
             </form>
