@@ -164,6 +164,7 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
         const durationMs = durationDays * 24 * 60 * 60 * 1000;
         const expirationDate = now + durationMs;
 
+        // 1. Cập nhật phân quyền vào collection 'users'
         await setDoc(doc(db, "users", uid), {
             vipTier: tierName,            
             vipActivationDate: now,
@@ -171,11 +172,19 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
             isVip: null 
         }, { merge: true });
 
-        await updateDoc(doc(db, "payment_requests", uid), {
-            status: "completed",
-            approvedAt: serverTimestamp()
+        // 2. TÌM VÀ CẬP NHẬT TRẠNG THÁI YÊU CẦU THÀNH COMPLETED (Sửa lỗi ID)
+        const q = query(collection(db, "payment_requests"), where("uid", "==", uid), where("status", "==", "pending"));
+        const reqSnap = await getDocs(q);
+        const reqPromises = [];
+        reqSnap.forEach(reqDoc => {
+            reqPromises.push(updateDoc(reqDoc.ref, {
+                status: "completed",
+                approvedAt: serverTimestamp()
+            }));
         });
+        await Promise.all(reqPromises); // Chạy cập nhật song song để xử lý nếu có nhiều request bị kẹt
 
+        // 3. Đẩy thông báo thành công cho người dùng
         await addDoc(collection(db, "notifications"), {
             toEmail: userEmail,
             title: `👑 Kích hoạt tài khoản ${tierName.toUpperCase()} thành công!`,
@@ -185,6 +194,7 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
             timestamp: serverTimestamp()
         });
 
+        // 4. Ghi đè Local State ngay lập tức để giao diện không bị giật lag
         const u = userState.cachedUsers.find(user => user.userId === uid);
         if (u) {
             u.vipTier = tierName;
@@ -201,7 +211,7 @@ async function approveUserUpgrade(uid, userEmail, tierName, durationDays = 30) {
     }
 }
 
-// ĐÃ SỬA: Thay vì nhận isCurrentlyActive, giờ nhận string targetTier
+// Bật tắt thủ công từ danh sách
 async function handleToggleVip(userId, targetTier) {
     const u = userState.cachedUsers.find(user => user.userId === userId);
     if (!u) return;
@@ -242,6 +252,21 @@ async function handleToggleVip(userId, targetTier) {
     try {
         const userRef = doc(db, "users", userId);
         await setDoc(userRef, updates, { merge: true });
+
+        // NẾU KÍCH HOẠT, XÓA LUÔN THÔNG BÁO CHỜ DUYỆT BÊN PAYMENT REQUESTS ĐỂ ẨN BADGE CẢNH BÁO
+        if (isActivating) {
+            const q = query(collection(db, "payment_requests"), where("uid", "==", userId), where("status", "==", "pending"));
+            const reqSnap = await getDocs(q);
+            const reqPromises = [];
+            reqSnap.forEach(reqDoc => {
+                reqPromises.push(updateDoc(reqDoc.ref, {
+                    status: "completed",
+                    approvedAt: serverTimestamp()
+                }));
+            });
+            await Promise.all(reqPromises);
+        }
+
         showToast(`Đã ${isActivating ? 'kích hoạt gói ' + targetTier.toUpperCase() : 'hủy quyền'} thành công!`, "success");
     } catch (error) {
         console.error("Lỗi cập nhật VIP:", error);
@@ -322,9 +347,11 @@ export async function handleBulkAction(actionType) {
         if (!u) return;
         
         let updates = {};
+        let newVipStatus = false;
+
         if (isVipAction) {
             const isCurrentlyActive = !!u.vipTier;
-            const newVipStatus = !isCurrentlyActive;
+            newVipStatus = !isCurrentlyActive;
             
             updates.vipTier = newVipStatus ? 'plus' : null;
             updates.isVip = null;
@@ -352,7 +379,20 @@ export async function handleBulkAction(actionType) {
             u.statusKey = updates.isBanned ? 'banned' : (u.vipTier ? 'vip' : 'normal');
         }
 
-        promises.push(setDoc(doc(db, "users", id), updates, { merge: true }));
+        promises.push((async () => {
+            await setDoc(doc(db, "users", id), updates, { merge: true });
+            
+            // Xử lý dọn dẹp payment_requests nếu là bật VIP
+            if (isVipAction && newVipStatus) {
+                const q = query(collection(db, "payment_requests"), where("uid", "==", id), where("status", "==", "pending"));
+                const reqSnap = await getDocs(q);
+                const reqPromises = [];
+                reqSnap.forEach(reqDoc => {
+                    reqPromises.push(updateDoc(reqDoc.ref, { status: "completed", approvedAt: serverTimestamp() }));
+                });
+                await Promise.all(reqPromises);
+            }
+        })());
     });
 
     renderUserList();
