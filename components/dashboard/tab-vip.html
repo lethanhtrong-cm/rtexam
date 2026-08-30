@@ -10,23 +10,50 @@
             <span id="vipStatusTab3" class="status-badge status-unactive" style="display: inline-block; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 600;">Chưa kích hoạt VIP</span>
         </div>
         
-        <h4 style="font-size: 1.1rem; color: #334155; margin-bottom: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">Đặc quyền khi nâng cấp PRO:</h4>
-        <ul style="list-style: none; padding: 0; margin: 0; color: #475569; font-size: 1rem; line-height: 1.6;">
-            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
-                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.2rem; margin-top: 3px;"></i> 
-                <span>Truy cập <strong>toàn bộ</strong> kho đề thi Pro độc quyền trên hệ thống.</span>
-            </li>
-            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
-                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.2rem; margin-top: 3px;"></i> 
-                <span>Mở khóa tính năng xem <strong>giải thích chi tiết</strong> từng đáp án.</span>
-            </li>
-            <li style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;">
-                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.2rem; margin-top: 3px;"></i> 
-                <span>Lưu trữ <strong>lịch sử làm bài</strong> và bảng điểm không giới hạn thời gian.</span>
-            </li>
-        </ul>
+        <h4 style="font-size: 1.1rem; color: #334155; margin-bottom: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">Chọn gói phù hợp với bạn:</h4>
+        
+        <!-- CẤU TRÚC MỚI: GÓI PLUS -->
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 18px; margin-bottom: 15px;">
+            <h5 style="margin: 0 0 12px 0; color: #1e293b; font-size: 1.15rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>Gói Plus</span>
+                <span style="color: #3b82f6; font-size: 1rem;">30.000đ/tháng</span>
+            </h5>
+            <ul style="list-style: none; padding: 0; margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                    <i class="fa-solid fa-check" style="color: #10b981; margin-top: 4px;"></i> 
+                    <span>Truy cập toàn bộ kho đề thi độc quyền.</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                    <i class="fa-solid fa-check" style="color: #10b981; margin-top: 4px;"></i> 
+                    <span>Xem <strong>kết quả và giải thích chi tiết</strong>.</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px;">
+                    <i class="fa-solid fa-check" style="color: #10b981; margin-top: 4px;"></i> 
+                    <span>Xem <strong>lịch sử làm bài</strong> không giới hạn.</span>
+                </li>
+            </ul>
+        </div>
 
-        <!-- ĐÃ THÊM: KHU VỰC NHẬP MÃ VOUCHER -->
+        <!-- CẤU TRÚC MỚI: GÓI PRO -->
+        <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; padding: 18px; margin-bottom: 20px; position: relative;">
+            <span style="position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">Khuyên dùng</span>
+            <h5 style="margin: 0 0 12px 0; color: #b45309; font-size: 1.15rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>Gói Pro</span>
+                <span style="color: #ea580c; font-size: 1rem;">50.000đ/tháng</span>
+            </h5>
+            <ul style="list-style: none; padding: 0; margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                    <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 4px;"></i> 
+                    <span>Bao gồm <strong>toàn bộ tính năng</strong> của Gói Plus.</span>
+                </li>
+                <li style="display: flex; align-items: flex-start; gap: 10px;">
+                    <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 4px;"></i> 
+                    <span>Sử dụng <strong>Trợ lý AI Học thuật</strong> chuyên sâu.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- KHU VỰC NHẬP MÃ VOUCHER (GIỮ NGUYÊN) -->
         <div style="margin-top: 30px; border-top: 2px dashed #e2e8f0; padding-top: 25px;">
             <h4 style="font-size: 1.1rem; color: #334155; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-ticket" style="color: #6366f1;"></i> Kích hoạt bằng mã Voucher
@@ -43,19 +70,32 @@
 
     <!-- CỘT PHẢI: HƯỚNG DẪN THANH TOÁN QR -->
     <div class="card vip-card-box" style="flex: 1.2; min-width: 350px; background: #fff; border-radius: 16px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
-        <h3 style="color: #1e293b; font-size: 1.4rem; margin-top: 0; margin-bottom: 25px; width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
+        <h3 style="color: #1e293b; font-size: 1.4rem; margin-top: 0; margin-bottom: 20px; width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
             <i class="fa-solid fa-qrcode" style="color: #2563eb;"></i> Thanh toán mã QR
         </h3>
+
+        <!-- BỔ SUNG: KHU VỰC CHỌN GÓI ĐỂ ĐỔI GIÁ TIỀN -->
+        <div style="display: flex; gap: 12px; width: 100%; margin-bottom: 20px;">
+            <label class="package-radio" style="flex: 1; border: 2px solid #3b82f6; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #eff6ff; transition: 0.2s;">
+                <input type="radio" name="packageSelect" value="30000" checked onchange="updatePaymentUI('30000')" style="display: none;"> 
+                <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Gói Plus</span>
+            </label>
+            <label class="package-radio" style="flex: 1; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #f8fafc; transition: 0.2s;">
+                <input type="radio" name="packageSelect" value="50000" onchange="updatePaymentUI('50000')" style="display: none;"> 
+                <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Gói Pro</span>
+            </label>
+        </div>
         
         <!-- Khu vực Mã QR -->
-        <div style="background: #ffffff; padding: 15px; border-radius: 16px; border: 2px dashed #cbd5e1; display: inline-block; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
-            <img id="qr-payment" src="https://img.vietqr.io/image/MB-2070120091994-compact.png?amount=20000&addInfo=NAP%20TIEN&accountName=LE%20THANH%20TRONG" alt="Mã QR Chuyển khoản" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
+        <div style="background: #ffffff; padding: 15px; border-radius: 16px; border: 2px dashed #cbd5e1; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+            <!-- URL mặc định để sẵn 30000 -->
+            <img id="qr-payment" src="https://img.vietqr.io/image/MB-2070120091994-compact.png?amount=30000&addInfo=NAP%20TIEN&accountName=LE%20THANH%20TRONG" alt="Mã QR Chuyển khoản" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
         </div>
         
         <!-- Khung Hướng dẫn chuyển khoản -->
         <div style="background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 12px; padding: 25px 20px; width: 100%; text-align: center; margin-bottom: 25px;">
             <p style="color: #047857; margin: 0 0 5px 0; font-size: 0.95rem; font-weight: 600;">Mức phí nâng cấp:</p>
-            <div style="font-size: 2.2rem; font-weight: 800; color: #059669; margin-bottom: 20px; letter-spacing: -0.5px;">20.000 ₫<span style="font-size: 1.1rem; color: #047857;">/tháng</span></div>
+            <div id="displayPrice" style="font-size: 2.2rem; font-weight: 800; color: #059669; margin-bottom: 20px; letter-spacing: -0.5px;">30.000 ₫<span style="font-size: 1.1rem; color: #047857;">/tháng</span></div>
             
             <p style="color: #475569; font-size: 0.95rem; margin: 0 0 10px 0;">Nội dung chuyển khoản (bắt buộc chính xác):</p>
             <div style="background: #ffffff; border: 1.5px dashed #3b82f6; padding: 15px; border-radius: 8px; user-select: all; cursor: pointer; display: inline-block; width: 90%;" title="Bôi đen để copy">
@@ -68,7 +108,7 @@
             </div>
         </div>
         
-        <!-- NÚT XÁC NHẬN VÀ HỦY ĐƯỢC CHIA BỐ CỤC LẠI -->
+        <!-- NÚT XÁC NHẬN VÀ HỦY (GIỮ NGUYÊN) -->
         <div style="display: flex; gap: 12px; width: 100%;">
             <button id="btnConfirmPayment" class="btn-primary" style="flex: 1; padding: 16px; font-size: 1.1rem; border-radius: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
                 <i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản
@@ -79,3 +119,33 @@
         </div>
     </div>
 </div>
+
+<!-- SCRIPT HỖ TRỢ ĐỔI GÓI CƯỚC -->
+<script>
+    function updatePaymentUI(amount) {
+        // Cập nhật giao diện (màu sắc) của 2 nút chọn
+        const labels = document.querySelectorAll('.package-radio');
+        const radios = document.querySelectorAll('input[name="packageSelect"]');
+        
+        radios.forEach((radio, index) => {
+            if(radio.checked) {
+                labels[index].style.borderColor = '#3b82f6';
+                labels[index].style.background = '#eff6ff';
+            } else {
+                labels[index].style.borderColor = '#e2e8f0';
+                labels[index].style.background = '#f8fafc';
+            }
+        });
+
+        // Cập nhật Text hiển thị tiền
+        const priceFormatted = parseInt(amount).toLocaleString('vi-VN');
+        document.getElementById('displayPrice').innerHTML = `${priceFormatted} ₫<span style="font-size: 1.1rem; color: #047857;">/tháng</span>`;
+
+        // Đổi số tiền trên mã QR Code (vẫn giữ nguyên email hiện tại)
+        const qrImg = document.getElementById('qr-payment');
+        const currentSrc = qrImg.src;
+        // Dùng Regex tìm và thay thế an toàn tham số amount
+        const newSrc = currentSrc.replace(/amount=\d+/, 'amount=' + amount);
+        qrImg.src = newSrc;
+    }
+</script>
