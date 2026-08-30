@@ -332,7 +332,6 @@ export function renderPaymentHistory() {
                 ? `<span style="background: #f59e0b; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đang chờ duyệt</span>`
                 : `<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;">Đã xử lý</span>`;
             
-            // XỬ LÝ HIỂN THỊ GÓI REQUEST VÀ 2 NÚT DUYỆT (PLUS/PRO)
             const reqTier = data.requestedTier ? data.requestedTier.toUpperCase() : 'PLUS';
             const tierBadgeHtml = reqTier === 'PRO'
                 ? `<span style="background: #ffedd5; color: #b45309; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">Gói PRO</span>`
@@ -419,7 +418,6 @@ export function renderUserList() {
         let badgeClass = 'badge-normal';
         let badgeText = 'Thường';
 
-        // XỬ LÝ BADGE ĐỂ CHUẨN VỚI PLUS / PRO
         if (user.isBanned) {
             badgeClass = 'badge-banned';
             badgeText = 'Bị Khóa';
@@ -436,10 +434,14 @@ export function renderUserList() {
         const scoreBadgeHtml = `<span style="font-size: 11px; color: #4338ca; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0e7ff; padding: 2px 6px; border-radius: 6px;" title="Điểm trung bình (ĐTB)"><i class="fa-solid fa-star"></i> ĐTB: ${user.avgScore.toFixed(2)}</span>`;
         const xpBadgeHtml = `<span style="font-size: 11px; color: #a16207; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef08a; padding: 2px 6px; border-radius: 6px;" title="Kinh nghiệm"><i class="fa-solid fa-bolt"></i> XP: ${Math.round(user.xp).toLocaleString()}</span>`;
 
-        const hasPendingRequest = userState.pendingVIPRequests.has(user.userId);
-        const pendingBadge = hasPendingRequest 
-            ? `<span style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; margin-left: 8px; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); animation: pulse 2s infinite;">💸 Báo Đã CK</span>` 
-            : '';
+        // Lấy tên gói từ Map để hiển thị cảnh báo
+        const pendingTier = userState.pendingVIPRequests.get(user.userId);
+        const hasPendingRequest = !!pendingTier;
+        let pendingBadge = '';
+        if (hasPendingRequest) {
+            const tierStr = pendingTier.toUpperCase();
+            pendingBadge = `<span style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; margin-left: 8px; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4); animation: pulse 2s infinite;">💸 Báo CK ${tierStr}</span>`;
+        }
 
         const costBadgeHtml = getCostBadgeHtml(user.totalTokensUsed);
 
@@ -474,27 +476,38 @@ export function renderUserList() {
         }
         datesHtml += `</div>`;
 
-        // Tinh chỉnh nút thủ công "Kích VIP" -> "Kích Plus" (Mặc định khi kích thủ công từ List là gói Plus)
         const isVipTierActive = !!user.vipTier;
-        const vipBtnClass = isVipTierActive ? 'btn-user-vip-off' : 'btn-user-vip-on';
-        const vipBtnText = isVipTierActive ? '❌ Tắt Gói' : '✨ Kích Plus';
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
         const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
         
         const baseBtnStyle = "padding: 6px 12px; font-size: 12.5px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s ease; color: white;";
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
-        const vipStyle = isVipTierActive ? `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`; 
         const historyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
         const excelStyle = `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);`;
         const banStyle = user.isBanned ? `${baseBtnStyle} background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 2px 5px rgba(16,185,129,0.3);` : `${baseBtnStyle} background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 2px 5px rgba(239,68,68,0.3);`; 
         
         const hoverEffect = `onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'"`;
 
+        let vipActionButtonsHtml = '';
+        if (isVipTierActive) {
+            const offStyle = `${baseBtnStyle} background: #94a3b8; box-shadow: 0 2px 5px rgba(148,163,184,0.3);`;
+            vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStyle}" ${hoverEffect}>❌ Tắt Gói</button>`;
+        } else {
+            // HIỂN THỊ TÁCH BIỆT 2 NÚT PLUS/PRO NẾU CHƯA KÍCH HOẠT
+            const plusStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
+            const proStyle = `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`;
+            
+            vipActionButtonsHtml = `
+                <button class="btn-user-action btn-user-vip-on btn-toggle-vip" data-id="${user.userId}" data-tier="plus" style="${plusStyle}" ${hoverEffect}>✨ Plus</button>
+                <button class="btn-user-action btn-user-vip-on btn-toggle-vip" data-id="${user.userId}" data-tier="pro" style="${proStyle}" ${hoverEffect}>👑 Pro</button>
+            `;
+        }
+
         const isChecked = userState.selectedUserIds.has(user.userId) ? 'checked' : '';
 
         const actionButtonsHtml = `
             <button class="btn-user-action btn-notify-user" data-email="${user.email}" style="${notifyStyle}" ${hoverEffect} title="Gửi TB">🔔 Gửi</button>
-            <button class="btn-user-action ${vipBtnClass} btn-toggle-vip" data-id="${user.userId}" data-vip="${isVipTierActive}" style="${vipStyle}" ${hoverEffect}>${vipBtnText}</button>
+            ${vipActionButtonsHtml}
             <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
             <button class="btn-user-action btn-export-excel" data-email="${user.email}" style="${excelStyle}" ${hoverEffect} title="Tải Excel Lịch sử & XP"><i class="fa-solid fa-file-excel"></i> Tải XP</button>
             <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
@@ -628,22 +641,7 @@ export function initUserInterfaceEvents(loadUserListCallback, openNotifyCallback
 
     const toolbar = document.querySelector('.toolbar-user-modern');
     if (toolbar) {
-        const tabUserList = document.getElementById('tab-user-list');
-        const statsContainer = tabUserList ? tabUserList.querySelector('.stats-container') : null;
-        
-        if (statsContainer && !document.getElementById('user-top-sticky-wrapper')) {
-            const wrapper = document.createElement('div');
-            wrapper.id = 'user-top-sticky-wrapper';
-            wrapper.style.cssText = 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 15px 0 10px 0; margin-top: -15px; margin-bottom: 15px; border-bottom: 1px solid #cbd5e1;';
-            statsContainer.parentNode.insertBefore(wrapper, statsContainer);
-            wrapper.appendChild(statsContainer);
-            wrapper.appendChild(toolbar);
-            
-            statsContainer.style.marginBottom = '15px';
-            toolbar.style.cssText += 'display: flex; flex-wrap: wrap; gap: 10px; align-items: center; width: 100%;';
-        } else if (!document.getElementById('user-top-sticky-wrapper')) {
-            toolbar.style.cssText += 'position: sticky; top: 60px; z-index: 95; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
-        }
+        toolbar.style.cssText += 'position: sticky; top: 65px; z-index: 90; background: #f1f5f9; padding: 10px 0; margin-top: -10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;';
         
         const searchContainer = document.querySelector('.search-user-container');
         if (searchContainer) {
