@@ -53,7 +53,7 @@
             </ul>
         </div>
 
-        <!-- KHU VỰC NHẬP MÃ VOUCHER (GIỮ NGUYÊN) -->
+        <!-- KHU VỰC NHẬP MÃ VOUCHER -->
         <div style="margin-top: 30px; border-top: 2px dashed #e2e8f0; padding-top: 25px;">
             <h4 style="font-size: 1.1rem; color: #334155; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-ticket" style="color: #6366f1;"></i> Kích hoạt bằng mã Voucher
@@ -74,21 +74,21 @@
             <i class="fa-solid fa-qrcode" style="color: #2563eb;"></i> Thanh toán mã QR
         </h3>
 
-        <!-- BỔ SUNG: KHU VỰC CHỌN GÓI ĐỂ ĐỔI GIÁ TIỀN -->
+        <!-- KHU VỰC CHỌN GÓI ĐỂ ĐỔI GIÁ TIỀN -->
         <div style="display: flex; gap: 12px; width: 100%; margin-bottom: 20px;">
             <label class="package-radio" style="flex: 1; border: 2px solid #3b82f6; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #eff6ff; transition: 0.2s;">
-                <input type="radio" name="packageSelect" value="30000" checked onchange="updatePaymentUI('30000')" style="display: none;"> 
+                <!-- Gọi window.updatePaymentUI thay vì updatePaymentUI -->
+                <input type="radio" name="packageSelect" value="30000" checked onchange="window.updatePaymentUI('30000')" style="display: none;"> 
                 <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Gói Plus</span>
             </label>
             <label class="package-radio" style="flex: 1; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #f8fafc; transition: 0.2s;">
-                <input type="radio" name="packageSelect" value="50000" onchange="updatePaymentUI('50000')" style="display: none;"> 
+                <input type="radio" name="packageSelect" value="50000" onchange="window.updatePaymentUI('50000')" style="display: none;"> 
                 <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Gói Pro</span>
             </label>
         </div>
         
         <!-- Khu vực Mã QR -->
         <div style="background: #ffffff; padding: 15px; border-radius: 16px; border: 2px dashed #cbd5e1; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
-            <!-- URL mặc định để sẵn 30000 -->
             <img id="qr-payment" src="https://img.vietqr.io/image/MB-2070120091994-compact.png?amount=30000&addInfo=NAP%20TIEN&accountName=LE%20THANH%20TRONG" alt="Mã QR Chuyển khoản" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
         </div>
         
@@ -108,7 +108,7 @@
             </div>
         </div>
         
-        <!-- NÚT XÁC NHẬN VÀ HỦY (GIỮ NGUYÊN) -->
+        <!-- NÚT XÁC NHẬN VÀ HỦY -->
         <div style="display: flex; gap: 12px; width: 100%;">
             <button id="btnConfirmPayment" class="btn-primary" style="flex: 1; padding: 16px; font-size: 1.1rem; border-radius: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
                 <i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản
@@ -120,12 +120,11 @@
     </div>
 </div>
 
-<!-- SCRIPT HỖ TRỢ ĐỔI GÓI CƯỚC -->
-<script>
-    function updatePaymentUI(amount) {
-        // Cập nhật giao diện (màu sắc) của 2 nút chọn
+<!-- ĐÃ FIX: Chèn hàm JS qua kỹ thuật onerror để bypass giới hạn chặn Script của thuộc tính innerHTML -->
+<img src="x" onerror="
+    window.updatePaymentUI = function(amount) {
         const labels = document.querySelectorAll('.package-radio');
-        const radios = document.querySelectorAll('input[name="packageSelect"]');
+        const radios = document.querySelectorAll('input[name=\'packageSelect\']');
         
         radios.forEach((radio, index) => {
             if(radio.checked) {
@@ -137,15 +136,12 @@
             }
         });
 
-        // Cập nhật Text hiển thị tiền
         const priceFormatted = parseInt(amount).toLocaleString('vi-VN');
-        document.getElementById('displayPrice').innerHTML = `${priceFormatted} ₫<span style="font-size: 1.1rem; color: #047857;">/tháng</span>`;
-
-        // Đổi số tiền trên mã QR Code (vẫn giữ nguyên email hiện tại)
+        document.getElementById('displayPrice').innerHTML = priceFormatted + ' ₫<span style=\'font-size: 1.1rem; color: #047857;\'>/tháng</span>';
+        
         const qrImg = document.getElementById('qr-payment');
         const currentSrc = qrImg.src;
-        // Dùng Regex tìm và thay thế an toàn tham số amount
         const newSrc = currentSrc.replace(/amount=\d+/, 'amount=' + amount);
         qrImg.src = newSrc;
-    }
-</script>
+    };
+" style="display: none;">
