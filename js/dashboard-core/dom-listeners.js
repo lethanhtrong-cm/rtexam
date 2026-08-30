@@ -1,5 +1,4 @@
 import { signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// ĐÃ SỬA: Bổ sung thêm getDoc, arrayUnion, increment để phục vụ tính năng Voucher
 import { doc, setDoc, deleteDoc, updateDoc, serverTimestamp, getDoc, arrayUnion, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { switchTab, showNotificationModal } from "../dashboard/dashboard-ui.js";
 
@@ -89,6 +88,9 @@ export function initDOMListeners(auth, db) {
             return;
         }
 
+        // ==========================================
+        // ĐÃ SỬA: Lấy loại Gói (Tier) khi Xác nhận CK
+        // ==========================================
         if (e.target.closest('#btnConfirmPayment')) {
             e.preventDefault(); e.stopPropagation();
             if (userDropdown) userDropdown.classList.remove('show');
@@ -97,6 +99,16 @@ export function initDOMListeners(auth, db) {
             if (btn && btn.disabled) return; 
             
             if (auth.currentUser) {
+                // Đọc gói cước người dùng đang chọn trên giao diện
+                let selectedTier = 'plus'; // Mặc định
+                let selectedAmount = 30000;
+                
+                const checkedRadio = document.querySelector('input[name="packageSelect"]:checked');
+                if (checkedRadio) {
+                    selectedAmount = parseInt(checkedRadio.value);
+                    if (selectedAmount === 50000) selectedTier = 'pro';
+                }
+
                 if (btn) {
                     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Chờ phê duyệt...';
                     btn.style.background = '#94a3b8';
@@ -111,7 +123,8 @@ export function initDOMListeners(auth, db) {
                     uid: auth.currentUser.uid, 
                     email: auth.currentUser.email, 
                     status: "pending", 
-                    amount: 20000, 
+                    amount: selectedAmount,
+                    requestedTier: selectedTier, // Push chữ 'plus' hoặc 'pro' lên Database
                     createdAt: serverTimestamp() 
                 }).catch(() => alert("Lỗi kết nối máy chủ, vui lòng thử lại!"));
             }
@@ -192,7 +205,7 @@ export function initDOMListeners(auth, db) {
         }
 
         // ==========================================
-        // ĐÃ THÊM: XỬ LÝ NHẬP MÃ VOUCHER VIP
+        // ĐÃ SỬA: XỬ LÝ NHẬP MÃ VOUCHER
         // ==========================================
         if (e.target.closest('#btnApplyVoucher')) {
             e.preventDefault();
@@ -219,7 +232,6 @@ export function initDOMListeners(auth, db) {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Xử lý...';
             msgEl.style.display = 'none';
 
-            // Dùng hàm bọc async để xử lý Firebase đồng bộ
             (async () => {
                 try {
                     const voucherRef = doc(db, "vouchers", voucherCode);
@@ -230,25 +242,26 @@ export function initDOMListeners(auth, db) {
                     const vData = voucherSnap.data();
                     const now = Date.now();
 
-                    // Xác thực điều kiện ngặt nghèo
                     if (!vData.isActive) throw new Error("Mã voucher này đã bị khóa!");
                     if (vData.startDate && now < vData.startDate) throw new Error("Mã voucher chưa đến thời gian sử dụng!");
                     if (vData.endDate && now > vData.endDate) throw new Error("Mã voucher đã hết hạn!");
                     if (vData.maxUses && vData.usedCount >= vData.maxUses) throw new Error("Mã voucher đã đạt giới hạn số lượt sử dụng!");
                     if (vData.usedBy && vData.usedBy.includes(auth.currentUser.uid)) throw new Error("Bạn đã sử dụng mã này rồi!");
 
-                    // Tính thời gian VIP
                     const durationMs = (vData.durationDays || 30) * 24 * 60 * 60 * 1000;
                     const vipExpirationDate = now + durationMs;
+                    
+                    // Lấy loại gói từ Voucher (hoặc mặc định kích hoạt gói xịn nhất là PRO)
+                    const grantTier = vData.tier || 'pro'; 
 
-                    // Tiến hành cập nhật User lên VIP
                     await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                        isVip: true,
+                        vipTier: grantTier, // Gán kiến trúc 3 cấp mới
                         vipActivationDate: now,
-                        vipExpirationDate: vipExpirationDate
+                        vipExpirationDate: vipExpirationDate,
+                        // Lưu vết xóa sạch isVip cũ để tránh xung đột
+                        isVip: null 
                     });
 
-                    // Cập nhật tăng số lượt dùng Voucher
                     await updateDoc(voucherRef, {
                         usedCount: increment(1),
                         usedBy: arrayUnion(auth.currentUser.uid)
@@ -256,10 +269,9 @@ export function initDOMListeners(auth, db) {
 
                     msgEl.style.display = 'block';
                     msgEl.style.color = '#10b981';
-                    msgEl.innerText = "🎉 Kích hoạt VIP thành công! Đang tải lại hệ thống...";
+                    msgEl.innerText = `🎉 Kích hoạt gói ${grantTier.toUpperCase()} thành công! Đang tải lại hệ thống...`;
                     inputEl.value = '';
                     
-                    // Tải lại trang để hệ thống render giao diện VIP mới
                     setTimeout(() => window.location.reload(), 2000);
 
                 } catch (error) {
