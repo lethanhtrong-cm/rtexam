@@ -104,7 +104,7 @@ function fetchUserData(user, auth, db) {
         const userDocRef = doc(db, "users", user.uid);
         
         onSnapshot(userDocRef, async (userDocSnap) => {
-            let currentUserData = { isVip: false, isBanned: false, bookmarks: [] };
+            let currentUserData = { vipTier: null, isBanned: false, bookmarks: [] };
             
             if (userDocSnap.exists()) {
                 currentUserData = userDocSnap.data();
@@ -127,7 +127,12 @@ function fetchUserData(user, auth, db) {
                     if (elTopbarAvatar) elTopbarAvatar.src = currentUserData.avatarBase64; 
                 }
 
-                if (currentUserData.isVip) {
+                // KIỂM TRA ĐIỀU KIỆN 3 HẠNG (THƯỜNG / PLUS / PRO)
+                // Hỗ trợ luồng cũ (isVip) bằng cách tạm ánh xạ sang 'plus' nếu hệ thống cũ chưa update triệt để
+                let activeTier = currentUserData.vipTier;
+                if (!activeTier && currentUserData.isVip) activeTier = 'plus';
+
+                if (activeTier === 'plus' || activeTier === 'pro') {
                     const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
                     const expiryField = currentUserData.vipExpirationDate || currentUserData.vipEnd;
                     
@@ -147,20 +152,24 @@ function fetchUserData(user, auth, db) {
                     }
                     
                     if (isExpired) {
-                        // ĐÃ KHÔI PHỤC: Cập nhật Firestore khi VIP thực sự hết hạn để đồng bộ toàn hệ thống
-                        setDoc(userDocRef, { isVip: false }, { merge: true }).catch(err => console.error(err));
+                        setDoc(userDocRef, { vipTier: null, isVip: false }, { merge: true }).catch(err => console.error(err));
                         setVipInactive();
-                        currentUserData.isVip = false;
+                        currentUserData.vipTier = null;
                     } else {
+                        // TẠO UI DỰA TRÊN TIER
+                        let tierName = activeTier === 'pro' ? 'PRO' : 'PLUS';
+                        let tierIcon = activeTier === 'pro' ? '<i class="fa-solid fa-crown"></i>' : '<i class="fa-solid fa-shield-halved"></i>';
+                        let tierColor = activeTier === 'pro' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #3b82f6, #2563eb)';
+
                         const elVipStatusBadge = document.getElementById("vipStatusBadge");
                         if (elVipStatusBadge) {
-                            elVipStatusBadge.textContent = "Đã kích hoạt Pro";
+                            elVipStatusBadge.textContent = `Đã kích hoạt ${tierName}`;
                             elVipStatusBadge.className = "status-badge status-active";
                         }
 
                         const elVipStatusTab3 = document.getElementById("vipStatusTab3");
                         if (elVipStatusTab3) {
-                            elVipStatusTab3.textContent = "Tài khoản PRO đang hoạt động";
+                            elVipStatusTab3.textContent = `Tài khoản ${tierName} đang hoạt động`;
                             elVipStatusTab3.className = "status-badge status-active";
                         }
 
@@ -170,11 +179,12 @@ function fetchUserData(user, auth, db) {
                         const elVipEndDate = document.getElementById("vipEndDate");
                         if (elVipEndDate) elVipEndDate.textContent = expiryDateObj ? formatDate(expiryDateObj) : "Vĩnh viễn / Không xác định";
 
+                        // RENDER HUY HIỆU TRÊN TOPBAR
                         const topbarVipContainer = document.getElementById('topbar-vip-container');
                         if (topbarVipContainer) {
                             topbarVipContainer.innerHTML = `
-                                <div class="topbar-vip-badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
-                                    <i class="fa-solid fa-gem"></i> PRO
+                                <div class="topbar-vip-badge" style="background: ${tierColor}; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0, 0.2);">
+                                    ${tierIcon} ${tierName}
                                 </div>
                             `;
                         }
@@ -201,8 +211,8 @@ function fetchUserData(user, auth, db) {
                             try {
                                 addDoc(collection(db, "notifications"), {
                                     toEmail: auth.currentUser.email,
-                                    title: "👑 Kích hoạt tài khoản PRO thành công",
-                                    message: "Cảm ơn bạn đã đồng hành cùng hệ thống. Tài khoản PRO đã được kích hoạt, mở khóa toàn bộ đề thi độc quyền và tiện ích giải thích chi tiết!",
+                                    title: `👑 Kích hoạt tài khoản ${tierName} thành công`,
+                                    message: `Cảm ơn bạn đã đồng hành cùng hệ thống. Tài khoản ${tierName} đã được kích hoạt, mở khóa các đặc quyền độc quyền!`,
                                     status: "unread",
                                     type: "system_broadcast",
                                     timestamp: serverTimestamp()
@@ -217,12 +227,12 @@ function fetchUserData(user, auth, db) {
                             const popupHTML = `
                                 <div class="custom-modal-overlay" id="vipSuccessModalCustom" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); justify-content: center; align-items: center;">
                                     <div class="custom-modal-content" style="max-width: 450px; background: #fff; border-radius: 16px; padding: 35px 25px; text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
-                                            <i class="fa-solid fa-crown" style="font-size: 2.5rem; color: white;"></i>
+                                        <div style="width: 80px; height: 80px; background: ${tierColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 4px 15px rgba(0,0,0, 0.2);">
+                                            ${tierIcon.replace('>', ' style="font-size: 2.5rem; color: white;">')}
                                         </div>
                                         <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.6rem;">Nâng Cấp Thành Công!</h2>
                                         <p style="color: #475569; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;">
-                                            Chào mừng bạn đến với hội viên <strong>PRO</strong>. Bạn đã mở khóa toàn bộ đặc quyền không giới hạn trên hệ thống.
+                                            Chào mừng bạn đến với hội viên <strong>${tierName}</strong>. Cùng nhau khám phá những tính năng học tập tuyệt vời nhất.
                                         </p>
                                         <button id="closeVipSuccessBtn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
                                             Khám phá ngay <i class="fa-solid fa-arrow-right ms-2"></i>
@@ -252,7 +262,7 @@ function fetchUserData(user, auth, db) {
         }, (error) => {
             console.error("Lỗi khi lắng nghe dữ liệu user từ Firestore:", error);
             setVipInactive();
-            resolve({ isVip: false, isBanned: false, bookmarks: [] });
+            resolve({ vipTier: null, isBanned: false, bookmarks: [] });
         });
     });
 }
