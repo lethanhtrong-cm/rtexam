@@ -20,38 +20,91 @@ document.addEventListener('ComponentsLoaded', () => {
         btnAutoGenerate.innerHTML = '<i class="fa-solid fa-robot"></i> Trợ lý AI';
     }
 
-    // Logic Đóng/Mở Slide-bar (Push Content)
+    // ==========================================
+    // TÍNH NĂNG 1: THAY ĐỔI KÍCH THƯỚC SIDEBAR
+    // ==========================================
+    if (aiSidebar) {
+        // Tạo thanh kéo (resizer) ở viền trái
+        const resizer = document.createElement('div');
+        resizer.style.width = '6px';
+        resizer.style.height = '100%';
+        resizer.style.position = 'absolute';
+        resizer.style.top = '0';
+        resizer.style.left = '0';
+        resizer.style.cursor = 'col-resize';
+        resizer.style.backgroundColor = 'transparent';
+        resizer.style.zIndex = '10000';
+        resizer.style.transition = 'background-color 0.2s';
+        
+        // Hiệu ứng hover cho thanh kéo
+        resizer.addEventListener('mouseenter', () => resizer.style.backgroundColor = '#cbd5e1');
+        resizer.addEventListener('mouseleave', () => resizer.style.backgroundColor = 'transparent');
+        
+        aiSidebar.appendChild(resizer);
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault(); // Ngăn hiện tượng bôi đen text khi kéo chuột
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            // Tính toán độ rộng mới = Tổng chiều rộng màn hình - Tọa độ X của chuột
+            let newWidth = window.innerWidth - e.clientX;
+            
+            // Giới hạn độ rộng (tối thiểu 320px, tối đa 80% màn hình)
+            if (newWidth < 320) newWidth = 320;
+            if (newWidth > window.innerWidth * 0.8) newWidth = window.innerWidth * 0.8;
+            
+            aiSidebar.style.width = `${newWidth}px`;
+            
+            // Nếu đang mở, đẩy mainContentWrap theo kích thước mới
+            if (aiSidebar.classList.contains('active') && mainContentWrap) {
+                mainContentWrap.style.marginRight = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+            }
+        });
+    }
+
+    // Logic Đóng/Mở Slide-bar cập nhật theo chiều rộng động
     function toggleSidebar() {
         if (!aiSidebar) return;
+        // Lấy chiều rộng hiện tại (hoặc 400 mặc định)
+        const currentWidth = aiSidebar.offsetWidth || 400;
+        
         if (aiSidebar.classList.contains('active')) {
             aiSidebar.classList.remove('active');
-            aiSidebar.style.right = '-400px';
+            aiSidebar.style.right = `-${currentWidth + 20}px`; // Đẩy ra ngoài màn hình
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
         } else {
             aiSidebar.classList.add('active');
             aiSidebar.style.right = '0';
-            if (mainContentWrap) mainContentWrap.style.marginRight = '400px';
+            if (mainContentWrap) mainContentWrap.style.marginRight = `${currentWidth}px`;
         }
     }
 
     if (btnAutoGenerate) btnAutoGenerate.addEventListener('click', toggleSidebar);
     if (closeAiSidebarBtn) closeAiSidebarBtn.addEventListener('click', toggleSidebar);
 
-    // Hàm chuyển đổi định dạng Markdown đơn giản (loại bỏ dấu * thừa)
+    // Hàm chuyển đổi định dạng Markdown đơn giản
     function parseMarkdown(text) {
         let html = text;
-        // Xử lý tiêu đề (Headings)
         html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
         html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
         html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
         html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-        // Xử lý in đậm
         html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Xử lý gạch đầu dòng (List)
         html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
-        // Xử lý in nghiêng
         html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        // Xử lý ngắt dòng
         html = html.replace(/\n/g, '<br>');
         return html;
     }
@@ -61,10 +114,55 @@ document.addEventListener('ComponentsLoaded', () => {
         if (!aiChatBox) return;
         const msgDiv = document.createElement('div');
         msgDiv.className = `chat-message ${sender}`;
+        msgDiv.style.position = 'relative'; // Cần thiết để neo nút Copy
         
-        // Render có xử lý Markdown cho AI, không xử lý với Loader
+        // Chỉ xử lý với tin nhắn hoàn thiện của AI
         if (sender === 'ai' && !text.includes('Đang suy nghĩ')) {
             msgDiv.innerHTML = parseMarkdown(text);
+            msgDiv.style.paddingRight = '35px'; // Tránh chữ đè lên nút copy
+            
+            // ==========================================
+            // TÍNH NĂNG 2: NÚT COPY CHO AI
+            // ==========================================
+            const copyBtn = document.createElement('button');
+            copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+            copyBtn.title = "Sao chép câu trả lời";
+            
+            // Chỉnh style trực tiếp cho nút copy
+            Object.assign(copyBtn.style, {
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                background: 'transparent',
+                border: 'none',
+                color: '#64748b',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                transition: 'color 0.2s'
+            });
+            
+            copyBtn.addEventListener('mouseenter', () => copyBtn.style.color = '#084298');
+            copyBtn.addEventListener('mouseleave', () => copyBtn.style.color = '#64748b');
+
+            // Xử lý sự kiện khi bấm Copy
+            copyBtn.addEventListener('click', async () => {
+                try {
+                    // Copy văn bản text thô ban đầu (chưa bị biến thành thẻ HTML)
+                    await navigator.clipboard.writeText(text); 
+                    
+                    // Đổi icon thành dấu Check để báo thành công
+                    copyBtn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i>';
+                    
+                    // Trả lại icon cũ sau 2 giây
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                    }, 2000);
+                } catch (err) {
+                    console.error('Lỗi khi copy:', err);
+                }
+            });
+
+            msgDiv.appendChild(copyBtn);
         } else {
             msgDiv.innerHTML = text.replace(/\n/g, '<br>');
         }
