@@ -337,7 +337,6 @@ export function renderPaymentHistory() {
                 ? `<span style="background: #ffedd5; color: #b45309; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">Gói PRO</span>`
                 : `<span style="background: #e0f2fe; color: #0369a1; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px;">Gói PLUS</span>`;
 
-            // BỔ SUNG NÚT XÓA BẢN GHI CHO CẢ 2 TRẠNG THÁI (ĐANG CHỜ / ĐÃ XỬ LÝ)
             const actionHtml = data.status === "pending"
                 ? `<div style="display:flex; gap:6px; justify-content:center; align-items:center;">
                      <button class="btn-modern-action btn-approve-tier" data-id="${data.uid}" data-email="${email}" data-tier="plus" style="background: #0ea5e9; color: white; border: none; padding: 6px 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer; transition: 0.2s;" title="Duyệt cấp quyền Plus"><i class="fa-solid fa-check"></i> Plus</button>
@@ -420,18 +419,17 @@ export function renderUserList() {
 
     paginatedUsers.forEach(user => {
         let currentStt = stt++;
-        let badgeClass = 'badge-normal';
-        let badgeText = 'Thường';
-
+        
+        // CẬP NHẬT GIAO DIỆN HUY HIỆU (BADGE) VỚI MÀU SẮC PHÂN BIỆT RÕ RÀNG
+        let statusBadgeHtml = '';
         if (user.isBanned) {
-            badgeClass = 'badge-banned';
-            badgeText = 'Bị Khóa';
+            statusBadgeHtml = `<span style="background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; border: 1px solid #fecaca; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: inline-block;">Bị Khóa 🚫</span>`;
         } else if (user.vipTier === 'pro') {
-            badgeClass = 'badge-vip';
-            badgeText = 'PRO 👑';
+            statusBadgeHtml = `<span style="background: #ffedd5; color: #b45309; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; border: 1px solid #fed7aa; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: inline-block;">PRO 👑</span>`;
         } else if (user.vipTier === 'plus') {
-            badgeClass = 'badge-vip'; 
-            badgeText = 'PLUS ✨';
+            statusBadgeHtml = `<span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; border: 1px solid #bae6fd; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: inline-block;">PLUS ✨</span>`;
+        } else {
+            statusBadgeHtml = `<span style="background: #f8fafc; color: #64748b; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid #e2e8f0; display: inline-block;">Thường 👤</span>`;
         }
 
         const firstLetter = user.email.charAt(0);
@@ -506,6 +504,12 @@ export function renderUserList() {
             `;
         }
 
+        // BỔ SUNG NÚT XÓA CHUYỂN KHOẢN NẾU TÀI KHOẢN NẰM TRONG DANH SÁCH LỌC
+        let deleteCkBtn = '';
+        if (userState.allPaymentUIDs.has(user.userId)) {
+            deleteCkBtn = `<button class="btn-user-action btn-delete-payment-record" data-id="${user.userId}" style="${baseBtnStyle} background: #fecaca; color: #dc2626; box-shadow: 0 2px 5px rgba(220,38,38,0.2);" ${hoverEffect} title="Xóa thông tin báo CK của tài khoản này"><i class="fa-solid fa-file-invoice-dollar"></i> Xóa CK</button>`;
+        }
+
         const isChecked = userState.selectedUserIds.has(user.userId) ? 'checked' : '';
 
         const actionButtonsHtml = `
@@ -513,6 +517,7 @@ export function renderUserList() {
             ${vipActionButtonsHtml}
             <button class="btn-user-action btn-user-history btn-history" data-email="${user.email}" style="${historyStyle}" ${hoverEffect}>📊 Lịch Sử</button>
             <button class="btn-user-action btn-export-excel" data-email="${user.email}" style="${excelStyle}" ${hoverEffect} title="Tải Excel Lịch sử & XP"><i class="fa-solid fa-file-excel"></i> Tải XP</button>
+            ${deleteCkBtn}
             <button class="btn-user-action ${banBtnClass} btn-toggle-ban" data-id="${user.userId}" data-banned="${user.isBanned}" style="${banStyle}" ${hoverEffect}>${banBtnText}</button>
         `;
 
@@ -533,7 +538,7 @@ export function renderUserList() {
                         <div class="user-avatar-placeholder" style="background-color: ${getAvatarColor(firstLetter)}; width: 35px; height: 35px; font-size: 16px;">
                             ${firstLetter}
                         </div>
-                        <span class="badge ${badgeClass}" style="padding: 3px 6px; font-size: 10px; margin-top: -3px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">${badgeText}</span>
+                        ${statusBadgeHtml}
                     </div>
                 </div>
             </td>
@@ -560,10 +565,10 @@ export function renderUserList() {
             </td>
             
             <td class="text-center desktop-status-td">
-                <span class="badge ${badgeClass}" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);">${badgeText}</span>
+                ${statusBadgeHtml}
             </td>
             <td class="text-center desktop-action-td">
-                <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;">
+                <div class="user-action-group" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
                     ${actionButtonsHtml}
                 </div>
             </td>
