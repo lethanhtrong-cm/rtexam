@@ -14,6 +14,15 @@
         * { box-sizing: border-box !important; }
         html, body { max-width: 100vw; overflow-x: hidden; margin: 0; padding: 0; }
 
+        /* TỰ ĐỘNG THU NHỎ TỶ LỆ TRÊN MÀN HÌNH VỪA VÀ NHỎ ĐỂ CHỐNG DỒN NÚT */
+        @media (min-width: 769px) and (max-width: 1440px) { body { zoom: 0.85; } }
+        @media (min-width: 769px) and (max-width: 1100px) { body { zoom: 0.75; } }
+        
+        /* CHỐNG DỒN Ô, CHỐNG RỚT DÒNG CHO CÁC BẢNG NẾU THIẾU CHIỀU NGANG */
+        .table-container { overflow-x: auto !important; max-width: 100%; width: 100%; }
+        .admin-table { min-width: 1100px !important; }
+        .admin-table th, .admin-table td { white-space: nowrap !important; }
+
         /* MÀN HÌNH KHÓA ĐĂNG NHẬP ADMIN */
         #admin-login-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -583,14 +592,16 @@
             let recentCurrentPage = 1;
             const recentItemsPerPage = 10;
             
-            let vipStatusMap = new Set();
+            // Dùng Map để lưu chính xác tier của từng email
+            let vipStatusMap = new Map();
 
             onSnapshot(collection(db, "users"), (snap) => {
                 vipStatusMap.clear();
                 snap.forEach(docSnap => {
                     const u = docSnap.data();
-                    if (u.isVip && u.email) {
-                        vipStatusMap.add(u.email.toLowerCase());
+                    let tier = u.vipTier || (u.isVip ? 'plus' : null); // Fallback sang plus nếu là vip cũ
+                    if (tier && u.email) {
+                        vipStatusMap.set(u.email.toLowerCase(), tier);
                     }
                 });
                 if (allRecentResults.length > 0) renderRecentExams();
@@ -668,10 +679,17 @@
                     const examCode = data.examId || data.examCode || 'Không rõ';
                     const email = data.email || 'Ẩn danh';
 
+                    // CẬP NHẬT RENDER HUY HIỆU THEO TRẠNG THÁI MỚI (THƯỜNG/PLUS/PRO)
                     const isVip = email !== 'Ẩn danh' && vipStatusMap.has(email.toLowerCase());
-                    const vipBadge = isVip 
-                        ? `<span style="background: #fef08a; color: #a16207; font-size: 10.5px; font-weight: 800; padding: 3px 6px; border-radius: 6px; margin-left: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: nowrap;">VIP 👑</span>`
-                        : `<span style="background: #f1f5f9; color: #64748b; font-size: 10.5px; font-weight: 700; padding: 3px 6px; border-radius: 6px; margin-left: 8px; border: 1px solid #e2e8f0; white-space: nowrap;">Thường 👤</span>`;
+                    const userTier = isVip ? vipStatusMap.get(email.toLowerCase()) : null;
+
+                    let vipBadge = `<span style="background: #f8fafc !important; color: #64748b !important; padding: 4px 8px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 700 !important; border: 1px solid #e2e8f0 !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; margin-left: 8px; line-height: 1 !important;"><i class="fa-solid fa-user" style="color: #94a3b8; margin-right: 4px;"></i>Thường</span>`;
+                    
+                    if (userTier === 'pro') {
+                        vipBadge = `<span style="background: #ffedd5 !important; color: #b45309 !important; padding: 4px 8px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 800 !important; border: 1px solid #fed7aa !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; margin-left: 8px; line-height: 1 !important;"><i class="fa-solid fa-crown" style="color: #f59e0b; margin-right: 4px;"></i>PRO</span>`;
+                    } else if (userTier === 'plus') {
+                        vipBadge = `<span style="background: #e0f2fe !important; color: #0369a1 !important; padding: 4px 8px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 800 !important; border: 1px solid #bae6fd !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; margin-left: 8px; line-height: 1 !important;"><i class="fa-solid fa-star" style="color: #0ea5e9; margin-right: 4px;"></i>PLUS</span>`;
+                    }
 
                     tbody.innerHTML += `
                         <tr style="transition: background 0.2s; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
