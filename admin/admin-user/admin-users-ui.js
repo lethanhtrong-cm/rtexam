@@ -548,7 +548,7 @@ export function renderUserList() {
             
             <td class="text-center desktop-only-cell" style="font-weight: 600; color: #64748b;">${currentStt}</td>
             
-            <td style="width: 100%;">
+            <td>
                 <div class="user-email-cell" style="display: flex; align-items: flex-start; width: 100%;">
                     <div class="user-avatar-placeholder desktop-only-cell" style="background-color: ${getAvatarColor(firstLetter)}; margin-top: 5px; flex-shrink: 0;">
                         ${firstLetter}
@@ -570,7 +570,7 @@ export function renderUserList() {
             <td class="text-center desktop-status-td">
                 ${statusBadgeHtml}
             </td>
-            <td class="text-center desktop-action-td">
+            <td class="text-center desktop-action-td" style="min-width: 320px;">
                 <!-- Ép cứng bố cục flex-direction: row để chống dồn nút dọc -->
                 <div class="user-action-group" style="display: flex !important; flex-direction: row !important; gap: 4px !important; justify-content: center !important; align-items: center !important; flex-wrap: wrap !important;">
                     ${actionButtonsHtml}
