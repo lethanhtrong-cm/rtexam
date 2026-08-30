@@ -14,31 +14,30 @@ document.addEventListener('ComponentsLoaded', () => {
 
     let chatHistory = [];
     let isFirstOpen = true;
-    let globalAiTier = 'free'; // Biến toàn cục lưu trữ hạng tài khoản hiện tại cho module AI
+    let globalAiTier = 'free'; 
 
     // ==========================================
     // TÍNH NĂNG: BỘ ĐẾM KÝ TỰ & LƯỢT HỎI REAL-TIME
     // ==========================================
-    // 1. Khởi tạo bộ đếm ký tự
+    // 1. Khởi tạo bộ đếm ký tự (Vẫn giữ ở dưới ô chat)
     const charCounter = document.createElement('div');
     charCounter.id = 'aiCharCounter';
     charCounter.style.cssText = "font-size: 0.8rem; color: #64748b; text-align: right; margin-top: 6px; padding-right: 5px; display: none; font-weight: 600; transition: color 0.2s;";
     charCounter.innerText = "0/1000";
 
-    // 2. Khởi tạo huy hiệu hiển thị số lượt hỏi còn lại (MỚI)
+    // 2. ĐÃ SỬA: Đưa huy hiệu trạng thái & số lượt lên Top Header của Sidebar
     const queryCounterUI = document.createElement('div');
     queryCounterUI.id = 'aiQueryCounterUI';
-    queryCounterUI.style.cssText = "font-size: 0.8rem; color: #0369a1; background: #e0f2fe; padding: 4px 10px; border-radius: 12px; display: none; width: fit-content; margin-bottom: 8px; font-weight: 600; border: 1px solid #bae6fd; transition: all 0.3s ease;";
+    queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; margin-right: 15px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap;";
+
+    if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
+        // Chèn huy hiệu vào thanh Header, ngay trước nút Đóng X
+        closeAiSidebarBtn.parentNode.insertBefore(queryCounterUI, closeAiSidebarBtn);
+    }
     
     if (aiChatInput && aiChatInput.parentNode) {
-        // Ép giới hạn nhập tối đa 1.000 ký tự trên thẻ HTML
         aiChatInput.setAttribute('maxlength', '1000');
-        
-        // Chèn các bộ đếm vào UI
-        aiChatInput.parentNode.insertBefore(queryCounterUI, aiChatInput);
         aiChatInput.parentNode.insertBefore(charCounter, aiChatInput.nextSibling);
-        
-        // Lắng nghe sự kiện gõ phím
         aiChatInput.addEventListener('input', updateCharCounterUI);
     }
 
@@ -63,23 +62,30 @@ document.addEventListener('ComponentsLoaded', () => {
         }
     }
 
-    // Hàm cập nhật Huy hiệu số lượt hỏi
+    // ĐÃ SỬA: Hàm cập nhật hiển thị Gói cước và Số lượt trên Header
     function updateQueryCounterDisplay(remaining, maxLimit, tier) {
         if (!queryCounterUI) return;
+        queryCounterUI.style.display = 'flex';
+        
+        let tierColor = '#4ade80'; // Xanh lá sáng cho Free
+        let tierIcon = '<i class="fa-solid fa-paper-plane"></i>';
+        
+        if (tier === 'plus') { 
+            tierColor = '#60a5fa'; // Xanh dương sáng cho Plus
+            tierIcon = '<i class="fa-solid fa-shield-halved"></i>'; 
+        }
+        if (tier === 'pro') { 
+            tierColor = '#fcd34d'; // Vàng sáng cho Pro
+            tierIcon = '<i class="fa-solid fa-crown"></i>'; 
+        }
+
         if (tier === 'pro') {
-            queryCounterUI.style.display = 'none'; // Pro không cần xem bộ đếm
+            queryCounterUI.innerHTML = `<span style="color: ${tierColor};">${tierIcon} PRO</span> <span style="opacity: 0.4; font-weight: 300;">|</span> <span><i class="fa-solid fa-bolt" style="color: #fcd34d;"></i> Không giới hạn</span>`;
         } else {
-            queryCounterUI.style.display = 'inline-block';
             if (remaining <= 0) {
-                queryCounterUI.style.color = '#ef4444';
-                queryCounterUI.style.background = '#fef2f2';
-                queryCounterUI.style.borderColor = '#fecaca';
-                queryCounterUI.innerHTML = `<i class="fa-solid fa-bolt"></i> Đã hết lượt hỏi hôm nay`;
+                queryCounterUI.innerHTML = `<span style="color: ${tierColor};">${tierIcon} ${tier.toUpperCase()}</span> <span style="opacity: 0.4; font-weight: 300;">|</span> <span style="color: #fca5a5;"><i class="fa-solid fa-bolt"></i> Hết lượt</span>`;
             } else {
-                queryCounterUI.style.color = '#0369a1';
-                queryCounterUI.style.background = '#e0f2fe';
-                queryCounterUI.style.borderColor = '#bae6fd';
-                queryCounterUI.innerHTML = `<i class="fa-solid fa-bolt"></i> Còn ${remaining}/${maxLimit} lượt hỏi`;
+                queryCounterUI.innerHTML = `<span style="color: ${tierColor};">${tierIcon} ${tier.toUpperCase()}</span> <span style="opacity: 0.4; font-weight: 300;">|</span> <span><i class="fa-solid fa-bolt" style="color: #fcd34d;"></i> Còn ${remaining}/${maxLimit} lượt</span>`;
             }
         }
     }
@@ -323,7 +329,6 @@ document.addEventListener('ComponentsLoaded', () => {
 
                     const remaining = maxLimit - usedCount;
 
-                    // MỚI: Gọi cập nhật huy hiệu hiển thị bên trong chatbox
                     updateQueryCounterDisplay(remaining, maxLimit, tier);
 
                     if (tier === 'pro') {
@@ -476,7 +481,7 @@ document.addEventListener('ComponentsLoaded', () => {
                         if (currentAiCount >= maxLimit) {
                             alert("Bạn đã hết lượt hỏi AI trong ngày hôm nay!");
                             btnSendAi.disabled = false;
-                            updateQueryCounterDisplay(0, maxLimit, tier); // Cập nhật lại UI phòng lỗi hiển thị
+                            updateQueryCounterDisplay(0, maxLimit, tier);
                             return; 
                         }
                     }
@@ -546,7 +551,6 @@ document.addEventListener('ComponentsLoaded', () => {
                             updateData.aiDailyCount = currentAiCount + 1;
                             updateData.aiLastUsedDate = todayStr;
                             
-                            // MỚI: Trừ lùi và cập nhật huy hiệu Real-time ngay sau khi gửi thành công
                             updateQueryCounterDisplay(maxLimit - (currentAiCount + 1), maxLimit, globalAiTier);
                         }
                         await updateDoc(doc(db, "users", auth.currentUser.uid), updateData);
