@@ -32,7 +32,7 @@
     </div>
     
     <div class="profile-column">
-        <div class="card" style="height: 100%;">
+        <div class="card">
             <h3><i class="fa-solid fa-pen-to-square"></i> Cập nhật hồ sơ</h3>
             <form id="updateProfileForm">
                 <div class="form-group">
@@ -46,6 +46,68 @@
                 </div>
                 <button type="submit" id="btnUpdateProfile" class="btn-primary">Lưu thay đổi</button>
             </form>
+        </div>
+
+        <!-- BỔ SUNG: Khối hiển thị quyền lợi gói cước hiện tại -->
+        <div class="card" style="margin-top: 24px;">
+            <h3><i class="fa-solid fa-gift" style="color: #10b981;"></i> Quyền lợi của bạn</h3>
+            
+            <!-- Trạng thái Gói Free -->
+            <div id="benefits-free" style="display: block; padding-top: 10px;">
+                <h5 style="color: #64748b; margin: 0 0 12px 0; font-size: 1rem;">Gói hiện tại: <span style="color: #475569; font-weight: 700;">FREE</span></h5>
+                <ul style="list-style: none; padding: 0; margin: 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                        <i class="fa-solid fa-check" style="color: #10b981; margin-top: 4px;"></i> 
+                        <span>Làm đề không giới hạn.</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; color: #94a3b8;">
+                        <i class="fa-solid fa-minus" style="margin-top: 4px;"></i> 
+                        <span>Xem lại đáp án, giải thích & lịch sử (Cần nâng cấp).</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #94a3b8;">
+                        <i class="fa-solid fa-minus" style="margin-top: 4px;"></i> 
+                        <span>Trợ lý AI hỗ trợ tra cứu thông tin (Cần nâng cấp).</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Trạng thái Gói Plus -->
+            <div id="benefits-plus" style="display: none; background: #eff6ff; padding: 15px; border-radius: 8px; border: 1px solid #bfdbfe; margin-top: 10px;">
+                <h5 style="color: #1d4ed8; margin: 0 0 12px 0; font-size: 1rem;">Gói hiện tại: <span style="font-weight: 800;">PLUS</span></h5>
+                <ul style="list-style: none; padding: 0; margin: 0; color: #1e3a8a; font-size: 0.95rem; line-height: 1.6;">
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                        <i class="fa-solid fa-check" style="color: #3b82f6; margin-top: 4px;"></i> 
+                        <span>Làm đề không giới hạn.</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                        <i class="fa-solid fa-check" style="color: #3b82f6; margin-top: 4px;"></i> 
+                        <span>Xem lại đáp án, giải thích & lịch sử đầy đủ.</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; color: #94a3b8;">
+                        <i class="fa-solid fa-minus" style="margin-top: 4px;"></i> 
+                        <span>Trợ lý AI hỗ trợ tra cứu thông tin (Cần nâng cấp Pro).</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Trạng thái Gói Pro -->
+            <div id="benefits-pro" style="display: none; background: #fff7ed; padding: 15px; border-radius: 8px; border: 1px solid #fed7aa; margin-top: 10px;">
+                <h5 style="color: #c2410c; margin: 0 0 12px 0; font-size: 1rem;">Gói hiện tại: <span style="font-weight: 800;">PRO</span> <i class="fa-solid fa-crown" style="color: #f59e0b;"></i></h5>
+                <ul style="list-style: none; padding: 0; margin: 0; color: #9a3412; font-size: 0.95rem; line-height: 1.6;">
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                        <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 4px;"></i> 
+                        <span>Làm đề không giới hạn.</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                        <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 4px;"></i> 
+                        <span>Xem lại đáp án, giải thích & lịch sử đầy đủ.</span>
+                    </li>
+                    <li style="display: flex; align-items: flex-start; gap: 10px;">
+                        <i class="fa-solid fa-check" style="color: #f59e0b; margin-top: 4px;"></i> 
+                        <span>Trợ lý AI hỗ trợ tra cứu thông tin, kiến thức chuyên sâu.</span>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
