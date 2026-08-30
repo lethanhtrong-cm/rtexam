@@ -168,28 +168,41 @@ document.addEventListener('ComponentsLoaded', () => {
     // Hàm render tin nhắn
     function appendMessage(sender, text) {
         if (!aiChatBox) return;
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `chat-message ${sender}`;
-        msgDiv.style.position = 'relative'; 
-        
+
+        // Xử lý riêng cho AI để tách nút Copy xuống bên dưới
         if (sender === 'ai' && !text.includes('Đang suy nghĩ')) {
+            // Wrapper chứa cả khung chat và nút copy
+            const wrapperDiv = document.createElement('div');
+            wrapperDiv.style.display = 'flex';
+            wrapperDiv.style.flexDirection = 'column';
+            wrapperDiv.style.alignSelf = 'flex-start'; // Căn lề trái
+            wrapperDiv.style.maxWidth = '85%';
+            wrapperDiv.style.marginBottom = '15px';
+
+            // Khung chat chính
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${sender}`;
+            msgDiv.style.marginBottom = '4px'; // Khoảng cách nhỏ với nút Copy bên dưới
+            msgDiv.style.maxWidth = '100%'; // Chiếm hết bề ngang của wrapper
             msgDiv.innerHTML = parseMarkdown(text);
-            msgDiv.style.paddingRight = '35px'; 
+            
+            // Khu vực chứa nút chức năng (bên dưới ngoài khung chat)
+            const actionRow = document.createElement('div');
+            actionRow.style.paddingLeft = '5px';
             
             const copyBtn = document.createElement('button');
-            copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
-            copyBtn.title = "Sao chép câu trả lời";
+            copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
             
             Object.assign(copyBtn.style, {
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
                 background: 'transparent',
                 border: 'none',
                 color: '#64748b',
                 cursor: 'pointer',
-                fontSize: '1rem',
-                transition: 'color 0.2s'
+                fontSize: '0.85rem',
+                transition: 'color 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
             });
             
             copyBtn.addEventListener('mouseenter', () => copyBtn.style.color = '#084298');
@@ -197,22 +210,34 @@ document.addEventListener('ComponentsLoaded', () => {
 
             copyBtn.addEventListener('click', async () => {
                 try {
-                    await navigator.clipboard.writeText(text); 
-                    copyBtn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i>';
+                    // Loại bỏ hoàn toàn dấu sao (*) và dấu thăng (#) trước khi copy
+                    const cleanText = text.replace(/[*#]/g, ''); 
+                    
+                    await navigator.clipboard.writeText(cleanText); 
+                    copyBtn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i> Đã chép';
                     setTimeout(() => {
-                        copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                        copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i> Sao chép';
                     }, 2000);
                 } catch (err) {
                     console.error('Lỗi khi copy:', err);
                 }
             });
 
-            msgDiv.appendChild(copyBtn);
+            // Gắn vào Wrapper
+            actionRow.appendChild(copyBtn);
+            wrapperDiv.appendChild(msgDiv);
+            wrapperDiv.appendChild(actionRow);
+            
+            aiChatBox.appendChild(wrapperDiv);
+
         } else {
+            // Xử lý mặc định cho User hoặc thông báo "Đang suy nghĩ..."
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${sender}`;
             msgDiv.innerHTML = text.replace(/\n/g, '<br>');
+            aiChatBox.appendChild(msgDiv);
         }
         
-        aiChatBox.appendChild(msgDiv);
         aiChatBox.scrollTop = aiChatBox.scrollHeight;
     }
 
@@ -234,7 +259,7 @@ document.addEventListener('ComponentsLoaded', () => {
                 role: "user",
                 parts: [{ text: prompt }]
             });
-            saveChatHistory(); // Lưu ngay khi người dùng gửi
+            saveChatHistory(); 
 
             const loadingId = 'loading-' + Date.now();
             appendMessage('ai', `<span id="${loadingId}"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang suy nghĩ...</span>`);
@@ -272,6 +297,12 @@ document.addEventListener('ComponentsLoaded', () => {
                     role: "model",
                     parts: [{ text: aiResponseText }]
                 });
+
+                // Giới hạn bộ nhớ: Chỉ giữ lại 6 tin nhắn (3 vòng hỏi-đáp) mới nhất để tiết kiệm chi phí API
+                if (chatHistory.length > 6) {
+                    chatHistory = chatHistory.slice(-6);
+                }
+
                 saveChatHistory(); // Lưu ngay khi AI trả lời thành công
 
                 if (usedTokens > 0) {
