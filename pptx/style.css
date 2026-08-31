@@ -1,5 +1,4 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-/* Đổi màu nền tối hơn một chút để làm nổi bật 2 khối trắng */
 body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
 /* Topbar */
@@ -14,22 +13,27 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .badge-free { background: #e2e8f0; color: #475569; }
 .badge-plus { background: #dbeafe; color: #1d4ed8; }
 .badge-pro { background: #ffedd5; color: #c2410c; }
+.btn-back-hero { background: #334155; color: white; border: none; padding: 6px 15px; border-radius: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-size: 0.9rem; }
+.btn-back-hero:hover { background: #475569; color: #60a5fa; }
 
-/* Layout chính: Đã thêm khoảng cách (padding, gap) */
-.pptx-layout { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 20px; }
+/* --- HERO PAGE STYLES --- */
+.hero-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; overflow-y: auto; animation: fadeIn 0.4s ease; }
+.hero-header { text-align: center; margin-bottom: 50px; }
+.hero-header h2 { font-size: 2.2rem; color: #0f172a; margin-bottom: 10px; font-weight: 800; }
+.hero-header p { font-size: 1.1rem; color: #64748b; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+.category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; width: 100%; max-width: 1100px; }
+.category-card { background: white; border-radius: 16px; padding: 30px 20px; text-align: center; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.02); cursor: pointer; transition: all 0.3s ease; }
+.category-card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.08); border-color: #cbd5e1; }
+.card-icon { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; transition: transform 0.3s; }
+.category-card:hover .card-icon { transform: scale(1.1); }
+.category-card h3 { color: #1e293b; font-size: 1.25rem; margin-bottom: 10px; font-weight: 700; }
+.category-card p { color: #64748b; font-size: 0.95rem; line-height: 1.5; }
+
+/* Layout chính: Viewer */
+.pptx-layout { flex: 1; overflow: hidden; padding: 20px; gap: 20px; animation: fadeIn 0.4s ease; }
 
 /* Sidebar: Thêm viền, bo góc, đổ bóng */
-.pptx-sidebar { 
-    width: 320px; 
-    background: white; 
-    border: 1px solid #cbd5e1; 
-    border-radius: 16px; 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-    display: flex; 
-    flex-direction: column; 
-    overflow-y: auto; 
-}
-/* Tùy chỉnh thanh cuộn cho Sidebar */
+.pptx-sidebar { width: 320px; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; overflow-y: auto; }
 .pptx-sidebar::-webkit-scrollbar { width: 6px; }
 .pptx-sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 .pptx-sidebar::-webkit-scrollbar-track { background: transparent; }
@@ -42,18 +46,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .pptx-item i { color: #f59e0b; font-size: 1.3rem; }
 
 /* Main Area: Thêm viền, bo góc, đổ bóng */
-.pptx-main { 
-    flex: 1; 
-    position: relative; 
-    background: white; 
-    border: 1px solid #cbd5e1; 
-    border-radius: 16px; 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    overflow: hidden; /* Cực kỳ quan trọng để iframe không đè lên góc bo tròn */
-}
+.pptx-main { flex: 1; position: relative; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
 /* Khối iframe container */
 .iframe-container { position: relative; width: 100%; height: 100%; border-radius: 16px; overflow: hidden; }
@@ -72,25 +65,18 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     z-index: 10;
-    pointer-events: none; /* Cho phép click xuyên qua để tương tác slide */
+    pointer-events: none;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="550" height="320" opacity="0.10" transform="rotate(-25)"><text x="40" y="160" font-family="Arial" font-size="22" font-weight="bold" fill="%230f172a">ktv3mien.com</text></svg>');
     background-repeat: repeat;
 }
 
-@media print {
-    body {
-        display: none !important;
-    }
-}
-
-@keyframes popIn {
-    0% { transform: scale(0.9); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
+@media print { body { display: none !important; } }
+@keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
 /* Responsive cho thiết bị di động / máy tính bảng */
 @media (max-width: 850px) {
     .pptx-layout { flex-direction: column; overflow-y: auto; }
     .pptx-sidebar { width: 100%; height: auto; max-height: 300px; flex-shrink: 0; }
-    .pptx-main { min-height: 400px; } /* Đảm bảo khung chiếu pptx luôn có chiều cao đủ nhìn */
+    .pptx-main { min-height: 400px; }
 }
