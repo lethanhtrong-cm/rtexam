@@ -151,8 +151,8 @@
     </div>
 </div>
 
-<img src="x" onerror="
-    // Hàm tái tạo URL QR Code sạch sẽ
+<svg width="0" height="0" style="display:none;" onload="
+    // Hàm tái tạo URL QR Code sạch sẽ không dùng regex
     window.generateQR = function() {
         const emailEl = document.getElementById('paymentEmail');
         const displayEl = document.getElementById('paymentEmailDisplay');
@@ -164,7 +164,7 @@
         if(emailEl && emailEl.dataset.originalEmail) {
             let fullEmail = emailEl.dataset.originalEmail;
             let username = fullEmail.split('@')[0].toUpperCase();
-            // Lọc bỏ ký tự đặc biệt, chỉ giữ lại chữ và số để chống lỗi App Ngân hàng
+            // Lọc bỏ ký tự đặc biệt, chỉ giữ lại chữ và số
             username = username.replace(/[^A-Z0-9]/g, ''); 
             transferContent = 'NAP ' + username;
             
@@ -174,9 +174,9 @@
 
         const qrImg = document.getElementById('qr-payment');
         if(qrImg) {
-            // Xây dựng lại URL từ đầu để tránh lỗi khi replace
+            // Xây dựng URL chuẩn thay vì dùng replace
             const baseUrl = 'https://img.vietqr.io/image/MB-2070120091994-compact.png';
-            const newSrc = \`\${baseUrl}?amount=\${amount}&addInfo=\${encodeURIComponent(transferContent)}&accountName=LE%20THANH%20TRONG\`;
+            const newSrc = baseUrl + '?amount=' + amount + '&addInfo=' + encodeURIComponent(transferContent) + '&accountName=LE%20THANH%20TRONG';
             
             if(qrImg.src !== newSrc) {
                 qrImg.src = newSrc;
@@ -230,14 +230,13 @@
         }
     };
     
-    // ĐÃ SỬA: Dùng setInterval để bắt chính xác thời điểm Firebase nạp Email vào UI
+    // Dùng setInterval để kiểm tra khi Firebase nạp xong Email
     const checkEmailInterval = setInterval(() => {
         const emailEl = document.getElementById('paymentEmail');
         if(emailEl && emailEl.innerText && emailEl.innerText !== '[Email của bạn]') {
-            // Firebase đã nạp email thành công
             emailEl.dataset.originalEmail = emailEl.innerText.trim();
-            window.generateQR(); // Tạo lại mã QR ngay lập tức
-            clearInterval(checkEmailInterval); // Dừng vòng lặp
+            window.generateQR(); 
+            clearInterval(checkEmailInterval); 
         }
     }, 500);
-" style="display: none;">
+"></svg>
