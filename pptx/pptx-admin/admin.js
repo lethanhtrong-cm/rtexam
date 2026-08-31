@@ -20,7 +20,7 @@ const db = getFirestore(app);
 let editingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Tạm thời bảo mật cơ bản: Phải đăng nhập mới dùng được Admin
+    // Bảo mật cơ bản: Phải đăng nhập mới dùng được Admin
     onAuthStateChanged(auth, (user) => {
         if (!user) {
             alert("Bạn cần đăng nhập bằng tài khoản Quản trị!");
@@ -52,12 +52,16 @@ function loadPptxData() {
             const data = docSnap.data();
             const id = docSnap.id;
 
+            // ĐÃ SỬA: Mã hóa thẻ HTML để chống render nhầm iframe ra bảng Admin
+            const safeTitle = data.title ? data.title.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+            const safeUrl = data.embedUrl ? data.embedUrl.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="font-weight: 600; color: #1e293b;">${data.title}</td>
-                <td class="link-cell">${data.embedUrl}</td>
+                <td style="font-weight: 600; color: #1e293b;">${safeTitle}</td>
+                <td class="link-cell">${safeUrl}</td>
                 <td style="text-align: center;">
-                    <button class="btn-action btn-edit" data-id="${id}" data-title="${data.title}" data-url="${data.embedUrl}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-action btn-edit" data-id="${id}" data-title="${safeTitle}" data-url="${safeUrl}"><i class="fa-solid fa-pen"></i></button>
                     <button class="btn-action btn-delete" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
                 </td>
             `;
@@ -91,11 +95,22 @@ function loadPptxData() {
 
 async function handleSavePptx() {
     const title = document.getElementById('pptx-title').value.trim();
-    const url = document.getElementById('pptx-url').value.trim();
+    let url = document.getElementById('pptx-url').value.trim();
 
     if (!title || !url) {
         alert("Vui lòng nhập đầy đủ tên và link!");
         return;
+    }
+
+    // ĐÃ THÊM: Logic tự động trích xuất Link nếu dán nhầm toàn bộ thẻ <iframe>
+    if (url.toLowerCase().includes('<iframe')) {
+        const match = url.match(/src=["'](.*?)["']/);
+        if (match && match[1]) {
+            url = match[1]; // Bóc tách chính xác phần link bên trong thuộc tính src
+        } else {
+            alert("Không thể trích xuất link từ mã iframe bạn dán. Vui lòng chỉ copy phần đường dẫn bắt đầu bằng https://...");
+            return;
+        }
     }
 
     try {
