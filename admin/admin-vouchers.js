@@ -83,9 +83,17 @@ function initVoucherManager() {
                     statusHtml = '<span style="background:#10b981; color:white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">Đang chạy</span>';
                 }
 
+                // ĐÃ THÊM: Đọc trường tier, mặc định hiển thị PLUS nếu chưa có
+                const tierDisplay = data.tier ? data.tier.toUpperCase() : 'PLUS';
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong style="color: #2563eb; font-size: 15px; border: 1px dashed #2563eb; padding: 4px 8px; border-radius: 6px;">${data.code}</strong></td>
+                    <td>
+                        <strong style="color: #2563eb; font-size: 15px; border: 1px dashed #2563eb; padding: 4px 8px; border-radius: 6px;">${data.code}</strong>
+                        <div style="margin-top: 8px;">
+                            <span style="background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">GÓI ${tierDisplay}</span>
+                        </div>
+                    </td>
                     <td class="text-center"><span style="background:#e0e7ff; color:#3730a3; padding: 4px 8px; border-radius:10px; font-weight:bold;">${data.durationDays} ngày</span></td>
                     <td class="text-center"><strong style="color: ${data.usedCount >= data.maxUses ? '#ef4444' : '#10b981'}; font-size: 15px;">${data.usedCount}</strong> / ${data.maxUses}</td>
                     <td class="text-center" style="font-size: 12px; color:#475569;">
@@ -200,7 +208,8 @@ async function handleCreateVoucher() {
                 isActive: true,
                 maxUses: maxUses,
                 usedCount: 0,
-                usedBy: []
+                usedBy: [],
+                tier: 'plus' // ĐÃ THÊM: Định danh rõ ràng mã này cấp quyền Plus
             };
             await setDoc(doc(db, "vouchers", codeInput), voucherData);
             showToast("Phát hành mã Voucher thành công!", "success");
