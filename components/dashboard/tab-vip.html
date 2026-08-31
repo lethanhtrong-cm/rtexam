@@ -40,7 +40,6 @@
         
         <div style="background: #f8fafc; padding: 20px 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
             <p style="font-size: 0.95rem; color: #64748b; margin-bottom: 12px; margin-top: 0;">Trạng thái tài khoản của bạn:</p>
-            <!-- ĐÃ SỬA: Thay thế thành Badge Gói Free màu xanh lá -->
             <span id="vipStatusTab3" style="display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
                 <i class="fa-solid fa-paper-plane" style="color: #22c55e;"></i> GÓI FREE
             </span>
@@ -232,4 +231,13 @@
             clearInterval(checkEmailInterval); 
         }
     }, 500);
+
+    // ĐÃ THÊM: Script bắt buộc ghi đè lại chữ Pro cũ từ file core bên ngoài thành Gói Free màu xanh lá
+    const overrideStatusInterval = setInterval(() => {
+        const statusEl = document.getElementById('vipStatusTab3');
+        if (statusEl) {
+            statusEl.innerHTML = '<i class="fa-solid fa-paper-plane" style="color: #22c55e;"></i> GÓI FREE';
+            statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;';
+        }
+    }, 100);
 "></svg>
