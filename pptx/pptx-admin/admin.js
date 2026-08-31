@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Load TOÀN BỘ dữ liệu từ DB (Realtime)
+// Load TOÀN BỘ dữ liệu từ DB (Realtime) kèm cơ chế Bắt Lỗi Mạng/Config
 function loadPptxData() {
     const q = query(collection(db, "pptx_lectures"), orderBy("createdAt", "asc"));
     
@@ -74,6 +74,9 @@ function loadPptxData() {
         });
         
         renderAdminTable(); // Gọi hàm render để lọc dữ liệu theo Nhóm hiện tại
+    }, (error) => {
+        console.error("Lỗi truy xuất Firestore:", error);
+        document.getElementById('pptx-tbody').innerHTML = `<tr><td colspan="3" style="text-align: center; color: #ef4444; font-weight: 600;">Lỗi kết nối Database (Mã: 400). Hãy kiểm tra lại firebaseConfig hoặc đảm bảo bạn đã bấm "Tạo Database" trên Firebase Console. Nhấn F12 xem chi tiết.</td></tr>`;
     });
 }
 
@@ -175,7 +178,7 @@ async function handleSavePptx() {
         resetForm();
     } catch (err) {
         console.error("Lỗi lưu trữ:", err);
-        alert("Đã xảy ra lỗi hệ thống.");
+        alert("Đã xảy ra lỗi hệ thống: " + err.message);
     }
 }
 
