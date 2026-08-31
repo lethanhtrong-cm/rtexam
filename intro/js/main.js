@@ -156,8 +156,17 @@ document.addEventListener('click', async (e) => {
         setLoadingBtn(btn, true, 'Đang đăng ký...');
         createUserWithEmailAndPassword(auth, email, password)
             .then(async (userCredential) => {
-                // Đăng ký mới chắc chắn chưa có profile nên chỉ cần gọi setDoc
-                await setDoc(doc(db, "users", userCredential.user.uid), { email: email, isVip: false });
+                // ĐÃ SỬA: Tính toán ngày hết hạn (5 ngày sau) cho tài khoản mới
+                const expireDate = new Date();
+                expireDate.setDate(expireDate.getDate() + 5);
+                
+                // Đăng ký mới chắc chắn chưa có profile nên chỉ cần gọi setDoc với cấu trúc VIP Plus
+                await setDoc(doc(db, "users", userCredential.user.uid), { 
+                    email: email, 
+                    isVip: true,
+                    vipTier: 'plus',
+                    vipExpiration: expireDate.toISOString()
+                });
                 showMsg('register-msg', '✅ Đăng ký thành công! Đang vào hệ thống...', 'success');
                 window.location.href = 'dashboard.html';
             })
@@ -195,11 +204,19 @@ document.addEventListener('click', async (e) => {
         setPersistence(auth, persistenceType)
             .then(() => signInWithEmailAndPassword(auth, email, password))
             .then(async (userCredential) => { 
-                // [ĐÃ SỬA] Kỹ thuật bảo vệ cấu trúc VIP: Chỉ khởi tạo nếu profile không tồn tại
+                // Kỹ thuật bảo vệ cấu trúc VIP: Chỉ khởi tạo nếu profile không tồn tại
                 const userRef = doc(db, "users", userCredential.user.uid);
                 const userSnap = await getDoc(userRef);
                 if (!userSnap.exists()) {
-                    await setDoc(userRef, { email: userCredential.user.email, isVip: false });
+                    // Phòng trường hợp tạo user trên console mà chưa có trong firestore
+                    const expireDate = new Date();
+                    expireDate.setDate(expireDate.getDate() + 5);
+                    await setDoc(userRef, { 
+                        email: userCredential.user.email, 
+                        isVip: true,
+                        vipTier: 'plus',
+                        vipExpiration: expireDate.toISOString()
+                    });
                 }
                 
                 const redirectUrl = localStorage.getItem('redirectAfterLogin');
@@ -233,11 +250,19 @@ document.addEventListener('click', async (e) => {
         setPersistence(auth, persistenceType)
             .then(() => signInWithPopup(auth, new GoogleAuthProvider()))
             .then(async (result) => { 
-                // [ĐÃ SỬA] Kỹ thuật bảo vệ cấu trúc VIP: Chỉ khởi tạo nếu profile không tồn tại
+                // Kỹ thuật bảo vệ cấu trúc VIP: Chỉ khởi tạo nếu profile không tồn tại (Người dùng mới hoàn toàn)
                 const userRef = doc(db, "users", result.user.uid);
                 const userSnap = await getDoc(userRef);
                 if (!userSnap.exists()) {
-                    await setDoc(userRef, { email: result.user.email, isVip: false });
+                    // ĐÃ SỬA: Tính toán ngày hết hạn (5 ngày sau) cho tài khoản mới qua Google
+                    const expireDate = new Date();
+                    expireDate.setDate(expireDate.getDate() + 5);
+                    await setDoc(userRef, { 
+                        email: result.user.email, 
+                        isVip: true,
+                        vipTier: 'plus',
+                        vipExpiration: expireDate.toISOString()
+                    });
                 }
 
                 const redirectUrl = localStorage.getItem('redirectAfterLogin');
