@@ -1,3 +1,36 @@
+<style>
+    /* BỔ SUNG: Tối ưu UI cho thiết bị di động */
+    @media (max-width: 768px) {
+        .vip-layout {
+            flex-direction: column;
+            gap: 15px !important;
+            padding: 5px 10px !important;
+        }
+        .vip-card-box {
+            min-width: 100% !important;
+            padding: 20px !important;
+        }
+        .vip-card-box h3 {
+            font-size: 1.25rem !important;
+            margin-bottom: 15px !important;
+        }
+        table th, table td {
+            padding: 10px 5px !important;
+            font-size: 0.85rem !important;
+        }
+        table span {
+            font-size: 0.75rem !important;
+        }
+        #btnConfirmPayment {
+            font-size: 1rem !important;
+            padding: 12px !important;
+        }
+        #displayPrice {
+            font-size: 1.8rem !important;
+        }
+    }
+</style>
+
 <div class="vip-layout" style="display: flex; flex-wrap: wrap; gap: 24px; max-width: 1100px; margin: 0 auto; padding: 10px 0;">
     <!-- CỘT TRÁI: THÔNG TIN GÓI CƯỚC & QUYỀN LỢI -->
     <div class="card vip-card-box" style="flex: 1; min-width: 350px; background: #fff; border-radius: 16px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9;">
@@ -38,7 +71,6 @@
                     </tr>
                     <tr>
                         <td style="padding: 14px 12px; text-align: left; color: #334155; font-weight: 500;">Trợ lý AI hỗ trợ tra cứu thông tin, kiến thức</td>
-                        <!-- ĐÃ SỬA: Cập nhật hạn mức thực tế cho từng gói cước -->
                         <td style="padding: 14px 12px;"><span style="font-size: 0.85rem; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">1 lượt/ngày</span></td>
                         <td style="padding: 14px 12px; background: #eff6ff;"><span style="font-size: 0.85rem; font-weight: 700; color: #2563eb; background: #dbeafe; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">3 lượt/ngày</span></td>
                         <td style="padding: 14px 12px; background: #fff7ed;"><span style="font-size: 0.85rem; font-weight: 700; color: #ea580c; background: #ffedd5; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">Không giới hạn</span></td>
@@ -80,9 +112,12 @@
             </label>
         </div>
         
-        <!-- Khu vực Mã QR -->
-        <div style="background: #ffffff; padding: 15px; border-radius: 16px; border: 2px dashed #cbd5e1; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+        <!-- Khu vực Mã QR (Có nút Download) -->
+        <div style="background: #ffffff; padding: 15px; border-radius: 16px; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); position: relative;">
             <img id="qr-payment" src="https://img.vietqr.io/image/MB-2070120091994-compact.png?amount=30000&addInfo=NAP%20TIEN&accountName=LE%20THANH%20TRONG" alt="Mã QR Chuyển khoản" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
+            <button onclick="window.downloadQR()" style="margin-top: 15px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;">
+                <i class="fa-solid fa-download"></i> Lưu mã QR
+            </button>
         </div>
         
         <!-- Khung Hướng dẫn chuyển khoản -->
@@ -114,6 +149,7 @@
 </div>
 
 <img src="x" onerror="
+    // Script xử lý UI
     window.updatePaymentUI = function(amount) {
         const labels = document.querySelectorAll('.package-radio');
         const radios = document.querySelectorAll('input[name=\'packageSelect\']');
@@ -131,9 +167,72 @@
         const priceFormatted = parseInt(amount).toLocaleString('vi-VN');
         document.getElementById('displayPrice').innerHTML = priceFormatted + ' ₫<span style=\'font-size: 1.1rem; color: #047857;\'>/tháng</span>';
         
+        // ĐÃ SỬA: Lọc bỏ đuôi @... trong nội dung email
+        const emailEl = document.getElementById('paymentEmail');
+        let transferContent = 'NAP TIEN'; // Fallback
+        if(emailEl && emailEl.innerText !== '[Email của bạn]') {
+            let fullEmail = emailEl.innerText.trim();
+            // Cắt phần trước chữ @
+            let username = fullEmail.split('@')[0];
+            // Cập nhật lại UI hiển thị
+            emailEl.innerText = username;
+            transferContent = 'NAP ' + username;
+        }
+        
+        // Cập nhật đường link QR VietQR
         const qrImg = document.getElementById('qr-payment');
-        const currentSrc = qrImg.src;
-        const newSrc = currentSrc.replace(/amount=\d+/, 'amount=' + amount);
+        let currentSrc = qrImg.src;
+        // Chỉnh giá tiền
+        let newSrc = currentSrc.replace(/amount=\d+/, 'amount=' + amount);
+        // Chỉnh nội dung chuyển khoản
+        newSrc = newSrc.replace(/addInfo=[^&]*/, 'addInfo=' + encodeURIComponent(transferContent));
+        
         qrImg.src = newSrc;
     };
+
+    // ĐÃ THÊM: Script Tải mã QR
+    window.downloadQR = async function() {
+        const qrImg = document.getElementById('qr-payment');
+        if (!qrImg || !qrImg.src) return;
+        
+        try {
+            // Fetch blob để vượt qua CORS (nếu có)
+            const response = await fetch(qrImg.src);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = 'ma-qr-thanh-toan-KTV3Mien.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Xóa url blob để giải phóng bộ nhớ
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Lỗi khi tải mã QR:', error);
+            alert('Không thể tải mã QR trực tiếp. Bạn vui lòng ấn giữ vào ảnh (hoặc click chuột phải) và chọn Lưu hình ảnh.');
+        }
+    };
+    
+    // Gắn listener lắng nghe DOM để tự động cập nhật QR khi Firebase load xong email
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.target.id === 'paymentEmail' && mutation.target.innerText !== '[Email của bạn]') {
+                const checkedRadio = document.querySelector('input[name=\'packageSelect\']:checked');
+                if(checkedRadio) {
+                    window.updatePaymentUI(checkedRadio.value);
+                }
+                observer.disconnect(); // Ngắt sau khi update lần đầu thành công
+            }
+        });
+    });
+    
+    setTimeout(() => {
+        const target = document.getElementById('paymentEmail');
+        if(target) {
+            observer.observe(target, { childList: true, characterData: true, subtree: true });
+        }
+    }, 500);
 " style="display: none;">
