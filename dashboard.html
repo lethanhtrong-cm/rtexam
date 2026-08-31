@@ -8,17 +8,16 @@
     
     <link rel="stylesheet" href="./css/dashboard.css">
 
-    <!-- CSS Tùy chỉnh: Cố định thanh thống kê và bộ lọc đề thi -->
     <style>
         .sticky-toolbar-wrapper {
             position: sticky;
-            top: 70px; /* Bù trừ khoảng cách với thanh Topbar phía trên */
-            z-index: 90; /* Đảm bảo khối này luôn nổi lên trên các thẻ đề thi khi cuộn */
-            background-color: #f8fafc; /* Đồng bộ màu nền để không bị chữ đè lộn xộn */
-            padding-bottom: 10px; /* Tạo khoảng trống hở một chút so với card đề thi */
+            top: 70px;
+            z-index: 90;
+            background-color: #f8fafc;
+            padding-bottom: 10px;
         }
         
-        /* ĐÃ THÊM: Tối ưu Floating Buttons trên Mobile */
+        /* Tối ưu Floating Buttons trên Mobile */
         @media (max-width: 768px) {
             #btn-floating-ai {
                 bottom: 140px !important;
@@ -26,18 +25,88 @@
                 width: 44px !important;
                 height: 44px !important;
             }
-            #btn-floating-ai i {
-                font-size: 1.2rem !important;
-            }
+            #btn-floating-ai i { font-size: 1.2rem !important; }
             #btn-floating-support {
                 bottom: 85px !important;
                 right: 15px !important;
                 width: 44px !important;
                 height: 44px !important;
             }
-            #btn-floating-support i {
-                font-size: 1.2rem !important;
-            }
+            #btn-floating-support i { font-size: 1.2rem !important; }
+        }
+
+        /* THÊM MỚI: CSS Cho thanh công cụ Dashboard Action Bar */
+        .dashboard-action-bar {
+            background: #ffffff;
+            padding: 16px 24px;
+            margin: 20px 24px 0 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            border: 1px solid #e2e8f0;
+        }
+
+        .dash-btn {
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+            border: none;
+            text-decoration: none;
+        }
+
+        /* Nút Nổi bật 1: AI */
+        .dash-btn-ai {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+            animation: superGlow 3s infinite ease-in-out;
+        }
+        .dash-btn-ai:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(124, 58, 237, 0.4); animation: none; color: white; }
+
+        @keyframes superGlow {
+            0%, 100% { box-shadow: 0 0 5px rgba(124, 58, 237, 0.3), 0 0 15px rgba(79, 70, 229, 0.2); }
+            50% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.6), 0 0 25px rgba(253, 224, 71, 0.4); }
+        }
+
+        /* Nút Nổi bật 2: PPTX */
+        .dash-btn-pptx {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            color: white;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+        }
+        .dash-btn-pptx:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(14, 165, 233, 0.4); color: white; }
+
+        /* Vạch ngăn cách */
+        .dash-divider {
+            width: 2px;
+            height: 30px;
+            background: #e2e8f0;
+            margin: 0 5px;
+        }
+
+        /* Nút Phụ */
+        .dash-btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+        .dash-btn-secondary:hover { background: #e2e8f0; color: #1e293b; transform: translateY(-2px); }
+
+        /* Responsive thanh công cụ trên Mobile */
+        @media (max-width: 768px) {
+            .dashboard-action-bar { padding: 15px; margin: 15px 15px 0 15px; gap: 10px; justify-content: center; }
+            .dash-btn { flex: 1; min-width: 140px; font-size: 0.85rem; padding: 10px; }
+            .dash-divider { display: none; } /* Ẩn vạch kẻ trên mobile */
         }
     </style>
 </head>
@@ -45,11 +114,34 @@
 
     <div id="topbar-container"></div>
 
-    <!-- Thêm ID và Transition để xử lý hiệu ứng đẩy nội dung khi mở AI Sidebar -->
     <div class="layout-wrapper" id="main-content-wrap" style="transition: margin-right 0.3s ease;">
         <div id="sidebar-container"></div>
 
         <div class="main-content">
+            
+            <!-- THÊM MỚI: THANH CÔNG CỤ NỔI BẬT ĐƯỢC CHUYỂN TỪ TOPBAR XUỐNG -->
+            <div class="dashboard-action-bar">
+                <!-- Nhóm nổi bật -->
+                <button id="btnAutoGenerate" class="dash-btn dash-btn-ai">
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #fde047;"></i> Trợ lý AI Học thuật
+                </button>
+                <button onclick="window.location.href='./pptx/index.html'" class="dash-btn dash-btn-pptx">
+                    <i class="fa-solid fa-desktop"></i> Thư viện bài giảng
+                </button>
+
+                <!-- Vạch ngăn cách -->
+                <div class="dash-divider"></div>
+
+                <!-- Nhóm công cụ -->
+                <button id="btnRandomExam" class="dash-btn dash-btn-secondary">
+                    <i class="fa-solid fa-dice" style="color: #ef4444;"></i> Tạo đề ngẫu nhiên
+                </button>
+                <button id="topbarNavCreateRoom" class="dash-btn dash-btn-secondary">
+                    <i class="fa-solid fa-users-viewfinder" style="color: #084298;"></i> Tạo phòng
+                </button>
+            </div>
+            <!-- KẾT THÚC THANH CÔNG CỤ -->
+
             <div class="tab-content-container">
                 <div id="tab-exams" class="tab-pane active"></div>
                 <div id="tab-profile" class="tab-pane"></div>
@@ -58,7 +150,6 @@
                 <div id="tab-vip" class="tab-pane"></div>
             </div>
             
-            <!-- Thanh Sticky Rank đã được ẩn theo logic thiết kế mới của Bảng xếp hạng -->
             <div class="sticky-user-rank" id="stickyUserRank" style="display: none;">
                 <p><i class="fa-solid fa-user-astronaut"></i> Thành tích của bạn:</p>
                 <div id="stickyUserStats">Đang tải...</div>
@@ -206,15 +297,12 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- BẮT ĐẦU: KHUNG GIAO DIỆN TRỢ LÝ AI SIDEBAR -->
-    <!-- ========================================== -->
     <style>
         /* CSS cho thanh trượt và tin nhắn */
         #aiSidebar {
             position: fixed;
             top: 0;
-            right: -400px; /* Giấu ra ngoài màn hình */
+            right: -400px; 
             width: 400px;
             height: 100vh;
             background-color: #ffffff;
@@ -226,9 +314,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        #aiSidebar.active {
-            right: 0; /* Trượt vào trong màn hình */
-        }
+        #aiSidebar.active { right: 0; }
 
         .chat-message {
             margin-bottom: 15px;
@@ -240,32 +326,12 @@
             word-wrap: break-word;
         }
 
-        .chat-message.ai {
-            background-color: #f1f5f9;
-            color: #1e293b;
-            align-self: flex-start;
-            border-bottom-left-radius: 2px;
-        }
-
-        .chat-message.user {
-            background-color: #084298;
-            color: #ffffff;
-            align-self: flex-end;
-            border-bottom-right-radius: 2px;
-        }
-
-        .chat-message.ai.error {
-            background-color: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
-        }
+        .chat-message.ai { background-color: #f1f5f9; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .chat-message.user { background-color: #084298; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .chat-message.ai.error { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         
-        /* Reponsive cho Mobile */
         @media (max-width: 768px) {
-            #aiSidebar {
-                width: 100%;
-                right: -100%;
-            }
+            #aiSidebar { width: 100%; right: -100%; }
         }
     </style>
 
@@ -276,23 +342,19 @@
             <button id="closeAiSidebarBtn" style="background: transparent; border: none; color: white; font-size: 1.4rem; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
         </div>
         
-        <!-- AI Chat Box (Khu vực tin nhắn) -->
+        <!-- AI Chat Box -->
         <div id="aiChatBox" style="flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; background: #ffffff;">
-            <!-- Tin nhắn chào mừng mặc định -->
             <div class="chat-message ai">
                 Chào bạn! Tôi là Trợ lý AI chuyên môn. Tôi có thể giúp bạn giải thích thuật ngữ, tra cứu thông số kỹ thuật, hoặc giải đáp các thắc mắc về y học. Bạn cần hỗ trợ gì?
             </div>
         </div>
         
-        <!-- AI Input Area (Khu vực nhập liệu) -->
+        <!-- AI Input Area -->
         <div style="padding: 15px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; gap: 10px; align-items: flex-end;">
             <textarea id="aiChatInput" placeholder="Nhập câu hỏi của bạn..." style="flex: 1; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; resize: none; height: 50px; outline: none; font-family: inherit; font-size: 0.95rem;"></textarea>
             <button id="btnSendAi" style="background: #084298; color: white; border: none; padding: 0 15px; height: 50px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1.1rem;"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
-    <!-- ========================================== -->
-    <!-- KẾT THÚC: KHUNG GIAO DIỆN TRỢ LÝ AI SIDEBAR-->
-    <!-- ========================================== -->
 
     <!-- SCRIPT XỬ LÝ ĐẨY DỮ LIỆU TIN NHẮN LÊN FIRESTORE -->
     <script type="module">
@@ -300,7 +362,6 @@
         import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // Gắn hàm vào window để gọi từ thuộc tính onclick trên nút HTML
         window.submitDirectFeedback = async function() {
             const input = document.getElementById('inputAdminFeedback');
             const message = input.value.trim();
@@ -310,7 +371,6 @@
                 return;
             }
 
-            // Tìm nút bấm để thêm hiệu ứng Loading chống Spam click
             const btn = document.querySelector('button[onclick="submitDirectFeedback()"]');
             const originalHTML = btn ? btn.innerHTML : 'Gửi tin nhắn trực tiếp';
             if (btn) {
@@ -319,7 +379,6 @@
             }
 
             try {
-                // Lấy thông tin email người dùng hiện hành
                 const auth = getAuth();
                 let userEmail = "Khách ẩn danh";
                 if (auth.currentUser && auth.currentUser.email) {
@@ -328,7 +387,6 @@
                     userEmail = localStorage.getItem('userEmail');
                 }
 
-                // Đẩy dữ liệu lên bảng admin_feedbacks
                 await addDoc(collection(db, "admin_feedbacks"), {
                     message: message,
                     userEmail: userEmail,
@@ -343,7 +401,6 @@
                 console.error("Lỗi khi gửi góp ý: ", error);
                 alert("Lỗi kết nối máy chủ. Không thể gửi tin nhắn lúc này!");
             } finally {
-                // Phục hồi lại nút
                 if (btn) {
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
@@ -355,8 +412,6 @@
     <!-- Hệ thống Script Modular -->
     <script src="./js/html-loader.js"></script>
     <script type="module" src="./js/dashboard-core.js"></script>
-    
-    <!-- Cụm Module Chức Năng (Bao gồm File tổng dashboard-exams.js đã được phân tách) -->
     <script type="module" src="./js/dashboard-exam/dashboard-exams.js"></script>
     <script type="module" src="./js/dashboard-profile.js"></script>
     <script type="module" src="./js/dashboard-history.js"></script>
