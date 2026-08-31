@@ -18,10 +18,11 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUserTier = 'free';
-let pptxDataList = []; // Mảng động sẽ nạp từ Firestore
+let pptxDataList = []; // Toàn bộ dữ liệu
+let currentSelectedCategory = null; // Thể loại đang xem
 
 document.addEventListener('DOMContentLoaded', () => {
-    // [THÊM MỚI] Bảo vệ bản quyền: Chặn chuột phải và phím tắt
+    // Bảo vệ bản quyền
     document.addEventListener('contextmenu', event => event.preventDefault());
     document.addEventListener('keydown', event => {
         if (
@@ -32,6 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
         }
     });
+
+    // Bắt sự kiện Click vào Card Chuyên Khoa ở Hero Page
+    document.querySelectorAll('.category-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const catId = card.getAttribute('data-cat');
+            const catName = card.getAttribute('data-name');
+            showViewerPage(catId, catName);
+        });
+    });
+
+    // Bắt sự kiện quay lại Hero Page
+    document.getElementById('btn-back-hero').addEventListener('click', showHeroPage);
 
     // 1. Kiểm tra Auth và Quyền
     onAuthStateChanged(auth, async (user) => {
@@ -48,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentUserTier = tier || 'free';
                     updateAuthUI(currentUserTier, badge);
                     
-                    // 2. Tải danh sách PPTX từ DB (Real-time)
                     fetchPptxFromDatabase();
                 } else {
                     currentUserTier = 'free';
@@ -77,6 +89,37 @@ function updateAuthUI(tier, badgeElement) {
     }
 }
 
+// Logic Chuyển Giao Diện
+function showViewerPage(categoryId, categoryName) {
+    currentSelectedCategory = categoryId;
+    
+    document.getElementById('hero-page').style.display = 'none';
+    document.getElementById('viewer-page').style.display = 'flex';
+    
+    const label = document.getElementById('current-category-label');
+    label.innerText = 'Nhóm: ' + categoryName;
+    label.style.display = 'inline-block';
+    
+    document.getElementById('btn-back-hero').style.display = 'inline-flex';
+    
+    // Gọi lại hàm render để lọc dữ liệu theo Category
+    renderPptxList();
+}
+
+function showHeroPage() {
+    currentSelectedCategory = null;
+    
+    document.getElementById('hero-page').style.display = 'flex';
+    document.getElementById('viewer-page').style.display = 'none';
+    
+    document.getElementById('current-category-label').style.display = 'none';
+    document.getElementById('btn-back-hero').style.display = 'none';
+    
+    // Tắt iframe để dừng load mạng và âm thanh (nếu có)
+    document.getElementById('pptx-viewer').src = '';
+}
+
+// Kéo dữ liệu thực từ Firestore Database
 function fetchPptxFromDatabase() {
     const q = query(collection(db, "pptx_lectures"), orderBy("createdAt", "asc"));
     
@@ -88,7 +131,11 @@ function fetchPptxFromDatabase() {
                 ...docSnap.data()
             });
         });
-        renderPptxList(); 
+        
+        // Chỉ render lại danh sách nếu đang ở màn hình Viewer
+        if (currentSelectedCategory) {
+            renderPptxList(); 
+        }
     });
 }
 
@@ -96,12 +143,19 @@ function renderPptxList() {
     const listContainer = document.getElementById('pptx-list');
     listContainer.innerHTML = '';
     
-    if (pptxDataList.length === 0) {
-        listContainer.innerHTML = '<li style="padding: 20px; color: #64748b; text-align: center;">Chưa có bài giảng nào</li>';
+    // Logic Lọc: Nếu bài giảng cũ không có category, mặc định nó thuộc 'mri'
+    const filteredList = pptxDataList.filter(item => {
+        const itemCat = item.category || 'mri';
+        return itemCat === currentSelectedCategory;
+    });
+    
+    if (filteredList.length === 0) {
+        listContainer.innerHTML = '<li style="padding: 20px; color: #64748b; text-align: center; font-size: 0.95rem;">Chưa có bài giảng nào trong nhóm này.</li>';
+        document.getElementById('pptx-viewer').src = '';
         return;
     }
 
-    pptxDataList.forEach((item, index) => {
+    filteredList.forEach((item, index) => {
         const li = document.createElement('li');
         li.className = 'pptx-item';
         if (index === 0) li.classList.add('active'); 
@@ -117,8 +171,9 @@ function renderPptxList() {
         listContainer.appendChild(li);
     });
 
-    if (pptxDataList.length > 0) {
-        loadPptx(pptxDataList[0].embedUrl);
+    // Auto load bài đầu tiên của danh sách đã lọc
+    if (filteredList.length > 0) {
+        loadPptx(filteredList[0].embedUrl);
     }
 }
 
