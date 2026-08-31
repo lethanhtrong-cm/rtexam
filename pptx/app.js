@@ -21,6 +21,18 @@ let currentUserTier = 'free';
 let pptxDataList = []; // Mảng động sẽ nạp từ Firestore
 
 document.addEventListener('DOMContentLoaded', () => {
+    // [THÊM MỚI] Bảo vệ bản quyền: Chặn chuột phải và phím tắt
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('keydown', event => {
+        if (
+            event.key === 'F12' || 
+            (event.ctrlKey && event.shiftKey && event.key === 'I') || 
+            (event.ctrlKey && (event.key === 'p' || event.key === 's' || event.key === 'c'))
+        ) {
+            event.preventDefault();
+        }
+    });
+
     // 1. Kiểm tra Auth và Quyền
     onAuthStateChanged(auth, async (user) => {
         const badge = document.getElementById('user-status-badge');
@@ -65,7 +77,6 @@ function updateAuthUI(tier, badgeElement) {
     }
 }
 
-// HÀM MỚI: Kéo dữ liệu thực từ Firestore Database
 function fetchPptxFromDatabase() {
     const q = query(collection(db, "pptx_lectures"), orderBy("createdAt", "asc"));
     
@@ -77,7 +88,7 @@ function fetchPptxFromDatabase() {
                 ...docSnap.data()
             });
         });
-        renderPptxList(); // Cập nhật lại UI sau khi có dữ liệu
+        renderPptxList(); 
     });
 }
 
