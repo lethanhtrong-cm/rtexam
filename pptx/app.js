@@ -22,6 +22,7 @@ const FREE_LIMIT = 3;
 const PLUS_LIMIT = 5;
 
 let currentUserTier = 'free';
+let currentUserName = 'Bạn'; // Lưu trữ tên người dùng
 let pptxDataList = []; // Toàn bộ dữ liệu
 let currentSelectedCategory = null; // Thể loại đang xem
 let viewedLectures = []; // Mảng chứa ID các bài giảng đã xem trong phiên
@@ -64,12 +65,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!tier && userData.isVip) tier = 'plus'; 
                     
                     currentUserTier = tier || 'free';
+                    
+                    // Ưu tiên lấy tên đầy đủ, nếu không có lấy tên hiển thị, cuối cùng là email
+                    currentUserName = userData.fullName || userData.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
+                    
                     updateAuthUI(currentUserTier, badge);
                     updateQuotaBanner();
-                    
                     fetchPptxFromDatabase();
                 } else {
                     currentUserTier = 'free';
+                    currentUserName = user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
+                    
                     updateAuthUI('free', badge);
                     updateQuotaBanner();
                     fetchPptxFromDatabase();
@@ -100,10 +106,15 @@ function updateAuthUI(tier, badgeElement) {
 // Cập nhật Khối Banner to trên Hero Page
 function updateQuotaBanner() {
     const banner = document.getElementById('quota-banner');
+    const greetingText = document.getElementById('quota-greeting-text');
     const statusText = document.getElementById('quota-status-text');
     const remainingText = document.getElementById('quota-remaining-text');
 
     if (!banner || !statusText || !remainingText) return;
+
+    if (greetingText) {
+        greetingText.innerHTML = `Xin chào, <strong>${currentUserName}</strong>!`;
+    }
 
     const tierName = currentUserTier.toUpperCase();
     statusText.innerHTML = `Bạn đang sử dụng quyền lợi của gói: <strong>${tierName}</strong>`;
