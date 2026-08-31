@@ -39,11 +39,12 @@
         .dashboard-action-bar {
             background: #ffffff;
             padding: 16px 24px;
-            margin: 20px 24px 0 24px;
+            margin: 24px 24px 20px 24px; /* ĐÃ SỬA: Tạo margin bottom 20px để không bị dính vào card dưới */
             border-radius: 16px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.04);
             display: flex;
             align-items: center;
+            justify-content: center; /* ĐÃ SỬA: Căn giữa các nút */
             gap: 15px;
             flex-wrap: wrap;
             border: 1px solid #e2e8f0;
@@ -104,7 +105,7 @@
 
         /* Responsive thanh công cụ trên Mobile */
         @media (max-width: 768px) {
-            .dashboard-action-bar { padding: 15px; margin: 15px 15px 0 15px; gap: 10px; justify-content: center; }
+            .dashboard-action-bar { padding: 15px; margin: 15px 15px 15px 15px; gap: 10px; justify-content: center; }
             .dash-btn { flex: 1; min-width: 140px; font-size: 0.85rem; padding: 10px; }
             .dash-divider { display: none; } /* Ẩn vạch kẻ trên mobile */
         }
@@ -119,7 +120,7 @@
 
         <div class="main-content">
             
-            <!-- THÊM MỚI: THANH CÔNG CỤ NỔI BẬT ĐƯỢC CHUYỂN TỪ TOPBAR XUỐNG -->
+            <!-- THANH CÔNG CỤ NỔI BẬT ĐƯỢC CHUYỂN TỪ TOPBAR XUỐNG -->
             <div class="dashboard-action-bar">
                 <!-- Nhóm nổi bật -->
                 <button id="btnAutoGenerate" class="dash-btn dash-btn-ai">
