@@ -35,19 +35,35 @@
             #btn-floating-support i { font-size: 1.2rem !important; }
         }
 
-        /* THÊM MỚI: CSS Cho thanh công cụ Dashboard Action Bar */
+        /* CSS Cho thanh công cụ Dashboard Action Bar */
         .dashboard-action-bar {
-            background: #ffffff;
+            /* Hiệu ứng nền gradient nhẹ */
+            background: linear-gradient(135deg, #ffffff 0%, #f4f7fb 100%);
             padding: 16px 24px;
-            margin: 24px 24px 20px 24px; /* ĐÃ SỬA: Tạo margin bottom 20px để không bị dính vào card dưới */
+            /* ĐÃ SỬA: Thu nhỏ margin-top từ 24px xuống 10px */
+            margin: 10px 24px 20px 24px; 
             border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
-            justify-content: center; /* ĐÃ SỬA: Căn giữa các nút */
+            justify-content: center;
             gap: 15px;
             flex-wrap: wrap;
-            border: 1px solid #e2e8f0;
+            /* ĐÃ SỬA: Viền bao quanh rõ ràng hơn */
+            border: 1px solid #cbd5e1; 
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ĐÃ THÊM: Dải viền gradient nhấn mạnh ở cạnh trên */
+        .dashboard-action-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #8b5cf6, #3b82f6, #0ea5e9);
         }
 
         .dash-btn {
@@ -63,6 +79,8 @@
             transition: all 0.25s ease;
             border: none;
             text-decoration: none;
+            position: relative;
+            z-index: 1;
         }
 
         /* Nút Nổi bật 1: AI */
@@ -91,21 +109,21 @@
         .dash-divider {
             width: 2px;
             height: 30px;
-            background: #e2e8f0;
+            background: #cbd5e1;
             margin: 0 5px;
         }
 
         /* Nút Phụ */
         .dash-btn-secondary {
-            background: #f1f5f9;
+            background: #ffffff;
             color: #475569;
             border: 1px solid #cbd5e1;
         }
-        .dash-btn-secondary:hover { background: #e2e8f0; color: #1e293b; transform: translateY(-2px); }
+        .dash-btn-secondary:hover { background: #f1f5f9; color: #1e293b; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
         /* Responsive thanh công cụ trên Mobile */
         @media (max-width: 768px) {
-            .dashboard-action-bar { padding: 15px; margin: 15px 15px 15px 15px; gap: 10px; justify-content: center; }
+            .dashboard-action-bar { padding: 15px; margin: 10px 15px 15px 15px; gap: 10px; justify-content: center; }
             .dash-btn { flex: 1; min-width: 140px; font-size: 0.85rem; padding: 10px; }
             .dash-divider { display: none; } /* Ẩn vạch kẻ trên mobile */
         }
