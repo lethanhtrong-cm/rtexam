@@ -570,7 +570,7 @@ document.addEventListener('ComponentsLoaded', () => {
             wrapperDiv.style.display = 'flex';
             wrapperDiv.style.flexDirection = 'column';
             wrapperDiv.style.alignSelf = 'flex-start';
-            wrapperDiv.style.maxWidth = '85%';
+            wrapperDiv.style.maxWidth = '100%'; // ĐÃ SỬA: Dàn hết 100% chiều ngang khung chat
             wrapperDiv.style.marginBottom = '15px';
 
             const msgDiv = document.createElement('div');
