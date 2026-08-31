@@ -16,8 +16,30 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .btn-back-hero { background: #334155; color: white; border: none; padding: 6px 15px; border-radius: 20px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-size: 0.9rem; }
 .btn-back-hero:hover { background: #475569; color: #60a5fa; }
 
-/* --- HERO PAGE STYLES --- */
-.hero-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; overflow-y: auto; animation: fadeIn 0.4s ease; }
+/* --- HERO PAGE & BANNER STYLES --- */
+.hero-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; overflow-y: auto; animation: fadeIn 0.4s ease; }
+
+.quota-banner { width: 100%; max-width: 1100px; margin-bottom: 40px; padding: 20px 30px; border-radius: 12px; display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: all 0.3s ease; }
+.quota-icon { font-size: 2.8rem; }
+.quota-info { display: flex; flex-direction: column; gap: 6px; }
+.quota-status { font-size: 1.05rem; font-weight: 500; }
+.quota-remaining { font-size: 1.4rem; font-weight: 800; }
+
+.free-banner { background: white; border: 1px solid #cbd5e1; }
+.free-banner .quota-icon { color: #64748b; }
+.free-banner .quota-status { color: #475569; }
+.free-banner .quota-remaining { color: #0f172a; }
+
+.plus-banner { background: #eff6ff; border: 1px solid #bfdbfe; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1); }
+.plus-banner .quota-icon { color: #3b82f6; }
+.plus-banner .quota-status { color: #2563eb; }
+.plus-banner .quota-remaining { color: #1e3a8a; }
+
+.pro-banner { background: #fff7ed; border: 1px solid #fed7aa; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1); }
+.pro-banner .quota-icon { color: #f59e0b; }
+.pro-banner .quota-status { color: #ea580c; }
+.pro-banner .quota-remaining { color: #7c2d12; }
+
 .hero-header { text-align: center; margin-bottom: 50px; }
 .hero-header h2 { font-size: 2.2rem; color: #0f172a; margin-bottom: 10px; font-weight: 800; }
 .hero-header p { font-size: 1.1rem; color: #64748b; max-width: 600px; margin: 0 auto; line-height: 1.6; }
@@ -32,7 +54,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 /* Layout chính: Viewer */
 .pptx-layout { flex: 1; overflow: hidden; padding: 20px; gap: 20px; animation: fadeIn 0.4s ease; }
 
-/* Sidebar: Thêm viền, bo góc, đổ bóng */
+/* Sidebar */
 .pptx-sidebar { width: 320px; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; overflow-y: auto; }
 .pptx-sidebar::-webkit-scrollbar { width: 6px; }
 .pptx-sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -45,7 +67,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .pptx-item.active { background: #eff6ff; color: #1d4ed8; font-weight: 700; box-shadow: inset 3px 0 0 0 #3b82f6; }
 .pptx-item i { color: #f59e0b; font-size: 1.3rem; }
 
-/* Main Area: Thêm viền, bo góc, đổ bóng */
+/* Main Area */
 .pptx-main { flex: 1; position: relative; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 
 /* Khối iframe container */
@@ -60,7 +82,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .btn-upgrade { background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; border: none; padding: 14px 30px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3); }
 .btn-upgrade:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(234, 88, 12, 0.4); }
 
-/* --- BẢO VỆ BẢN QUYỀN (WATERMARK & IN ẤN) --- */
+/* BẢO VỆ BẢN QUYỀN (WATERMARK & IN ẤN) */
 .copyright-watermark {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -74,7 +96,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-/* Responsive cho thiết bị di động / máy tính bảng */
+/* Responsive */
 @media (max-width: 850px) {
     .pptx-layout { flex-direction: column; overflow-y: auto; }
     .pptx-sidebar { width: 100%; height: auto; max-height: 300px; flex-shrink: 0; }
