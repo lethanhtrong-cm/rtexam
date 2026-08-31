@@ -119,7 +119,7 @@ function showHeroPage() {
     document.getElementById('pptx-viewer').src = '';
 }
 
-// Kéo dữ liệu thực từ Firestore Database
+// Kéo dữ liệu thực từ Firestore Database kèm Cơ chế Bắt Lỗi
 function fetchPptxFromDatabase() {
     const q = query(collection(db, "pptx_lectures"), orderBy("createdAt", "asc"));
     
@@ -135,6 +135,12 @@ function fetchPptxFromDatabase() {
         // Chỉ render lại danh sách nếu đang ở màn hình Viewer
         if (currentSelectedCategory) {
             renderPptxList(); 
+        }
+    }, (error) => {
+        console.error("Lỗi truy xuất Firestore:", error);
+        const listContainer = document.getElementById('pptx-list');
+        if(listContainer) {
+            listContainer.innerHTML = '<li style="padding: 20px; color: #ef4444; text-align: center; font-size: 0.95rem; font-weight: 600;">Lỗi kết nối Database. Vui lòng kiểm tra lại cấu hình Firebase hoặc mạng internet của bạn.</li>';
         }
     });
 }
