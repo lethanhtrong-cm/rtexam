@@ -17,6 +17,28 @@
             background-color: #f8fafc; /* Đồng bộ màu nền để không bị chữ đè lộn xộn */
             padding-bottom: 10px; /* Tạo khoảng trống hở một chút so với card đề thi */
         }
+        
+        /* ĐÃ THÊM: Tối ưu Floating Buttons trên Mobile */
+        @media (max-width: 768px) {
+            #btn-floating-ai {
+                bottom: 140px !important;
+                right: 15px !important;
+                width: 44px !important;
+                height: 44px !important;
+            }
+            #btn-floating-ai i {
+                font-size: 1.2rem !important;
+            }
+            #btn-floating-support {
+                bottom: 85px !important;
+                right: 15px !important;
+                width: 44px !important;
+                height: 44px !important;
+            }
+            #btn-floating-support i {
+                font-size: 1.2rem !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -47,12 +69,12 @@
     </div> 
 
     <!-- Nút Floating Mở Trợ lý AI -->
-    <button onclick="document.getElementById('btnAutoGenerate')?.click()" style="position: fixed; bottom: 100px; right: 30px; z-index: 9999; background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; width: 56px; height: 56px; border: none; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 6px 16px rgba(139, 92, 246, 0.3); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.1) translateY(-5px)';" onmouseout="this.style.transform='scale(1) translateY(0)';" title="Mở Trợ lý AI Học thuật">
+    <button id="btn-floating-ai" onclick="document.getElementById('btnAutoGenerate')?.click()" style="position: fixed; bottom: 100px; right: 30px; z-index: 9999; background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; width: 56px; height: 56px; border: none; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 6px 16px rgba(139, 92, 246, 0.3); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.1) translateY(-5px)';" onmouseout="this.style.transform='scale(1) translateY(0)';" title="Mở Trợ lý AI Học thuật">
         <i class="fa-solid fa-robot" style="font-size: 1.6rem;"></i>
     </button>
 
     <!-- Nút Floating Liên hệ Admin / Góp ý -->
-    <button onclick="document.getElementById('feedback-admin-modal').style.display='flex'" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; background: linear-gradient(135deg, #0068ff, #0a4ec2); color: white; width: 56px; height: 56px; border: none; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 6px 16px rgba(0, 104, 255, 0.3); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.1) translateY(-5px)';" onmouseout="this.style.transform='scale(1) translateY(0)';" title="Góp ý / Liên hệ Admin">
+    <button id="btn-floating-support" onclick="document.getElementById('feedback-admin-modal').style.display='flex'" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; background: linear-gradient(135deg, #0068ff, #0a4ec2); color: white; width: 56px; height: 56px; border: none; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 6px 16px rgba(0, 104, 255, 0.3); cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.1) translateY(-5px)';" onmouseout="this.style.transform='scale(1) translateY(0)';" title="Góp ý / Liên hệ Admin">
         <i class="fa-solid fa-headset" style="font-size: 1.6rem;"></i>
     </button>
 
