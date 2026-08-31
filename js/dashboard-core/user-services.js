@@ -150,12 +150,16 @@ function fetchUserData(user, auth, db) {
                 if (!activeTier && currentUserData.isVip) activeTier = 'plus';
 
                 if (activeTier === 'plus' || activeTier === 'pro') {
+                    // ĐÃ SỬA: Đọc cả trường vipExpiration mới thiết lập trong luồng Tân thủ
                     const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
-                    const expiryField = currentUserData.vipExpirationDate || currentUserData.vipEnd;
+                    const expiryField = currentUserData.vipExpirationDate || currentUserData.vipExpiration || currentUserData.vipEnd;
                     
+                    // Đối với tân thủ, nếu không có ActivationDate, mặc định lấy ngày tạo account/hiện tại
                     let startDateObj = null;
                     if (startField) {
                         startDateObj = startField.toDate ? startField.toDate() : new Date(startField);
+                    } else if (expiryField) {
+                        startDateObj = new Date();
                     }
                     
                     let expiryDateObj = null;
@@ -191,6 +195,7 @@ function fetchUserData(user, auth, db) {
                             elVipStatusTab3.className = "status-badge status-active";
                         }
 
+                        // ĐÃ SỬA: Render ngày tháng chính xác
                         const elVipStartDate = document.getElementById("vipStartDate");
                         if (elVipStartDate) elVipStartDate.textContent = startDateObj ? formatDate(startDateObj) : "Không xác định";
 
@@ -207,6 +212,7 @@ function fetchUserData(user, auth, db) {
                             `;
                         }
                         
+                        // Cập nhật giao diện nút nếu đang mở Tab VIP
                         const tabVip = document.getElementById('tab-vip');
                         if (tabVip && tabVip.classList.contains('active')) {
                             const btn = document.getElementById('btnConfirmPayment');
@@ -238,7 +244,10 @@ function fetchUserData(user, auth, db) {
                             } catch (err) {
                                 console.error("Lỗi khi tự động push thông báo:", err);
                             }
+                        }
 
+                        // ĐÃ SỬA: Tách logic bật Popup Tân thủ VIP (Chỉ hiện 1 lần duy nhất trong phiên làm việc)
+                        if (!sessionStorage.getItem('welcomedVipNewbie')) {
                             const existingModal = document.getElementById('vipSuccessModalCustom');
                             if (existingModal) existingModal.remove();
 
@@ -248,9 +257,9 @@ function fetchUserData(user, auth, db) {
                                         <div style="width: 80px; height: 80px; background: ${tierColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 4px 15px rgba(0,0,0, 0.2);">
                                             ${tierIcon.replace('>', ' style="font-size: 2.5rem; color: white;">')}
                                         </div>
-                                        <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.6rem;">Nâng Cấp Thành Công!</h2>
+                                        <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.6rem;">Chào mừng Tân thủ!</h2>
                                         <p style="color: #475569; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;">
-                                            Chào mừng bạn đến với hội viên <strong>${tierName}</strong>. Cùng nhau khám phá những tính năng học tập tuyệt vời nhất.
+                                            Tài khoản của bạn đã được tặng <strong>5 ngày</strong> sử dụng gói <strong>${tierName}</strong> hoàn toàn miễn phí. Cùng khám phá Trợ lý AI và các tính năng luyện thi ngay nhé!
                                         </p>
                                         <button id="closeVipSuccessBtn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
                                             Khám phá ngay <i class="fa-solid fa-arrow-right ms-2"></i>
@@ -266,6 +275,8 @@ function fetchUserData(user, auth, db) {
                             const closeCustomModal = () => { if (successModal) successModal.remove(); };
                             closeBtn.addEventListener('click', closeCustomModal);
                             successModal.addEventListener('click', (e) => { if (e.target === successModal) closeCustomModal(); });
+
+                            sessionStorage.setItem('welcomedVipNewbie', 'true');
                         }
                     }
                 } else {
