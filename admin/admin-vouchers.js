@@ -100,14 +100,14 @@ function initVoucherManager() {
                         <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">Không giới hạn</span>
                     </td>
                     <td class="text-center">${statusHtml}</td>
-                    <td class="text-center">
-                        <button class="btn-edit-vc" data-id="${id}" data-duration="${data.durationDays}" data-max="${data.maxUses}" style="padding:6px 10px; border:none; border-radius:6px; cursor:pointer; background:#3b82f6; color:white; font-size:12px; margin-bottom: 5px; width: 100%;">
-                            <i class="fa-solid fa-pen"></i> Sửa thông tin
+                    <td style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; align-items: center; border: none; padding: 12px;">
+                        <button class="btn-edit-vc" data-id="${id}" data-duration="${data.durationDays}" data-max="${data.maxUses}" style="padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; background: #3b82f6; color: white; font-size: 12px; font-weight: bold; white-space: nowrap; transition: 0.2s;">
+                            <i class="fa-solid fa-pen"></i> Sửa
                         </button>
-                        <button class="btn-toggle-vc" data-id="${id}" data-active="${data.isActive}" style="padding:6px 10px; border:none; border-radius:6px; cursor:pointer; background:${data.isActive ? '#f59e0b' : '#10b981'}; color:white; font-size:12px; margin-bottom: 5px; width: 100%;">
-                            ${data.isActive ? '<i class="fa-solid fa-pause"></i> Tạm ngưng' : '<i class="fa-solid fa-play"></i> Bật lại mã'}
+                        <button class="btn-toggle-vc" data-id="${id}" data-active="${data.isActive}" style="padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; background: ${data.isActive ? '#f59e0b' : '#10b981'}; color: white; font-size: 12px; font-weight: bold; white-space: nowrap; transition: 0.2s;">
+                            ${data.isActive ? '<i class="fa-solid fa-pause"></i> Tạm ngưng' : '<i class="fa-solid fa-play"></i> Bật'}
                         </button>
-                        <button class="btn-delete-vc" data-id="${id}" style="padding:6px 10px; border:none; border-radius:6px; cursor:pointer; background:#ef4444; color:white; font-size:12px; width: 100%;">
+                        <button class="btn-delete-vc" data-id="${id}" style="padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; background: #ef4444; color: white; font-size: 12px; font-weight: bold; white-space: nowrap; transition: 0.2s;">
                             <i class="fa-solid fa-trash"></i> Xóa
                         </button>
                     </td>
