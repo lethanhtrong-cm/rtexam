@@ -31,10 +31,10 @@ document.addEventListener('ComponentsLoaded', () => {
         
         .quick-prompt-chip { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 6px 12px; border-radius: 16px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: 0.2s; font-weight: 500; }
         .quick-prompt-chip:hover { background: #bae6fd; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .quick-prompts-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 5px; scrollbar-width: none; }
+        .quick-prompts-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }
         .quick-prompts-container::-webkit-scrollbar { display: none; }
         
-        .scroll-bottom-btn { position: absolute; bottom: 85px; right: 20px; background: rgba(59, 130, 246, 0.9); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; display: none; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; transition: 0.2s; backdrop-filter: blur(4px); }
+        .scroll-bottom-btn { position: absolute; bottom: 120px; right: 20px; background: rgba(59, 130, 246, 0.9); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; display: none; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; transition: 0.2s; backdrop-filter: blur(4px); }
         .scroll-bottom-btn:hover { background: #2563eb; transform: scale(1.1); }
     `;
     document.head.appendChild(style);
@@ -48,7 +48,8 @@ document.addEventListener('ComponentsLoaded', () => {
     charCounter.innerText = "0/1000";
 
     const quickPromptsWrapper = document.createElement('div');
-    quickPromptsWrapper.style.cssText = "padding: 0 5px; margin-top: 5px;";
+    // ĐÃ SỬA: Chỉnh padding để hợp với layout ngoài, không làm vỡ input
+    quickPromptsWrapper.style.cssText = "padding: 5px 15px; margin-bottom: 2px; border-top: 1px solid #e2e8f0; background: #f8fafc;";
     const promptsContainer = document.createElement('div');
     promptsContainer.className = 'quick-prompts-container';
     
@@ -74,8 +75,15 @@ document.addEventListener('ComponentsLoaded', () => {
 
     if (aiChatInput && aiChatInput.parentNode) {
         aiChatInput.setAttribute('maxlength', '1000');
-        aiChatInput.parentNode.insertBefore(quickPromptsWrapper, aiChatInput);
-        aiChatInput.parentNode.insertBefore(charCounter, aiChatInput.nextSibling);
+        
+        // ĐÃ SỬA: Đưa Quick Prompts ra bên ngoài (trước thẻ bao bọc khung chat input)
+        const inputContainer = aiChatInput.parentNode;
+        if (inputContainer && inputContainer.parentNode) {
+            inputContainer.parentNode.insertBefore(quickPromptsWrapper, inputContainer);
+        }
+        
+        // Vẫn giữ bộ đếm nằm ngay dưới ô chat
+        inputContainer.insertBefore(charCounter, aiChatInput.nextSibling);
         aiChatInput.addEventListener('input', updateCharCounterUI);
     }
 
@@ -165,7 +173,6 @@ document.addEventListener('ComponentsLoaded', () => {
             fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
             isFullscreen = true;
         } else {
-            // ĐÃ SỬA: Phục hồi lại width 500px thay vì 460px
             aiSidebar.style.width = savedSidebarWidth || '500px';
             aiSidebar.style.zIndex = ''; 
             if (mainContentWrap) mainContentWrap.style.marginRight = savedSidebarWidth || '500px';
@@ -177,9 +184,6 @@ document.addEventListener('ComponentsLoaded', () => {
     if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
         const sidebarHeader = closeAiSidebarBtn.parentNode;
         
-        // Đảm bảo nút Close không bị ép nhỏ
-        closeAiSidebarBtn.style.flexShrink = '0';
-        
         sidebarHeader.insertBefore(queryCounterUI, closeAiSidebarBtn);
         sidebarHeader.insertBefore(clearChatBtn, closeAiSidebarBtn);
         sidebarHeader.insertBefore(fullscreenAiBtn, closeAiSidebarBtn);
@@ -187,21 +191,13 @@ document.addEventListener('ComponentsLoaded', () => {
         sidebarHeader.style.display = 'flex';
         sidebarHeader.style.alignItems = 'center';
         sidebarHeader.style.flexWrap = 'nowrap';
-        // ĐÃ SỬA: Thu hẹp gap để tiết kiệm không gian
         sidebarHeader.style.gap = '8px'; 
         
-        // ĐÃ SỬA: Xử lý hiển thị Tiêu đề và chống ép kích thước các nút
+        // ĐÃ SỬA: Ép cứng toàn bộ child (kể cả thẻ Tiêu đề) không được phép thu hẹp, 
+        // đảm bảo toàn bộ chữ "Trợ lý AI Học thuật" luôn hiện đủ.
         Array.from(sidebarHeader.children).forEach(child => {
-            if (child === queryCounterUI || child === closeAiSidebarBtn || child === fullscreenAiBtn || child === clearChatBtn) {
-                // Huy hiệu và các nút công cụ: Bắt buộc không co nhỏ
-                child.style.flexShrink = '0';
-            } else {
-                // Phần Tiêu đề: Cho phép co giãn và dùng dấu ... nếu thiếu chỗ
-                child.style.flexShrink = '1';
-                child.style.overflow = 'hidden';
-                child.style.textOverflow = 'ellipsis';
-                child.style.whiteSpace = 'nowrap';
-            }
+            child.style.flexShrink = '0';
+            child.style.whiteSpace = 'nowrap';
         });
     }
 
@@ -340,7 +336,6 @@ document.addEventListener('ComponentsLoaded', () => {
             if (!isResizing || isFullscreen) return; 
             let newWidth = window.innerWidth - e.clientX;
             
-            // ĐÃ SỬA: Tăng minWidth thành 500px khi kéo thả
             let minWidth = window.innerWidth <= 520 ? window.innerWidth : 500;
             if (newWidth < minWidth) newWidth = minWidth;
             if (newWidth > window.innerWidth * 0.9) newWidth = window.innerWidth * 0.9;
@@ -371,7 +366,6 @@ document.addEventListener('ComponentsLoaded', () => {
                 isFullscreen = false;
                 fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
                 aiSidebar.style.zIndex = '';
-                // ĐÃ SỬA: Phục hồi lại width 500px thay vì 460px
                 aiSidebar.style.width = savedSidebarWidth || '500px';
             }
 
@@ -380,7 +374,6 @@ document.addEventListener('ComponentsLoaded', () => {
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
 
         } else {
-            // ĐÃ SỬA: Mặc định bật lên là 500px cho thong thả
             let minWidth = window.innerWidth <= 520 ? window.innerWidth : 500;
             let currentWidth = aiSidebar.offsetWidth;
             
