@@ -17,9 +17,14 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Hạn mức xem bài giảng
+const FREE_LIMIT = 3;
+const PLUS_LIMIT = 5;
+
 let currentUserTier = 'free';
 let pptxDataList = []; // Toàn bộ dữ liệu
 let currentSelectedCategory = null; // Thể loại đang xem
+let viewedLectures = []; // Mảng chứa ID các bài giảng đã xem trong phiên
 
 document.addEventListener('DOMContentLoaded', () => {
     // Bảo vệ bản quyền
@@ -60,11 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     currentUserTier = tier || 'free';
                     updateAuthUI(currentUserTier, badge);
+                    updateQuotaBanner();
                     
                     fetchPptxFromDatabase();
                 } else {
                     currentUserTier = 'free';
                     updateAuthUI('free', badge);
+                    updateQuotaBanner();
                     fetchPptxFromDatabase();
                 }
             } catch (err) {
@@ -76,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Cập nhật Nhãn hiển thị trên Topbar
 function updateAuthUI(tier, badgeElement) {
     if (tier === 'plus') {
         badgeElement.className = 'badge badge-plus';
@@ -86,6 +94,31 @@ function updateAuthUI(tier, badgeElement) {
     } else {
         badgeElement.className = 'badge badge-free';
         badgeElement.innerHTML = 'GÓI FREE';
+    }
+}
+
+// Cập nhật Khối Banner to trên Hero Page
+function updateQuotaBanner() {
+    const banner = document.getElementById('quota-banner');
+    const statusText = document.getElementById('quota-status-text');
+    const remainingText = document.getElementById('quota-remaining-text');
+
+    if (!banner || !statusText || !remainingText) return;
+
+    const tierName = currentUserTier.toUpperCase();
+    statusText.innerHTML = `Bạn đang sử dụng quyền lợi của gói: <strong>${tierName}</strong>`;
+
+    if (currentUserTier === 'pro') {
+        remainingText.innerHTML = `Lượt xem bài giảng: <strong>Không giới hạn</strong>`;
+        banner.className = 'quota-banner pro-banner';
+    } else if (currentUserTier === 'plus') {
+        const remaining = PLUS_LIMIT - viewedLectures.length;
+        remainingText.innerHTML = `Lượt mở xem bài giảng còn lại: <strong>${remaining > 0 ? remaining : 0} bài</strong>`;
+        banner.className = 'quota-banner plus-banner';
+    } else {
+        const remaining = FREE_LIMIT - viewedLectures.length;
+        remainingText.innerHTML = `Lượt mở xem bài giảng còn lại: <strong>${remaining > 0 ? remaining : 0} bài</strong>`;
+        banner.className = 'quota-banner free-banner';
     }
 }
 
@@ -119,7 +152,7 @@ function showHeroPage() {
     document.getElementById('pptx-viewer').src = '';
 }
 
-// Kéo dữ liệu thực từ Firestore Database kèm Cơ chế Bắt Lỗi
+// Kéo dữ liệu thực từ Firestore Database
 function fetchPptxFromDatabase() {
     const q = query(collection(db, "pptx_lectures"), orderBy("createdAt", "asc"));
     
@@ -149,7 +182,7 @@ function renderPptxList() {
     const listContainer = document.getElementById('pptx-list');
     listContainer.innerHTML = '';
     
-    // Logic Lọc: Nếu bài giảng cũ không có category, mặc định nó thuộc 'mri'
+    // Logic Lọc
     const filteredList = pptxDataList.filter(item => {
         const itemCat = item.category || 'mri';
         return itemCat === currentSelectedCategory;
@@ -171,24 +204,47 @@ function renderPptxList() {
         li.addEventListener('click', () => {
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
             li.classList.add('active');
-            loadPptx(item.embedUrl);
+            
+            // Truyền ID bài giảng
+            loadPptx(item.embedUrl, item.id);
         });
         
         listContainer.appendChild(li);
     });
 
-    // Auto load bài đầu tiên của danh sách đã lọc
+    // Auto load bài đầu tiên
     if (filteredList.length > 0) {
-        loadPptx(filteredList[0].embedUrl);
+        loadPptx(filteredList[0].embedUrl, filteredList[0].id);
     }
 }
 
-function loadPptx(embedUrl) {
+// Hàm load nội dung, kiểm tra giới hạn mới 3 (free) và 5 (plus)
+function loadPptx(embedUrl, itemId) {
     const lockOverlay = document.getElementById('premium-lock-overlay');
     const iframeContainer = document.getElementById('iframe-container');
     const iframeViewer = document.getElementById('pptx-viewer');
 
-    if (currentUserTier === 'plus' || currentUserTier === 'pro') {
+    let canView = false;
+
+    if (currentUserTier === 'pro') {
+        canView = true; 
+    } else if (viewedLectures.includes(itemId)) {
+        // Bài giảng đã xem trong phiên -> Xem lại không trừ lượt
+        canView = true;
+    } else {
+        // Kiểm tra Hạn mức (Plus: 5, Free: 3)
+        if (currentUserTier === 'plus' && viewedLectures.length < PLUS_LIMIT) {
+            canView = true;
+            viewedLectures.push(itemId);
+            updateQuotaBanner(); // Cập nhật số đếm trên giao diện Hero
+        } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
+            canView = true;
+            viewedLectures.push(itemId);
+            updateQuotaBanner(); // Cập nhật số đếm trên giao diện Hero
+        }
+    }
+
+    if (canView) {
         lockOverlay.style.display = 'none';
         iframeContainer.style.display = 'block';
         iframeViewer.src = embedUrl;
