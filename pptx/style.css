@@ -55,7 +55,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
     overflow: hidden; /* Cực kỳ quan trọng để iframe không đè lên góc bo tròn */
 }
 
-/* Đã chỉnh sửa thêm position relative cho khối iframe container */
+/* Khối iframe container */
 .iframe-container { position: relative; width: 100%; height: 100%; border-radius: 16px; overflow: hidden; }
 .iframe-container iframe { width: 100%; height: 100%; border: none; display: block; }
 
@@ -67,13 +67,13 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .btn-upgrade { background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; border: none; padding: 14px 30px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3); }
 .btn-upgrade:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(234, 88, 12, 0.4); }
 
-/* --- CÁC ĐOẠN CSS BẢO VỆ BẢN QUYỀN MỚI THÊM VÀO --- */
+/* --- BẢO VỆ BẢN QUYỀN (WATERMARK & IN ẤN) --- */
 .copyright-watermark {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     z-index: 10;
-    pointer-events: none; /* Rất quan trọng: cho phép click xuyên qua để thao tác slide */
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="350" height="200" opacity="0.12" transform="rotate(-30)"><text x="10" y="100" font-family="Arial" font-size="18" font-weight="bold" fill="%230f172a">Phan Thường Điện Quang</text></svg>');
+    pointer-events: none; /* Cho phép click xuyên qua để tương tác slide */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="550" height="320" opacity="0.10" transform="rotate(-25)"><text x="40" y="160" font-family="Arial" font-size="22" font-weight="bold" fill="%230f172a">ktv3mien.com</text></svg>');
     background-repeat: repeat;
 }
 
