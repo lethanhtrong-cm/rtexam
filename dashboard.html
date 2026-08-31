@@ -37,10 +37,8 @@
 
         /* CSS Cho thanh công cụ Dashboard Action Bar */
         .dashboard-action-bar {
-            /* Hiệu ứng nền gradient nhẹ */
             background: linear-gradient(135deg, #ffffff 0%, #f4f7fb 100%);
             padding: 16px 24px;
-            /* ĐÃ SỬA: Thu nhỏ margin-top từ 24px xuống 10px */
             margin: 10px 24px 20px 24px; 
             border-radius: 16px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.05);
@@ -49,13 +47,13 @@
             justify-content: center;
             gap: 15px;
             flex-wrap: wrap;
-            /* ĐÃ SỬA: Viền bao quanh rõ ràng hơn */
             border: 1px solid #cbd5e1; 
             position: relative;
-            overflow: hidden;
+            /* ĐÃ SỬA: Chống trình duyệt tự động bóp nghẹt chiều cao khi nội dung dài */
+            flex-shrink: 0; 
         }
 
-        /* ĐÃ THÊM: Dải viền gradient nhấn mạnh ở cạnh trên */
+        /* Dải viền gradient nhấn mạnh ở cạnh trên */
         .dashboard-action-bar::before {
             content: '';
             position: absolute;
@@ -64,6 +62,9 @@
             width: 100%;
             height: 4px;
             background: linear-gradient(90deg, #8b5cf6, #3b82f6, #0ea5e9);
+            /* ĐÃ SỬA: Bo góc dải màu thay vì dùng overflow hidden ở thẻ cha */
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
         }
 
         .dash-btn {
