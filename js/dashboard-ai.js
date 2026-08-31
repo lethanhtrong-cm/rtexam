@@ -47,7 +47,6 @@ document.addEventListener('ComponentsLoaded', () => {
     charCounter.style.cssText = "font-size: 0.8rem; color: #64748b; text-align: right; margin-top: 6px; padding-right: 5px; display: none; font-weight: 600; transition: color 0.2s;";
     charCounter.innerText = "0/1000";
 
-    // Khởi tạo container Gợi ý câu hỏi (Quick Prompts)
     const quickPromptsWrapper = document.createElement('div');
     quickPromptsWrapper.style.cssText = "padding: 0 5px; margin-top: 5px;";
     const promptsContainer = document.createElement('div');
@@ -75,9 +74,7 @@ document.addEventListener('ComponentsLoaded', () => {
 
     if (aiChatInput && aiChatInput.parentNode) {
         aiChatInput.setAttribute('maxlength', '1000');
-        // Chèn Quick Prompts ngay trên ô nhập liệu
         aiChatInput.parentNode.insertBefore(quickPromptsWrapper, aiChatInput);
-        // Chèn Counter ngay dưới ô nhập liệu
         aiChatInput.parentNode.insertBefore(charCounter, aiChatInput.nextSibling);
         aiChatInput.addEventListener('input', updateCharCounterUI);
     }
@@ -114,7 +111,6 @@ document.addEventListener('ComponentsLoaded', () => {
     }
     if (aiChatBox) {
         aiChatBox.addEventListener('scroll', () => {
-            // Hiện nút nếu cuộn lên cách đáy hơn 150px
             if (aiChatBox.scrollHeight - aiChatBox.scrollTop - aiChatBox.clientHeight > 150) {
                 scrollBtn.style.display = 'flex';
             } else {
@@ -134,12 +130,11 @@ document.addEventListener('ComponentsLoaded', () => {
     queryCounterUI.id = 'aiQueryCounterUI';
     queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap; flex-shrink: 0;";
 
-    // Nút Clear Chat (Xóa phiên)
     const clearChatBtn = document.createElement('button');
     clearChatBtn.id = 'clearAiChatBtn';
     clearChatBtn.title = 'Làm mới phiên trò chuyện';
     clearChatBtn.innerHTML = '<i class="fa-solid fa-broom"></i>';
-    clearChatBtn.style.cssText = "background: transparent; border: none; color: white; font-size: 1.1rem; cursor: pointer; padding: 5px; margin-left: 10px; display: flex; align-items: center; justify-content: center; transition: 0.2s;";
+    clearChatBtn.style.cssText = "background: transparent; border: none; color: white; font-size: 1.1rem; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0;";
     
     clearChatBtn.addEventListener('mouseenter', () => clearChatBtn.style.color = '#cbd5e1');
     clearChatBtn.addEventListener('mouseleave', () => clearChatBtn.style.color = 'white');
@@ -152,12 +147,11 @@ document.addEventListener('ComponentsLoaded', () => {
         }
     });
 
-    // Nút Fullscreen
     const fullscreenAiBtn = document.createElement('button');
     fullscreenAiBtn.id = 'fullscreenAiBtn';
     fullscreenAiBtn.title = 'Phóng to / Thu nhỏ';
     fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
-    fullscreenAiBtn.style.cssText = "background: transparent; border: none; color: white; font-size: 1.1rem; cursor: pointer; padding: 5px; margin-right: 5px; margin-left: 5px; display: flex; align-items: center; justify-content: center; transition: 0.2s;";
+    fullscreenAiBtn.style.cssText = "background: transparent; border: none; color: white; font-size: 1.1rem; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0;";
     
     fullscreenAiBtn.addEventListener('mouseenter', () => fullscreenAiBtn.style.color = '#cbd5e1');
     fullscreenAiBtn.addEventListener('mouseleave', () => fullscreenAiBtn.style.color = 'white');
@@ -171,9 +165,10 @@ document.addEventListener('ComponentsLoaded', () => {
             fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
             isFullscreen = true;
         } else {
-            aiSidebar.style.width = savedSidebarWidth || '460px';
+            // ĐÃ SỬA: Phục hồi lại width 500px thay vì 460px
+            aiSidebar.style.width = savedSidebarWidth || '500px';
             aiSidebar.style.zIndex = ''; 
-            if (mainContentWrap) mainContentWrap.style.marginRight = savedSidebarWidth || '460px';
+            if (mainContentWrap) mainContentWrap.style.marginRight = savedSidebarWidth || '500px';
             fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
             isFullscreen = false;
         }
@@ -181,6 +176,10 @@ document.addEventListener('ComponentsLoaded', () => {
 
     if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
         const sidebarHeader = closeAiSidebarBtn.parentNode;
+        
+        // Đảm bảo nút Close không bị ép nhỏ
+        closeAiSidebarBtn.style.flexShrink = '0';
+        
         sidebarHeader.insertBefore(queryCounterUI, closeAiSidebarBtn);
         sidebarHeader.insertBefore(clearChatBtn, closeAiSidebarBtn);
         sidebarHeader.insertBefore(fullscreenAiBtn, closeAiSidebarBtn);
@@ -188,12 +187,20 @@ document.addEventListener('ComponentsLoaded', () => {
         sidebarHeader.style.display = 'flex';
         sidebarHeader.style.alignItems = 'center';
         sidebarHeader.style.flexWrap = 'nowrap';
-        sidebarHeader.style.gap = '15px'; 
+        // ĐÃ SỬA: Thu hẹp gap để tiết kiệm không gian
+        sidebarHeader.style.gap = '8px'; 
         
+        // ĐÃ SỬA: Xử lý hiển thị Tiêu đề và chống ép kích thước các nút
         Array.from(sidebarHeader.children).forEach(child => {
-            if (child !== queryCounterUI && child !== closeAiSidebarBtn && child !== fullscreenAiBtn && child !== clearChatBtn) {
-                child.style.whiteSpace = 'nowrap';
+            if (child === queryCounterUI || child === closeAiSidebarBtn || child === fullscreenAiBtn || child === clearChatBtn) {
+                // Huy hiệu và các nút công cụ: Bắt buộc không co nhỏ
                 child.style.flexShrink = '0';
+            } else {
+                // Phần Tiêu đề: Cho phép co giãn và dùng dấu ... nếu thiếu chỗ
+                child.style.flexShrink = '1';
+                child.style.overflow = 'hidden';
+                child.style.textOverflow = 'ellipsis';
+                child.style.whiteSpace = 'nowrap';
             }
         });
     }
@@ -333,7 +340,8 @@ document.addEventListener('ComponentsLoaded', () => {
             if (!isResizing || isFullscreen) return; 
             let newWidth = window.innerWidth - e.clientX;
             
-            let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
+            // ĐÃ SỬA: Tăng minWidth thành 500px khi kéo thả
+            let minWidth = window.innerWidth <= 520 ? window.innerWidth : 500;
             if (newWidth < minWidth) newWidth = minWidth;
             if (newWidth > window.innerWidth * 0.9) newWidth = window.innerWidth * 0.9;
             
@@ -363,7 +371,8 @@ document.addEventListener('ComponentsLoaded', () => {
                 isFullscreen = false;
                 fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
                 aiSidebar.style.zIndex = '';
-                aiSidebar.style.width = savedSidebarWidth || '460px';
+                // ĐÃ SỬA: Phục hồi lại width 500px thay vì 460px
+                aiSidebar.style.width = savedSidebarWidth || '500px';
             }
 
             let currentWidth = aiSidebar.offsetWidth;
@@ -371,7 +380,8 @@ document.addEventListener('ComponentsLoaded', () => {
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
 
         } else {
-            let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
+            // ĐÃ SỬA: Mặc định bật lên là 500px cho thong thả
+            let minWidth = window.innerWidth <= 520 ? window.innerWidth : 500;
             let currentWidth = aiSidebar.offsetWidth;
             
             if (!currentWidth || currentWidth < minWidth) {
@@ -563,7 +573,6 @@ document.addEventListener('ComponentsLoaded', () => {
     function appendMessage(sender, text) {
         if (!aiChatBox) return;
 
-        // ĐÃ SỬA: Bỏ qua tạo nút copy nếu tin nhắn chứa indicator (đang gõ)
         if (sender === 'ai' && !text.includes('typing-indicator') && !text.includes('Đang suy nghĩ')) {
             const wrapperDiv = document.createElement('div');
             wrapperDiv.style.display = 'flex';
@@ -691,7 +700,6 @@ document.addEventListener('ComponentsLoaded', () => {
             saveChatHistory(); 
 
             const loadingId = 'loading-' + Date.now();
-            // ĐÃ SỬA: Dùng hiệu ứng gõ phím Bounce Dots thay thế text
             appendMessage('ai', `<div id="${loadingId}" class="typing-indicator"><span></span><span></span><span></span></div>`);
 
             try {
@@ -706,7 +714,6 @@ document.addEventListener('ComponentsLoaded', () => {
                 const usedTokens = parseInt(response.headers.get('X-Token-Usage')) || 0; 
                 
                 const loadingEl = document.getElementById(loadingId);
-                // Vì appendMessage nhét html vào trong thẻ div.chat-message, nên phải gọi parentNode 2 lần để xóa sạch
                 if (loadingEl && loadingEl.parentNode) {
                     loadingEl.parentNode.remove();
                 }
