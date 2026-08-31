@@ -14,16 +14,65 @@
             <a href="../dashboard.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Về Dashboard</a>
             <h1 class="topbar-title"><i class="fa-solid fa-desktop"></i> Thư viện Bài giảng</h1>
         </div>
-        <div class="topbar-center">
-            <span class="active-category">Nhóm: MRI</span>
+        <div class="topbar-center" style="display: flex; gap: 10px; align-items: center;">
+            <button id="btn-back-hero" class="btn-back-hero" style="display: none;">
+                <i class="fa-solid fa-layer-group"></i> Chọn Chuyên Khoa
+            </button>
+            <span id="current-category-label" class="active-category" style="display: none;"></span>
         </div>
         <div class="topbar-right">
             <span id="user-status-badge" class="badge badge-loading">Đang tải trạng thái...</span>
         </div>
     </nav>
 
-    <!-- BỐ CỤC CHÍNH -->
-    <div class="pptx-layout">
+    <!-- MÀN HÌNH 1: HERO PAGE (CHỌN DANH MỤC) -->
+    <div id="hero-page" class="hero-container">
+        <div class="hero-header">
+            <h2>Khám phá Kho Tàng Kiến Thức Y Khoa</h2>
+            <p>Vui lòng chọn một chuyên khoa bên dưới để xem danh sách các bài giảng tương ứng</p>
+        </div>
+        
+        <div class="category-grid">
+            <!-- Card MRI -->
+            <div class="category-card" data-cat="mri" data-name="MRI">
+                <div class="card-icon" style="background: #eff6ff; color: #3b82f6;">
+                    <i class="fa-solid fa-magnet"></i>
+                </div>
+                <h3>Cộng hưởng từ (MRI)</h3>
+                <p>Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI</p>
+            </div>
+            
+            <!-- Card CT -->
+            <div class="category-card" data-cat="ct" data-name="Cắt lớp vi tính (CT)">
+                <div class="card-icon" style="background: #f0fdf4; color: #22c55e;">
+                    <i class="fa-solid fa-x-ray"></i>
+                </div>
+                <h3>Cắt lớp vi tính (CT)</h3>
+                <p>Bài giảng về nguyên lý và ứng dụng CT Scanner</p>
+            </div>
+            
+            <!-- Card X-Quang -->
+            <div class="category-card" data-cat="xray" data-name="X-quang">
+                <div class="card-icon" style="background: #fdf2f8; color: #ec4899;">
+                    <i class="fa-solid fa-person-rays"></i>
+                </div>
+                <h3>X-quang</h3>
+                <p>Kiến thức cơ bản và nâng cao về chẩn đoán X-quang</p>
+            </div>
+            
+            <!-- Card Thuốc tương phản -->
+            <div class="category-card" data-cat="contrast" data-name="Thuốc tương phản">
+                <div class="card-icon" style="background: #fffbeb; color: #f59e0b;">
+                    <i class="fa-solid fa-syringe"></i>
+                </div>
+                <h3>Thuốc tương phản</h3>
+                <p>Hướng dẫn sử dụng và xử trí tai biến thuốc tương phản</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH 2: VIEWER PAGE (BỐ CỤC CHÍNH CŨ) -->
+    <div id="viewer-page" class="pptx-layout" style="display: none;">
         <!-- CỘT TRÁI: DANH SÁCH FILE -->
         <aside class="pptx-sidebar">
             <h3 class="sidebar-title">Danh sách bài học</h3>
