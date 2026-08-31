@@ -40,8 +40,9 @@
         
         <div style="background: #f8fafc; padding: 20px 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
             <p style="font-size: 0.95rem; color: #64748b; margin-bottom: 12px; margin-top: 0;">Trạng thái tài khoản của bạn:</p>
-            <span id="vipStatusTab3" style="display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
-                <i class="fa-solid fa-paper-plane" style="color: #22c55e;"></i> GÓI FREE
+            <!-- ĐÃ SỬA: Thay thế dòng chữ tĩnh bằng cấu trúc thẻ Flex hiển thị Icon Gói cước -->
+            <span id="vipStatusTab3" style="display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;">
+                <i class="fa-solid fa-paper-plane" style="color: #64748b;"></i> GÓI FREE
             </span>
         </div>
         
@@ -232,12 +233,24 @@
         }
     }, 500);
 
-    // ĐÃ THÊM: Script bắt buộc ghi đè lại chữ Pro cũ từ file core bên ngoài thành Gói Free màu xanh lá
-    const overrideStatusInterval = setInterval(() => {
+    // ĐÃ THÊM: Script tự động định dạng lại Status VIP thành Badge có Icon (Đồng bộ với logic Firebase bên ngoài)
+    const formatVipStatusInterval = setInterval(() => {
         const statusEl = document.getElementById('vipStatusTab3');
         if (statusEl) {
-            statusEl.innerHTML = '<i class="fa-solid fa-paper-plane" style="color: #22c55e;"></i> GÓI FREE';
-            statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;';
+            const text = statusEl.innerText.toLowerCase();
+            if (statusEl.dataset.formatted === text) return; 
+            
+            if (text.includes('pro')) {
+                statusEl.innerHTML = '<i class="fa-solid fa-crown" style="color: #ea580c;"></i> GÓI PRO';
+                statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa;';
+            } else if (text.includes('plus')) {
+                statusEl.innerHTML = '<i class="fa-solid fa-shield-halved" style="color: #2563eb;"></i> GÓI PLUS';
+                statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
+            } else {
+                statusEl.innerHTML = '<i class="fa-solid fa-paper-plane" style="color: #475569;"></i> GÓI FREE';
+                statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;';
+            }
+            statusEl.dataset.formatted = text;
         }
-    }, 100);
+    }, 500);
 "></svg>
