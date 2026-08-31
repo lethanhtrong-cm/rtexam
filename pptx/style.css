@@ -19,25 +19,28 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 /* --- HERO PAGE & BANNER STYLES --- */
 .hero-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; overflow-y: auto; animation: fadeIn 0.4s ease; }
 
-.quota-banner { width: 100%; max-width: 1100px; margin-bottom: 40px; padding: 20px 30px; border-radius: 12px; display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: all 0.3s ease; }
-.quota-icon { font-size: 2.8rem; }
-.quota-info { display: flex; flex-direction: column; gap: 6px; }
+/* Đã chỉnh sửa thành căn giữa hoàn toàn */
+.quota-banner { width: 100%; max-width: 800px; margin: 0 auto 40px auto; padding: 30px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: all 0.3s ease; text-align: center; }
+.quota-icon { font-size: 3.5rem; }
+.quota-info { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.quota-greeting { font-size: 1.4rem; font-weight: 800; }
 .quota-status { font-size: 1.05rem; font-weight: 500; }
-.quota-remaining { font-size: 1.4rem; font-weight: 800; }
+.quota-remaining { font-size: 1.3rem; font-weight: 700; margin-top: 5px; }
 
+/* Thay đổi màu sắc chữ theo cấp độ tài khoản */
 .free-banner { background: white; border: 1px solid #cbd5e1; }
-.free-banner .quota-icon { color: #64748b; }
-.free-banner .quota-status { color: #475569; }
+.free-banner .quota-icon, .free-banner .quota-greeting { color: #475569; }
+.free-banner .quota-status { color: #64748b; }
 .free-banner .quota-remaining { color: #0f172a; }
 
 .plus-banner { background: #eff6ff; border: 1px solid #bfdbfe; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1); }
-.plus-banner .quota-icon { color: #3b82f6; }
-.plus-banner .quota-status { color: #2563eb; }
+.plus-banner .quota-icon, .plus-banner .quota-greeting { color: #2563eb; }
+.plus-banner .quota-status { color: #3b82f6; }
 .plus-banner .quota-remaining { color: #1e3a8a; }
 
 .pro-banner { background: #fff7ed; border: 1px solid #fed7aa; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1); }
-.pro-banner .quota-icon { color: #f59e0b; }
-.pro-banner .quota-status { color: #ea580c; }
+.pro-banner .quota-icon, .pro-banner .quota-greeting { color: #ea580c; }
+.pro-banner .quota-status { color: #f59e0b; }
 .pro-banner .quota-remaining { color: #7c2d12; }
 
 .hero-header { text-align: center; margin-bottom: 50px; }
