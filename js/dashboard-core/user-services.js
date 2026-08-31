@@ -20,15 +20,6 @@ function renderFreeBadgeUI() {
     }
 }
 
-// ĐÃ THÊM: Hàm điều khiển bật/tắt khối quyền lợi trong tab Profile
-function updateBenefitsUI(tier) {
-    const active = tier || 'free';
-    ['free', 'plus', 'pro'].forEach(t => {
-        const el = document.getElementById(`benefits-${t}`);
-        if (el) el.style.display = (t === active) ? 'block' : 'none';
-    });
-}
-
 export function initNotificationListener(auth, db) {
     const user = auth.currentUser;
     if (!user) return;
@@ -184,10 +175,6 @@ function fetchUserData(user, auth, db) {
                         setVipInactive();
                         renderFreeBadgeUI(); 
                         currentUserData.vipTier = null;
-                        
-                        // ĐẢM BẢO CẬP NHẬT UI ĐÚNG GÓI FREE
-                        setTimeout(() => updateBenefitsUI('free'), 200);
-                        setTimeout(() => updateBenefitsUI('free'), 1500); // Dự phòng nếu HTML tải chậm
                     } else {
                         // TẠO UI DỰA TRÊN TIER
                         let tierName = activeTier === 'pro' ? 'PRO' : 'PLUS';
@@ -222,10 +209,6 @@ function fetchUserData(user, auth, db) {
                             `;
                         }
                         
-                        // ĐẢM BẢO CẬP NHẬT UI ĐÚNG GÓI PLUS HOẶC PRO
-                        setTimeout(() => updateBenefitsUI(activeTier), 200);
-                        setTimeout(() => updateBenefitsUI(activeTier), 1500); // Dự phòng nếu HTML tải chậm
-                        
                         const tabVip = document.getElementById('tab-vip');
                         if (tabVip && tabVip.classList.contains('active')) {
                             const btn = document.getElementById('btnConfirmPayment');
@@ -259,7 +242,7 @@ function fetchUserData(user, auth, db) {
                             }
                         }
 
-                        // HIỂN THỊ POPUP TÂN THỦ
+                        // HIỂN THỊ POPUP TÂN THỦ NỔI BẬT VÀ ĐẸP MẮT HƠN
                         if (!sessionStorage.getItem('welcomedVipNewbie')) {
                             const existingModal = document.getElementById('vipSuccessModalCustom');
                             if (existingModal) existingModal.remove();
@@ -316,14 +299,10 @@ function fetchUserData(user, auth, db) {
                 } else {
                     setVipInactive();
                     renderFreeBadgeUI(); 
-                    setTimeout(() => updateBenefitsUI('free'), 200);
-                    setTimeout(() => updateBenefitsUI('free'), 1500); 
                 }
             } else {
                 setVipInactive(); 
                 renderFreeBadgeUI(); 
-                setTimeout(() => updateBenefitsUI('free'), 200);
-                setTimeout(() => updateBenefitsUI('free'), 1500);
             }
             
             resolve(currentUserData);
@@ -332,8 +311,6 @@ function fetchUserData(user, auth, db) {
             console.error("Lỗi khi lắng nghe dữ liệu user từ Firestore:", error);
             setVipInactive();
             renderFreeBadgeUI(); 
-            setTimeout(() => updateBenefitsUI('free'), 200);
-            setTimeout(() => updateBenefitsUI('free'), 1500);
             resolve({ vipTier: null, isBanned: false, bookmarks: [] });
         });
     });
