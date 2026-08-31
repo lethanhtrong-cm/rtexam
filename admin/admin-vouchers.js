@@ -8,13 +8,6 @@ document.addEventListener('componentsLoaded', () => {
     initVoucherManager();
 });
 
-// Hàm hỗ trợ format timestamp sang định dạng chuẩn của input datetime-local
-function formatForDateTimeLocal(timestamp) {
-    const d = new Date(timestamp);
-    const pad = (n) => n.toString().padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 // Hàm reset form về trạng thái Tạo Mới ban đầu
 function resetVoucherForm() {
     editingVoucherId = null;
@@ -27,8 +20,6 @@ function resetVoucherForm() {
     
     document.getElementById('v-duration').value = '30';
     document.getElementById('v-max').value = '100';
-    document.getElementById('v-start').value = '';
-    document.getElementById('v-end').value = '';
 
     const createBtn = document.getElementById('btn-create-voucher');
     if(createBtn) {
@@ -41,6 +32,12 @@ function resetVoucherForm() {
 }
 
 function initVoucherManager() {
+    // TỰ ĐỘNG ẨN 2 Ô NHẬP NGÀY THÁNG KHỎI GIAO DIỆN MÀ KHÔNG CẦN SỬA HTML
+    const vStart = document.getElementById('v-start');
+    if (vStart && vStart.parentNode) vStart.parentNode.style.display = 'none';
+    const vEnd = document.getElementById('v-end');
+    if (vEnd && vEnd.parentNode) vEnd.parentNode.style.display = 'none';
+
     const btnCreate = document.getElementById('btn-create-voucher');
     if (btnCreate) {
         btnCreate.addEventListener('click', handleCreateVoucher);
@@ -77,17 +74,9 @@ function initVoucherManager() {
                 const data = docSnap.data();
                 const id = docSnap.id;
                 
-                const startStr = new Date(data.startDate).toLocaleString('vi-VN');
-                const endStr = new Date(data.endDate).toLocaleString('vi-VN');
-                
-                const now = Date.now();
                 let statusHtml = '';
                 if (!data.isActive) {
                     statusHtml = '<span style="background:#64748b; color:white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">Tạm tắt</span>';
-                } else if (now < data.startDate) {
-                    statusHtml = '<span style="background:#f59e0b; color:white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">Chưa bắt đầu</span>';
-                } else if (now > data.endDate) {
-                    statusHtml = '<span style="background:#ef4444; color:white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">Hết hạn</span>';
                 } else if (data.usedCount >= data.maxUses) {
                     statusHtml = '<span style="background:#ef4444; color:white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;">Đã hết lượt</span>';
                 } else {
@@ -99,21 +88,19 @@ function initVoucherManager() {
                     <td><strong style="color: #2563eb; font-size: 15px; border: 1px dashed #2563eb; padding: 4px 8px; border-radius: 6px;">${data.code}</strong></td>
                     <td class="text-center"><span style="background:#e0e7ff; color:#3730a3; padding: 4px 8px; border-radius:10px; font-weight:bold;">${data.durationDays} ngày</span></td>
                     <td class="text-center"><strong style="color: ${data.usedCount >= data.maxUses ? '#ef4444' : '#10b981'}; font-size: 15px;">${data.usedCount}</strong> / ${data.maxUses}</td>
-                    <td class="text-center" style="font-size: 12px; color:#475569; line-height: 1.6;">
-                        <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">Từ: <strong>${startStr}</strong></div>
-                        <div style="padding-top: 4px;">Đến: <strong>${endStr}</strong></div>
+                    <td class="text-center" style="font-size: 12px; color:#475569;">
+                        <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">Không giới hạn</span>
                     </td>
                     <td class="text-center">${statusHtml}</td>
                     <td class="text-center">
-                        <!-- NÚT SỬA ĐƯỢC CHÈN VÀO ĐÂY -->
-                        <button class="btn-edit-vc" data-id="${id}" data-duration="${data.durationDays}" data-max="${data.maxUses}" data-start="${data.startDate}" data-end="${data.endDate}" style="padding:6px 10px; border:none; border-radius:6px; cursor:pointer; background:#3b82f6; color:white; font-size:12px; margin-bottom: 5px; width: 100%;">
+                        <button class="btn-edit-vc" data-id="${id}" data-duration="${data.durationDays}" data-max="${data.maxUses}" style="padding:6px 10px; border:none; border-radius:6px; cursor:pointer; background:#3b82f6; color:white; font-size:12px; margin-bottom: 5px; width: 100%;">
                             <i class="fa-solid fa-pen"></i> Sửa thông tin
                         </button>
                         <button class="btn-toggle-vc" data-id="${id}" data-active="${data.isActive}" style="padding:6px 10px; border:none; border-radius:6px; cursor:pointer; background:${data.isActive ? '#f59e0b' : '#10b981'}; color:white; font-size:12px; margin-bottom: 5px; width: 100%;">
                             ${data.isActive ? '<i class="fa-solid fa-pause"></i> Tạm ngưng' : '<i class="fa-solid fa-play"></i> Bật lại mã'}
                         </button>
                         <button class="btn-delete-vc" data-id="${id}" style="padding:6px 10px; border:none; border-radius:6px; cursor:pointer; background:#ef4444; color:white; font-size:12px; width: 100%;">
-                            <i class="fa-solid fa-trash"></i> Xóa vĩnh viễn
+                            <i class="fa-solid fa-trash"></i> Xóa
                         </button>
                     </td>
                 `;
@@ -127,7 +114,6 @@ function initVoucherManager() {
                     if (confirm(`Bạn có chắc chắn muốn xóa mã voucher ${vId} không? Hành động này không thể hoàn tác.`)) {
                         await deleteDoc(doc(db, "vouchers", vId));
                         showToast("Đã xóa mã voucher thành công", "success");
-                        // Nếu đang sửa cái vừa xóa thì reset form
                         if (editingVoucherId === vId) resetVoucherForm();
                     }
                 }
@@ -159,12 +145,6 @@ function initVoucherManager() {
                     document.getElementById('v-duration').value = target.getAttribute('data-duration');
                     document.getElementById('v-max').value = target.getAttribute('data-max');
                     
-                    // Nạp ngày tháng
-                    const startMs = Number(target.getAttribute('data-start'));
-                    const endMs = Number(target.getAttribute('data-end'));
-                    document.getElementById('v-start').value = formatForDateTimeLocal(startMs);
-                    document.getElementById('v-end').value = formatForDateTimeLocal(endMs);
-
                     editingVoucherId = vId;
 
                     // Thay đổi giao diện nút bấm
@@ -188,24 +168,14 @@ async function handleCreateVoucher() {
     const codeInput = document.getElementById('v-code').value.trim().toUpperCase();
     const duration = parseInt(document.getElementById('v-duration').value);
     const maxUses = parseInt(document.getElementById('v-max').value);
-    const startStr = document.getElementById('v-start').value;
-    const endStr = document.getElementById('v-end').value;
 
-    if (!codeInput || isNaN(duration) || isNaN(maxUses) || !startStr || !endStr) {
-        showToast("Vui lòng điền đầy đủ và chính xác tất cả thông tin!", "error");
+    if (!codeInput || isNaN(duration) || isNaN(maxUses)) {
+        showToast("Vui lòng điền đầy đủ Mã Voucher, Số ngày và Giới hạn lượt!", "error");
         return;
     }
 
     if (codeInput.includes(" ")) {
         showToast("Mã voucher không được chứa khoảng trắng!", "error");
-        return;
-    }
-
-    const startTimestamp = new Date(startStr).getTime();
-    const endTimestamp = new Date(endStr).getTime();
-
-    if (startTimestamp >= endTimestamp) {
-        showToast("Lỗi: Thời gian kết thúc phải lớn hơn thời gian bắt đầu!", "error");
         return;
     }
 
@@ -218,20 +188,16 @@ async function handleCreateVoucher() {
             // LƯU CHỈNH SỬA
             await updateDoc(doc(db, "vouchers", editingVoucherId), {
                 durationDays: duration,
-                maxUses: maxUses,
-                startDate: startTimestamp,
-                endDate: endTimestamp
+                maxUses: maxUses
             });
             showToast("Đã cập nhật mã Voucher thành công!", "success");
             resetVoucherForm();
         } else {
-            // TẠO MÃ MỚI
+            // TẠO MÃ MỚI (Bỏ startDate và endDate)
             const voucherData = {
                 code: codeInput,
                 durationDays: duration,
                 isActive: true,
-                startDate: startTimestamp,
-                endDate: endTimestamp,
                 maxUses: maxUses,
                 usedCount: 0,
                 usedBy: []
