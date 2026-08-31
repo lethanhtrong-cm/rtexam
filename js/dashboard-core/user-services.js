@@ -150,9 +150,11 @@ function fetchUserData(user, auth, db) {
                 if (!activeTier && currentUserData.isVip) activeTier = 'plus';
 
                 if (activeTier === 'plus' || activeTier === 'pro') {
+                    // ĐÃ SỬA: Đọc cả trường vipExpiration mới thiết lập trong luồng Tân thủ
                     const startField = currentUserData.vipActivationDate || currentUserData.vipStart;
                     const expiryField = currentUserData.vipExpirationDate || currentUserData.vipExpiration || currentUserData.vipEnd;
                     
+                    // Đối với tân thủ, nếu không có ActivationDate, mặc định lấy ngày tạo account/hiện tại
                     let startDateObj = null;
                     if (startField) {
                         startDateObj = startField.toDate ? startField.toDate() : new Date(startField);
@@ -193,6 +195,7 @@ function fetchUserData(user, auth, db) {
                             elVipStatusTab3.className = "status-badge status-active";
                         }
 
+                        // ĐÃ SỬA: Render ngày tháng chính xác
                         const elVipStartDate = document.getElementById("vipStartDate");
                         if (elVipStartDate) elVipStartDate.textContent = startDateObj ? formatDate(startDateObj) : "Không xác định";
 
@@ -209,6 +212,7 @@ function fetchUserData(user, auth, db) {
                             `;
                         }
                         
+                        // Cập nhật giao diện nút nếu đang mở Tab VIP
                         const tabVip = document.getElementById('tab-vip');
                         if (tabVip && tabVip.classList.contains('active')) {
                             const btn = document.getElementById('btnConfirmPayment');
@@ -242,46 +246,25 @@ function fetchUserData(user, auth, db) {
                             }
                         }
 
-                        // HIỂN THỊ POPUP TÂN THỦ NỔI BẬT VÀ ĐẸP MẮT HƠN
+                        // ĐÃ SỬA: Tách logic bật Popup Tân thủ VIP (Chỉ hiện 1 lần duy nhất trong phiên làm việc)
                         if (!sessionStorage.getItem('welcomedVipNewbie')) {
                             const existingModal = document.getElementById('vipSuccessModalCustom');
                             if (existingModal) existingModal.remove();
 
                             const popupHTML = `
-                                <div class="custom-modal-overlay" id="vipSuccessModalCustom" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 15px;">
-                                    <div class="custom-modal-content" style="max-width: 400px; width: 100%; background: #ffffff; border-radius: 24px; text-align: center; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); overflow: hidden; position: relative;">
-                                        
-                                        <!-- Vùng trang trí Header Popup -->
-                                        <div style="background: linear-gradient(135deg, #6366f1, #3b82f6, #0ea5e9); height: 130px; width: 100%; position: relative; display: flex; justify-content: center;">
-                                            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.2; background-image: radial-gradient(#ffffff 2px, transparent 2px); background-size: 20px 20px;"></div>
+                                <div class="custom-modal-overlay" id="vipSuccessModalCustom" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px); justify-content: center; align-items: center;">
+                                    <div class="custom-modal-content" style="max-width: 450px; background: #fff; border-radius: 16px; padding: 35px 25px; text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                                        <div style="width: 80px; height: 80px; background: ${tierColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 4px 15px rgba(0,0,0, 0.2);">
+                                            ${tierIcon.replace('>', ' style="font-size: 2.5rem; color: white;">')}
                                         </div>
-                                        
-                                        <!-- Vùng chứa Avatar/Icon nổi -->
-                                        <div style="width: 90px; height: 90px; background: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: -45px auto 15px; box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3); position: relative; z-index: 2; border: 5px solid #ffffff;">
-                                            <div style="width: 100%; height: 100%; border-radius: 50%; background: ${tierColor}; display: flex; align-items: center; justify-content: center;">
-                                                ${tierIcon.replace('>', ' style="font-size: 2.2rem; color: white;">')}
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Vùng nội dung chữ và nút bấm -->
-                                        <div style="padding: 0 30px 35px 30px;">
-                                            <span style="display: inline-block; background: #fef08a; color: #854d0e; font-size: 0.75rem; font-weight: 800; padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(254, 240, 138, 0.5);">🎁 Quà Tặng Tân Thủ</span>
-                                            
-                                            <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.8rem; line-height: 1.2;">Chào mừng bạn!</h2>
-                                            
-                                            <p style="color: #475569; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;">
-                                                Hệ thống đã tự động tặng bạn <span style="background: #dbeafe; color: #1d4ed8; font-weight: 800; padding: 2px 8px; border-radius: 6px;">5 NGÀY</span> trải nghiệm gói <span style="background: #ffedd5; color: #c2410c; font-weight: 800; padding: 2px 8px; border-radius: 6px;">${tierName}</span> hoàn toàn miễn phí. Cùng bắt đầu học tập ngay nhé!
-                                            </p>
-                                            
-                                            <button id="closeVipSuccessBtn" style="width: 100%; padding: 16px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 14px; font-size: 1.15rem; font-weight: bold; cursor: pointer; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35); transition: transform 0.2s, box-shadow 0.2s;">
-                                                Khám phá ngay <i class="fa-solid fa-rocket ms-2"></i>
-                                            </button>
-                                        </div>
+                                        <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.6rem;">Chào mừng Tân thủ!</h2>
+                                        <p style="color: #475569; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;">
+                                            Tài khoản của bạn đã được tặng <strong>5 ngày</strong> sử dụng gói <strong>${tierName}</strong> hoàn toàn miễn phí. Cùng khám phá Trợ lý AI và các tính năng luyện thi ngay nhé!
+                                        </p>
+                                        <button id="closeVipSuccessBtn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
+                                            Khám phá ngay <i class="fa-solid fa-arrow-right ms-2"></i>
+                                        </button>
                                     </div>
-                                    <style>
-                                        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-                                        #closeVipSuccessBtn:hover { transform: translateY(-3px); box-shadow: 0 12px 25px rgba(37, 99, 235, 0.45) !important; }
-                                    </style>
                                 </div>
                             `;
                             document.body.insertAdjacentHTML('beforeend', popupHTML);
