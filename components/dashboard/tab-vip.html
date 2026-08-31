@@ -40,10 +40,7 @@
         
         <div style="background: #f8fafc; padding: 20px 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
             <p style="font-size: 0.95rem; color: #64748b; margin-bottom: 12px; margin-top: 0;">Trạng thái tài khoản của bạn:</p>
-            <!-- ĐÃ SỬA: Thay thế dòng chữ tĩnh bằng cấu trúc thẻ Flex hiển thị Icon Gói cước -->
-            <span id="vipStatusTab3" style="display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;">
-                <i class="fa-solid fa-paper-plane" style="color: #64748b;"></i> GÓI FREE
-            </span>
+            <span id="vipStatusTab3" class="status-badge status-unactive" style="display: inline-block; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 600;">Chưa kích hoạt VIP</span>
         </div>
         
         <h4 style="font-size: 1.1rem; color: #334155; margin-bottom: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">Bảng so sánh quyền lợi:</h4>
@@ -78,6 +75,7 @@
                         <td style="padding: 14px 12px; background: #eff6ff;"><span style="font-size: 0.85rem; font-weight: 700; color: #2563eb; background: #dbeafe; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">3 lượt/ngày</span></td>
                         <td style="padding: 14px 12px; background: #fff7ed;"><span style="font-size: 0.85rem; font-weight: 700; color: #ea580c; background: #ffedd5; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">Không giới hạn</span></td>
                     </tr>
+                    <!-- ĐÃ THÊM: Hàng so sánh quyền lợi Truy cập Thư viện PPTX -->
                     <tr>
                         <td style="padding: 14px 12px; text-align: left; color: #334155; font-weight: 500;">Truy cập Thư viện bài giảng PPTX</td>
                         <td style="padding: 14px 12px;"><span style="font-size: 0.85rem; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">3 bài</span></td>
@@ -144,6 +142,7 @@
                 <span style="color: #64748b; font-size: 0.85rem; font-style: italic;">Hệ thống sẽ tự động đối soát và mở khóa sau 1-3 phút.</span>
             </div>
             
+            <!-- Hidden element to store the actual full email loaded by Firebase -->
             <span id="paymentEmail" style="display: none;">[Email của bạn]</span>
         </div>
         
@@ -160,32 +159,39 @@
 </div>
 
 <svg width="0" height="0" style="display:none;" onload="
+    // Hàm tái tạo URL QR Code sạch sẽ không dùng regex
     window.generateQR = function() {
         const emailEl = document.getElementById('paymentEmail');
         const displayEl = document.getElementById('paymentEmailDisplay');
         const checkedRadio = document.querySelector('input[name=\'packageSelect\']:checked');
         const amount = checkedRadio ? checkedRadio.value : '30000';
         
-        let transferContent = 'NAP TIEN'; 
+        let transferContent = 'NAP TIEN'; // Giá trị mặc định
         
         if(emailEl && emailEl.dataset.originalEmail) {
             let fullEmail = emailEl.dataset.originalEmail;
             let username = fullEmail.split('@')[0].toUpperCase();
+            // Lọc bỏ ký tự đặc biệt, chỉ giữ lại chữ và số
             username = username.replace(/[^A-Z0-9]/g, ''); 
             transferContent = 'NAP ' + username;
+            
+            // Cập nhật giao diện chữ
             if(displayEl) displayEl.innerText = transferContent;
         }
 
         const qrImg = document.getElementById('qr-payment');
         if(qrImg) {
+            // Xây dựng URL chuẩn thay vì dùng replace
             const baseUrl = 'https://img.vietqr.io/image/MB-2070120091994-compact.png';
             const newSrc = baseUrl + '?amount=' + amount + '&addInfo=' + encodeURIComponent(transferContent) + '&accountName=LE%20THANH%20TRONG';
+            
             if(qrImg.src !== newSrc) {
                 qrImg.src = newSrc;
             }
         }
     };
 
+    // Script xử lý UI khi bấm chọn Gói
     window.updatePaymentUI = function(amount) {
         const labels = document.querySelectorAll('.package-radio');
         const radios = document.querySelectorAll('input[name=\'packageSelect\']');
@@ -202,55 +208,42 @@
 
         const priceFormatted = parseInt(amount).toLocaleString('vi-VN');
         document.getElementById('displayPrice').innerHTML = priceFormatted + ' ₫<span style=\'font-size: 1.1rem; color: #047857;\'>/tháng</span>';
+        
+        // Gọi hàm tạo QR
         window.generateQR();
     };
 
+    // Script Tải mã QR
     window.downloadQR = async function() {
         const qrImg = document.getElementById('qr-payment');
         if (!qrImg || !qrImg.src) return;
+        
         try {
             const response = await fetch(qrImg.src);
             const blob = await response.blob();
             const blobUrl = window.URL.createObjectURL(blob);
+            
             const link = document.createElement('a');
             link.href = blobUrl;
             link.download = 'ma-qr-thanh-toan-KTV3Mien.png';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            
             window.URL.revokeObjectURL(blobUrl);
         } catch (error) {
+            console.error('Lỗi khi tải mã QR:', error);
             alert('Không thể tải mã QR trực tiếp. Bạn vui lòng ấn giữ vào ảnh (hoặc click chuột phải) và chọn Lưu hình ảnh.');
         }
     };
     
+    // Dùng setInterval để kiểm tra khi Firebase nạp xong Email
     const checkEmailInterval = setInterval(() => {
         const emailEl = document.getElementById('paymentEmail');
         if(emailEl && emailEl.innerText && emailEl.innerText !== '[Email của bạn]') {
             emailEl.dataset.originalEmail = emailEl.innerText.trim();
             window.generateQR(); 
             clearInterval(checkEmailInterval); 
-        }
-    }, 500);
-
-    // ĐÃ THÊM: Script tự động định dạng lại Status VIP thành Badge có Icon (Đồng bộ với logic Firebase bên ngoài)
-    const formatVipStatusInterval = setInterval(() => {
-        const statusEl = document.getElementById('vipStatusTab3');
-        if (statusEl) {
-            const text = statusEl.innerText.toLowerCase();
-            if (statusEl.dataset.formatted === text) return; 
-            
-            if (text.includes('pro')) {
-                statusEl.innerHTML = '<i class="fa-solid fa-crown" style="color: #ea580c;"></i> GÓI PRO';
-                statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa;';
-            } else if (text.includes('plus')) {
-                statusEl.innerHTML = '<i class="fa-solid fa-shield-halved" style="color: #2563eb;"></i> GÓI PLUS';
-                statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
-            } else {
-                statusEl.innerHTML = '<i class="fa-solid fa-paper-plane" style="color: #475569;"></i> GÓI FREE';
-                statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;';
-            }
-            statusEl.dataset.formatted = text;
         }
     }, 500);
 "></svg>
