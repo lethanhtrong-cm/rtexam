@@ -9,14 +9,6 @@
         <h2 class="logo-text" style="margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap;">Hệ Thống Thi Trắc Nghiệm - KTV 3 Miền.com</h2>
     </div>
 
-    <!-- KHU VỰC MENU ĐIỀU HƯỚNG TRUNG TÂM -->
-    <nav class="topbar-center-menu" style="display: flex; gap: 12px; justify-content: center; align-items: center;">
-        <a href="#" id="btnAutoGenerate" class="ai-highlight-btn"><i class="fa-solid fa-wand-magic-sparkles" style="color: #fde047;"></i> Trợ lý AI Học thuật</a>
-        <a href="#" id="btnRandomExam"><i class="fa-solid fa-dice" style="color: #fca5a5;"></i> Tạo đề ngẫu nhiên</a>
-        <a href="#" id="topbarNavCreateRoom"><i class="fa-solid fa-users-viewfinder"></i> Tạo phòng</a>
-        <a href="#" id="btnUploadExam"><i class="fa-solid fa-cloud-arrow-up"></i> Upload đề</a>
-    </nav>
-    
     <!-- KHU VỰC CHỨC NĂNG BÊN PHẢI -->
     <div class="topbar-actions" style="display: flex; align-items: center; justify-content: flex-end; gap: 20px; flex: 1;">
         
@@ -77,45 +69,6 @@
 </header>
 
 <style>
-    /* UI/UX cho thanh Navigation trung tâm nổi bật & tinh tế */
-    .topbar-center-menu a {
-        color: #ffffff; 
-        background-color: rgba(255, 255, 255, 0.1); 
-        border: 1px solid rgba(255, 255, 255, 0.5); 
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.95rem;
-        transition: all 0.25s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        border-radius: 20px; 
-    }
-    
-    .topbar-center-menu a:hover {
-        background-color: rgba(255, 255, 255, 0.25);
-        border-color: rgba(255, 255, 255, 0.6);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-
-    /* NÚT TRỢ LÝ AI ĐƯỢC LÀM NỔI BẬT ĐẶC BIỆT */
-    .ai-highlight-btn {
-        background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
-        border: 1px solid rgba(255, 255, 255, 0.8) !important;
-        box-shadow: 0 0 15px rgba(124, 58, 237, 0.5);
-    }
-
-    /* Hiệu ứng nhấp nháy phát sáng mạnh mẽ cho nút AI */
-    @keyframes superGlow {
-        0%, 100% { box-shadow: 0 0 5px rgba(124, 58, 237, 0.4), 0 0 20px rgba(79, 70, 229, 0.3); transform: scale(1); }
-        50% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.8), 0 0 30px rgba(253, 224, 71, 0.5); transform: scale(1.03); }
-    }
-    
-    #btnAutoGenerate { animation: superGlow 3s infinite ease-in-out; }
-    #btnAutoGenerate:hover { animation: none; transform: translateY(-2px); }
-
     #btnQuickOpenAi:hover {
         transform: scale(1.1);
         box-shadow: 0 6px 15px rgba(139, 92, 246, 0.6);
@@ -138,67 +91,21 @@
        TỐI ƯU HÓA RESPONSIVE DI ĐỘNG BẰNG CÁCH ÉP KIỂU !IMPORTANT
        ========================================================================= */
        
-    /* Tối ưu cho màn hình Laptop (Dưới 1400px) */
     @media (max-width: 1400px) {
         .main-topbar { padding: 10px 15px !important; }
         .logo-text { font-size: 1.1rem !important; }
-        .topbar-center-menu { gap: 6px !important; }
-        .topbar-center-menu a { padding: 6px 10px !important; font-size: 0.85rem !important; }
         .topbar-actions { gap: 12px !important; }
     }
 
-    /* 1. Màn hình Tablet/Laptop nhỏ (Dưới 1100px) */
     @media (max-width: 1100px) {
         .logo-text { display: none !important; }
     }
     
-    /* 2. Màn hình Tablet chuẩn (Dưới 992px) */
     @media (max-width: 992px) {
         #mobileMenuToggle { display: block !important; }
         .main-topbar { padding: 10px 15px !important; }
-        .topbar-center-menu a { padding: 6px 10px !important; font-size: 0.85rem !important; }
     }
     
-    /* 3. ĐIỆN THOẠI (Dưới 768px): BIẾN MENU TRUNG TÂM THÀNH THANH BOTTOM NAVIGATION */
-    @media (max-width: 768px) {
-        .topbar-center-menu {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            background: #ffffff !important;
-            border-top: 1px solid #e2e8f0 !important;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.05) !important;
-            padding: 8px 5px !important;
-            margin: 0 !important;
-            z-index: 9999 !important;
-            justify-content: space-around !important;
-            border-radius: 0 !important;
-        }
-        .topbar-center-menu a {
-            flex-direction: column !important;
-            background: transparent !important;
-            border: none !important;
-            color: #64748b !important;
-            font-size: 0.75rem !important;
-            padding: 5px !important;
-            gap: 4px !important;
-            box-shadow: none !important;
-            flex: 1 !important;
-            text-align: center !important;
-            border-radius: 8px !important;
-        }
-        .topbar-center-menu a i { font-size: 1.25rem !important; margin-bottom: 2px !important; }
-        .topbar-center-menu a:hover, .topbar-center-menu a:active {
-            background: #f1f5f9 !important;
-            color: #084298 !important;
-            transform: none !important;
-        }
-        /* Phá hiệu ứng phát sáng của nút AI trên mobile để đồng bộ màu */
-        #btnAutoGenerate { animation: none !important; color: #8b5cf6 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
-    }
-
-    /* 4. Siêu tối ưu cho màn hình Điện thoại (Dưới 576px) */
     @media (max-width: 576px) {
         .topbar-actions { gap: 10px !important; }
         .user-greeting-text { display: none !important; }
@@ -209,7 +116,6 @@
     }
 </style>
 
-<!-- ĐÃ THÊM: Đoạn script nhỏ để kích hoạt nút mở nhanh AI đồng bộ với nút gốc -->
 <script>
     document.getElementById('btnQuickOpenAi')?.addEventListener('click', (e) => {
         e.preventDefault();
