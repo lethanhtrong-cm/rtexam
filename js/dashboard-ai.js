@@ -15,39 +15,69 @@ document.addEventListener('ComponentsLoaded', () => {
     let chatHistory = [];
     let isFirstOpen = true;
     let globalAiTier = 'free'; 
+    let isFullscreen = false;
+    let savedSidebarWidth = '';
 
     // ==========================================
-    // TÍNH NĂNG: BỘ ĐẾM KÝ TỰ & LƯỢT HỎI REAL-TIME
+    // NHÚNG CSS CHO CÁC HIỆU ỨNG UI MỚI
+    // ==========================================
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: #f1f5f9; border-radius: 12px; width: fit-content; margin-top: 5px; }
+        .typing-indicator span { width: 6px; height: 6px; background-color: #3b82f6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        
+        .quick-prompt-chip { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; padding: 6px 12px; border-radius: 16px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: 0.2s; font-weight: 500; }
+        .quick-prompt-chip:hover { background: #bae6fd; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .quick-prompts-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 5px; scrollbar-width: none; }
+        .quick-prompts-container::-webkit-scrollbar { display: none; }
+        
+        .scroll-bottom-btn { position: absolute; bottom: 85px; right: 20px; background: rgba(59, 130, 246, 0.9); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; display: none; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; transition: 0.2s; backdrop-filter: blur(4px); }
+        .scroll-bottom-btn:hover { background: #2563eb; transform: scale(1.1); }
+    `;
+    document.head.appendChild(style);
+
+    // ==========================================
+    // TÍNH NĂNG: BỘ ĐẾM KÝ TỰ & GỢI Ý CÂU HỎI
     // ==========================================
     const charCounter = document.createElement('div');
     charCounter.id = 'aiCharCounter';
     charCounter.style.cssText = "font-size: 0.8rem; color: #64748b; text-align: right; margin-top: 6px; padding-right: 5px; display: none; font-weight: 600; transition: color 0.2s;";
     charCounter.innerText = "0/1000";
 
-    const queryCounterUI = document.createElement('div');
-    queryCounterUI.id = 'aiQueryCounterUI';
-    queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; margin-right: 15px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap; flex-shrink: 0;";
-
-    // ĐÃ SỬA: Chèn và ép tiêu đề Sidebar luôn nằm trên 1 hàng ngang
-    if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
-        const sidebarHeader = closeAiSidebarBtn.parentNode;
-        sidebarHeader.insertBefore(queryCounterUI, closeAiSidebarBtn);
-        
-        sidebarHeader.style.display = 'flex';
-        sidebarHeader.style.alignItems = 'center';
-        sidebarHeader.style.flexWrap = 'nowrap';
-        sidebarHeader.style.gap = '15px'; // ĐÃ THÊM: Ép buộc luôn có khoảng trắng 15px giữa tiêu đề và huy hiệu
-        
-        Array.from(sidebarHeader.children).forEach(child => {
-            if (child !== queryCounterUI && child !== closeAiSidebarBtn) {
-                child.style.whiteSpace = 'nowrap';
-                child.style.flexShrink = '0';
-            }
-        });
-    }
+    // Khởi tạo container Gợi ý câu hỏi (Quick Prompts)
+    const quickPromptsWrapper = document.createElement('div');
+    quickPromptsWrapper.style.cssText = "padding: 0 5px; margin-top: 5px;";
+    const promptsContainer = document.createElement('div');
+    promptsContainer.className = 'quick-prompts-container';
     
+    const prompts = [
+        "Phân tích ưu điểm CT đếm Photon",
+        "So sánh xung T1W và T2W",
+        "Giải thích cơ chế ảnh CCTA"
+    ];
+    
+    prompts.forEach(p => {
+        const chip = document.createElement('button');
+        chip.className = 'quick-prompt-chip';
+        chip.innerText = p;
+        chip.addEventListener('click', (e) => {
+            e.preventDefault();
+            aiChatInput.value = p;
+            updateCharCounterUI();
+            aiChatInput.focus();
+        });
+        promptsContainer.appendChild(chip);
+    });
+    quickPromptsWrapper.appendChild(promptsContainer);
+
     if (aiChatInput && aiChatInput.parentNode) {
         aiChatInput.setAttribute('maxlength', '1000');
+        // Chèn Quick Prompts ngay trên ô nhập liệu
+        aiChatInput.parentNode.insertBefore(quickPromptsWrapper, aiChatInput);
+        // Chèn Counter ngay dưới ô nhập liệu
         aiChatInput.parentNode.insertBefore(charCounter, aiChatInput.nextSibling);
         aiChatInput.addEventListener('input', updateCharCounterUI);
     }
@@ -71,6 +101,101 @@ document.addEventListener('ComponentsLoaded', () => {
                 if (btnSendAi) btnSendAi.disabled = false; 
             }
         }
+    }
+
+    // ==========================================
+    // TÍNH NĂNG: CUỘN XUỐNG CUỐI (SCROLL TO BOTTOM)
+    // ==========================================
+    const scrollBtn = document.createElement('button');
+    scrollBtn.className = 'scroll-bottom-btn';
+    scrollBtn.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
+    if (aiSidebar) {
+        aiSidebar.appendChild(scrollBtn);
+    }
+    if (aiChatBox) {
+        aiChatBox.addEventListener('scroll', () => {
+            // Hiện nút nếu cuộn lên cách đáy hơn 150px
+            if (aiChatBox.scrollHeight - aiChatBox.scrollTop - aiChatBox.clientHeight > 150) {
+                scrollBtn.style.display = 'flex';
+            } else {
+                scrollBtn.style.display = 'none';
+            }
+        });
+    }
+    scrollBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        aiChatBox.scrollTo({ top: aiChatBox.scrollHeight, behavior: 'smooth' });
+    });
+
+    // ==========================================
+    // CÁC NÚT TRÊN HEADER SIDEBAR (HUY HIỆU, CLEAR, FULLSCREEN)
+    // ==========================================
+    const queryCounterUI = document.createElement('div');
+    queryCounterUI.id = 'aiQueryCounterUI';
+    queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap; flex-shrink: 0;";
+
+    // Nút Clear Chat (Xóa phiên)
+    const clearChatBtn = document.createElement('button');
+    clearChatBtn.id = 'clearAiChatBtn';
+    clearChatBtn.title = 'Làm mới phiên trò chuyện';
+    clearChatBtn.innerHTML = '<i class="fa-solid fa-broom"></i>';
+    clearChatBtn.style.cssText = "background: transparent; border: none; color: white; font-size: 1.1rem; cursor: pointer; padding: 5px; margin-left: 10px; display: flex; align-items: center; justify-content: center; transition: 0.2s;";
+    
+    clearChatBtn.addEventListener('mouseenter', () => clearChatBtn.style.color = '#cbd5e1');
+    clearChatBtn.addEventListener('mouseleave', () => clearChatBtn.style.color = 'white');
+    clearChatBtn.addEventListener('click', () => {
+        if (confirm("Bạn có chắc chắn muốn làm mới phiên? Lịch sử hiện tại sẽ bị xóa để giúp AI phân tích câu hỏi mới nhanh và chính xác hơn.")) {
+            chatHistory = [];
+            saveChatHistory();
+            if (aiChatBox) aiChatBox.innerHTML = '';
+            appendMessage('ai', "💡 *Ghi chú hệ thống: Đã làm mới bộ nhớ. Hãy đặt câu hỏi mới cho tôi nhé!*");
+        }
+    });
+
+    // Nút Fullscreen
+    const fullscreenAiBtn = document.createElement('button');
+    fullscreenAiBtn.id = 'fullscreenAiBtn';
+    fullscreenAiBtn.title = 'Phóng to / Thu nhỏ';
+    fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
+    fullscreenAiBtn.style.cssText = "background: transparent; border: none; color: white; font-size: 1.1rem; cursor: pointer; padding: 5px; margin-right: 5px; margin-left: 5px; display: flex; align-items: center; justify-content: center; transition: 0.2s;";
+    
+    fullscreenAiBtn.addEventListener('mouseenter', () => fullscreenAiBtn.style.color = '#cbd5e1');
+    fullscreenAiBtn.addEventListener('mouseleave', () => fullscreenAiBtn.style.color = 'white');
+
+    fullscreenAiBtn.addEventListener('click', () => {
+        if (!isFullscreen) {
+            savedSidebarWidth = aiSidebar.style.width;
+            aiSidebar.style.width = '100vw';
+            aiSidebar.style.zIndex = '100000'; 
+            if (mainContentWrap) mainContentWrap.style.marginRight = '0';
+            fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
+            isFullscreen = true;
+        } else {
+            aiSidebar.style.width = savedSidebarWidth || '460px';
+            aiSidebar.style.zIndex = ''; 
+            if (mainContentWrap) mainContentWrap.style.marginRight = savedSidebarWidth || '460px';
+            fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
+            isFullscreen = false;
+        }
+    });
+
+    if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
+        const sidebarHeader = closeAiSidebarBtn.parentNode;
+        sidebarHeader.insertBefore(queryCounterUI, closeAiSidebarBtn);
+        sidebarHeader.insertBefore(clearChatBtn, closeAiSidebarBtn);
+        sidebarHeader.insertBefore(fullscreenAiBtn, closeAiSidebarBtn);
+        
+        sidebarHeader.style.display = 'flex';
+        sidebarHeader.style.alignItems = 'center';
+        sidebarHeader.style.flexWrap = 'nowrap';
+        sidebarHeader.style.gap = '15px'; 
+        
+        Array.from(sidebarHeader.children).forEach(child => {
+            if (child !== queryCounterUI && child !== closeAiSidebarBtn && child !== fullscreenAiBtn && child !== clearChatBtn) {
+                child.style.whiteSpace = 'nowrap';
+                child.style.flexShrink = '0';
+            }
+        });
     }
 
     function updateQueryCounterDisplay(remaining, maxLimit, tier) {
@@ -109,9 +234,8 @@ document.addEventListener('ComponentsLoaded', () => {
         const user = e.detail.user || auth.currentUser;
         if (!user) return;
         
-        if (unsubscribeUser) unsubscribeUser(); // Hủy lắng nghe cũ nếu có
+        if (unsubscribeUser) unsubscribeUser(); 
         
-        // ĐÃ SỬA: Dùng onSnapshot để lắng nghe thay đổi Real-time
         unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
@@ -199,13 +323,14 @@ document.addEventListener('ComponentsLoaded', () => {
         let isResizing = false;
 
         resizer.addEventListener('mousedown', (e) => {
+            if (isFullscreen) return; 
             isResizing = true;
             document.body.style.cursor = 'col-resize';
             e.preventDefault(); 
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
+            if (!isResizing || isFullscreen) return; 
             let newWidth = window.innerWidth - e.clientX;
             
             let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
@@ -231,19 +356,29 @@ document.addEventListener('ComponentsLoaded', () => {
     function toggleSidebar() {
         if (!aiSidebar) return;
         
-        let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
-        let currentWidth = aiSidebar.offsetWidth;
-        
-        if (!currentWidth || currentWidth < minWidth) {
-            currentWidth = minWidth;
-            aiSidebar.style.width = `${currentWidth}px`;
-        }
-        
         if (aiSidebar.classList.contains('active')) {
             aiSidebar.classList.remove('active');
+            
+            if (isFullscreen) {
+                isFullscreen = false;
+                fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
+                aiSidebar.style.zIndex = '';
+                aiSidebar.style.width = savedSidebarWidth || '460px';
+            }
+
+            let currentWidth = aiSidebar.offsetWidth;
             aiSidebar.style.right = `-${currentWidth + 20}px`; 
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
+
         } else {
+            let minWidth = window.innerWidth <= 500 ? window.innerWidth : 460;
+            let currentWidth = aiSidebar.offsetWidth;
+            
+            if (!currentWidth || currentWidth < minWidth) {
+                currentWidth = minWidth;
+                aiSidebar.style.width = `${currentWidth}px`;
+            }
+
             aiSidebar.classList.add('active');
             aiSidebar.style.right = '0';
             if (mainContentWrap) mainContentWrap.style.marginRight = `${currentWidth}px`;
@@ -258,7 +393,7 @@ document.addEventListener('ComponentsLoaded', () => {
                 hintDiv.style.fontSize = '0.85rem';
                 hintDiv.style.lineHeight = '1.4';
                 hintDiv.style.border = '1px solid #bae6fd';
-                hintDiv.innerHTML = '<i class="fa-solid fa-arrows-left-right" style="color: #0ea5e9; margin-right: 5px;"></i> <b>Mẹo nhỏ:</b> Bạn có thể nhấn giữ và kéo viền bên trái của cửa sổ này để thay đổi kích thước theo ý thích nhé!';
+                hintDiv.innerHTML = '<i class="fa-solid fa-arrows-left-right" style="color: #0ea5e9; margin-right: 5px;"></i> <b>Mẹo:</b> Dùng nút chổi <i class="fa-solid fa-broom" style="color: #3b82f6;"></i> ở phía trên để xóa lịch sử, giúp AI chạy nhanh và tiết kiệm tài nguyên nhé!';
                 
                 aiChatBox.appendChild(hintDiv);
                 loadChatHistory();
@@ -428,7 +563,8 @@ document.addEventListener('ComponentsLoaded', () => {
     function appendMessage(sender, text) {
         if (!aiChatBox) return;
 
-        if (sender === 'ai' && !text.includes('Đang suy nghĩ')) {
+        // ĐÃ SỬA: Bỏ qua tạo nút copy nếu tin nhắn chứa indicator (đang gõ)
+        if (sender === 'ai' && !text.includes('typing-indicator') && !text.includes('Đang suy nghĩ')) {
             const wrapperDiv = document.createElement('div');
             wrapperDiv.style.display = 'flex';
             wrapperDiv.style.flexDirection = 'column';
@@ -555,7 +691,8 @@ document.addEventListener('ComponentsLoaded', () => {
             saveChatHistory(); 
 
             const loadingId = 'loading-' + Date.now();
-            appendMessage('ai', `<span id="${loadingId}"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang suy nghĩ...</span>`);
+            // ĐÃ SỬA: Dùng hiệu ứng gõ phím Bounce Dots thay thế text
+            appendMessage('ai', `<div id="${loadingId}" class="typing-indicator"><span></span><span></span><span></span></div>`);
 
             try {
                 const response = await fetch('/api/generate', {
@@ -569,7 +706,10 @@ document.addEventListener('ComponentsLoaded', () => {
                 const usedTokens = parseInt(response.headers.get('X-Token-Usage')) || 0; 
                 
                 const loadingEl = document.getElementById(loadingId);
-                if (loadingEl) loadingEl.parentNode.remove();
+                // Vì appendMessage nhét html vào trong thẻ div.chat-message, nên phải gọi parentNode 2 lần để xóa sạch
+                if (loadingEl && loadingEl.parentNode) {
+                    loadingEl.parentNode.remove();
+                }
 
                 if (!response.ok) {
                     chatHistory.pop(); 
@@ -619,7 +759,9 @@ document.addEventListener('ComponentsLoaded', () => {
             } catch (error) {
                 console.error("Lỗi AI Chat:", error);
                 const loadingEl = document.getElementById(loadingId);
-                if (loadingEl) loadingEl.parentNode.remove();
+                if (loadingEl && loadingEl.parentNode) {
+                    loadingEl.parentNode.remove();
+                }
                 appendMessage('ai error', "Lỗi kết nối AI: " + error.message);
             }
         });
