@@ -127,13 +127,16 @@
             
             <p style="color: #475569; font-size: 0.95rem; margin: 0 0 10px 0;">Nội dung chuyển khoản (bắt buộc chính xác):</p>
             <div style="background: #ffffff; border: 1.5px dashed #3b82f6; padding: 15px; border-radius: 8px; user-select: all; cursor: pointer; display: inline-block; width: 90%;" title="Bôi đen để copy">
-                <span style="font-weight: 800; color: #1d4ed8; font-size: 1.15rem; letter-spacing: 0.5px;">NAP <span id="paymentEmail">[Email của bạn]</span></span>
+                <span style="font-weight: 800; color: #1d4ed8; font-size: 1.15rem; letter-spacing: 0.5px;" id="paymentEmailDisplay">NAP TIEN</span>
             </div>
             
             <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px;">
                 <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i>
                 <span style="color: #64748b; font-size: 0.85rem; font-style: italic;">Hệ thống sẽ tự động đối soát và mở khóa sau 1-3 phút.</span>
             </div>
+            
+            <!-- Hidden element to store the actual full email loaded by Firebase -->
+            <span id="paymentEmail" style="display: none;">[Email của bạn]</span>
         </div>
         
         <!-- NÚT XÁC NHẬN VÀ HỦY -->
@@ -149,7 +152,39 @@
 </div>
 
 <img src="x" onerror="
-    // Script xử lý UI
+    // Hàm tái tạo URL QR Code sạch sẽ
+    window.generateQR = function() {
+        const emailEl = document.getElementById('paymentEmail');
+        const displayEl = document.getElementById('paymentEmailDisplay');
+        const checkedRadio = document.querySelector('input[name=\'packageSelect\']:checked');
+        const amount = checkedRadio ? checkedRadio.value : '30000';
+        
+        let transferContent = 'NAP TIEN'; // Giá trị mặc định
+        
+        if(emailEl && emailEl.dataset.originalEmail) {
+            let fullEmail = emailEl.dataset.originalEmail;
+            let username = fullEmail.split('@')[0].toUpperCase();
+            // Lọc bỏ ký tự đặc biệt, chỉ giữ lại chữ và số để chống lỗi App Ngân hàng
+            username = username.replace(/[^A-Z0-9]/g, ''); 
+            transferContent = 'NAP ' + username;
+            
+            // Cập nhật giao diện chữ
+            if(displayEl) displayEl.innerText = transferContent;
+        }
+
+        const qrImg = document.getElementById('qr-payment');
+        if(qrImg) {
+            // Xây dựng lại URL từ đầu để tránh lỗi khi replace
+            const baseUrl = 'https://img.vietqr.io/image/MB-2070120091994-compact.png';
+            const newSrc = \`\${baseUrl}?amount=\${amount}&addInfo=\${encodeURIComponent(transferContent)}&accountName=LE%20THANH%20TRONG\`;
+            
+            if(qrImg.src !== newSrc) {
+                qrImg.src = newSrc;
+            }
+        }
+    };
+
+    // Script xử lý UI khi bấm chọn Gói
     window.updatePaymentUI = function(amount) {
         const labels = document.querySelectorAll('.package-radio');
         const radios = document.querySelectorAll('input[name=\'packageSelect\']');
@@ -167,36 +202,16 @@
         const priceFormatted = parseInt(amount).toLocaleString('vi-VN');
         document.getElementById('displayPrice').innerHTML = priceFormatted + ' ₫<span style=\'font-size: 1.1rem; color: #047857;\'>/tháng</span>';
         
-        // ĐÃ SỬA: Lọc bỏ đuôi @... trong nội dung email
-        const emailEl = document.getElementById('paymentEmail');
-        let transferContent = 'NAP TIEN'; // Fallback
-        if(emailEl && emailEl.innerText !== '[Email của bạn]') {
-            let fullEmail = emailEl.innerText.trim();
-            // Cắt phần trước chữ @
-            let username = fullEmail.split('@')[0];
-            // Cập nhật lại UI hiển thị
-            emailEl.innerText = username;
-            transferContent = 'NAP ' + username;
-        }
-        
-        // Cập nhật đường link QR VietQR
-        const qrImg = document.getElementById('qr-payment');
-        let currentSrc = qrImg.src;
-        // Chỉnh giá tiền
-        let newSrc = currentSrc.replace(/amount=\d+/, 'amount=' + amount);
-        // Chỉnh nội dung chuyển khoản
-        newSrc = newSrc.replace(/addInfo=[^&]*/, 'addInfo=' + encodeURIComponent(transferContent));
-        
-        qrImg.src = newSrc;
+        // Gọi hàm tạo QR
+        window.generateQR();
     };
 
-    // ĐÃ THÊM: Script Tải mã QR
+    // Script Tải mã QR
     window.downloadQR = async function() {
         const qrImg = document.getElementById('qr-payment');
         if (!qrImg || !qrImg.src) return;
         
         try {
-            // Fetch blob để vượt qua CORS (nếu có)
             const response = await fetch(qrImg.src);
             const blob = await response.blob();
             const blobUrl = window.URL.createObjectURL(blob);
@@ -208,7 +223,6 @@
             link.click();
             document.body.removeChild(link);
             
-            // Xóa url blob để giải phóng bộ nhớ
             window.URL.revokeObjectURL(blobUrl);
         } catch (error) {
             console.error('Lỗi khi tải mã QR:', error);
@@ -216,23 +230,14 @@
         }
     };
     
-    // Gắn listener lắng nghe DOM để tự động cập nhật QR khi Firebase load xong email
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.target.id === 'paymentEmail' && mutation.target.innerText !== '[Email của bạn]') {
-                const checkedRadio = document.querySelector('input[name=\'packageSelect\']:checked');
-                if(checkedRadio) {
-                    window.updatePaymentUI(checkedRadio.value);
-                }
-                observer.disconnect(); // Ngắt sau khi update lần đầu thành công
-            }
-        });
-    });
-    
-    setTimeout(() => {
-        const target = document.getElementById('paymentEmail');
-        if(target) {
-            observer.observe(target, { childList: true, characterData: true, subtree: true });
+    // ĐÃ SỬA: Dùng setInterval để bắt chính xác thời điểm Firebase nạp Email vào UI
+    const checkEmailInterval = setInterval(() => {
+        const emailEl = document.getElementById('paymentEmail');
+        if(emailEl && emailEl.innerText && emailEl.innerText !== '[Email của bạn]') {
+            // Firebase đã nạp email thành công
+            emailEl.dataset.originalEmail = emailEl.innerText.trim();
+            window.generateQR(); // Tạo lại mã QR ngay lập tức
+            clearInterval(checkEmailInterval); // Dừng vòng lặp
         }
     }, 500);
 " style="display: none;">
