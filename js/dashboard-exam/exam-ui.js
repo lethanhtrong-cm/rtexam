@@ -207,9 +207,9 @@ export function renderExams() {
             { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Trung bình') },
             { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Khó') },
 
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Dễ') },
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Trung bình') },
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP & AI", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Khó') }
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Dễ') },
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Trung bình') },
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Khó') }
         );
 
         let currentMainCategoryTracker = null;
