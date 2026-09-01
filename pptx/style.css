@@ -111,10 +111,10 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
     /* Topbar bẻ dòng gọn gàng */
     .pptx-topbar { flex-wrap: wrap; height: auto; min-height: 60px; padding: 10px 15px; gap: 10px; }
     .topbar-center { order: 3; width: 100%; justify-content: center !important; }
-    .topbar-left { flex: 1; }
+    .topbar-left { flex: 1; min-width: 0; } /* Thêm min-width: 0 để flexbox không bị tràn */
     .topbar-right { flex: 1; display: flex; justify-content: flex-end; }
-    .topbar-title { font-size: 1rem; padding-left: 10px; }
-    .btn-back-hero { font-size: 0.8rem; padding: 5px 12px; }
+    .topbar-title { font-size: 1rem; padding-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .btn-back-hero { font-size: 0.8rem; padding: 5px 12px; white-space: nowrap; }
 
     /* Hero Page thu nhỏ khoảng cách */
     .hero-container { padding: 25px 15px; }
