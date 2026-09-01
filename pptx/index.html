@@ -14,7 +14,7 @@
             <h1 class="topbar-title"><i class="fa-solid fa-desktop"></i> Thư viện Bài giảng</h1>
         </div>
         <div class="topbar-center" style="display: flex; gap: 10px; align-items: center;">
-            <span style="font-weight: 800; font-size: 1.15rem; color: #cbd5e1; letter-spacing: 1.5px;">ktv3mien.com</span>
+            <span style="font-weight: 800; font-size: 1.15rem; color: #cbd5e1; letter-spacing: 1.5px;">KTV3MIEN.COM</span>
             <button id="btn-back-hero" class="btn-back-hero" style="display: none;">
                 <i class="fa-solid fa-layer-group"></i> Chọn Chuyên Khoa
             </button>
@@ -40,16 +40,39 @@
             <h2>Khám phá Thư viện tài liệu hình ảnh y học</h2>
             <p>Vui lòng chọn một chuyên khoa bên dưới để xem danh sách các bài giảng tương ứng</p>
         </div>
+
+        <!-- THÊM MỚI: Khối Thống kê Tổng quan -->
+        <div class="stats-overview-container">
+            <div class="stat-card">
+                <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fa-solid fa-layer-group"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="stat-categories">--</div>
+                    <div class="stat-label">Nhóm kiến thức</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="color: #22c55e; background: #f0fdf4;"><i class="fa-solid fa-file-video"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="stat-lectures">--</div>
+                    <div class="stat-label">Bài giảng & Video</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="color: #f59e0b; background: #fffbeb;"><i class="fa-solid fa-fire"></i></div>
+                <div class="stat-info">
+                    <div class="stat-value" id="stat-views">--</div>
+                    <div class="stat-label">Lượt xem thực tế</div>
+                </div>
+            </div>
+        </div>
         
         <div class="category-grid">
-            <!-- Card MRI đã thêm Sub-Category Dropdown -->
             <div class="category-card" id="card-mri">
                 <div class="card-icon" style="background: #eff6ff; color: #3b82f6;">
                     <i class="fa-solid fa-magnet"></i>
                 </div>
                 <h3>Cộng hưởng từ (MRI)</h3>
                 <p>Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI</p>
-                <!-- Vùng chứa 2 tuỳ chọn con sẽ hiển thị khi click -->
                 <div class="sub-category-list" style="display: none;">
                     <button class="btn-sub-cat" data-cat="mri_pptx" data-name="MRI - Bản thuyết trình"><i class="fa-solid fa-file-powerpoint"></i> Bản thuyết trình</button>
                     <button class="btn-sub-cat" data-cat="mri_video" data-name="MRI - Video Clip"><i class="fa-solid fa-circle-play"></i> Video Clip</button>
@@ -101,9 +124,7 @@
 
             <div id="iframe-container" class="iframe-container" style="display: none;">
                 <div class="copyright-watermark"></div>
-                <!-- Trình chiếu Iframe cho PPTX/Youtube -->
                 <iframe id="pptx-viewer" src="" frameborder="0" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-                <!-- Trình chiếu MP4 cho Video Upload -->
                 <video id="video-viewer" controls controlsList="nodownload" style="width: 100%; height: 100%; border-radius: 16px; background: #000; display: none;"></video>
             </div>
         </main>
