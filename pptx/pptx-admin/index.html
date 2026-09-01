@@ -18,7 +18,6 @@
         .admin-sidebar { width: 280px; background: #f8fafc; border-right: 1px solid #e2e8f0; padding: 20px 0; display: flex; flex-direction: column; }
         .admin-sidebar h3 { padding: 0 20px 15px; font-size: 0.9rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px; }
         
-        /* Chỉnh sửa style Menu để phân cấp nhóm con */
         .admin-menu-parent { padding: 10px 20px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 10px; margin-top: 5px; }
         .admin-menu-item { padding: 12px 20px 12px 45px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #475569; font-weight: 600; transition: 0.2s; border-left: 4px solid transparent; font-size: 0.95rem; }
         .admin-menu-item.root-item { padding-left: 20px; margin-top: 5px; }
@@ -30,7 +29,7 @@
         
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #475569; }
-        .form-group input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 1rem; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 1rem; background: white; }
         .btn-submit { background: #3b82f6; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-submit:hover { background: #2563eb; }
         .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
@@ -43,8 +42,6 @@
         .btn-action { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; color: white; }
         .btn-edit { background: #f59e0b; margin-right: 5px; }
         .btn-delete { background: #ef4444; }
-        
-        .current-cat-badge { display: inline-block; background: #dbeafe; color: #1d4ed8; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-left: 10px; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -58,7 +55,6 @@
             <div class="admin-sidebar">
                 <h3>Danh mục quản lý</h3>
                 
-                <!-- Nhóm MRI (Được chia làm 2 nhánh) -->
                 <div class="admin-menu-parent">
                     <i class="fa-solid fa-magnet" style="color: #3b82f6; width: 16px; text-align: center;"></i> Cộng hưởng từ (MRI)
                 </div>
@@ -69,7 +65,6 @@
                     <i class="fa-solid fa-circle-play"></i> Video Clip
                 </div>
                 
-                <!-- Các nhóm còn lại -->
                 <div class="admin-menu-item root-item" data-cat="ct" data-name="CT">
                     <i class="fa-solid fa-x-ray" style="color: #22c55e;"></i> Cắt lớp vi tính (CT)
                 </div>
@@ -85,8 +80,20 @@
                 <div style="background: #f8fafc; padding: 25px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 30px;">
                     <h3 style="margin-bottom: 20px; color: #334155; display: flex; align-items: center;">
                         <i class="fa-solid fa-plus-circle" style="margin-right: 10px;"></i> Thêm/Sửa Bài Giảng
-                        <span id="form-cat-badge" class="current-cat-badge">Nhóm: MRI - Bản thuyết trình</span>
                     </h3>
+                    
+                    <!-- Dropdown mới để tự do luân chuyển chuyên khoa -->
+                    <div class="form-group">
+                        <label>Nhóm chuyên khoa:</label>
+                        <select id="pptx-category">
+                            <option value="mri_pptx">Cộng hưởng từ (MRI) - Bản thuyết trình</option>
+                            <option value="mri_video">Cộng hưởng từ (MRI) - Video Clip</option>
+                            <option value="ct">Cắt lớp vi tính (CT)</option>
+                            <option value="xray">X-quang</option>
+                            <option value="contrast">Thuốc tương phản</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label>Tên bài giảng:</label>
                         <input type="text" id="pptx-title" placeholder="VD: Giải phẫu MRI Sọ não cơ bản">
