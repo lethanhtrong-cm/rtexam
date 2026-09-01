@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// SỬA ĐỔI: Import thêm updateDoc để cập nhật dữ liệu lên Firestore
+import { getFirestore, doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
@@ -24,7 +25,6 @@ let currentUserName = 'Bạn';
 let pptxDataList = []; 
 let currentSelectedCategory = null; 
 
-// SỬA ĐỔI: Khởi tạo biến rỗng. Sẽ gán dữ liệu từ localStorage dựa theo UID của user đăng nhập
 let viewedLectures = []; 
 let userStorageKey = 'viewedLectures_guest';
 
@@ -71,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const badge = document.getElementById('user-status-badge');
         
         if (user) {
-            // SỬA ĐỔI: Lấy lịch sử xem theo UID của user từ localStorage
             userStorageKey = 'viewedLectures_' + user.uid;
             viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
 
@@ -100,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Lỗi lấy dữ liệu user:", err);
             }
         } else {
-            // SỬA ĐỔI: Dành cho user chưa đăng nhập
             userStorageKey = 'viewedLectures_guest';
             viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
             window.location.href = '../dashboard.html';
@@ -244,6 +242,21 @@ function renderPptxList() {
     }
 }
 
+// SỬA ĐỔI: Hàm đồng bộ số lượt xem lên Firebase để Admin đọc
+async function syncViewCountToFirestore() {
+    const user = auth.currentUser;
+    if (user) {
+        try {
+            await updateDoc(doc(db, "users", user.uid), {
+                viewedLecturesCount: viewedLectures.length,
+                viewedLecturesList: viewedLectures // Lưu cả danh sách ID bài đã xem
+            });
+        } catch (error) {
+            console.error("Lỗi đồng bộ lượt xem lên Admin:", error);
+        }
+    }
+}
+
 function loadPptx(embedUrl, itemId) {
     const lockOverlay = document.getElementById('premium-lock-overlay');
     const iframeContainer = document.getElementById('iframe-container');
@@ -253,22 +266,28 @@ function loadPptx(embedUrl, itemId) {
     let canView = false;
 
     if (currentUserTier === 'pro') {
-        canView = true; 
+        canView = true;
+        // SỬA ĐỔI: Lưu vết cho cả tài khoản PRO để Admin có thể thống kê
+        if (!viewedLectures.includes(itemId)) {
+            viewedLectures.push(itemId);
+            localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
+            syncViewCountToFirestore(); 
+        }
     } else if (viewedLectures.includes(itemId)) {
         canView = true;
     } else {
         if (currentUserTier === 'plus' && viewedLectures.length < PLUS_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
-            // SỬA ĐỔI: Đồng bộ hóa mảng vào localStorage với ID tài khoản
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
-            updateQuotaBanner(); 
+            updateQuotaBanner();
+            syncViewCountToFirestore(); // Gửi lên Firestore
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
-            // SỬA ĐỔI: Đồng bộ hóa mảng vào localStorage với ID tài khoản
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
-            updateQuotaBanner(); 
+            updateQuotaBanner();
+            syncViewCountToFirestore(); // Gửi lên Firestore
         }
     }
 
