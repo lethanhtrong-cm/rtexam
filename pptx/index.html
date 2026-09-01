@@ -70,19 +70,12 @@
         </div>
         
         <div class="category-grid">
-            <!-- Đã thêm data-cat và data-name để click thẳng vào thẻ -->
             <div class="category-card" id="card-mri" data-cat="mri_video" data-name="Cộng hưởng từ (MRI)">
                 <div class="card-icon" style="background: #eff6ff; color: #3b82f6;">
                     <i class="fa-solid fa-magnet"></i>
                 </div>
                 <h3>Cộng hưởng từ (MRI)</h3>
                 <p>Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI</p>
-                
-                <!-- TẠM ẨN DANH SÁCH NÚT SỔ XUỐNG -->
-                <!-- <div class="sub-category-list" style="display: none;">
-                    <button class="btn-sub-cat" data-cat="mri_pptx" data-name="MRI - Bản thuyết trình"><i class="fa-solid fa-file-powerpoint"></i> Bản thuyết trình</button>
-                    <button class="btn-sub-cat" data-cat="mri_video" data-name="MRI - Video Clip"><i class="fa-solid fa-circle-play"></i> Video Clip</button>
-                </div> -->
             </div>
             
             <div class="category-card" data-cat="ct" data-name="Cắt lớp vi tính (CT)">
@@ -136,6 +129,34 @@
                 <iframe id="pptx-viewer" src="" frameborder="0" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
                 <video id="video-viewer" controls controlsList="nodownload" style="width: 100%; height: 100%; border-radius: 16px; background: #000; display: none;"></video>
             </div>
+
+            <!-- THÊM MỚI: KHU VỰC ĐÁNH GIÁ & BÌNH LUẬN -->
+            <div id="feedback-section" class="feedback-section" style="display: none;">
+                <div class="feedback-header">
+                    <h3><i class="fa-regular fa-comments"></i> Thảo luận & Đánh giá</h3>
+                    <div id="average-rating-display" class="average-rating">
+                        <!-- Rating sẽ render ở đây -->
+                    </div>
+                </div>
+                
+                <div class="feedback-input-box">
+                    <div class="star-rating" id="star-rating-input">
+                        <span style="font-size: 0.95rem; color: #64748b; margin-right: 10px;">Chất lượng:</span>
+                        <i class="fa-solid fa-star" data-val="1"></i>
+                        <i class="fa-solid fa-star" data-val="2"></i>
+                        <i class="fa-solid fa-star" data-val="3"></i>
+                        <i class="fa-solid fa-star" data-val="4"></i>
+                        <i class="fa-solid fa-star" data-val="5"></i>
+                    </div>
+                    <textarea id="comment-textarea" placeholder="Bạn cảm thấy bài giảng này như thế nào? Hãy chia sẻ cùng mọi người nhé..."></textarea>
+                    <button id="btn-submit-comment" class="btn-submit-comment"><i class="fa-solid fa-paper-plane"></i> Gửi bình luận</button>
+                </div>
+
+                <div id="comments-list" class="comments-list">
+                    <!-- Danh sách bình luận load từ DB -->
+                </div>
+            </div>
+
         </main>
         
         <div id="grid-view-container" class="grid-view-container" style="display: none;">
