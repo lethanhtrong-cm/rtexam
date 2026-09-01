@@ -187,8 +187,7 @@ function fetchUserData(user, auth, db) {
                             elVipStatusBadge.className = "status-badge status-active";
                         }
 
-                        // ĐÃ BỎ: Không can thiệp đổi CSS inline cứng nhắc cho Thẻ Trạng Thái Tab 3 ở đây nữa, 
-                        // vì chúng ta đã đổi mã HTML thẻ trạng thái gói Free bên tab-vip rồi.
+                        // ĐÃ BỎ: Không can thiệp đổi CSS inline cứng nhắc cho Thẻ Trạng Thái Tab 3 ở đây nữa
                         const elVipStatusTab3 = document.getElementById("vipStatusTab3");
                         if (elVipStatusTab3) {
                             if (activeTier === 'pro') {
@@ -207,7 +206,7 @@ function fetchUserData(user, auth, db) {
                         if (elVipEndDate) elVipEndDate.textContent = expiryDateObj ? formatDate(expiryDateObj) : "Vĩnh viễn / Không xác định";
 
                         // =========================================================================
-                        // ĐÃ SỬA: RENDER HUY HIỆU VÀ GIỮ LẠI NÚT NÂNG CẤP CHO GÓI PLUS
+                        // ĐÃ SỬA: RENDER HUY HIỆU VÀ CHỈNH SỬA ONCLICK CỦA NÚT NÂNG CẤP PRO
                         // =========================================================================
                         const topbarVipContainer = document.getElementById('topbar-vip-container');
                         if (topbarVipContainer) {
@@ -218,10 +217,10 @@ function fetchUserData(user, auth, db) {
                                 </div>
                             `;
                             
-                            // Nếu đang là gói Plus, cho phép hiển thị thêm Nút Nâng Cấp Kế bên
+                            // Nút nâng Pro tự động trigger UI sang Gói Pro
                             if (activeTier === 'plus') {
                                 badgeHTML += `
-                                    <button id="btnUpgradeHeader" onclick="document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active')); document.getElementById('tab-vip').classList.add('active');" style="background: linear-gradient(135deg, #ea580c, #c2410c); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3); white-space: nowrap;">
+                                    <button id="btnUpgradeHeader" onclick="document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active')); document.getElementById('tab-vip').classList.add('active'); setTimeout(() => { const r = document.querySelector('input[value=\\'50000\\']'); if(r){ r.checked=true; window.updatePaymentUI('50000'); } }, 50);" style="background: linear-gradient(135deg, #ea580c, #c2410c); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3); white-space: nowrap;">
                                         <i class="fa-solid fa-arrow-up-right-dots"></i> <span>Nâng Pro</span>
                                     </button>
                                 `;
@@ -365,7 +364,6 @@ export async function executeAuthUI(user, auth, db) {
     if (sessionStorage.getItem('triggerUpgradeTab') === 'true') {
         sessionStorage.removeItem('triggerUpgradeTab'); 
         setTimeout(() => {
-            // Thay vì click nút header (có thể bị ẩn nếu đang ở Gói Plus), gọi chuyển tab trực tiếp
             document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active')); 
             const vipTab = document.getElementById('tab-vip');
             if (vipTab) vipTab.classList.add('active');
