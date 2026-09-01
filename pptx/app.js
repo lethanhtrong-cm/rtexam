@@ -23,7 +23,9 @@ let currentUserTier = 'free';
 let currentUserName = 'Bạn'; 
 let pptxDataList = []; 
 let currentSelectedCategory = null; 
-let viewedLectures = []; 
+
+// SỬA ĐỔI: Khởi tạo mảng từ sessionStorage (nếu có) để không bị mất khi F5
+let viewedLectures = JSON.parse(sessionStorage.getItem('viewedLectures')) || []; 
 
 document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('contextmenu', event => event.preventDefault());
@@ -255,10 +257,14 @@ function loadPptx(embedUrl, itemId) {
         if (currentUserTier === 'plus' && viewedLectures.length < PLUS_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
+            // SỬA ĐỔI: Đồng bộ hóa mảng vào sessionStorage ngay sau khi thêm bài mới
+            sessionStorage.setItem('viewedLectures', JSON.stringify(viewedLectures));
             updateQuotaBanner(); 
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
+            // SỬA ĐỔI: Đồng bộ hóa mảng vào sessionStorage ngay sau khi thêm bài mới
+            sessionStorage.setItem('viewedLectures', JSON.stringify(viewedLectures));
             updateQuotaBanner(); 
         }
     }
