@@ -24,7 +24,6 @@ let currentUserName = 'Bạn';
 let pptxDataList = []; 
 let currentSelectedCategory = null; 
 
-// THÊM MỚI: Biến ghi nhớ giao diện List hay Grid
 let currentViewMode = 'list'; 
 let currentLoadedItemId = null; 
 let viewedLectures = []; 
@@ -42,14 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // THÊM MỚI: Logic nảy đổi giao diện Lưới/Danh sách
     document.getElementById('btn-toggle-view').addEventListener('click', (e) => {
         currentViewMode = currentViewMode === 'list' ? 'grid' : 'list';
         const btn = e.currentTarget;
         const videoViewer = document.getElementById('video-viewer');
 
         if (currentViewMode === 'grid') {
-            // Tạm dừng video ẩn để tránh tiếng kêu nền
             if (videoViewer && typeof videoViewer.pause === 'function') videoViewer.pause();
             
             btn.innerHTML = '<i class="fa-solid fa-list"></i> Danh Sách';
@@ -190,7 +187,6 @@ function showViewerPage(categoryId, categoryName) {
     document.getElementById('btn-back-hero').style.display = 'inline-flex';
     document.getElementById('btn-toggle-view').style.display = 'inline-flex';
     
-    // Khôi phục layout theo lựa chọn trước đó của User
     if (currentViewMode === 'grid') {
         document.querySelector('.pptx-sidebar').style.display = 'none';
         document.querySelector('.pptx-main').style.display = 'none';
@@ -207,6 +203,11 @@ function showViewerPage(categoryId, categoryName) {
 function showHeroPage() {
     currentSelectedCategory = null;
     currentLoadedItemId = null; 
+    
+    // Xóa tham số chia sẻ trên URL khi về trang Hero để tránh load vòng lặp khi F5
+    const url = new URL(window.location);
+    url.searchParams.delete('lecture');
+    window.history.replaceState({}, document.title, url.toString());
     
     document.getElementById('hero-page').style.display = 'flex';
     document.getElementById('viewer-page').style.display = 'none';
@@ -256,6 +257,30 @@ function fetchPptxFromDatabase() {
         
         updateStatsUI();
 
+        // LOGIC NHẬN DIỆN LINK CHIA SẺ TỪ URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedId = urlParams.get('lecture');
+        
+        if (sharedId && !currentSelectedCategory) {
+            const sharedItem = pptxDataList.find(item => item.id === sharedId);
+            if (sharedItem) {
+                let cat = sharedItem.category || 'mri';
+                const normalizedCat = cat === 'mri' ? 'mri_pptx' : cat;
+                let catName = 'Bài giảng được chia sẻ';
+                
+                // Trích xuất tên chuyên khoa để hiển thị lên nhãn
+                document.querySelectorAll('.category-card, .btn-sub-cat').forEach(el => {
+                    if (el.getAttribute('data-cat') === normalizedCat) {
+                        catName = el.getAttribute('data-name');
+                    }
+                });
+
+                currentLoadedItemId = sharedId;
+                showViewerPage(normalizedCat, catName);
+                return; // Thoát để ngăn vòng lặp render
+            }
+        }
+
         if (currentSelectedCategory) {
             renderPptxList(); 
         }
@@ -300,21 +325,29 @@ function renderPptxList() {
         const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
         const viewCount = item.viewCount || 0;
         
-        // 1. RENDER CHO LIST VIEW
+        // 1. RENDER CHO LIST VIEW KÈM NÚT SHARE
         const li = document.createElement('li');
         li.className = 'pptx-item';
         if (item.id === activeItem.id) li.classList.add('active'); 
         
         li.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fa-solid ${iconClass}"></i> <span>${item.title}</span>
+            <div style="display: flex; align-items: center; gap: 12px; max-width: 65%; overflow: hidden;">
+                <i class="fa-solid ${iconClass}"></i> 
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.title}">${item.title}</span>
             </div>
-            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">
-                <i class="fa-solid fa-eye"></i> ${viewCount}
+            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+                <span><i class="fa-solid fa-eye"></i> ${viewCount}</span>
+                <button class="btn-share-item" style="background: none; border: none; color: #3b82f6; cursor: pointer; padding: 5px; font-size: 1rem;" title="Chia sẻ link bài giảng"><i class="fa-solid fa-share-nodes"></i></button>
             </div>
         `;
         li.style.justifyContent = 'space-between';
         
+        li.querySelector('.btn-share-item').addEventListener('click', (e) => {
+            e.stopPropagation(); // Ngăn sự kiện mở bài giảng (bị trừ view)
+            const shareUrl = window.location.origin + window.location.pathname + '?lecture=' + item.id;
+            navigator.clipboard.writeText(shareUrl).then(() => alert('Đã copy link chia sẻ vào bộ nhớ tạm!\n' + shareUrl));
+        });
+
         li.addEventListener('click', () => {
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
             li.classList.add('active');
@@ -322,7 +355,7 @@ function renderPptxList() {
         });
         listContainer.appendChild(li);
 
-        // 2. RENDER CHO GRID VIEW (THÊM MỚI)
+        // 2. RENDER CHO GRID VIEW KÈM NÚT SHARE
         const card = document.createElement('div');
         card.className = 'grid-card';
         card.innerHTML = `
@@ -332,11 +365,20 @@ function renderPptxList() {
             </div>
             <div class="grid-card-thumbnail">
                 <i class="fa-solid fa-circle-play play-icon"></i>
-                <div class="grid-card-stats"><i class="fa-solid fa-eye"></i> ${viewCount}</div>
+                <div class="grid-card-stats" style="display: flex; align-items: center; gap: 12px;">
+                    <span><i class="fa-solid fa-eye"></i> ${viewCount}</span>
+                    <button class="btn-share-item" style="background: none; border: none; color: white; cursor: pointer; padding: 0;" title="Chia sẻ link bài giảng"><i class="fa-solid fa-share-nodes"></i></button>
+                </div>
             </div>
         `;
+        
+        card.querySelector('.btn-share-item').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const shareUrl = window.location.origin + window.location.pathname + '?lecture=' + item.id;
+            navigator.clipboard.writeText(shareUrl).then(() => alert('Đã copy link chia sẻ vào bộ nhớ tạm!\n' + shareUrl));
+        });
+
         card.addEventListener('click', () => {
-            // Khi User bấm vào thẻ Card Lưới -> Tự động nảy lại dạng List và Load Video
             currentViewMode = 'list';
             const btn = document.getElementById('btn-toggle-view');
             btn.innerHTML = '<i class="fa-solid fa-border-all"></i> Lưới';
@@ -347,14 +389,13 @@ function renderPptxList() {
             document.getElementById('grid-view-container').style.display = 'none';
             
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
-            li.classList.add('active'); // Sáng thẻ LI tương ứng
+            li.classList.add('active'); 
             
             loadPptx(item.embedUrl, item.id);
         });
         gridContainer.appendChild(card);
     });
 
-    // Chỉ tự động phát video đầu tiên nếu đang ở chế độ List truyền thống
     if (activeItem && currentViewMode === 'list') {
         loadPptx(activeItem.embedUrl, activeItem.id);
     }
