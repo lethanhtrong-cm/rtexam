@@ -41,12 +41,18 @@
         </div>
         
         <div class="category-grid">
-            <div class="category-card" data-cat="mri" data-name="MRI">
+            <!-- Card MRI đã thêm Sub-Category Dropdown -->
+            <div class="category-card" id="card-mri">
                 <div class="card-icon" style="background: #eff6ff; color: #3b82f6;">
                     <i class="fa-solid fa-magnet"></i>
                 </div>
                 <h3>Cộng hưởng từ (MRI)</h3>
                 <p>Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI</p>
+                <!-- Vùng chứa 2 tuỳ chọn con sẽ hiển thị khi click -->
+                <div class="sub-category-list" style="display: none;">
+                    <button class="btn-sub-cat" data-cat="mri_pptx" data-name="MRI - Bản thuyết trình"><i class="fa-solid fa-file-powerpoint"></i> Bản thuyết trình</button>
+                    <button class="btn-sub-cat" data-cat="mri_video" data-name="MRI - Video Clip"><i class="fa-solid fa-circle-play"></i> Video Clip</button>
+                </div>
             </div>
             
             <div class="category-card" data-cat="ct" data-name="Cắt lớp vi tính (CT)">
