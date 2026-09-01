@@ -40,6 +40,7 @@
         th { background: #f8fafc; font-weight: 600; color: #475569; }
         td.link-cell { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #64748b; font-size: 0.9rem; }
         .btn-action { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; color: white; }
+        .btn-reset { background: #64748b; margin-right: 5px; } /* Màu nút reset */
         .btn-edit { background: #f59e0b; margin-right: 5px; }
         .btn-delete { background: #ef4444; }
     </style>
@@ -120,9 +121,8 @@
                         <tr>
                             <th>Tên bài giảng</th>
                             <th>Link Nhúng / File Video</th>
-                            <!-- SỬA ĐỔI: Thêm cột Lượt xem -->
                             <th style="width: 100px; text-align: center;">Lượt xem</th>
-                            <th style="width: 150px; text-align: center;">Thao tác</th>
+                            <th style="width: 180px; text-align: center;">Thao tác</th> <!-- Nới rộng cột thao tác -->
                         </tr>
                     </thead>
                     <tbody id="pptx-tbody">
