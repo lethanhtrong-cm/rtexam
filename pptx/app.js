@@ -32,7 +32,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     UI.initResizer();
     UI.initStarRating(); 
-    UI.initMobileCommentToggle(); // Gọi thêm hàm cho Mobile
+    UI.initMobileCommentToggle(); 
+
+    // THÊM MỚI: Bắt sự kiện Tắt/Mở danh sách Sidebar (làm video phóng to)
+    document.getElementById('btn-toggle-sidebar').addEventListener('click', (e) => {
+        const sidebar = document.querySelector('.pptx-sidebar');
+        const resizer = document.getElementById('dragMe');
+        const icon = e.currentTarget;
+        
+        if (sidebar.style.display === 'none') {
+            sidebar.style.display = '';
+            if(resizer) resizer.style.display = '';
+            icon.innerHTML = '<i class="fa-solid fa-list-ul"></i>';
+        } else {
+            sidebar.style.display = 'none';
+            if(resizer) resizer.style.display = 'none';
+            icon.innerHTML = '<i class="fa-solid fa-expand"></i>'; // Thay đổi icon để thể hiện đã ẩn sidebar
+        }
+    });
 
     document.getElementById('btn-toggle-view').addEventListener('click', (e) => {
         currentViewMode = currentViewMode === 'list' ? 'grid' : 'list';
@@ -241,6 +258,7 @@ function renderPptxList() {
         li.className = 'pptx-item';
         if (item.id === activeItem.id) li.classList.add('active'); 
         
+        // GIỮ LẠI LOGIC CHỮ XUỐNG HÀNG Ở BƯỚC TRƯỚC
         li.innerHTML = `
             <div style="display: flex; align-items: flex-start; gap: 12px; flex: 1; padding-right: 10px;">
                 <i class="fa-solid ${iconClass}" style="margin-top: 3px; flex-shrink: 0;"></i> 
