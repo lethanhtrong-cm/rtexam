@@ -24,8 +24,9 @@ let currentUserName = 'Bạn';
 let pptxDataList = []; 
 let currentSelectedCategory = null; 
 
-// SỬA ĐỔI: Khởi tạo mảng từ sessionStorage (nếu có) để không bị mất khi F5
-let viewedLectures = JSON.parse(sessionStorage.getItem('viewedLectures')) || []; 
+// SỬA ĐỔI: Khởi tạo biến rỗng. Sẽ gán dữ liệu từ localStorage dựa theo UID của user đăng nhập
+let viewedLectures = []; 
+let userStorageKey = 'viewedLectures_guest';
 
 document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('contextmenu', event => event.preventDefault());
@@ -39,17 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Bắt sự kiện Click Card & Logic sổ xuống nhóm con MRI
     document.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
-            // Nếu click vào Card MRI, sổ ra các nút con thay vì vào thẳng danh sách
             if (card.id === 'card-mri') {
                 const subList = card.querySelector('.sub-category-list');
                 const isHidden = subList.style.display === 'none';
                 subList.style.display = isHidden ? 'flex' : 'none';
                 return;
             }
-            // Các Card bình thường (CT, X-quang...)
             const catId = card.getAttribute('data-cat');
             const catName = card.getAttribute('data-name');
             if(catId && catName) {
@@ -58,10 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Bắt sự kiện Click vào 2 Nút tuỳ chọn con của MRI
     document.querySelectorAll('.btn-sub-cat').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Ngăn sự kiện click lan ngược ra thẻ card cha
+            e.stopPropagation(); 
             const catId = btn.getAttribute('data-cat');
             const catName = btn.getAttribute('data-name');
             showViewerPage(catId, catName);
@@ -74,6 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const badge = document.getElementById('user-status-badge');
         
         if (user) {
+            // SỬA ĐỔI: Lấy lịch sử xem theo UID của user từ localStorage
+            userStorageKey = 'viewedLectures_' + user.uid;
+            viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
+
             try {
                 const docSnap = await getDoc(doc(db, "users", user.uid));
                 if (docSnap.exists()) {
@@ -99,6 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Lỗi lấy dữ liệu user:", err);
             }
         } else {
+            // SỬA ĐỔI: Dành cho user chưa đăng nhập
+            userStorageKey = 'viewedLectures_guest';
+            viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
             window.location.href = '../dashboard.html';
         }
     });
@@ -204,7 +208,6 @@ function renderPptxList() {
     
     const filteredList = pptxDataList.filter(item => {
         const itemCat = item.category || 'mri';
-        // Chuẩn hoá: Nhận diện dữ liệu cũ 'mri' vào 'mri_pptx'
         const normalizedCat = itemCat === 'mri' ? 'mri_pptx' : itemCat;
         return normalizedCat === currentSelectedCategory;
     });
@@ -257,14 +260,14 @@ function loadPptx(embedUrl, itemId) {
         if (currentUserTier === 'plus' && viewedLectures.length < PLUS_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
-            // SỬA ĐỔI: Đồng bộ hóa mảng vào sessionStorage ngay sau khi thêm bài mới
-            sessionStorage.setItem('viewedLectures', JSON.stringify(viewedLectures));
+            // SỬA ĐỔI: Đồng bộ hóa mảng vào localStorage với ID tài khoản
+            localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             updateQuotaBanner(); 
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
-            // SỬA ĐỔI: Đồng bộ hóa mảng vào sessionStorage ngay sau khi thêm bài mới
-            sessionStorage.setItem('viewedLectures', JSON.stringify(viewedLectures));
+            // SỬA ĐỔI: Đồng bộ hóa mảng vào localStorage với ID tài khoản
+            localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             updateQuotaBanner(); 
         }
     }
