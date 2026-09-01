@@ -149,11 +149,9 @@ export const UI = {
         document.getElementById('pptx-viewer').src = '';
         document.getElementById('video-viewer').src = '';
         
-        // Ẩn khu vực comment khi ra ngoài
         UI.hideFeedbackSection();
     },
 
-    // THÊM MỚI: CÁC HÀM XỬ LÝ GIAO DIỆN BÌNH LUẬN
     initStarRating: () => {
         const stars = document.querySelectorAll('#star-rating-input i');
         stars.forEach(star => {
@@ -179,28 +177,61 @@ export const UI = {
         document.getElementById('comment-textarea').value = '';
     },
 
-    showFeedbackSection: () => {
+    // THÊM MỚI: Khởi tạo nút Toggle Bình luận trên Mobile
+    initMobileCommentToggle: () => {
+        const toggleBtn = document.getElementById('mobile-comment-toggle');
         const feedbackSec = document.getElementById('feedback-section');
-        if(feedbackSec) feedbackSec.style.display = 'flex';
+        if (toggleBtn && feedbackSec) {
+            toggleBtn.addEventListener('click', () => {
+                const isHidden = window.getComputedStyle(feedbackSec).display === 'none';
+                if (isHidden) {
+                    // Cưỡng ép hiển thị bằng inline-style đè lên media query
+                    feedbackSec.style.display = 'flex';
+                    toggleBtn.innerHTML = '<i class="fa-solid fa-angle-up"></i> Ẩn Thảo luận';
+                    toggleBtn.style.background = '#64748b';
+                    setTimeout(() => feedbackSec.scrollIntoView({ behavior: 'smooth' }), 100);
+                } else {
+                    // Cưỡng ép ẩn bằng inline-style
+                    feedbackSec.style.display = 'none';
+                    toggleBtn.innerHTML = '<i class="fa-solid fa-comments"></i> Xem Thảo luận & Đánh giá';
+                    toggleBtn.style.background = '#3b82f6';
+                }
+            });
+        }
     },
 
+    // SỬA ĐỔI: Hàm hiển thị khối Feedback sao cho tương thích cả CSS Desktop và Mobile Toggle
+    showFeedbackSection: () => {
+        const feedbackSec = document.getElementById('feedback-section');
+        const toggleBtn = document.getElementById('mobile-comment-toggle');
+        if(feedbackSec) {
+            feedbackSec.style.display = ''; // Reset CSS inline để CSS media tự quyết định
+        }
+        if (toggleBtn) {
+            toggleBtn.style.display = ''; // Để Media CSS tự quyết định ẩn/hiện
+            toggleBtn.innerHTML = '<i class="fa-solid fa-comments"></i> Xem Thảo luận & Đánh giá';
+            toggleBtn.style.background = '#3b82f6';
+        }
+    },
+
+    // SỬA ĐỔI: Khóa cứng toàn bộ trên cả hai môi trường
     hideFeedbackSection: () => {
         const feedbackSec = document.getElementById('feedback-section');
+        const toggleBtn = document.getElementById('mobile-comment-toggle');
         if(feedbackSec) feedbackSec.style.display = 'none';
+        if(toggleBtn) toggleBtn.style.display = 'none'; 
     },
 
     renderComments: (commentsArr, avgRating, totalRatings) => {
         const listEl = document.getElementById('comments-list');
         const avgEl = document.getElementById('average-rating-display');
         
-        // Render Điểm trung bình
         if (totalRatings > 0) {
             avgEl.innerHTML = `<i class="fa-solid fa-star"></i> ${avgRating} <span style="font-size: 0.9rem; color: #64748b; font-weight: normal;">(${totalRatings} đánh giá)</span>`;
         } else {
             avgEl.innerHTML = `<span style="font-size: 0.95rem; color: #64748b; font-weight: normal;">Chưa có đánh giá</span>`;
         }
 
-        // Render Danh sách bình luận
         if (commentsArr.length === 0) {
             listEl.innerHTML = '<div class="no-comment-msg">Chưa có bình luận nào. Hãy là người đầu tiên chia sẻ cảm nghĩ của bạn!</div>';
             return;
@@ -210,14 +241,12 @@ export const UI = {
         commentsArr.forEach(c => {
             const letter = (c.userName || 'U').charAt(0).toUpperCase();
             
-            // Format Thời gian
             let timeStr = '';
             if (c.createdAt) {
                 const dateObj = (typeof c.createdAt.toDate === 'function') ? c.createdAt.toDate() : new Date(c.createdAt);
                 timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
             }
 
-            // Tạo chuỗi HTML ngôi sao
             let starsHtml = '';
             if (c.rating > 0) {
                 for(let i=1; i<=5; i++) {
