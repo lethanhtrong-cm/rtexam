@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// SỬA ĐỔI: Import thêm updateDoc để cập nhật dữ liệu lên Firestore
 import { getFirestore, doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -87,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateAuthUI(currentUserTier, badge);
                     updateQuotaBanner();
                     fetchPptxFromDatabase();
+                    
+                    // Ép đồng bộ dữ liệu ngay khi đăng nhập để Admin luôn xem được số mới nhất
+                    syncViewCountToFirestore();
                 } else {
                     currentUserTier = 'free';
                     currentUserName = user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
@@ -94,6 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateAuthUI('free', badge);
                     updateQuotaBanner();
                     fetchPptxFromDatabase();
+                    
+                    // Ép đồng bộ dữ liệu
+                    syncViewCountToFirestore();
                 }
             } catch (err) {
                 console.error("Lỗi lấy dữ liệu user:", err);
@@ -242,14 +247,13 @@ function renderPptxList() {
     }
 }
 
-// SỬA ĐỔI: Hàm đồng bộ số lượt xem lên Firebase để Admin đọc
 async function syncViewCountToFirestore() {
     const user = auth.currentUser;
     if (user) {
         try {
             await updateDoc(doc(db, "users", user.uid), {
                 viewedLecturesCount: viewedLectures.length,
-                viewedLecturesList: viewedLectures // Lưu cả danh sách ID bài đã xem
+                viewedLecturesList: viewedLectures 
             });
         } catch (error) {
             console.error("Lỗi đồng bộ lượt xem lên Admin:", error);
@@ -267,7 +271,6 @@ function loadPptx(embedUrl, itemId) {
 
     if (currentUserTier === 'pro') {
         canView = true;
-        // SỬA ĐỔI: Lưu vết cho cả tài khoản PRO để Admin có thể thống kê
         if (!viewedLectures.includes(itemId)) {
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
@@ -281,13 +284,13 @@ function loadPptx(embedUrl, itemId) {
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             updateQuotaBanner();
-            syncViewCountToFirestore(); // Gửi lên Firestore
+            syncViewCountToFirestore(); 
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             updateQuotaBanner();
-            syncViewCountToFirestore(); // Gửi lên Firestore
+            syncViewCountToFirestore(); 
         }
     }
 
