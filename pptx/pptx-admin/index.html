@@ -17,10 +17,14 @@
         
         .admin-sidebar { width: 280px; background: #f8fafc; border-right: 1px solid #e2e8f0; padding: 20px 0; display: flex; flex-direction: column; }
         .admin-sidebar h3 { padding: 0 20px 15px; font-size: 0.9rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px; }
-        .admin-menu-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #475569; font-weight: 600; transition: 0.2s; border-left: 4px solid transparent; }
+        
+        /* Chỉnh sửa style Menu để phân cấp nhóm con */
+        .admin-menu-parent { padding: 10px 20px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        .admin-menu-item { padding: 12px 20px 12px 45px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #475569; font-weight: 600; transition: 0.2s; border-left: 4px solid transparent; font-size: 0.95rem; }
+        .admin-menu-item.root-item { padding-left: 20px; margin-top: 5px; }
         .admin-menu-item:hover { background: #f1f5f9; }
         .admin-menu-item.active { background: #eff6ff; color: #3b82f6; border-left-color: #3b82f6; }
-        .admin-menu-item i { width: 20px; text-align: center; font-size: 1.1rem; }
+        .admin-menu-item i { width: 16px; text-align: center; }
         
         .admin-main { flex: 1; padding: 30px; overflow-y: auto; }
         
@@ -53,16 +57,26 @@
         <div class="admin-layout">
             <div class="admin-sidebar">
                 <h3>Danh mục quản lý</h3>
-                <div class="admin-menu-item active" data-cat="mri" data-name="MRI">
-                    <i class="fa-solid fa-magnet" style="color: #3b82f6;"></i> Cộng hưởng từ (MRI)
+                
+                <!-- Nhóm MRI (Được chia làm 2 nhánh) -->
+                <div class="admin-menu-parent">
+                    <i class="fa-solid fa-magnet" style="color: #3b82f6; width: 16px; text-align: center;"></i> Cộng hưởng từ (MRI)
                 </div>
-                <div class="admin-menu-item" data-cat="ct" data-name="CT">
+                <div class="admin-menu-item active" data-cat="mri_pptx" data-name="MRI - Bản thuyết trình">
+                    <i class="fa-solid fa-file-powerpoint"></i> Bản thuyết trình
+                </div>
+                <div class="admin-menu-item" data-cat="mri_video" data-name="MRI - Video Clip">
+                    <i class="fa-solid fa-circle-play"></i> Video Clip
+                </div>
+                
+                <!-- Các nhóm còn lại -->
+                <div class="admin-menu-item root-item" data-cat="ct" data-name="CT">
                     <i class="fa-solid fa-x-ray" style="color: #22c55e;"></i> Cắt lớp vi tính (CT)
                 </div>
-                <div class="admin-menu-item" data-cat="xray" data-name="X-quang">
+                <div class="admin-menu-item root-item" data-cat="xray" data-name="X-quang">
                     <i class="fa-solid fa-person-rays" style="color: #ec4899;"></i> X-quang
                 </div>
-                <div class="admin-menu-item" data-cat="contrast" data-name="Thuốc tương phản">
+                <div class="admin-menu-item root-item" data-cat="contrast" data-name="Thuốc tương phản">
                     <i class="fa-solid fa-syringe" style="color: #f59e0b;"></i> Thuốc tương phản
                 </div>
             </div>
@@ -71,7 +85,7 @@
                 <div style="background: #f8fafc; padding: 25px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 30px;">
                     <h3 style="margin-bottom: 20px; color: #334155; display: flex; align-items: center;">
                         <i class="fa-solid fa-plus-circle" style="margin-right: 10px;"></i> Thêm/Sửa Bài Giảng
-                        <span id="form-cat-badge" class="current-cat-badge">Nhóm: MRI</span>
+                        <span id="form-cat-badge" class="current-cat-badge">Nhóm: MRI - Bản thuyết trình</span>
                     </h3>
                     <div class="form-group">
                         <label>Tên bài giảng:</label>
