@@ -24,6 +24,8 @@ let currentUserName = 'Bạn';
 let pptxDataList = []; 
 let currentSelectedCategory = null; 
 
+// [SỬA ĐỔI]: Thêm biến theo dõi bài giảng đang phát để chặn vòng lặp
+let currentLoadedItemId = null; 
 let viewedLectures = []; 
 let userStorageKey = 'viewedLectures_guest';
 
@@ -151,6 +153,7 @@ function updateQuotaBanner() {
 
 function showViewerPage(categoryId, categoryName) {
     currentSelectedCategory = categoryId;
+    currentLoadedItemId = null; // Reset để load bài đầu tiên của chuyên khoa mới
     
     document.getElementById('hero-page').style.display = 'none';
     document.getElementById('viewer-page').style.display = 'flex';
@@ -166,6 +169,7 @@ function showViewerPage(categoryId, categoryName) {
 
 function showHeroPage() {
     currentSelectedCategory = null;
+    currentLoadedItemId = null; // Reset
     
     document.getElementById('hero-page').style.display = 'flex';
     document.getElementById('viewer-page').style.display = 'none';
@@ -215,13 +219,24 @@ function renderPptxList() {
         listContainer.innerHTML = '<li style="padding: 20px; color: #64748b; text-align: center; font-size: 0.95rem;">Chưa có bài giảng nào trong nhóm này.</li>';
         document.getElementById('pptx-viewer').src = '';
         document.getElementById('video-viewer').src = '';
+        currentLoadedItemId = null;
         return;
     }
 
-    filteredList.forEach((item, index) => {
+    // [SỬA ĐỔI]: Tìm bài giảng đang phát, nếu không có thì lấy bài đầu tiên
+    let activeItem = filteredList.find(item => item.id === currentLoadedItemId);
+    if (!activeItem) {
+        activeItem = filteredList[0];
+    }
+
+    filteredList.forEach((item) => {
         const li = document.createElement('li');
         li.className = 'pptx-item';
-        if (index === 0) li.classList.add('active'); 
+        
+        // Giữ active chuẩn xác bài đang xem
+        if (item.id === activeItem.id) {
+            li.classList.add('active'); 
+        }
         
         const isVideo = item.embedUrl && item.embedUrl.includes('firebasestorage.googleapis.com');
         const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
@@ -247,8 +262,8 @@ function renderPptxList() {
         listContainer.appendChild(li);
     });
 
-    if (filteredList.length > 0) {
-        loadPptx(filteredList[0].embedUrl, filteredList[0].id);
+    if (activeItem) {
+        loadPptx(activeItem.embedUrl, activeItem.id);
     }
 }
 
@@ -277,6 +292,9 @@ async function incrementLectureViewCount(itemId) {
 }
 
 function loadPptx(embedUrl, itemId) {
+    // [SỬA ĐỔI]: CHỐNG LẶP VÔ HẠN. Nếu bài này đang chiếu rồi thì không load/cộng view lại nữa.
+    if (currentLoadedItemId === itemId) return;
+    
     const lockOverlay = document.getElementById('premium-lock-overlay');
     const iframeContainer = document.getElementById('iframe-container');
     const iframeViewer = document.getElementById('pptx-viewer');
@@ -310,7 +328,8 @@ function loadPptx(embedUrl, itemId) {
     }
 
     if (canView) {
-        // SỬA ĐỔI: Cơ chế Total Views - Tăng lượt xem bất cứ khi nào bài giảng được phát (kể cả xem lại)
+        // [SỬA ĐỔI]: Ghi nhận ID bài đang xem và cộng View
+        currentLoadedItemId = itemId;
         incrementLectureViewCount(itemId);
 
         lockOverlay.style.display = 'none';
