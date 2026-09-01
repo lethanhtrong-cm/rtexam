@@ -8,16 +8,13 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background: #f1f5f9; color: #1e293b; padding: 30px; display: flex; justify-content: center; }
-        /* Mở rộng container để chứa thêm menu trái */
         .admin-container { width: 100%; max-width: 1200px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
         .admin-header { background: #0f172a; color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
         .admin-header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
         .admin-header a { color: #cbd5e1; text-decoration: none; font-size: 0.95rem; display: flex; align-items: center; gap: 5px; }
         
-        /* Layout mới: Sidebar + Main Content */
         .admin-layout { display: flex; flex: 1; min-height: 600px; }
         
-        /* Sidebar Menu */
         .admin-sidebar { width: 280px; background: #f8fafc; border-right: 1px solid #e2e8f0; padding: 20px 0; display: flex; flex-direction: column; }
         .admin-sidebar h3 { padding: 0 20px 15px; font-size: 0.9rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px; }
         .admin-menu-item { padding: 15px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #475569; font-weight: 600; transition: 0.2s; border-left: 4px solid transparent; }
@@ -25,7 +22,6 @@
         .admin-menu-item.active { background: #eff6ff; color: #3b82f6; border-left-color: #3b82f6; }
         .admin-menu-item i { width: 20px; text-align: center; font-size: 1.1rem; }
         
-        /* Main Area */
         .admin-main { flex: 1; padding: 30px; overflow-y: auto; }
         
         .form-group { margin-bottom: 20px; }
@@ -33,6 +29,7 @@
         .form-group input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 1rem; }
         .btn-submit { background: #3b82f6; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
         .btn-submit:hover { background: #2563eb; }
+        .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
         .btn-cancel { background: #ef4444; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; display: none; margin-left: 10px; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -43,19 +40,17 @@
         .btn-edit { background: #f59e0b; margin-right: 5px; }
         .btn-delete { background: #ef4444; }
         
-        /* Bổ sung nhãn nhóm đang active */
         .current-cat-badge { display: inline-block; background: #dbeafe; color: #1d4ed8; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-left: 10px; vertical-align: middle; }
     </style>
 </head>
 <body>
     <div class="admin-container">
         <div class="admin-header">
-            <h1><i class="fa-solid fa-file-powerpoint"></i> Quản lý Bài giảng PPTX</h1>
+            <h1><i class="fa-solid fa-file-powerpoint"></i> Quản lý Bài giảng PPTX & Video</h1>
             <a href="../../dashboard.html"><i class="fa-solid fa-arrow-left"></i> Về Dashboard</a>
         </div>
         
         <div class="admin-layout">
-            <!-- MENU TRÁI -->
             <div class="admin-sidebar">
                 <h3>Danh mục quản lý</h3>
                 <div class="admin-menu-item active" data-cat="mri" data-name="MRI">
@@ -72,9 +67,7 @@
                 </div>
             </div>
             
-            <!-- KHUNG NỘI DUNG CHÍNH -->
             <div class="admin-main">
-                <!-- Form Thêm/Sửa -->
                 <div style="background: #f8fafc; padding: 25px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 30px;">
                     <h3 style="margin-bottom: 20px; color: #334155; display: flex; align-items: center;">
                         <i class="fa-solid fa-plus-circle" style="margin-right: 10px;"></i> Thêm/Sửa Bài Giảng
@@ -85,14 +78,20 @@
                         <input type="text" id="pptx-title" placeholder="VD: Giải phẫu MRI Sọ não cơ bản">
                     </div>
                     <div class="form-group">
-                        <label>Link nhúng (Google Slides Iframe URL):</label>
+                        <label>Link nhúng (Google Slides / Youtube URL):</label>
                         <input type="text" id="pptx-url" placeholder="VD: https://docs.google.com/presentation/d/e/2PACX.../embed">
                     </div>
-                    <button id="btn-save" class="btn-submit"><i class="fa-solid fa-cloud-arrow-up"></i> Lưu Bài Giảng</button>
+                    
+                    <div class="form-group" style="border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                        <label><i class="fa-solid fa-upload"></i> Hoặc Tải Video Trực Tiếp (.mp4):</label>
+                        <input type="file" id="video-upload" accept="video/*" style="background: white;">
+                        <div id="upload-progress" style="font-size: 0.95rem; color: #3b82f6; margin-top: 8px; display: none; font-weight: bold;">Đang tải lên: 0%</div>
+                    </div>
+
+                    <button id="btn-save" class="btn-submit"><i class="fa-solid fa-cloud-arrow-up"></i> Lưu Dữ Liệu</button>
                     <button id="btn-cancel" class="btn-cancel"><i class="fa-solid fa-xmark"></i> Hủy Sửa</button>
                 </div>
 
-                <!-- Bảng danh sách -->
                 <h3 style="display: flex; align-items: center; justify-content: space-between;">
                     <span>Danh sách hiện tại</span>
                 </h3>
@@ -100,7 +99,7 @@
                     <thead>
                         <tr>
                             <th>Tên bài giảng</th>
-                            <th>Link Nhúng</th>
+                            <th>Link Nhúng / File Video</th>
                             <th style="width: 150px; text-align: center;">Thao tác</th>
                         </tr>
                     </thead>
