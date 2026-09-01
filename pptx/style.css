@@ -52,13 +52,12 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .category-card h3 { color: #1e293b; font-size: 1.25rem; margin-bottom: 10px; font-weight: 700; }
 .category-card p { color: #64748b; font-size: 0.95rem; line-height: 1.5; }
 
-/* Styles dành riêng cho thẻ Sub-Category của MRI */
 .sub-category-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 20px; animation: fadeIn 0.3s ease; }
 .btn-sub-cat { background: #f8fafc; color: #3b82f6; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; }
 .btn-sub-cat:hover { background: #eff6ff; color: #1d4ed8; border-color: #3b82f6; transform: translateY(-2px); }
 
 /* Layout chính: Viewer */
-.pptx-layout { flex: 1; overflow: hidden; padding: 20px; gap: 20px; animation: fadeIn 0.4s ease; }
+.pptx-layout { flex: 1; overflow: hidden; padding: 20px; gap: 20px; display: flex; animation: fadeIn 0.4s ease; }
 
 /* Sidebar */
 .pptx-sidebar { width: 320px; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; overflow-y: auto; }
@@ -71,7 +70,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .pptx-item { padding: 14px 16px; border-radius: 10px; margin-bottom: 5px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 12px; color: #475569; font-weight: 500; }
 .pptx-item:hover { background: #f8fafc; transform: translateX(3px); }
 .pptx-item.active { background: #eff6ff; color: #1d4ed8; font-weight: 700; box-shadow: inset 3px 0 0 0 #3b82f6; }
-.pptx-item i { color: #f59e0b; font-size: 1.3rem; }
+.pptx-item i.fa-file-powerpoint, .pptx-item i.fa-circle-play { color: #f59e0b; font-size: 1.3rem; }
 
 /* Main Area */
 .pptx-main { flex: 1; position: relative; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -88,7 +87,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .btn-upgrade { background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; border: none; padding: 14px 30px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3); }
 .btn-upgrade:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(234, 88, 12, 0.4); }
 
-/* BẢO VỆ BẢN QUYỀN (WATERMARK & IN ẤN) */
+/* BẢO VỆ BẢN QUYỀN (WATERMARK) */
 .copyright-watermark {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -102,9 +101,46 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
-/* Responsive */
+/* ========================================================
+   TỐI ƯU HÓA GIAO DIỆN MOBILE (RESPONSIVE)
+   ======================================================== */
 @media (max-width: 850px) {
-    .pptx-layout { flex-direction: column; overflow-y: auto; }
-    .pptx-sidebar { width: 100%; height: auto; max-height: 300px; flex-shrink: 0; }
-    .pptx-main { min-height: 400px; }
+    /* Cho phép cuộn toàn bộ trang trên mobile thay vì khóa cứng height */
+    body { height: auto; min-height: 100vh; overflow-y: auto; }
+    
+    /* Topbar bẻ dòng gọn gàng */
+    .pptx-topbar { flex-wrap: wrap; height: auto; min-height: 60px; padding: 10px 15px; gap: 10px; }
+    .topbar-center { order: 3; width: 100%; justify-content: center !important; }
+    .topbar-left { flex: 1; }
+    .topbar-right { flex: 1; display: flex; justify-content: flex-end; }
+    .topbar-title { font-size: 1rem; padding-left: 10px; }
+    .btn-back-hero { font-size: 0.8rem; padding: 5px 12px; }
+
+    /* Hero Page thu nhỏ khoảng cách */
+    .hero-container { padding: 25px 15px; }
+    .hero-header h2 { font-size: 1.6rem; }
+    .hero-header p { font-size: 0.95rem; }
+    .quota-banner { padding: 20px; }
+    .quota-greeting { font-size: 1.15rem; }
+    .quota-status { font-size: 0.95rem; }
+    .quota-remaining { font-size: 1.1rem; }
+
+    /* Layout Viewer bẻ dọc (Column) */
+    .pptx-layout { flex-direction: column; overflow-y: visible; padding: 10px; gap: 15px; }
+    
+    /* Trình phát Video/Slide đưa lên trên, ưu tiên chiều cao hiển thị */
+    .pptx-main { order: 1; min-height: 35vh; height: auto; aspect-ratio: 16/9; border-radius: 12px; }
+    
+    /* Danh sách bài học đẩy xuống dưới, không chiếm màn hình */
+    .pptx-sidebar { order: 2; width: 100%; height: auto; max-height: 350px; flex-shrink: 0; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: none; }
+}
+
+/* Tối ưu riêng cho các màn hình điện thoại siêu nhỏ (dưới 480px) */
+@media (max-width: 480px) {
+    .category-grid { grid-template-columns: 1fr; }
+    .pptx-main { min-height: 250px; }
+    .lock-content { padding: 25px 15px; }
+    .lock-content h2 { font-size: 1.25rem; }
+    .lock-content p { font-size: 0.9rem; }
+    .pptx-item { font-size: 0.9rem; padding: 12px 14px; }
 }
