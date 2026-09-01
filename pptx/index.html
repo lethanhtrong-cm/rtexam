@@ -20,6 +20,11 @@
             </button>
             <span id="current-category-label" class="active-category" style="display: none;"></span>
             
+            <!-- THÊM MỚI: NÚT ẨN HIỆN SIDEBAR -->
+            <button id="btn-toggle-sidebar" class="btn-back-hero" style="display: none; background: #64748b;" title="Ẩn/Hiện danh sách bài học">
+                <i class="fa-solid fa-list-ul"></i>
+            </button>
+
             <button id="btn-toggle-view" class="btn-back-hero" style="display: none; background: #3b82f6;">
                 <i class="fa-solid fa-border-all"></i> Lưới
             </button>
@@ -130,17 +135,14 @@
                 <video id="video-viewer" controls controlsList="nodownload" style="width: 100%; height: 100%; border-radius: 16px; background: #000; display: none;"></video>
             </div>
 
-            <!-- Nút bấm ẩn/hiện comment trên mobile -->
             <button id="mobile-comment-toggle" class="mobile-comment-toggle" style="display: none;">
                 <i class="fa-solid fa-comments"></i> Xem Thảo luận & Đánh giá
             </button>
 
-            <!-- KHU VỰC ĐÁNH GIÁ & BÌNH LUẬN -->
             <div id="feedback-section" class="feedback-section" style="display: none;">
                 <div class="feedback-header">
                     <h3><i class="fa-regular fa-comments"></i> Thảo luận & Đánh giá</h3>
                     <div id="average-rating-display" class="average-rating">
-                        <!-- Rating sẽ render ở đây -->
                     </div>
                 </div>
                 
@@ -158,7 +160,6 @@
                 </div>
 
                 <div id="comments-list" class="comments-list">
-                    <!-- Danh sách bình luận load từ DB -->
                 </div>
             </div>
 
