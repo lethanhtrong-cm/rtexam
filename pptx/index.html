@@ -19,6 +19,11 @@
                 <i class="fa-solid fa-layer-group"></i> Chọn Chuyên Khoa
             </button>
             <span id="current-category-label" class="active-category" style="display: none;"></span>
+            
+            <!-- THÊM MỚI: Nút chuyển đổi giao diện -->
+            <button id="btn-toggle-view" class="btn-back-hero" style="display: none; background: #3b82f6;">
+                <i class="fa-solid fa-border-all"></i> Lưới
+            </button>
         </div>
         <div class="topbar-right">
             <span id="user-status-badge" class="badge badge-loading">Đang tải trạng thái...</span>
@@ -41,7 +46,6 @@
             <p>Vui lòng chọn một chuyên khoa bên dưới để xem danh sách các bài giảng tương ứng</p>
         </div>
 
-        <!-- THÊM MỚI: Khối Thống kê Tổng quan -->
         <div class="stats-overview-container">
             <div class="stat-card">
                 <div class="stat-icon" style="color: #3b82f6; background: #eff6ff;"><i class="fa-solid fa-layer-group"></i></div>
@@ -106,6 +110,8 @@
     </div>
 
     <div id="viewer-page" class="pptx-layout" style="display: none;">
+        
+        <!-- TRẠNG THÁI 1: VIEW DẠNG LIST (Mặc định) -->
         <aside class="pptx-sidebar">
             <h3 class="sidebar-title">Danh sách bài học</h3>
             <ul id="pptx-list" class="pptx-list">
@@ -128,6 +134,11 @@
                 <video id="video-viewer" controls controlsList="nodownload" style="width: 100%; height: 100%; border-radius: 16px; background: #000; display: none;"></video>
             </div>
         </main>
+        
+        <!-- TRẠNG THÁI 2: VIEW DẠNG GRID (Thêm mới) -->
+        <div id="grid-view-container" class="grid-view-container" style="display: none;">
+        </div>
+
     </div>
 
     <script type="module" src="app.js"></script>
