@@ -13,7 +13,7 @@ function renderFreeBadgeUI() {
         topbarVipContainer.style.gap = '12px';
         topbarVipContainer.innerHTML = `
             <span style="background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.5); color: #4ade80; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap;"><i class="fa-solid fa-paper-plane"></i> Free</span>
-            <button id="btnUpgradeHeader" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3); white-space: nowrap;">
+            <button id="btnUpgradeHeader" onclick="document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active')); document.getElementById('tab-vip').classList.add('active');" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3); white-space: nowrap;">
                 <i class="fa-solid fa-crown"></i> <span>Nâng cấp</span>
             </button>
         `;
@@ -187,10 +187,17 @@ function fetchUserData(user, auth, db) {
                             elVipStatusBadge.className = "status-badge status-active";
                         }
 
+                        // ĐÃ BỎ: Không can thiệp đổi CSS inline cứng nhắc cho Thẻ Trạng Thái Tab 3 ở đây nữa, 
+                        // vì chúng ta đã đổi mã HTML thẻ trạng thái gói Free bên tab-vip rồi.
                         const elVipStatusTab3 = document.getElementById("vipStatusTab3");
                         if (elVipStatusTab3) {
-                            elVipStatusTab3.textContent = `Tài khoản ${tierName} đang hoạt động`;
-                            elVipStatusTab3.className = "status-badge status-active";
+                            if (activeTier === 'pro') {
+                                elVipStatusTab3.innerHTML = '<i class="fa-solid fa-crown" style="color: #ea580c;"></i> GÓI PRO';
+                                elVipStatusTab3.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa;';
+                            } else {
+                                elVipStatusTab3.innerHTML = '<i class="fa-solid fa-shield-halved" style="color: #2563eb;"></i> GÓI PLUS';
+                                elVipStatusTab3.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;';
+                            }
                         }
 
                         const elVipStartDate = document.getElementById("vipStartDate");
@@ -199,15 +206,29 @@ function fetchUserData(user, auth, db) {
                         const elVipEndDate = document.getElementById("vipEndDate");
                         if (elVipEndDate) elVipEndDate.textContent = expiryDateObj ? formatDate(expiryDateObj) : "Vĩnh viễn / Không xác định";
 
-                        // RENDER HUY HIỆU TRÊN TOPBAR
+                        // =========================================================================
+                        // ĐÃ SỬA: RENDER HUY HIỆU VÀ GIỮ LẠI NÚT NÂNG CẤP CHO GÓI PLUS
+                        // =========================================================================
                         const topbarVipContainer = document.getElementById('topbar-vip-container');
                         if (topbarVipContainer) {
-                            topbarVipContainer.innerHTML = `
+                            // Tạo khối chứa Badge VIP
+                            let badgeHTML = `
                                 <div class="topbar-vip-badge" style="background: ${tierColor}; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0, 0.2);">
                                     ${tierIcon} ${tierName}
                                 </div>
                             `;
+                            
+                            // Nếu đang là gói Plus, cho phép hiển thị thêm Nút Nâng Cấp Kế bên
+                            if (activeTier === 'plus') {
+                                badgeHTML += `
+                                    <button id="btnUpgradeHeader" onclick="document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active')); document.getElementById('tab-vip').classList.add('active');" style="background: linear-gradient(135deg, #ea580c, #c2410c); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.3); white-space: nowrap;">
+                                        <i class="fa-solid fa-arrow-up-right-dots"></i> <span>Nâng Pro</span>
+                                    </button>
+                                `;
+                            }
+                            topbarVipContainer.innerHTML = badgeHTML;
                         }
+                        // =========================================================================
                         
                         const tabVip = document.getElementById('tab-vip');
                         if (tabVip && tabVip.classList.contains('active')) {
@@ -223,9 +244,12 @@ function fetchUserData(user, auth, db) {
                                 btnCancel.style.display = 'none';
                             }
                             
-                            const allExamsMenu = document.querySelector('.sub-menu-item[data-technique="all"]') || document.querySelector('[data-target="tab-dashboard"]');
-                            if (allExamsMenu) {
-                                allExamsMenu.click();
+                            // Chặn tự động chuyển tab nếu User Plus đang đứng ở Tab Nâng Cấp và muốn lên Pro
+                            if (activeTier !== 'plus') {
+                                const allExamsMenu = document.querySelector('.sub-menu-item[data-technique="all"]') || document.querySelector('[data-target="tab-dashboard"]');
+                                if (allExamsMenu) {
+                                    allExamsMenu.click();
+                                }
                             }
                             
                             try {
@@ -341,8 +365,10 @@ export async function executeAuthUI(user, auth, db) {
     if (sessionStorage.getItem('triggerUpgradeTab') === 'true') {
         sessionStorage.removeItem('triggerUpgradeTab'); 
         setTimeout(() => {
-            const btnVip = document.getElementById('btnUpgradeHeader');
-            if (btnVip) btnVip.click(); 
+            // Thay vì click nút header (có thể bị ẩn nếu đang ở Gói Plus), gọi chuyển tab trực tiếp
+            document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active')); 
+            const vipTab = document.getElementById('tab-vip');
+            if (vipTab) vipTab.classList.add('active');
         }, 400); 
     }
 }
