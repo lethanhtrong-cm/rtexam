@@ -91,8 +91,8 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .pptx-main::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
 /* Khối iframe container - THIẾT LẬP CHIỀU CAO CỐ ĐỊNH TỶ LỆ */
-.iframe-container { position: relative; width: 100%; height: 70vh; min-height: 400px; flex-shrink: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; overflow: hidden; }
-.iframe-container iframe { width: 100%; height: 100%; border: none; display: block; }
+/* Khối iframe container - THIẾT LẬP CHIỀU CAO CỐ ĐỊNH TỶ LỆ */
+.iframe-container { position: relative; width: 100%; height: calc(100vh - 105px); min-height: 400px; flex-shrink: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; overflow: hidden; }
 .iframe-container video { width: 100%; height: 100%; background: #000; display: block; border-radius: 0 !important; }
 
 /* Lock Overlay */
