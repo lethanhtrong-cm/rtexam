@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Cấu hình Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
     authDomain: "rt-examination.firebaseapp.com",
@@ -17,18 +16,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Hạn mức xem bài giảng
 const FREE_LIMIT = 3;
 const PLUS_LIMIT = 5;
 
 let currentUserTier = 'free';
-let currentUserName = 'Bạn'; // Lưu trữ tên người dùng
-let pptxDataList = []; // Toàn bộ dữ liệu
-let currentSelectedCategory = null; // Thể loại đang xem
-let viewedLectures = []; // Mảng chứa ID các bài giảng đã xem trong phiên
+let currentUserName = 'Bạn'; 
+let pptxDataList = []; 
+let currentSelectedCategory = null; 
+let viewedLectures = []; 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Bảo vệ bản quyền
     document.addEventListener('contextmenu', event => event.preventDefault());
     document.addEventListener('keydown', event => {
         if (
@@ -40,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Bắt sự kiện Click vào Card Chuyên Khoa ở Hero Page
     document.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
             const catId = card.getAttribute('data-cat');
@@ -49,10 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Bắt sự kiện quay lại Hero Page
     document.getElementById('btn-back-hero').addEventListener('click', showHeroPage);
 
-    // 1. Kiểm tra Auth và Quyền
     onAuthStateChanged(auth, async (user) => {
         const badge = document.getElementById('user-status-badge');
         
@@ -65,8 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!tier && userData.isVip) tier = 'plus'; 
                     
                     currentUserTier = tier || 'free';
-                    
-                    // Ưu tiên lấy tên đầy đủ, nếu không có lấy tên hiển thị, cuối cùng là email
                     currentUserName = userData.fullName || userData.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
                     
                     updateAuthUI(currentUserTier, badge);
@@ -89,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Cập nhật Nhãn hiển thị trên Topbar
 function updateAuthUI(tier, badgeElement) {
     if (tier === 'plus') {
         badgeElement.className = 'badge badge-plus';
@@ -103,7 +94,6 @@ function updateAuthUI(tier, badgeElement) {
     }
 }
 
-// Cập nhật Khối Banner to trên Hero Page
 function updateQuotaBanner() {
     const banner = document.getElementById('quota-banner');
     const greetingText = document.getElementById('quota-greeting-text');
@@ -133,7 +123,6 @@ function updateQuotaBanner() {
     }
 }
 
-// Logic Chuyển Giao Diện
 function showViewerPage(categoryId, categoryName) {
     currentSelectedCategory = categoryId;
     
@@ -146,7 +135,6 @@ function showViewerPage(categoryId, categoryName) {
     
     document.getElementById('btn-back-hero').style.display = 'inline-flex';
     
-    // Gọi lại hàm render để lọc dữ liệu theo Category
     renderPptxList();
 }
 
@@ -159,11 +147,10 @@ function showHeroPage() {
     document.getElementById('current-category-label').style.display = 'none';
     document.getElementById('btn-back-hero').style.display = 'none';
     
-    // Tắt iframe để dừng load mạng và âm thanh (nếu có)
     document.getElementById('pptx-viewer').src = '';
+    document.getElementById('video-viewer').src = '';
 }
 
-// Kéo dữ liệu thực từ Firestore Database
 function fetchPptxFromDatabase() {
     const q = query(collection(db, "pptx_lectures"), orderBy("createdAt", "asc"));
     
@@ -176,7 +163,6 @@ function fetchPptxFromDatabase() {
             });
         });
         
-        // Chỉ render lại danh sách nếu đang ở màn hình Viewer
         if (currentSelectedCategory) {
             renderPptxList(); 
         }
@@ -193,7 +179,6 @@ function renderPptxList() {
     const listContainer = document.getElementById('pptx-list');
     listContainer.innerHTML = '';
     
-    // Logic Lọc
     const filteredList = pptxDataList.filter(item => {
         const itemCat = item.category || 'mri';
         return itemCat === currentSelectedCategory;
@@ -202,6 +187,7 @@ function renderPptxList() {
     if (filteredList.length === 0) {
         listContainer.innerHTML = '<li style="padding: 20px; color: #64748b; text-align: center; font-size: 0.95rem;">Chưa có bài giảng nào trong nhóm này.</li>';
         document.getElementById('pptx-viewer').src = '';
+        document.getElementById('video-viewer').src = '';
         return;
     }
 
@@ -210,58 +196,75 @@ function renderPptxList() {
         li.className = 'pptx-item';
         if (index === 0) li.classList.add('active'); 
         
-        li.innerHTML = `<i class="fa-solid fa-file-powerpoint"></i> <span>${item.title}</span>`;
+        // Cập nhật icon linh hoạt theo nội dung lưu trữ
+        const isVideo = item.embedUrl && item.embedUrl.includes('firebasestorage.googleapis.com');
+        const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
+        
+        li.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span>${item.title}</span>`;
         
         li.addEventListener('click', () => {
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
             li.classList.add('active');
             
-            // Truyền ID bài giảng
             loadPptx(item.embedUrl, item.id);
         });
         
         listContainer.appendChild(li);
     });
 
-    // Auto load bài đầu tiên
     if (filteredList.length > 0) {
         loadPptx(filteredList[0].embedUrl, filteredList[0].id);
     }
 }
 
-// Hàm load nội dung, kiểm tra giới hạn mới 3 (free) và 5 (plus)
 function loadPptx(embedUrl, itemId) {
     const lockOverlay = document.getElementById('premium-lock-overlay');
     const iframeContainer = document.getElementById('iframe-container');
     const iframeViewer = document.getElementById('pptx-viewer');
+    const videoViewer = document.getElementById('video-viewer');
 
     let canView = false;
 
     if (currentUserTier === 'pro') {
         canView = true; 
     } else if (viewedLectures.includes(itemId)) {
-        // Bài giảng đã xem trong phiên -> Xem lại không trừ lượt
         canView = true;
     } else {
-        // Kiểm tra Hạn mức (Plus: 5, Free: 3)
         if (currentUserTier === 'plus' && viewedLectures.length < PLUS_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
-            updateQuotaBanner(); // Cập nhật số đếm trên giao diện Hero
+            updateQuotaBanner(); 
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
-            updateQuotaBanner(); // Cập nhật số đếm trên giao diện Hero
+            updateQuotaBanner(); 
         }
     }
 
     if (canView) {
         lockOverlay.style.display = 'none';
         iframeContainer.style.display = 'block';
-        iframeViewer.src = embedUrl;
+        
+        // Xử lý Render đúng trình phát
+        const isVideoUpload = embedUrl.includes('firebasestorage.googleapis.com');
+        if (isVideoUpload) {
+            iframeViewer.style.display = 'none';
+            iframeViewer.src = '';
+            
+            videoViewer.style.display = 'block';
+            videoViewer.src = embedUrl;
+        } else {
+            videoViewer.style.display = 'none';
+            videoViewer.src = '';
+            
+            iframeViewer.style.display = 'block';
+            iframeViewer.src = embedUrl;
+        }
+
     } else {
         lockOverlay.style.display = 'flex';
         iframeContainer.style.display = 'none';
         iframeViewer.src = ''; 
+        videoViewer.src = ''; 
     }
 }
