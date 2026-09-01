@@ -1,7 +1,8 @@
 import { auth, db } from "./firebase-config.js";
 import { UI } from "./app-ui.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// THÊM MỚI: addDoc, serverTimestamp để lưu bình luận
+import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FREE_LIMIT = 3;
 const PLUS_LIMIT = 5;
@@ -16,6 +17,9 @@ let currentLoadedItemId = null;
 let viewedLectures = []; 
 let userStorageKey = 'viewedLectures_guest';
 
+// Bến lưu trữ bộ lắng nghe bình luận (để ngắt kết nối khi chuyển bài)
+let currentCommentsUnsubscribe = null; 
+
 document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('contextmenu', event => event.preventDefault());
     document.addEventListener('keydown', event => {
@@ -29,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     UI.initResizer();
+    UI.initStarRating(); // Khởi tạo hiệu ứng chọn sao
 
     document.getElementById('btn-toggle-view').addEventListener('click', (e) => {
         currentViewMode = currentViewMode === 'list' ? 'grid' : 'list';
@@ -37,6 +42,42 @@ document.addEventListener('DOMContentLoaded', () => {
             videoViewer.pause();
         }
         UI.toggleViewModeDisplay(currentViewMode, e.currentTarget);
+    });
+
+    // Lắng nghe sự kiện gửi bình luận
+    document.getElementById('btn-submit-comment').addEventListener('click', async () => {
+        if (!currentLoadedItemId || !auth.currentUser) return;
+        
+        const text = document.getElementById('comment-textarea').value.trim();
+        const rating = UI.getRating();
+        
+        if (!text && rating === 0) {
+            alert('Vui lòng nhập nội dung bình luận hoặc chọn số sao đánh giá!');
+            return;
+        }
+
+        try {
+            const btnSubmit = document.getElementById('btn-submit-comment');
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+            // Lưu vào sub-collection 'comments' của bài giảng hiện tại
+            await addDoc(collection(db, `pptx_lectures/${currentLoadedItemId}/comments`), {
+                userId: auth.currentUser.uid,
+                userName: currentUserName,
+                text: text,
+                rating: rating,
+                createdAt: serverTimestamp()
+            });
+
+            UI.resetRating();
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi bình luận';
+        } catch (error) {
+            console.error("Lỗi khi gửi bình luận:", error);
+            alert("Lỗi khi gửi dữ liệu. Vui lòng kiểm tra kết nối mạng!");
+            document.getElementById('btn-submit-comment').disabled = false;
+        }
     });
 
     document.querySelectorAll('.category-card').forEach(card => {
@@ -73,6 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = new URL(window.location);
         url.searchParams.delete('lecture');
         window.history.replaceState({}, document.title, url.toString());
+        
+        // Hủy lắng nghe bình luận khi ra ngoài
+        if (currentCommentsUnsubscribe) {
+            currentCommentsUnsubscribe();
+            currentCommentsUnsubscribe = null;
+        }
         
         UI.showHeroPage();
     });
@@ -180,6 +227,7 @@ function renderPptxList() {
         document.getElementById('pptx-viewer').src = '';
         document.getElementById('video-viewer').src = '';
         currentLoadedItemId = null;
+        UI.hideFeedbackSection(); // Ẩn cmt nếu không có bài
         return;
     }
 
@@ -286,6 +334,30 @@ async function incrementLectureViewCount(itemId) {
     }
 }
 
+// THÊM MỚI: Hàm fetch bình luận realtime
+function loadLectureComments(itemId) {
+    if (currentCommentsUnsubscribe) {
+        currentCommentsUnsubscribe();
+        currentCommentsUnsubscribe = null;
+    }
+    const q = query(collection(db, `pptx_lectures/${itemId}/comments`), orderBy("createdAt", "desc"));
+    currentCommentsUnsubscribe = onSnapshot(q, (snapshot) => {
+        const comments = [];
+        let totalRate = 0;
+        let count = 0;
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            comments.push({ id: doc.id, ...data });
+            if (data.rating) {
+                totalRate += data.rating;
+                count++;
+            }
+        });
+        const avg = count > 0 ? (totalRate / count).toFixed(1) : 0;
+        UI.renderComments(comments, avg, count);
+    });
+}
+
 function loadPptx(embedUrl, itemId) {
     if (currentLoadedItemId === itemId) return;
     
@@ -343,10 +415,18 @@ function loadPptx(embedUrl, itemId) {
             iframeViewer.src = embedUrl;
         }
 
+        // Hiện section bình luận và Load dữ liệu bình luận
+        UI.showFeedbackSection();
+        UI.resetRating();
+        loadLectureComments(itemId);
+
     } else {
         lockOverlay.style.display = 'flex';
         iframeContainer.style.display = 'none';
         iframeViewer.src = ''; 
         videoViewer.src = ''; 
+        
+        // Ẩn bình luận nếu bị khóa
+        UI.hideFeedbackSection();
     }
 }
