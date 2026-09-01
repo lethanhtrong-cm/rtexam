@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// Thêm hàm getDocs để truy xuất danh sách bình luận
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -51,9 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Sự kiện đóng Modal Bình luận
     document.getElementById('close-comments-modal').addEventListener('click', () => {
         document.getElementById('comments-modal').style.display = 'none';
+        // Refresh lại dữ liệu cột Đánh giá của bảng khi đóng modal phòng trường hợp Admin vừa xóa bình luận
+        renderAdminTable(); 
     });
 });
 
@@ -72,8 +72,43 @@ function loadPptxData() {
         renderAdminTable(); 
     }, (error) => {
         console.error("Lỗi truy xuất Firestore:", error);
-        document.getElementById('pptx-tbody').innerHTML = `<tr><td colspan="4" style="text-align: center; color: #ef4444; font-weight: 600;">Lỗi kết nối Database. Nhấn F12 xem chi tiết.</td></tr>`;
+        document.getElementById('pptx-tbody').innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444; font-weight: 600;">Lỗi kết nối Database. Nhấn F12 xem chi tiết.</td></tr>`;
     });
+}
+
+// THÊM MỚI: Hàm fetch nhanh số lượng bình luận và đánh giá cho từng bài giảng
+async function fetchLectureStatsForTable(lectureId) {
+    try {
+        const q = query(collection(db, `pptx_lectures/${lectureId}/comments`));
+        const snap = await getDocs(q);
+        const count = snap.size;
+        
+        let totalRate = 0;
+        let rateCount = 0;
+        snap.forEach(doc => {
+            const data = doc.data();
+            if (data.rating) {
+                totalRate += data.rating;
+                rateCount++;
+            }
+        });
+        
+        const avg = rateCount > 0 ? (totalRate / rateCount).toFixed(1) : 0;
+        const col = document.getElementById(`rating-col-${lectureId}`);
+        
+        if (col) {
+            if (count > 0) {
+                col.innerHTML = `
+                    <div style="color: #f59e0b; font-weight: bold;"><i class="fa-solid fa-star"></i> ${avg}</div>
+                    <div style="font-size: 0.8rem; color: #64748b; font-weight: 500;">(${count} bình luận)</div>
+                `;
+            } else {
+                col.innerHTML = `<div style="font-size: 0.85rem; color: #cbd5e1; font-weight: 500;">Chưa có</div>`;
+            }
+        }
+    } catch (e) {
+        console.error("Lỗi fetch thống kê:", e);
+    }
 }
 
 function renderAdminTable() {
@@ -87,7 +122,7 @@ function renderAdminTable() {
     });
 
     if (filteredData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #64748b;">Chưa có bài giảng nào trong nhóm này.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b;">Chưa có bài giảng nào trong nhóm này.</td></tr>`;
         return;
     }
 
@@ -101,10 +136,14 @@ function renderAdminTable() {
         const viewCount = data.viewCount || 0;
 
         const tr = document.createElement('tr');
+        // SỬA ĐỔI: Thêm cột `rating-col-${id}` hiển thị loading chờ fetch data
         tr.innerHTML = `
             <td style="font-weight: 600; color: #1e293b;">${safeTitle}</td>
             <td class="link-cell">${safeUrl}</td>
             <td style="text-align: center; font-weight: bold; color: #3b82f6;"><i class="fa-solid fa-eye"></i> ${viewCount}</td>
+            <td style="text-align: center;" id="rating-col-${id}">
+                <i class="fa-solid fa-spinner fa-spin" style="color: #cbd5e1;"></i>
+            </td>
             <td style="text-align: center; white-space: nowrap;">
                 <button class="btn-action btn-comment" data-id="${id}" data-title="${safeTitle}" title="Xem bình luận & đánh giá"><i class="fa-solid fa-comments"></i></button>
                 <button class="btn-action btn-reset" data-id="${id}" title="Khôi phục lượt xem về 0"><i class="fa-solid fa-rotate-left"></i></button>
@@ -113,9 +152,11 @@ function renderAdminTable() {
             </td>
         `;
         tbody.appendChild(tr);
+
+        // Kích hoạt hàm đếm bình luận tự động ngầm
+        fetchLectureStatsForTable(id);
     });
 
-    // Cài đặt sự kiện Xóa bài giảng
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.onclick = async (e) => {
             const id = e.currentTarget.getAttribute('data-id');
@@ -125,7 +166,6 @@ function renderAdminTable() {
         }
     });
 
-    // Cài đặt sự kiện Reset View
     document.querySelectorAll('.btn-reset').forEach(btn => {
         btn.onclick = async (e) => {
             const id = e.currentTarget.getAttribute('data-id');
@@ -140,7 +180,6 @@ function renderAdminTable() {
         }
     });
 
-    // Cài đặt sự kiện Sửa bài giảng
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.onclick = (e) => {
             const target = e.currentTarget;
@@ -154,7 +193,6 @@ function renderAdminTable() {
         }
     });
 
-    // THÊM MỚI: Cài đặt sự kiện Xem Bình luận
     document.querySelectorAll('.btn-comment').forEach(btn => {
         btn.onclick = (e) => {
             const id = e.currentTarget.getAttribute('data-id');
@@ -164,7 +202,6 @@ function renderAdminTable() {
     });
 }
 
-// THÊM MỚI: Hàm mở Modal và lấy danh sách bình luận
 async function openCommentsModal(lectureId, lectureTitle) {
     document.getElementById('modal-lecture-title').innerText = lectureTitle;
     const listContainer = document.getElementById('modal-comments-list');
@@ -184,14 +221,12 @@ async function openCommentsModal(lectureId, lectureTitle) {
         querySnapshot.forEach((docSnap) => {
             const c = docSnap.data();
             
-            // Format Thời gian
             let timeStr = '';
             if (c.createdAt) {
                 const dateObj = c.createdAt.toDate();
                 timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
             }
             
-            // Render số sao
             let starsHtml = '';
             if (c.rating > 0) {
                 for(let i=1; i<=5; i++) {
@@ -216,7 +251,6 @@ async function openCommentsModal(lectureId, lectureTitle) {
         });
         listContainer.innerHTML = html;
 
-        // Cài đặt sự kiện Xóa bình luận
         document.querySelectorAll('.btn-delete-comment').forEach(btn => {
             btn.onclick = async (e) => {
                 if (confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN bình luận này không?')) {
