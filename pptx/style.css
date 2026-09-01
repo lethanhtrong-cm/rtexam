@@ -81,19 +81,22 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .pptx-item.active { background: #eff6ff; color: #1d4ed8; font-weight: 700; box-shadow: inset 3px 0 0 0 #3b82f6; }
 .pptx-item i.fa-file-powerpoint, .pptx-item i.fa-circle-play { color: #f59e0b; font-size: 1.3rem; }
 
-/* THÊM MỚI: CSS Thanh Kéo Đổi Kích Thước */
+/* Thanh Kéo Đổi Kích Thước */
 .resizer { width: 12px; cursor: col-resize; background-color: transparent; border-radius: 6px; transition: background-color 0.2s; flex-shrink: 0; z-index: 10; margin: 0 4px; }
 .resizer:hover, .resizer.resizing { background-color: #94a3b8; }
 
-/* Main Area */
-.pptx-main { flex: 1; position: relative; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center; justify-content: center; overflow: hidden; min-width: 0; }
+/* Main Area - SỬA LẠI THÀNH COLUMN SCROLL ĐỂ CHỨA COMMENT BÊN DƯỚI */
+.pptx-main { flex: 1; position: relative; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; overflow-y: auto; overflow-x: hidden; min-width: 0; padding-bottom: 20px; }
+.pptx-main::-webkit-scrollbar { width: 8px; }
+.pptx-main::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-/* Khối iframe container */
-.iframe-container { position: relative; width: 100%; height: 100%; border-radius: 16px; overflow: hidden; }
+/* Khối iframe container - THIẾT LẬP CHIỀU CAO CỐ ĐỊNH TỶ LỆ */
+.iframe-container { position: relative; width: 100%; height: 70vh; min-height: 400px; flex-shrink: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; overflow: hidden; }
 .iframe-container iframe { width: 100%; height: 100%; border: none; display: block; }
+.iframe-container video { width: 100%; height: 100%; background: #000; display: block; border-radius: 0 !important; }
 
 /* Lock Overlay */
-.lock-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 5; }
+.lock-overlay { position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 50; }
 .lock-content { text-align: center; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); max-width: 450px; border: 1px solid #e2e8f0; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .lock-content h2 { color: #0f172a; margin-bottom: 15px; font-size: 1.6rem; font-weight: 800; }
 .lock-content p { color: #64748b; margin-bottom: 25px; line-height: 1.6; font-size: 1.05rem; }
@@ -101,14 +104,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .btn-upgrade:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(234, 88, 12, 0.4); }
 
 /* BẢO VỆ BẢN QUYỀN (WATERMARK) */
-.copyright-watermark {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 10;
-    pointer-events: none;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="550" height="320" opacity="0.10" transform="rotate(-25)"><text x="40" y="160" font-family="Arial" font-size="22" font-weight="bold" fill="%230f172a">ktv3mien.com</text></svg>');
-    background-repeat: repeat;
-}
+.copyright-watermark { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="550" height="320" opacity="0.10" transform="rotate(-25)"><text x="40" y="160" font-family="Arial" font-size="22" font-weight="bold" fill="%230f172a">ktv3mien.com</text></svg>'); background-repeat: repeat; }
 
 /* CSS CHO CHẾ ĐỘ HIỂN THỊ DẠNG LƯỚI (GRID VIEW) */
 .grid-view-container { width: 100%; display: none; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; overflow-y: auto; padding-right: 10px; align-content: start; animation: fadeIn 0.4s ease; }
@@ -122,6 +118,32 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .grid-card-thumbnail i.play-icon { font-size: 3rem; color: rgba(255,255,255,0.7); transition: 0.2s; }
 .grid-card:hover .grid-card-thumbnail i.play-icon { color: white; transform: scale(1.1); }
 .grid-card-stats { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
+
+/* THÊM MỚI: CSS CHO PHẦN BÌNH LUẬN & ĐÁNH GIÁ */
+.feedback-section { width: 100%; max-width: 900px; padding: 25px; display: flex; flex-direction: column; }
+.feedback-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px; }
+.feedback-header h3 { font-size: 1.2rem; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+.average-rating { color: #f59e0b; font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 6px; }
+
+.feedback-input-box { display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+.star-rating { display: flex; align-items: center; gap: 5px; }
+.star-rating i { color: #cbd5e1; cursor: pointer; font-size: 1.4rem; transition: 0.2s ease; }
+.star-rating i.active, .star-rating i:hover { color: #f59e0b; transform: scale(1.1); }
+#comment-textarea { width: 100%; height: 90px; padding: 15px; border-radius: 10px; border: 1px solid #cbd5e1; resize: vertical; outline: none; font-family: inherit; font-size: 0.95rem; transition: 0.2s; }
+#comment-textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.btn-submit-comment { align-self: flex-end; padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: #3b82f6; color: white; display: flex; align-items: center; gap: 8px; transition: 0.2s; font-size: 0.95rem; }
+.btn-submit-comment:hover { background: #2563eb; transform: translateY(-2px); }
+.btn-submit-comment:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+
+.comments-list { display: flex; flex-direction: column; gap: 15px; }
+.comment-item { display: flex; gap: 15px; padding: 15px; background: white; border-radius: 12px; border: 1px solid #f1f5f9; box-shadow: 0 2px 4px rgba(0,0,0,0.01); }
+.comment-avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; }
+.comment-content { flex: 1; min-width: 0; }
+.comment-user { font-weight: 700; color: #0f172a; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.comment-user span.time { font-size: 0.8rem; color: #94a3b8; font-weight: normal; display: flex; align-items: center; gap: 4px; }
+.comment-stars { color: #f59e0b; font-size: 0.85rem; margin-bottom: 8px; display: flex; gap: 2px; }
+.comment-text { color: #334155; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.no-comment-msg { text-align: center; color: #94a3b8; font-style: italic; padding: 20px 0; }
 
 @media print { body { display: none !important; } }
 @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
@@ -152,18 +174,21 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
     .stat-value { font-size: 1.3rem; }
     .stat-label { font-size: 0.85rem; }
 
-    /* Bỏ padding gap để mobile vừa vặn */
     .pptx-layout { flex-direction: column; overflow-y: visible; padding: 10px; gap: 15px; }
-    .resizer { display: none !important; } /* Ẩn resizer trên mobile */
+    .resizer { display: none !important; } 
     .pptx-sidebar { order: 2; width: 100% !important; height: auto; max-height: 350px; flex-shrink: 0; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: none; }
-    .pptx-main { order: 1; min-height: 35vh; height: auto; aspect-ratio: 16/9; border-radius: 12px; }
+    
+    /* Điều chỉnh main trên mobile */
+    .pptx-main { order: 1; min-height: 50vh; height: auto; border-radius: 12px; overflow: visible; padding-bottom: 15px; }
+    .iframe-container { height: 35vh; min-height: 250px; border-radius: 12px; }
+    .feedback-section { padding: 15px 10px; }
     
     .grid-view-container { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); padding-right: 0; }
 }
 
 @media (max-width: 480px) {
     .category-grid { grid-template-columns: 1fr; }
-    .pptx-main { min-height: 250px; }
+    .iframe-container { min-height: 220px; }
     .lock-content { padding: 25px 15px; }
     .lock-content h2 { font-size: 1.25rem; }
     .lock-content p { font-size: 0.9rem; }
