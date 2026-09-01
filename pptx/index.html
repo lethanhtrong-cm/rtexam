@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- THANH ĐIỀU HƯỚNG TRÊN -->
     <nav class="pptx-topbar">
         <div class="topbar-left">
             <a href="../dashboard.html" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Về Dashboard</a>
@@ -25,10 +24,8 @@
         </div>
     </nav>
 
-    <!-- MÀN HÌNH 1: HERO PAGE (CHỌN DANH MỤC) -->
     <div id="hero-page" class="hero-container">
         
-        <!-- THÔNG BÁO TÀI KHOẢN & LƯỢT XEM -->
         <div id="quota-banner" class="quota-banner free-banner">
             <div class="quota-icon"><i class="fa-solid fa-circle-user"></i></div>
             <div class="quota-info">
@@ -44,7 +41,6 @@
         </div>
         
         <div class="category-grid">
-            <!-- Card MRI -->
             <div class="category-card" data-cat="mri" data-name="MRI">
                 <div class="card-icon" style="background: #eff6ff; color: #3b82f6;">
                     <i class="fa-solid fa-magnet"></i>
@@ -53,7 +49,6 @@
                 <p>Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI</p>
             </div>
             
-            <!-- Card CT -->
             <div class="category-card" data-cat="ct" data-name="Cắt lớp vi tính (CT)">
                 <div class="card-icon" style="background: #f0fdf4; color: #22c55e;">
                     <i class="fa-solid fa-x-ray"></i>
@@ -62,7 +57,6 @@
                 <p>Bài giảng về nguyên lý và ứng dụng CT Scanner</p>
             </div>
             
-            <!-- Card X-Quang -->
             <div class="category-card" data-cat="xray" data-name="X-quang">
                 <div class="card-icon" style="background: #fdf2f8; color: #ec4899;">
                     <i class="fa-solid fa-person-rays"></i>
@@ -71,7 +65,6 @@
                 <p>Kiến thức cơ bản và nâng cao về chẩn đoán X-quang</p>
             </div>
             
-            <!-- Card Thuốc tương phản -->
             <div class="category-card" data-cat="contrast" data-name="Thuốc tương phản">
                 <div class="card-icon" style="background: #fffbeb; color: #f59e0b;">
                     <i class="fa-solid fa-syringe"></i>
@@ -82,19 +75,14 @@
         </div>
     </div>
 
-    <!-- MÀN HÌNH 2: VIEWER PAGE (BỐ CỤC CHÍNH CŨ) -->
     <div id="viewer-page" class="pptx-layout" style="display: none;">
-        <!-- CỘT TRÁI: DANH SÁCH FILE -->
         <aside class="pptx-sidebar">
             <h3 class="sidebar-title">Danh sách bài học</h3>
             <ul id="pptx-list" class="pptx-list">
-                <!-- Danh sách sẽ được render bằng JS -->
             </ul>
         </aside>
 
-        <!-- CỘT PHẢI: KHUNG TRÌNH CHIẾU -->
         <main class="pptx-main">
-            <!-- Màn hình khóa dành cho tài khoản Free -->
             <div id="premium-lock-overlay" class="lock-overlay" style="display: flex;">
                 <div class="lock-content">
                     <i class="fa-solid fa-lock" style="font-size: 3rem; color: #f59e0b; margin-bottom: 15px;"></i>
@@ -104,16 +92,16 @@
                 </div>
             </div>
 
-            <!-- Khung iframe nhúng file -->
             <div id="iframe-container" class="iframe-container" style="display: none;">
-                <!-- Lớp bản quyền Overlay -->
                 <div class="copyright-watermark"></div>
+                <!-- Trình chiếu Iframe cho PPTX/Youtube -->
                 <iframe id="pptx-viewer" src="" frameborder="0" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+                <!-- Trình chiếu MP4 cho Video Upload -->
+                <video id="video-viewer" controls controlsList="nodownload" style="width: 100%; height: 100%; border-radius: 16px; background: #000; display: none;"></video>
             </div>
         </main>
     </div>
 
-    <!-- Script ES6 -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
