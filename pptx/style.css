@@ -145,6 +145,10 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .comment-text { color: #334155; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .no-comment-msg { text-align: center; color: #94a3b8; font-style: italic; padding: 20px 0; }
 
+/* THÊM MỚI: CSS Toggle Button cho Mobile */
+.mobile-comment-toggle { display: none; width: calc(100% - 20px); margin: 15px auto 5px auto; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 6px rgba(59,130,246,0.3); flex-shrink: 0; transition: 0.2s; }
+.mobile-comment-toggle:active { transform: scale(0.98); }
+
 @media print { body { display: none !important; } }
 @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
@@ -154,14 +158,16 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
     body { height: auto; min-height: 100vh; overflow-y: auto; }
     
     /* Gọn gàng hơn cho Topbar Mobile */
-    .pptx-topbar { flex-wrap: wrap; height: auto; min-height: 60px; padding: 10px 5px; gap: 8px; justify-content: center; }
-    .topbar-center { order: 3; width: 100%; justify-content: center !important; }
+    .pptx-topbar { flex-wrap: wrap; height: auto; min-height: 60px; padding: 10px 15px; gap: 10px; }
     .topbar-left { flex: 1; min-width: 0; } 
-    .topbar-right { flex: 1; display: flex; justify-content: flex-end; }
+    .topbar-right { flex: none; display: flex; justify-content: flex-end; }
+    .topbar-center { order: 3; width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; align-items: center; }
     
-    /* Cho phép Title ngắt dòng */
+    /* Cho phép Title tự do, ẩn chữ quảng cáo, bọc gàng nhãn Group */
     .topbar-title { font-size: 1rem; padding-left: 10px; white-space: normal; line-height: 1.3; word-break: break-word; }
-    .btn-back-hero { font-size: 0.8rem; padding: 5px 12px; white-space: nowrap; }
+    .topbar-center > span:first-child { display: none !important; } 
+    .active-category { white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; padding: 6px 12px; font-size: 0.85rem; }
+    .btn-back-hero { font-size: 0.85rem; padding: 6px 12px; white-space: nowrap; }
 
     .hero-container { padding: 25px 15px; }
     .hero-header h2 { font-size: 1.6rem; }
@@ -181,11 +187,13 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
     .resizer { display: none !important; } 
     .pptx-sidebar { order: 2; width: 100% !important; height: auto; max-height: 350px; flex-shrink: 0; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: none; }
     
+    /* Main Area Mobile */
     .pptx-main { order: 1; min-height: 50vh; height: auto; border-radius: 12px; overflow: visible; padding-bottom: 15px; }
     .iframe-container { height: 35vh; min-height: 250px; border-radius: 12px; }
     
-    /* ẨN HOÀN TOÀN BÌNH LUẬN TRÊN MOBILE */
-    .feedback-section { display: none !important; }
+    /* ẨN VÀ ĐIỀU KHIỂN TOGGLE COMMENT TRÊN MOBILE */
+    .mobile-comment-toggle { display: flex; } 
+    .feedback-section { display: none; padding: 15px 10px; } /* CSS Media che giấu, JS có thể ghi đè */
     
     .grid-view-container { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); padding-right: 0; }
 }
