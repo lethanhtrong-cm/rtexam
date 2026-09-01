@@ -66,7 +66,7 @@ function loadPptxData() {
         renderAdminTable(); 
     }, (error) => {
         console.error("Lỗi truy xuất Firestore:", error);
-        document.getElementById('pptx-tbody').innerHTML = `<tr><td colspan="3" style="text-align: center; color: #ef4444; font-weight: 600;">Lỗi kết nối Database. Nhấn F12 xem chi tiết.</td></tr>`;
+        document.getElementById('pptx-tbody').innerHTML = `<tr><td colspan="4" style="text-align: center; color: #ef4444; font-weight: 600;">Lỗi kết nối Database. Nhấn F12 xem chi tiết.</td></tr>`;
     });
 }
 
@@ -81,7 +81,7 @@ function renderAdminTable() {
     });
 
     if (filteredData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #64748b;">Chưa có bài giảng nào trong nhóm này.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #64748b;">Chưa có bài giảng nào trong nhóm này.</td></tr>`;
         return;
     }
 
@@ -92,11 +92,15 @@ function renderAdminTable() {
         
         const itemCat = data.category || 'mri';
         const normalizedCat = itemCat === 'mri' ? 'mri_pptx' : itemCat;
+        
+        // SỬA ĐỔI: Lấy viewCount
+        const viewCount = data.viewCount || 0;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-weight: 600; color: #1e293b;">${safeTitle}</td>
             <td class="link-cell">${safeUrl}</td>
+            <td style="text-align: center; font-weight: bold; color: #3b82f6;"><i class="fa-solid fa-eye"></i> ${viewCount}</td>
             <td style="text-align: center;">
                 <button class="btn-action btn-edit" data-id="${id}" data-title="${safeTitle}" data-url="${safeUrl}" data-category="${normalizedCat}"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-action btn-delete" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
@@ -114,7 +118,6 @@ function renderAdminTable() {
         }
     });
 
-    // Đẩy thông tin Category vào Dropdown khi bấm Sửa
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.onclick = (e) => {
             const target = e.currentTarget;
@@ -196,10 +199,12 @@ async function processSave(title, finalUrl, selectedCategory) {
                 category: selectedCategory 
             });
         } else {
+            // Khi thêm mới, khởi tạo viewCount = 0
             await addDoc(collection(db, "pptx_lectures"), {
                 title: title,
                 embedUrl: finalUrl,
                 category: selectedCategory,
+                viewCount: 0,
                 createdAt: serverTimestamp()
             });
         }
@@ -220,6 +225,5 @@ function resetForm() {
     document.getElementById('btn-save').innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Lưu Dữ Liệu';
     document.getElementById('btn-cancel').style.display = 'none';
     
-    // Đặt Dropdown về đúng với thẻ đang mở ở Sidebar
     document.getElementById('pptx-category').value = currentAdminCategory;
 }
