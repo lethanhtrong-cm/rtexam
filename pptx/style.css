@@ -85,14 +85,14 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .resizer { width: 12px; cursor: col-resize; background-color: transparent; border-radius: 6px; transition: background-color 0.2s; flex-shrink: 0; z-index: 10; margin: 0 4px; }
 .resizer:hover, .resizer.resizing { background-color: #94a3b8; }
 
-/* Main Area - SỬA LẠI THÀNH COLUMN SCROLL ĐỂ CHỨA COMMENT BÊN DƯỚI */
+/* Main Area - SCROLL ĐỂ CHỨA COMMENT BÊN DƯỚI */
 .pptx-main { flex: 1; position: relative; background: white; border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; overflow-y: auto; overflow-x: hidden; min-width: 0; padding-bottom: 20px; }
 .pptx-main::-webkit-scrollbar { width: 8px; }
 .pptx-main::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
 /* Khối iframe container - THIẾT LẬP CHIỀU CAO CỐ ĐỊNH TỶ LỆ */
-/* Khối iframe container - THIẾT LẬP CHIỀU CAO CỐ ĐỊNH TỶ LỆ */
 .iframe-container { position: relative; width: 100%; height: calc(100vh - 105px); min-height: 400px; flex-shrink: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; overflow: hidden; }
+.iframe-container iframe { width: 100%; height: 100%; border: none; display: block; }
 .iframe-container video { width: 100%; height: 100%; background: #000; display: block; border-radius: 0 !important; }
 
 /* Lock Overlay */
@@ -119,7 +119,7 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 .grid-card:hover .grid-card-thumbnail i.play-icon { color: white; transform: scale(1.1); }
 .grid-card-stats { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
 
-/* THÊM MỚI: CSS CHO PHẦN BÌNH LUẬN & ĐÁNH GIÁ */
+/* BÌNH LUẬN & ĐÁNH GIÁ */
 .feedback-section { width: 100%; max-width: 900px; padding: 25px; display: flex; flex-direction: column; }
 .feedback-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px; }
 .feedback-header h3 { font-size: 1.2rem; color: #0f172a; display: flex; align-items: center; gap: 8px; }
@@ -153,11 +153,14 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
 @media (max-width: 850px) {
     body { height: auto; min-height: 100vh; overflow-y: auto; }
     
-    .pptx-topbar { flex-wrap: wrap; height: auto; min-height: 60px; padding: 10px 15px; gap: 10px; }
+    /* Gọn gàng hơn cho Topbar Mobile */
+    .pptx-topbar { flex-wrap: wrap; height: auto; min-height: 60px; padding: 10px 5px; gap: 8px; justify-content: center; }
     .topbar-center { order: 3; width: 100%; justify-content: center !important; }
     .topbar-left { flex: 1; min-width: 0; } 
     .topbar-right { flex: 1; display: flex; justify-content: flex-end; }
-    .topbar-title { font-size: 1rem; padding-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    /* Cho phép Title ngắt dòng */
+    .topbar-title { font-size: 1rem; padding-left: 10px; white-space: normal; line-height: 1.3; word-break: break-word; }
     .btn-back-hero { font-size: 0.8rem; padding: 5px 12px; white-space: nowrap; }
 
     .hero-container { padding: 25px 15px; }
@@ -178,10 +181,11 @@ body { background: #f1f5f9; color: #1e293b; height: 100vh; display: flex; flex-d
     .resizer { display: none !important; } 
     .pptx-sidebar { order: 2; width: 100% !important; height: auto; max-height: 350px; flex-shrink: 0; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: none; }
     
-    /* Điều chỉnh main trên mobile */
     .pptx-main { order: 1; min-height: 50vh; height: auto; border-radius: 12px; overflow: visible; padding-bottom: 15px; }
     .iframe-container { height: 35vh; min-height: 250px; border-radius: 12px; }
-    .feedback-section { padding: 15px 10px; }
+    
+    /* ẨN HOÀN TOÀN BÌNH LUẬN TRÊN MOBILE */
+    .feedback-section { display: none !important; }
     
     .grid-view-container { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); padding-right: 0; }
 }
