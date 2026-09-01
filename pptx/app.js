@@ -24,6 +24,8 @@ let currentUserName = 'Bạn';
 let pptxDataList = []; 
 let currentSelectedCategory = null; 
 
+// THÊM MỚI: Biến ghi nhớ giao diện List hay Grid
+let currentViewMode = 'list'; 
 let currentLoadedItemId = null; 
 let viewedLectures = []; 
 let userStorageKey = 'viewedLectures_guest';
@@ -37,6 +39,30 @@ document.addEventListener('DOMContentLoaded', () => {
             (event.ctrlKey && (event.key === 'p' || event.key === 's' || event.key === 'c'))
         ) {
             event.preventDefault();
+        }
+    });
+
+    // THÊM MỚI: Logic nảy đổi giao diện Lưới/Danh sách
+    document.getElementById('btn-toggle-view').addEventListener('click', (e) => {
+        currentViewMode = currentViewMode === 'list' ? 'grid' : 'list';
+        const btn = e.currentTarget;
+        const videoViewer = document.getElementById('video-viewer');
+
+        if (currentViewMode === 'grid') {
+            // Tạm dừng video ẩn để tránh tiếng kêu nền
+            if (videoViewer && typeof videoViewer.pause === 'function') videoViewer.pause();
+            
+            btn.innerHTML = '<i class="fa-solid fa-list"></i> Danh Sách';
+            btn.style.background = '#10b981'; 
+            document.querySelector('.pptx-sidebar').style.display = 'none';
+            document.querySelector('.pptx-main').style.display = 'none';
+            document.getElementById('grid-view-container').style.display = 'grid';
+        } else {
+            btn.innerHTML = '<i class="fa-solid fa-border-all"></i> Lưới';
+            btn.style.background = '#3b82f6';
+            document.querySelector('.pptx-sidebar').style.display = '';
+            document.querySelector('.pptx-main').style.display = '';
+            document.getElementById('grid-view-container').style.display = 'none';
         }
     });
 
@@ -162,6 +188,18 @@ function showViewerPage(categoryId, categoryName) {
     label.style.display = 'inline-block';
     
     document.getElementById('btn-back-hero').style.display = 'inline-flex';
+    document.getElementById('btn-toggle-view').style.display = 'inline-flex';
+    
+    // Khôi phục layout theo lựa chọn trước đó của User
+    if (currentViewMode === 'grid') {
+        document.querySelector('.pptx-sidebar').style.display = 'none';
+        document.querySelector('.pptx-main').style.display = 'none';
+        document.getElementById('grid-view-container').style.display = 'grid';
+    } else {
+        document.querySelector('.pptx-sidebar').style.display = '';
+        document.querySelector('.pptx-main').style.display = '';
+        document.getElementById('grid-view-container').style.display = 'none';
+    }
     
     renderPptxList();
 }
@@ -175,12 +213,12 @@ function showHeroPage() {
     
     document.getElementById('current-category-label').style.display = 'none';
     document.getElementById('btn-back-hero').style.display = 'none';
+    document.getElementById('btn-toggle-view').style.display = 'none';
     
     document.getElementById('pptx-viewer').src = '';
     document.getElementById('video-viewer').src = '';
 }
 
-// THÊM MỚI: Hàm tính toán và cập nhật các ô Thống kê trên giao diện
 function updateStatsUI() {
     const statCategories = document.getElementById('stat-categories');
     const statLectures = document.getElementById('stat-lectures');
@@ -194,12 +232,10 @@ function updateStatsUI() {
             totalViews += (item.viewCount || 0);
             let cat = item.category || 'mri';
             if (cat === 'mri') cat = 'mri_pptx';
-            // Gom nhóm mri_pptx và mri_video thành 1 nhóm chuyên khoa gốc 'mri'
             const rootCat = cat.split('_')[0]; 
             uniqueRootCategories.add(rootCat);
         });
 
-        // Nếu chưa có dữ liệu, hiển thị mặc định 4 nhóm tĩnh (MRI, CT, X-quang, Thuốc TP)
         statCategories.innerText = uniqueRootCategories.size > 0 ? uniqueRootCategories.size : 4;
         statLectures.innerText = pptxDataList.length;
         statViews.innerText = totalViews.toLocaleString('vi-VN');
@@ -218,7 +254,6 @@ function fetchPptxFromDatabase() {
             });
         });
         
-        // Gọi hàm cập nhật số liệu thống kê sau khi tải dữ liệu xong
         updateStatsUI();
 
         if (currentSelectedCategory) {
@@ -235,7 +270,10 @@ function fetchPptxFromDatabase() {
 
 function renderPptxList() {
     const listContainer = document.getElementById('pptx-list');
+    const gridContainer = document.getElementById('grid-view-container');
+    
     listContainer.innerHTML = '';
+    gridContainer.innerHTML = '';
     
     const filteredList = pptxDataList.filter(item => {
         const itemCat = item.category || 'mri';
@@ -245,6 +283,7 @@ function renderPptxList() {
     
     if (filteredList.length === 0) {
         listContainer.innerHTML = '<li style="padding: 20px; color: #64748b; text-align: center; font-size: 0.95rem;">Chưa có bài giảng nào trong nhóm này.</li>';
+        gridContainer.innerHTML = '<div style="padding: 20px; color: #64748b; text-align: center; font-size: 0.95rem; width: 100%;">Chưa có bài giảng nào trong nhóm này.</div>';
         document.getElementById('pptx-viewer').src = '';
         document.getElementById('video-viewer').src = '';
         currentLoadedItemId = null;
@@ -257,16 +296,14 @@ function renderPptxList() {
     }
 
     filteredList.forEach((item) => {
-        const li = document.createElement('li');
-        li.className = 'pptx-item';
-        
-        if (item.id === activeItem.id) {
-            li.classList.add('active'); 
-        }
-        
         const isVideo = item.embedUrl && item.embedUrl.includes('firebasestorage.googleapis.com');
         const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
         const viewCount = item.viewCount || 0;
+        
+        // 1. RENDER CHO LIST VIEW
+        const li = document.createElement('li');
+        li.className = 'pptx-item';
+        if (item.id === activeItem.id) li.classList.add('active'); 
         
         li.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -281,14 +318,44 @@ function renderPptxList() {
         li.addEventListener('click', () => {
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
             li.classList.add('active');
+            loadPptx(item.embedUrl, item.id);
+        });
+        listContainer.appendChild(li);
+
+        // 2. RENDER CHO GRID VIEW (THÊM MỚI)
+        const card = document.createElement('div');
+        card.className = 'grid-card';
+        card.innerHTML = `
+            <div class="grid-card-header">
+                <i class="fa-solid ${iconClass}"></i>
+                <span>${item.title}</span>
+            </div>
+            <div class="grid-card-thumbnail">
+                <i class="fa-solid fa-circle-play play-icon"></i>
+                <div class="grid-card-stats"><i class="fa-solid fa-eye"></i> ${viewCount}</div>
+            </div>
+        `;
+        card.addEventListener('click', () => {
+            // Khi User bấm vào thẻ Card Lưới -> Tự động nảy lại dạng List và Load Video
+            currentViewMode = 'list';
+            const btn = document.getElementById('btn-toggle-view');
+            btn.innerHTML = '<i class="fa-solid fa-border-all"></i> Lưới';
+            btn.style.background = '#3b82f6';
+            
+            document.querySelector('.pptx-sidebar').style.display = '';
+            document.querySelector('.pptx-main').style.display = '';
+            document.getElementById('grid-view-container').style.display = 'none';
+            
+            document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
+            li.classList.add('active'); // Sáng thẻ LI tương ứng
             
             loadPptx(item.embedUrl, item.id);
         });
-        
-        listContainer.appendChild(li);
+        gridContainer.appendChild(card);
     });
 
-    if (activeItem) {
+    // Chỉ tự động phát video đầu tiên nếu đang ở chế độ List truyền thống
+    if (activeItem && currentViewMode === 'list') {
         loadPptx(activeItem.embedUrl, activeItem.id);
     }
 }
