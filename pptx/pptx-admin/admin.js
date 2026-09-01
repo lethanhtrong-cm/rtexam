@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // Cấu hình Firebase
 const firebaseConfig = {
@@ -16,13 +17,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 let editingId = null;
-let currentAdminCategory = 'mri'; // Trạng thái nhóm đang được chọn quản lý
-let allAdminPptx = []; // Mảng chứa toàn bộ dữ liệu từ DB
+let currentAdminCategory = 'mri';
+let allAdminPptx = []; 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Bảo mật cơ bản: Phải đăng nhập mới dùng được Admin
     onAuthStateChanged(auth, (user) => {
         if (!user) {
             alert("Bạn cần đăng nhập bằng tài khoản Quản trị!");
@@ -38,29 +39,23 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSave.addEventListener('click', handleSavePptx);
     btnCancel.addEventListener('click', resetForm);
 
-    // Gắn sự kiện click cho Sidebar Menu để đổi Nhóm
     document.querySelectorAll('.admin-menu-item').forEach(item => {
         item.addEventListener('click', (e) => {
-            // Xóa active cũ, thêm active mới
             document.querySelectorAll('.admin-menu-item').forEach(el => el.classList.remove('active'));
             const target = e.currentTarget;
             target.classList.add('active');
             
-            // Cập nhật trạng thái
             currentAdminCategory = target.getAttribute('data-cat');
             const catName = target.getAttribute('data-name');
             
-            // Cập nhật UI
             document.getElementById('form-cat-badge').innerText = 'Nhóm: ' + catName;
             
-            // Hủy sửa nếu đang sửa dở dang và render lại bảng
             resetForm();
             renderAdminTable();
         });
     });
 });
 
-// Load TOÀN BỘ dữ liệu từ DB (Realtime) kèm cơ chế Bắt Lỗi Mạng/Config
 function loadPptxData() {
     const q = query(collection(db, "pptx_lectures"), orderBy("createdAt", "asc"));
     
@@ -73,19 +68,17 @@ function loadPptxData() {
             });
         });
         
-        renderAdminTable(); // Gọi hàm render để lọc dữ liệu theo Nhóm hiện tại
+        renderAdminTable(); 
     }, (error) => {
         console.error("Lỗi truy xuất Firestore:", error);
-        document.getElementById('pptx-tbody').innerHTML = `<tr><td colspan="3" style="text-align: center; color: #ef4444; font-weight: 600;">Lỗi kết nối Database (Mã: 400). Hãy kiểm tra lại firebaseConfig hoặc đảm bảo bạn đã bấm "Tạo Database" trên Firebase Console. Nhấn F12 xem chi tiết.</td></tr>`;
+        document.getElementById('pptx-tbody').innerHTML = `<tr><td colspan="3" style="text-align: center; color: #ef4444; font-weight: 600;">Lỗi kết nối Database. Nhấn F12 xem chi tiết.</td></tr>`;
     });
 }
 
-// Render dữ liệu ra bảng dựa theo currentAdminCategory
 function renderAdminTable() {
     const tbody = document.getElementById('pptx-tbody');
     tbody.innerHTML = '';
     
-    // Lọc data theo category (nếu bài cũ không có category thì mặc định là 'mri' để bảo toàn)
     const filteredData = allAdminPptx.filter(item => {
         const itemCat = item.category || 'mri';
         return itemCat === currentAdminCategory;
@@ -98,7 +91,6 @@ function renderAdminTable() {
 
     filteredData.forEach(data => {
         const id = data.id;
-        // Mã hóa thẻ HTML để chống render nhầm iframe ra bảng Admin
         const safeTitle = data.title ? data.title.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
         const safeUrl = data.embedUrl ? data.embedUrl.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
 
@@ -114,17 +106,15 @@ function renderAdminTable() {
         tbody.appendChild(tr);
     });
 
-    // Gắn sự kiện Xóa
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.onclick = async (e) => {
             const id = e.currentTarget.getAttribute('data-id');
-            if (confirm('Xóa bài giảng này khỏi hệ thống?')) {
+            if (confirm('Xóa dữ liệu này khỏi hệ thống?')) {
                 await deleteDoc(doc(db, "pptx_lectures", id));
             }
         }
     });
 
-    // Gắn sự kiện Sửa
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.onclick = (e) => {
             const target = e.currentTarget;
@@ -141,36 +131,72 @@ function renderAdminTable() {
 async function handleSavePptx() {
     const title = document.getElementById('pptx-title').value.trim();
     let url = document.getElementById('pptx-url').value.trim();
+    const fileInput = document.getElementById('video-upload');
+    const file = fileInput.files[0];
 
-    if (!title || !url) {
-        alert("Vui lòng nhập đầy đủ tên và link!");
+    if (!title) {
+        alert("Vui lòng nhập tên bài giảng!");
+        return;
+    }
+    
+    if (!url && !file) {
+        alert("Vui lòng dán Link nhúng hoặc chọn File Video tải lên!");
         return;
     }
 
-    // Trích xuất Link nếu dán nhầm toàn bộ thẻ <iframe>
-    if (url.toLowerCase().includes('<iframe')) {
-        const match = url.match(/src=["'](.*?)["']/);
-        if (match && match[1]) {
-            url = match[1]; // Bóc tách chính xác phần link bên trong thuộc tính src
-        } else {
-            alert("Không thể trích xuất link từ mã iframe bạn dán. Vui lòng chỉ copy phần đường dẫn bắt đầu bằng https://...");
-            return;
-        }
-    }
+    if (file) {
+        const btnSave = document.getElementById('btn-save');
+        const progressDiv = document.getElementById('upload-progress');
+        btnSave.disabled = true;
+        progressDiv.style.display = 'block';
 
+        const storageRef = ref(storage, 'videos/' + Date.now() + '_' + file.name);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressDiv.innerText = 'Đang tải lên: ' + Math.floor(progress) + '%';
+            },
+            (error) => {
+                console.error(error);
+                alert("Lỗi tải video lên máy chủ: " + error.message);
+                progressDiv.style.display = 'none';
+                btnSave.disabled = false;
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                progressDiv.style.display = 'none';
+                btnSave.disabled = false;
+                await processSave(title, downloadURL);
+            }
+        );
+    } else {
+        if (url.toLowerCase().includes('<iframe')) {
+            const match = url.match(/src=["'](.*?)["']/);
+            if (match && match[1]) {
+                url = match[1];
+            } else {
+                alert("Không thể trích xuất link từ mã iframe bạn dán.");
+                return;
+            }
+        }
+        await processSave(title, url);
+    }
+}
+
+async function processSave(title, finalUrl) {
     try {
         if (editingId) {
-            // Khi cập nhật, lưu lại đè lên nhóm hiện tại để lỡ muốn chuyển nhóm cũng được
             await updateDoc(doc(db, "pptx_lectures", editingId), { 
                 title: title, 
-                embedUrl: url,
+                embedUrl: finalUrl,
                 category: currentAdminCategory 
             });
         } else {
-            // Khi tạo mới, đính kèm category hiện tại
             await addDoc(collection(db, "pptx_lectures"), {
                 title: title,
-                embedUrl: url,
+                embedUrl: finalUrl,
                 category: currentAdminCategory,
                 createdAt: serverTimestamp()
             });
@@ -186,6 +212,9 @@ function resetForm() {
     editingId = null;
     document.getElementById('pptx-title').value = '';
     document.getElementById('pptx-url').value = '';
-    document.getElementById('btn-save').innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Lưu Bài Giảng';
+    document.getElementById('video-upload').value = '';
+    document.getElementById('upload-progress').style.display = 'none';
+    document.getElementById('btn-save').disabled = false;
+    document.getElementById('btn-save').innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Lưu Dữ Liệu';
     document.getElementById('btn-cancel').style.display = 'none';
 }
