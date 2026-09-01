@@ -38,9 +38,9 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
         th { background: #f8fafc; font-weight: 600; color: #475569; }
-        td.link-cell { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #64748b; font-size: 0.9rem; }
+        td.link-cell { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #64748b; font-size: 0.9rem; }
         .btn-action { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; color: white; }
-        .btn-comment { background: #3b82f6; margin-right: 5px; } /* Nút xem bình luận */
+        .btn-comment { background: #3b82f6; margin-right: 5px; } 
         .btn-reset { background: #64748b; margin-right: 5px; }
         .btn-edit { background: #f59e0b; margin-right: 5px; }
         .btn-delete { background: #ef4444; }
@@ -123,18 +123,19 @@
                             <th>Tên bài giảng</th>
                             <th>Link Nhúng / File Video</th>
                             <th style="width: 100px; text-align: center;">Lượt xem</th>
+                            <!-- THÊM MỚI: Cột Đánh giá -->
+                            <th style="width: 120px; text-align: center;">Đánh giá</th>
                             <th style="width: 200px; text-align: center;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody id="pptx-tbody">
-                        <tr><td colspan="4" style="text-align: center; color: #64748b;">Đang tải dữ liệu...</td></tr>
+                        <tr><td colspan="5" style="text-align: center; color: #64748b;">Đang tải dữ liệu...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- THÊM MỚI: Modal Hiển thị Bình luận -->
     <div id="comments-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
         <div style="background: white; width: 90%; max-width: 600px; border-radius: 12px; padding: 25px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
@@ -142,7 +143,6 @@
                 <button id="close-comments-modal" style="background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="modal-comments-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 15px; padding-right: 5px;">
-                <!-- Dữ liệu comment sẽ được JS nhúng vào đây -->
             </div>
         </div>
     </div>
