@@ -120,7 +120,7 @@
                     <i class="fa-solid fa-lock" style="font-size: 3rem; color: #f59e0b; margin-bottom: 15px;"></i>
                     <h2>Nội dung vượt quá giới hạn</h2>
                     <p>Bạn đã sử dụng hết lượt xem của phiên này. Cần nâng cấp gói <strong>PLUS</strong> hoặc <strong>PRO</strong> để tiếp tục trải nghiệm.</p>
-                    <button onclick="window.location.href='../dashboard.html'" class="btn-upgrade">Nâng cấp ngay</button>
+                    <button onclick="sessionStorage.setItem('triggerUpgradeTab', 'true'); window.location.href='../dashboard.html'" class="btn-upgrade">Nâng cấp ngay</button>
                 </div>
             </div>
 
