@@ -1,3 +1,5 @@
+let selectedRating = 0;
+
 export const UI = {
     updateAuthUI: (tier, badgeElement) => {
         if (!badgeElement) return;
@@ -146,5 +148,97 @@ export const UI = {
         
         document.getElementById('pptx-viewer').src = '';
         document.getElementById('video-viewer').src = '';
+        
+        // Ẩn khu vực comment khi ra ngoài
+        UI.hideFeedbackSection();
+    },
+
+    // THÊM MỚI: CÁC HÀM XỬ LÝ GIAO DIỆN BÌNH LUẬN
+    initStarRating: () => {
+        const stars = document.querySelectorAll('#star-rating-input i');
+        stars.forEach(star => {
+            star.addEventListener('mouseover', (e) => {
+                const val = parseInt(e.target.dataset.val);
+                stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= val));
+            });
+            star.addEventListener('mouseout', () => {
+                stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= selectedRating));
+            });
+            star.addEventListener('click', (e) => {
+                selectedRating = parseInt(e.target.dataset.val);
+                stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= selectedRating));
+            });
+        });
+    },
+
+    getRating: () => selectedRating,
+    
+    resetRating: () => {
+        selectedRating = 0;
+        document.querySelectorAll('#star-rating-input i').forEach(s => s.classList.remove('active'));
+        document.getElementById('comment-textarea').value = '';
+    },
+
+    showFeedbackSection: () => {
+        const feedbackSec = document.getElementById('feedback-section');
+        if(feedbackSec) feedbackSec.style.display = 'flex';
+    },
+
+    hideFeedbackSection: () => {
+        const feedbackSec = document.getElementById('feedback-section');
+        if(feedbackSec) feedbackSec.style.display = 'none';
+    },
+
+    renderComments: (commentsArr, avgRating, totalRatings) => {
+        const listEl = document.getElementById('comments-list');
+        const avgEl = document.getElementById('average-rating-display');
+        
+        // Render Điểm trung bình
+        if (totalRatings > 0) {
+            avgEl.innerHTML = `<i class="fa-solid fa-star"></i> ${avgRating} <span style="font-size: 0.9rem; color: #64748b; font-weight: normal;">(${totalRatings} đánh giá)</span>`;
+        } else {
+            avgEl.innerHTML = `<span style="font-size: 0.95rem; color: #64748b; font-weight: normal;">Chưa có đánh giá</span>`;
+        }
+
+        // Render Danh sách bình luận
+        if (commentsArr.length === 0) {
+            listEl.innerHTML = '<div class="no-comment-msg">Chưa có bình luận nào. Hãy là người đầu tiên chia sẻ cảm nghĩ của bạn!</div>';
+            return;
+        }
+
+        let html = '';
+        commentsArr.forEach(c => {
+            const letter = (c.userName || 'U').charAt(0).toUpperCase();
+            
+            // Format Thời gian
+            let timeStr = '';
+            if (c.createdAt) {
+                const dateObj = (typeof c.createdAt.toDate === 'function') ? c.createdAt.toDate() : new Date(c.createdAt);
+                timeStr = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            }
+
+            // Tạo chuỗi HTML ngôi sao
+            let starsHtml = '';
+            if (c.rating > 0) {
+                for(let i=1; i<=5; i++) {
+                    starsHtml += `<i class="fa-solid fa-star" style="color: ${i <= c.rating ? '#f59e0b' : '#e2e8f0'}"></i>`;
+                }
+            }
+
+            html += `
+                <div class="comment-item">
+                    <div class="comment-avatar">${letter}</div>
+                    <div class="comment-content">
+                        <div class="comment-user">
+                            <span>${c.userName || 'Học viên'}</span>
+                            <span class="time"><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+                        </div>
+                        ${starsHtml ? `<div class="comment-stars">${starsHtml}</div>` : ''}
+                        <div class="comment-text">${c.text ? c.text.replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''}</div>
+                    </div>
+                </div>
+            `;
+        });
+        listEl.innerHTML = html;
     }
 };
