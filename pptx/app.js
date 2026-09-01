@@ -1,20 +1,7 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
-    authDomain: "rt-examination.firebaseapp.com",
-    projectId: "rt-examination",
-    storageBucket: "rt-examination.firebasestorage.app",
-    messagingSenderId: "920482699854",
-    appId: "1:920482699854:web:44f9b0d735bdc001c6c11f",
-    measurementId: "G-8N7RTTREQM"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+import { auth, db } from "./firebase-config.js";
+import { UI } from "./app-ui.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FREE_LIMIT = 3;
 const PLUS_LIMIT = 5;
@@ -41,79 +28,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const resizer = document.getElementById('dragMe');
-    const leftSide = document.querySelector('.pptx-sidebar');
-    let x = 0;
-    let leftWidth = 0;
-
-    const mouseDownHandler = function(e) {
-        x = e.clientX;
-        const rect = leftSide.getBoundingClientRect();
-        leftWidth = rect.width;
-        document.addEventListener('mousemove', mouseMoveHandler);
-        document.addEventListener('mouseup', mouseUpHandler);
-        if(resizer) resizer.classList.add('resizing');
-        document.body.style.cursor = 'col-resize';
-    };
-
-    const mouseMoveHandler = function(e) {
-        const dx = e.clientX - x;
-        const newWidth = leftWidth + dx;
-        if (newWidth >= 200 && newWidth <= 600) {
-            leftSide.style.width = `${newWidth}px`;
-        }
-    };
-
-    const mouseUpHandler = function() {
-        if(resizer) resizer.classList.remove('resizing');
-        document.body.style.cursor = '';
-        document.removeEventListener('mousemove', mouseMoveHandler);
-        document.removeEventListener('mouseup', mouseUpHandler);
-    };
-
-    if(resizer && leftSide) {
-        resizer.addEventListener('mousedown', mouseDownHandler);
-    }
+    UI.initResizer();
 
     document.getElementById('btn-toggle-view').addEventListener('click', (e) => {
         currentViewMode = currentViewMode === 'list' ? 'grid' : 'list';
-        const btn = e.currentTarget;
         const videoViewer = document.getElementById('video-viewer');
-
-        if (currentViewMode === 'grid') {
-            if (videoViewer && typeof videoViewer.pause === 'function') videoViewer.pause();
-            
-            btn.innerHTML = '<i class="fa-solid fa-list"></i> Danh Sách';
-            btn.style.background = '#10b981'; 
-            document.querySelector('.pptx-sidebar').style.display = 'none';
-            document.querySelector('.pptx-main').style.display = 'none';
-            if(resizer) resizer.style.display = 'none';
-            document.getElementById('grid-view-container').style.display = 'grid';
-        } else {
-            btn.innerHTML = '<i class="fa-solid fa-border-all"></i> Lưới';
-            btn.style.background = '#3b82f6';
-            document.querySelector('.pptx-sidebar').style.display = '';
-            document.querySelector('.pptx-main').style.display = '';
-            if(resizer) resizer.style.display = '';
-            document.getElementById('grid-view-container').style.display = 'none';
+        if (currentViewMode === 'grid' && videoViewer && typeof videoViewer.pause === 'function') {
+            videoViewer.pause();
         }
+        UI.toggleViewModeDisplay(currentViewMode, e.currentTarget);
     });
 
     document.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
-            // TẠM ẨN LOGIC SỔ XUỐNG ĐỂ CLICK THẲNG VÀO THẺ MRI NHƯ BÌNH THƯỜNG
-            /* 
-            if (card.id === 'card-mri') {
-                const subList = card.querySelector('.sub-category-list');
-                const isHidden = subList.style.display === 'none';
-                subList.style.display = isHidden ? 'flex' : 'none';
-                return;
-            } 
-            */
             const catId = card.getAttribute('data-cat');
             const catName = card.getAttribute('data-name');
             if(catId && catName) {
-                showViewerPage(catId, catName);
+                currentSelectedCategory = catId;
+                currentLoadedItemId = null; 
+                UI.showViewerPage(catName, currentViewMode);
+                renderPptxList();
             }
         });
     });
@@ -123,11 +57,25 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation(); 
             const catId = btn.getAttribute('data-cat');
             const catName = btn.getAttribute('data-name');
-            showViewerPage(catId, catName);
+            if(catId && catName) {
+                currentSelectedCategory = catId;
+                currentLoadedItemId = null; 
+                UI.showViewerPage(catName, currentViewMode);
+                renderPptxList();
+            }
         });
     });
 
-    document.getElementById('btn-back-hero').addEventListener('click', showHeroPage);
+    document.getElementById('btn-back-hero').addEventListener('click', () => {
+        currentSelectedCategory = null;
+        currentLoadedItemId = null; 
+        
+        const url = new URL(window.location);
+        url.searchParams.delete('lecture');
+        window.history.replaceState({}, document.title, url.toString());
+        
+        UI.showHeroPage();
+    });
 
     onAuthStateChanged(auth, async (user) => {
         const badge = document.getElementById('user-status-badge');
@@ -145,19 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     currentUserTier = tier || 'free';
                     currentUserName = userData.fullName || userData.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
-                    
-                    updateAuthUI(currentUserTier, badge);
-                    updateQuotaBanner();
-                    fetchPptxFromDatabase();
-                    syncViewCountToFirestore();
                 } else {
                     currentUserTier = 'free';
                     currentUserName = user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
-                    
-                    updateAuthUI('free', badge);
-                    updateQuotaBanner();
-                    fetchPptxFromDatabase();
-                    syncViewCountToFirestore();
                 }
             } catch (err) {
                 console.error("Lỗi lấy dữ liệu user:", err);
@@ -166,126 +104,15 @@ document.addEventListener('DOMContentLoaded', () => {
             userStorageKey = 'viewedLectures_guest';
             viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
             window.location.href = '../dashboard.html';
+            return;
         }
+        
+        UI.updateAuthUI(currentUserTier, badge);
+        UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
+        fetchPptxFromDatabase();
+        syncViewCountToFirestore();
     });
 });
-
-function updateAuthUI(tier, badgeElement) {
-    if (tier === 'plus') {
-        badgeElement.className = 'badge badge-plus';
-        badgeElement.innerHTML = '<i class="fa-solid fa-shield-halved"></i> GÓI PLUS';
-    } else if (tier === 'pro') {
-        badgeElement.className = 'badge badge-pro';
-        badgeElement.innerHTML = '<i class="fa-solid fa-crown"></i> GÓI PRO';
-    } else {
-        badgeElement.className = 'badge badge-free';
-        badgeElement.innerHTML = 'GÓI FREE';
-    }
-}
-
-function updateQuotaBanner() {
-    const banner = document.getElementById('quota-banner');
-    const greetingText = document.getElementById('quota-greeting-text');
-    const statusText = document.getElementById('quota-status-text');
-    const remainingText = document.getElementById('quota-remaining-text');
-
-    if (!banner || !statusText || !remainingText) return;
-
-    if (greetingText) {
-        greetingText.innerHTML = `Xin chào, <strong>${currentUserName}</strong>!`;
-    }
-
-    const tierName = currentUserTier.toUpperCase();
-    statusText.innerHTML = `Bạn đang sử dụng quyền lợi của gói: <strong>${tierName}</strong>`;
-
-    if (currentUserTier === 'pro') {
-        remainingText.innerHTML = `Lượt xem bài giảng: <strong>Không giới hạn</strong>`;
-        banner.className = 'quota-banner pro-banner';
-    } else if (currentUserTier === 'plus') {
-        const remaining = PLUS_LIMIT - viewedLectures.length;
-        remainingText.innerHTML = `Lượt mở xem bài giảng còn lại: <strong>${remaining > 0 ? remaining : 0} bài</strong>`;
-        banner.className = 'quota-banner plus-banner';
-    } else {
-        const remaining = FREE_LIMIT - viewedLectures.length;
-        remainingText.innerHTML = `Lượt mở xem bài giảng còn lại: <strong>${remaining > 0 ? remaining : 0} bài</strong>`;
-        banner.className = 'quota-banner free-banner';
-    }
-}
-
-function showViewerPage(categoryId, categoryName) {
-    currentSelectedCategory = categoryId;
-    currentLoadedItemId = null; 
-    
-    document.getElementById('hero-page').style.display = 'none';
-    document.getElementById('viewer-page').style.display = 'flex';
-    
-    const label = document.getElementById('current-category-label');
-    label.innerText = 'Nhóm: ' + categoryName;
-    label.style.display = 'inline-block';
-    
-    document.getElementById('btn-back-hero').style.display = 'inline-flex';
-    document.getElementById('btn-toggle-view').style.display = 'inline-flex';
-    
-    const resizer = document.getElementById('dragMe');
-    if (currentViewMode === 'grid') {
-        document.querySelector('.pptx-sidebar').style.display = 'none';
-        document.querySelector('.pptx-main').style.display = 'none';
-        if(resizer) resizer.style.display = 'none';
-        document.getElementById('grid-view-container').style.display = 'grid';
-    } else {
-        document.querySelector('.pptx-sidebar').style.display = '';
-        document.querySelector('.pptx-main').style.display = '';
-        if(resizer) resizer.style.display = '';
-        document.getElementById('grid-view-container').style.display = 'none';
-    }
-    
-    renderPptxList();
-}
-
-function showHeroPage() {
-    currentSelectedCategory = null;
-    currentLoadedItemId = null; 
-    
-    const url = new URL(window.location);
-    url.searchParams.delete('lecture');
-    window.history.replaceState({}, document.title, url.toString());
-    
-    document.getElementById('hero-page').style.display = 'flex';
-    document.getElementById('viewer-page').style.display = 'none';
-    
-    document.getElementById('current-category-label').style.display = 'none';
-    document.getElementById('btn-back-hero').style.display = 'none';
-    document.getElementById('btn-toggle-view').style.display = 'none';
-    
-    const resizer = document.getElementById('dragMe');
-    if(resizer) resizer.style.display = 'none';
-    
-    document.getElementById('pptx-viewer').src = '';
-    document.getElementById('video-viewer').src = '';
-}
-
-function updateStatsUI() {
-    const statCategories = document.getElementById('stat-categories');
-    const statLectures = document.getElementById('stat-lectures');
-    const statViews = document.getElementById('stat-views');
-    
-    if (statCategories && statLectures && statViews) {
-        let totalViews = 0;
-        const uniqueRootCategories = new Set();
-        
-        pptxDataList.forEach(item => {
-            totalViews += (item.viewCount || 0);
-            let cat = item.category || 'mri';
-            if (cat === 'mri') cat = 'mri_pptx';
-            const rootCat = cat.split('_')[0]; 
-            uniqueRootCategories.add(rootCat);
-        });
-
-        statCategories.innerText = uniqueRootCategories.size > 0 ? uniqueRootCategories.size : 4;
-        statLectures.innerText = pptxDataList.length;
-        statViews.innerText = totalViews.toLocaleString('vi-VN');
-    }
-}
 
 function fetchPptxFromDatabase() {
     const q = query(collection(db, "pptx_lectures"), orderBy("createdAt", "asc"));
@@ -293,13 +120,10 @@ function fetchPptxFromDatabase() {
     onSnapshot(q, (snapshot) => {
         pptxDataList = [];
         snapshot.forEach(docSnap => {
-            pptxDataList.push({
-                id: docSnap.id,
-                ...docSnap.data()
-            });
+            pptxDataList.push({ id: docSnap.id, ...docSnap.data() });
         });
         
-        updateStatsUI();
+        UI.updateStatsUI(pptxDataList);
 
         const urlParams = new URLSearchParams(window.location.search);
         const sharedId = urlParams.get('lecture');
@@ -317,8 +141,10 @@ function fetchPptxFromDatabase() {
                     }
                 });
 
+                currentSelectedCategory = normalizedCat;
                 currentLoadedItemId = sharedId;
-                showViewerPage(normalizedCat, catName);
+                UI.showViewerPage(catName, currentViewMode);
+                renderPptxList();
                 return;
             }
         }
@@ -421,14 +247,7 @@ function renderPptxList() {
         card.addEventListener('click', () => {
             currentViewMode = 'list';
             const btn = document.getElementById('btn-toggle-view');
-            btn.innerHTML = '<i class="fa-solid fa-border-all"></i> Lưới';
-            btn.style.background = '#3b82f6';
-            
-            document.querySelector('.pptx-sidebar').style.display = '';
-            document.querySelector('.pptx-main').style.display = '';
-            const resizer = document.getElementById('dragMe');
-            if(resizer) resizer.style.display = '';
-            document.getElementById('grid-view-container').style.display = 'none';
+            UI.toggleViewModeDisplay(currentViewMode, btn);
             
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
             li.classList.add('active'); 
@@ -491,13 +310,13 @@ function loadPptx(embedUrl, itemId) {
             canView = true;
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
-            updateQuotaBanner();
+            UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
             syncViewCountToFirestore(); 
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
-            updateQuotaBanner();
+            UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
             syncViewCountToFirestore(); 
         }
     }
