@@ -37,10 +37,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Bắt sự kiện Click Card & Logic sổ xuống nhóm con MRI
     document.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
+            // Nếu click vào Card MRI, sổ ra các nút con thay vì vào thẳng danh sách
+            if (card.id === 'card-mri') {
+                const subList = card.querySelector('.sub-category-list');
+                const isHidden = subList.style.display === 'none';
+                subList.style.display = isHidden ? 'flex' : 'none';
+                return;
+            }
+            // Các Card bình thường (CT, X-quang...)
             const catId = card.getAttribute('data-cat');
             const catName = card.getAttribute('data-name');
+            if(catId && catName) {
+                showViewerPage(catId, catName);
+            }
+        });
+    });
+
+    // Bắt sự kiện Click vào 2 Nút tuỳ chọn con của MRI
+    document.querySelectorAll('.btn-sub-cat').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Ngăn sự kiện click lan ngược ra thẻ card cha
+            const catId = btn.getAttribute('data-cat');
+            const catName = btn.getAttribute('data-name');
             showViewerPage(catId, catName);
         });
     });
@@ -181,7 +202,9 @@ function renderPptxList() {
     
     const filteredList = pptxDataList.filter(item => {
         const itemCat = item.category || 'mri';
-        return itemCat === currentSelectedCategory;
+        // Chuẩn hoá: Nhận diện dữ liệu cũ 'mri' vào 'mri_pptx'
+        const normalizedCat = itemCat === 'mri' ? 'mri_pptx' : itemCat;
+        return normalizedCat === currentSelectedCategory;
     });
     
     if (filteredList.length === 0) {
@@ -196,7 +219,6 @@ function renderPptxList() {
         li.className = 'pptx-item';
         if (index === 0) li.classList.add('active'); 
         
-        // Cập nhật icon linh hoạt theo nội dung lưu trữ
         const isVideo = item.embedUrl && item.embedUrl.includes('firebasestorage.googleapis.com');
         const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
         
@@ -245,7 +267,6 @@ function loadPptx(embedUrl, itemId) {
         lockOverlay.style.display = 'none';
         iframeContainer.style.display = 'block';
         
-        // Xử lý Render đúng trình phát
         const isVideoUpload = embedUrl.includes('firebasestorage.googleapis.com');
         if (isVideoUpload) {
             iframeViewer.style.display = 'none';
