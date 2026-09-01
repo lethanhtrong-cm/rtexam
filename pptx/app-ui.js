@@ -101,6 +101,7 @@ export const UI = {
     },
 
     toggleViewModeDisplay: (currentViewMode, btnToggle) => {
+        const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
         if (currentViewMode === 'grid') {
             btnToggle.innerHTML = '<i class="fa-solid fa-list"></i> Danh Sách';
             btnToggle.style.background = '#10b981'; 
@@ -108,6 +109,7 @@ export const UI = {
             document.querySelector('.pptx-main').style.display = 'none';
             const resizer = document.getElementById('dragMe');
             if(resizer) resizer.style.display = 'none';
+            if(btnToggleSidebar) btnToggleSidebar.style.display = 'none'; // Ẩn nút gập sidebar khi ở Lưới
             document.getElementById('grid-view-container').style.display = 'grid';
         } else {
             btnToggle.innerHTML = '<i class="fa-solid fa-border-all"></i> Lưới';
@@ -116,6 +118,10 @@ export const UI = {
             document.querySelector('.pptx-main').style.display = '';
             const resizer = document.getElementById('dragMe');
             if(resizer) resizer.style.display = '';
+            if(btnToggleSidebar) {
+                btnToggleSidebar.style.display = 'inline-flex';
+                btnToggleSidebar.innerHTML = '<i class="fa-solid fa-list-ul"></i>'; // Mặc định hiển thị icon list
+            }
             document.getElementById('grid-view-container').style.display = 'none';
         }
     },
@@ -142,6 +148,9 @@ export const UI = {
         document.getElementById('current-category-label').style.display = 'none';
         document.getElementById('btn-back-hero').style.display = 'none';
         document.getElementById('btn-toggle-view').style.display = 'none';
+        
+        const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+        if(btnToggleSidebar) btnToggleSidebar.style.display = 'none';
         
         const resizer = document.getElementById('dragMe');
         if(resizer) resizer.style.display = 'none';
@@ -177,7 +186,6 @@ export const UI = {
         document.getElementById('comment-textarea').value = '';
     },
 
-    // THÊM MỚI: Khởi tạo nút Toggle Bình luận trên Mobile
     initMobileCommentToggle: () => {
         const toggleBtn = document.getElementById('mobile-comment-toggle');
         const feedbackSec = document.getElementById('feedback-section');
@@ -185,13 +193,11 @@ export const UI = {
             toggleBtn.addEventListener('click', () => {
                 const isHidden = window.getComputedStyle(feedbackSec).display === 'none';
                 if (isHidden) {
-                    // Cưỡng ép hiển thị bằng inline-style đè lên media query
                     feedbackSec.style.display = 'flex';
                     toggleBtn.innerHTML = '<i class="fa-solid fa-angle-up"></i> Ẩn Thảo luận';
                     toggleBtn.style.background = '#64748b';
                     setTimeout(() => feedbackSec.scrollIntoView({ behavior: 'smooth' }), 100);
                 } else {
-                    // Cưỡng ép ẩn bằng inline-style
                     feedbackSec.style.display = 'none';
                     toggleBtn.innerHTML = '<i class="fa-solid fa-comments"></i> Xem Thảo luận & Đánh giá';
                     toggleBtn.style.background = '#3b82f6';
@@ -200,21 +206,19 @@ export const UI = {
         }
     },
 
-    // SỬA ĐỔI: Hàm hiển thị khối Feedback sao cho tương thích cả CSS Desktop và Mobile Toggle
     showFeedbackSection: () => {
         const feedbackSec = document.getElementById('feedback-section');
         const toggleBtn = document.getElementById('mobile-comment-toggle');
         if(feedbackSec) {
-            feedbackSec.style.display = ''; // Reset CSS inline để CSS media tự quyết định
+            feedbackSec.style.display = ''; 
         }
         if (toggleBtn) {
-            toggleBtn.style.display = ''; // Để Media CSS tự quyết định ẩn/hiện
+            toggleBtn.style.display = ''; 
             toggleBtn.innerHTML = '<i class="fa-solid fa-comments"></i> Xem Thảo luận & Đánh giá';
             toggleBtn.style.background = '#3b82f6';
         }
     },
 
-    // SỬA ĐỔI: Khóa cứng toàn bộ trên cả hai môi trường
     hideFeedbackSection: () => {
         const feedbackSec = document.getElementById('feedback-section');
         const toggleBtn = document.getElementById('mobile-comment-toggle');
