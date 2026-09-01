@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // THÊM MỚI: Logic kéo thả để Resize Sidebar
     const resizer = document.getElementById('dragMe');
     const leftSide = document.querySelector('.pptx-sidebar');
     let x = 0;
@@ -102,12 +101,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
+            // TẠM ẨN LOGIC SỔ XUỐNG ĐỂ CLICK THẲNG VÀO THẺ MRI NHƯ BÌNH THƯỜNG
+            /* 
             if (card.id === 'card-mri') {
                 const subList = card.querySelector('.sub-category-list');
                 const isHidden = subList.style.display === 'none';
                 subList.style.display = isHidden ? 'flex' : 'none';
                 return;
-            }
+            } 
+            */
             const catId = card.getAttribute('data-cat');
             const catName = card.getAttribute('data-name');
             if(catId && catName) {
