@@ -183,8 +183,15 @@ function fetchPptxFromDatabase() {
             pptxDataList.push({ id: docSnap.id, ...docSnap.data() });
         });
         
+        // THÊM MỚI: Đồng bộ thứ tự (order) từ trang Admin
+        pptxDataList.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : 999999;
+            const orderB = b.order !== undefined ? b.order : 999999;
+            if (orderA === orderB) return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+            return orderA - orderB;
+        });
+        
         UI.updateStatsUI(pptxDataList);
-
         const urlParams = new URLSearchParams(window.location.search);
         const sharedId = urlParams.get('lecture');
         
