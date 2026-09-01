@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// SỬA ĐỔI: Import thêm hàm increment
 import { getFirestore, doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -228,7 +227,6 @@ function renderPptxList() {
         const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
         const viewCount = item.viewCount || 0;
         
-        // SỬA ĐỔI: Thêm số lượt xem vào thẻ li
         li.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
                 <i class="fa-solid ${iconClass}"></i> <span>${item.title}</span>
@@ -268,7 +266,6 @@ async function syncViewCountToFirestore() {
     }
 }
 
-// SỬA ĐỔI: Hàm gọi Firebase để tăng view bài giảng
 async function incrementLectureViewCount(itemId) {
     try {
         await updateDoc(doc(db, "pptx_lectures", itemId), {
@@ -293,7 +290,6 @@ function loadPptx(embedUrl, itemId) {
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             syncViewCountToFirestore(); 
-            incrementLectureViewCount(itemId); // Tăng view bài giảng
         }
     } else if (viewedLectures.includes(itemId)) {
         canView = true;
@@ -304,18 +300,19 @@ function loadPptx(embedUrl, itemId) {
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             updateQuotaBanner();
             syncViewCountToFirestore(); 
-            incrementLectureViewCount(itemId); // Tăng view bài giảng
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             updateQuotaBanner();
             syncViewCountToFirestore(); 
-            incrementLectureViewCount(itemId); // Tăng view bài giảng
         }
     }
 
     if (canView) {
+        // SỬA ĐỔI: Cơ chế Total Views - Tăng lượt xem bất cứ khi nào bài giảng được phát (kể cả xem lại)
+        incrementLectureViewCount(itemId);
+
         lockOverlay.style.display = 'none';
         iframeContainer.style.display = 'block';
         
