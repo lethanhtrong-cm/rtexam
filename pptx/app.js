@@ -24,7 +24,6 @@ let currentUserName = 'Bạn';
 let pptxDataList = []; 
 let currentSelectedCategory = null; 
 
-// [SỬA ĐỔI]: Thêm biến theo dõi bài giảng đang phát để chặn vòng lặp
 let currentLoadedItemId = null; 
 let viewedLectures = []; 
 let userStorageKey = 'viewedLectures_guest';
@@ -153,7 +152,7 @@ function updateQuotaBanner() {
 
 function showViewerPage(categoryId, categoryName) {
     currentSelectedCategory = categoryId;
-    currentLoadedItemId = null; // Reset để load bài đầu tiên của chuyên khoa mới
+    currentLoadedItemId = null; 
     
     document.getElementById('hero-page').style.display = 'none';
     document.getElementById('viewer-page').style.display = 'flex';
@@ -169,7 +168,7 @@ function showViewerPage(categoryId, categoryName) {
 
 function showHeroPage() {
     currentSelectedCategory = null;
-    currentLoadedItemId = null; // Reset
+    currentLoadedItemId = null; 
     
     document.getElementById('hero-page').style.display = 'flex';
     document.getElementById('viewer-page').style.display = 'none';
@@ -179,6 +178,32 @@ function showHeroPage() {
     
     document.getElementById('pptx-viewer').src = '';
     document.getElementById('video-viewer').src = '';
+}
+
+// THÊM MỚI: Hàm tính toán và cập nhật các ô Thống kê trên giao diện
+function updateStatsUI() {
+    const statCategories = document.getElementById('stat-categories');
+    const statLectures = document.getElementById('stat-lectures');
+    const statViews = document.getElementById('stat-views');
+    
+    if (statCategories && statLectures && statViews) {
+        let totalViews = 0;
+        const uniqueRootCategories = new Set();
+        
+        pptxDataList.forEach(item => {
+            totalViews += (item.viewCount || 0);
+            let cat = item.category || 'mri';
+            if (cat === 'mri') cat = 'mri_pptx';
+            // Gom nhóm mri_pptx và mri_video thành 1 nhóm chuyên khoa gốc 'mri'
+            const rootCat = cat.split('_')[0]; 
+            uniqueRootCategories.add(rootCat);
+        });
+
+        // Nếu chưa có dữ liệu, hiển thị mặc định 4 nhóm tĩnh (MRI, CT, X-quang, Thuốc TP)
+        statCategories.innerText = uniqueRootCategories.size > 0 ? uniqueRootCategories.size : 4;
+        statLectures.innerText = pptxDataList.length;
+        statViews.innerText = totalViews.toLocaleString('vi-VN');
+    }
 }
 
 function fetchPptxFromDatabase() {
@@ -193,6 +218,9 @@ function fetchPptxFromDatabase() {
             });
         });
         
+        // Gọi hàm cập nhật số liệu thống kê sau khi tải dữ liệu xong
+        updateStatsUI();
+
         if (currentSelectedCategory) {
             renderPptxList(); 
         }
@@ -223,7 +251,6 @@ function renderPptxList() {
         return;
     }
 
-    // [SỬA ĐỔI]: Tìm bài giảng đang phát, nếu không có thì lấy bài đầu tiên
     let activeItem = filteredList.find(item => item.id === currentLoadedItemId);
     if (!activeItem) {
         activeItem = filteredList[0];
@@ -233,7 +260,6 @@ function renderPptxList() {
         const li = document.createElement('li');
         li.className = 'pptx-item';
         
-        // Giữ active chuẩn xác bài đang xem
         if (item.id === activeItem.id) {
             li.classList.add('active'); 
         }
@@ -292,7 +318,6 @@ async function incrementLectureViewCount(itemId) {
 }
 
 function loadPptx(embedUrl, itemId) {
-    // [SỬA ĐỔI]: CHỐNG LẶP VÔ HẠN. Nếu bài này đang chiếu rồi thì không load/cộng view lại nữa.
     if (currentLoadedItemId === itemId) return;
     
     const lockOverlay = document.getElementById('premium-lock-overlay');
@@ -328,7 +353,6 @@ function loadPptx(embedUrl, itemId) {
     }
 
     if (canView) {
-        // [SỬA ĐỔI]: Ghi nhận ID bài đang xem và cộng View
         currentLoadedItemId = itemId;
         incrementLectureViewCount(itemId);
 
