@@ -41,6 +41,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // THÊM MỚI: Logic kéo thả để Resize Sidebar
+    const resizer = document.getElementById('dragMe');
+    const leftSide = document.querySelector('.pptx-sidebar');
+    let x = 0;
+    let leftWidth = 0;
+
+    const mouseDownHandler = function(e) {
+        x = e.clientX;
+        const rect = leftSide.getBoundingClientRect();
+        leftWidth = rect.width;
+        document.addEventListener('mousemove', mouseMoveHandler);
+        document.addEventListener('mouseup', mouseUpHandler);
+        if(resizer) resizer.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+    };
+
+    const mouseMoveHandler = function(e) {
+        const dx = e.clientX - x;
+        const newWidth = leftWidth + dx;
+        if (newWidth >= 200 && newWidth <= 600) {
+            leftSide.style.width = `${newWidth}px`;
+        }
+    };
+
+    const mouseUpHandler = function() {
+        if(resizer) resizer.classList.remove('resizing');
+        document.body.style.cursor = '';
+        document.removeEventListener('mousemove', mouseMoveHandler);
+        document.removeEventListener('mouseup', mouseUpHandler);
+    };
+
+    if(resizer && leftSide) {
+        resizer.addEventListener('mousedown', mouseDownHandler);
+    }
+
     document.getElementById('btn-toggle-view').addEventListener('click', (e) => {
         currentViewMode = currentViewMode === 'list' ? 'grid' : 'list';
         const btn = e.currentTarget;
@@ -53,12 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.background = '#10b981'; 
             document.querySelector('.pptx-sidebar').style.display = 'none';
             document.querySelector('.pptx-main').style.display = 'none';
+            if(resizer) resizer.style.display = 'none';
             document.getElementById('grid-view-container').style.display = 'grid';
         } else {
             btn.innerHTML = '<i class="fa-solid fa-border-all"></i> Lưới';
             btn.style.background = '#3b82f6';
             document.querySelector('.pptx-sidebar').style.display = '';
             document.querySelector('.pptx-main').style.display = '';
+            if(resizer) resizer.style.display = '';
             document.getElementById('grid-view-container').style.display = 'none';
         }
     });
@@ -187,13 +224,16 @@ function showViewerPage(categoryId, categoryName) {
     document.getElementById('btn-back-hero').style.display = 'inline-flex';
     document.getElementById('btn-toggle-view').style.display = 'inline-flex';
     
+    const resizer = document.getElementById('dragMe');
     if (currentViewMode === 'grid') {
         document.querySelector('.pptx-sidebar').style.display = 'none';
         document.querySelector('.pptx-main').style.display = 'none';
+        if(resizer) resizer.style.display = 'none';
         document.getElementById('grid-view-container').style.display = 'grid';
     } else {
         document.querySelector('.pptx-sidebar').style.display = '';
         document.querySelector('.pptx-main').style.display = '';
+        if(resizer) resizer.style.display = '';
         document.getElementById('grid-view-container').style.display = 'none';
     }
     
@@ -204,7 +244,6 @@ function showHeroPage() {
     currentSelectedCategory = null;
     currentLoadedItemId = null; 
     
-    // Xóa tham số chia sẻ trên URL khi về trang Hero để tránh load vòng lặp khi F5
     const url = new URL(window.location);
     url.searchParams.delete('lecture');
     window.history.replaceState({}, document.title, url.toString());
@@ -215,6 +254,9 @@ function showHeroPage() {
     document.getElementById('current-category-label').style.display = 'none';
     document.getElementById('btn-back-hero').style.display = 'none';
     document.getElementById('btn-toggle-view').style.display = 'none';
+    
+    const resizer = document.getElementById('dragMe');
+    if(resizer) resizer.style.display = 'none';
     
     document.getElementById('pptx-viewer').src = '';
     document.getElementById('video-viewer').src = '';
@@ -257,7 +299,6 @@ function fetchPptxFromDatabase() {
         
         updateStatsUI();
 
-        // LOGIC NHẬN DIỆN LINK CHIA SẺ TỪ URL
         const urlParams = new URLSearchParams(window.location.search);
         const sharedId = urlParams.get('lecture');
         
@@ -268,7 +309,6 @@ function fetchPptxFromDatabase() {
                 const normalizedCat = cat === 'mri' ? 'mri_pptx' : cat;
                 let catName = 'Bài giảng được chia sẻ';
                 
-                // Trích xuất tên chuyên khoa để hiển thị lên nhãn
                 document.querySelectorAll('.category-card, .btn-sub-cat').forEach(el => {
                     if (el.getAttribute('data-cat') === normalizedCat) {
                         catName = el.getAttribute('data-name');
@@ -277,7 +317,7 @@ function fetchPptxFromDatabase() {
 
                 currentLoadedItemId = sharedId;
                 showViewerPage(normalizedCat, catName);
-                return; // Thoát để ngăn vòng lặp render
+                return;
             }
         }
 
@@ -325,7 +365,6 @@ function renderPptxList() {
         const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
         const viewCount = item.viewCount || 0;
         
-        // 1. RENDER CHO LIST VIEW KÈM NÚT SHARE
         const li = document.createElement('li');
         li.className = 'pptx-item';
         if (item.id === activeItem.id) li.classList.add('active'); 
@@ -343,7 +382,7 @@ function renderPptxList() {
         li.style.justifyContent = 'space-between';
         
         li.querySelector('.btn-share-item').addEventListener('click', (e) => {
-            e.stopPropagation(); // Ngăn sự kiện mở bài giảng (bị trừ view)
+            e.stopPropagation(); 
             const shareUrl = window.location.origin + window.location.pathname + '?lecture=' + item.id;
             navigator.clipboard.writeText(shareUrl).then(() => alert('Đã copy link chia sẻ vào bộ nhớ tạm!\n' + shareUrl));
         });
@@ -355,7 +394,6 @@ function renderPptxList() {
         });
         listContainer.appendChild(li);
 
-        // 2. RENDER CHO GRID VIEW KÈM NÚT SHARE
         const card = document.createElement('div');
         card.className = 'grid-card';
         card.innerHTML = `
@@ -386,6 +424,8 @@ function renderPptxList() {
             
             document.querySelector('.pptx-sidebar').style.display = '';
             document.querySelector('.pptx-main').style.display = '';
+            const resizer = document.getElementById('dragMe');
+            if(resizer) resizer.style.display = '';
             document.getElementById('grid-view-container').style.display = 'none';
             
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
