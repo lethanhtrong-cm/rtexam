@@ -1,7 +1,6 @@
 import { auth, db } from "./firebase-config.js";
 import { UI } from "./app-ui.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// THÊM MỚI: addDoc, serverTimestamp để lưu bình luận
 import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FREE_LIMIT = 3;
@@ -17,7 +16,6 @@ let currentLoadedItemId = null;
 let viewedLectures = []; 
 let userStorageKey = 'viewedLectures_guest';
 
-// Bến lưu trữ bộ lắng nghe bình luận (để ngắt kết nối khi chuyển bài)
 let currentCommentsUnsubscribe = null; 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -33,7 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     UI.initResizer();
-    UI.initStarRating(); // Khởi tạo hiệu ứng chọn sao
+    UI.initStarRating(); 
+    UI.initMobileCommentToggle(); // Gọi thêm hàm cho Mobile
 
     document.getElementById('btn-toggle-view').addEventListener('click', (e) => {
         currentViewMode = currentViewMode === 'list' ? 'grid' : 'list';
@@ -44,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.toggleViewModeDisplay(currentViewMode, e.currentTarget);
     });
 
-    // Lắng nghe sự kiện gửi bình luận
     document.getElementById('btn-submit-comment').addEventListener('click', async () => {
         if (!currentLoadedItemId || !auth.currentUser) return;
         
@@ -61,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
 
-            // Lưu vào sub-collection 'comments' của bài giảng hiện tại
             await addDoc(collection(db, `pptx_lectures/${currentLoadedItemId}/comments`), {
                 userId: auth.currentUser.uid,
                 userName: currentUserName,
@@ -115,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
         url.searchParams.delete('lecture');
         window.history.replaceState({}, document.title, url.toString());
         
-        // Hủy lắng nghe bình luận khi ra ngoài
         if (currentCommentsUnsubscribe) {
             currentCommentsUnsubscribe();
             currentCommentsUnsubscribe = null;
@@ -227,7 +223,7 @@ function renderPptxList() {
         document.getElementById('pptx-viewer').src = '';
         document.getElementById('video-viewer').src = '';
         currentLoadedItemId = null;
-        UI.hideFeedbackSection(); // Ẩn cmt nếu không có bài
+        UI.hideFeedbackSection(); 
         return;
     }
 
@@ -334,7 +330,6 @@ async function incrementLectureViewCount(itemId) {
     }
 }
 
-// THÊM MỚI: Hàm fetch bình luận realtime
 function loadLectureComments(itemId) {
     if (currentCommentsUnsubscribe) {
         currentCommentsUnsubscribe();
@@ -415,7 +410,6 @@ function loadPptx(embedUrl, itemId) {
             iframeViewer.src = embedUrl;
         }
 
-        // Hiện section bình luận và Load dữ liệu bình luận
         UI.showFeedbackSection();
         UI.resetRating();
         loadLectureComments(itemId);
@@ -426,7 +420,6 @@ function loadPptx(embedUrl, itemId) {
         iframeViewer.src = ''; 
         videoViewer.src = ''; 
         
-        // Ẩn bình luận nếu bị khóa
         UI.hideFeedbackSection();
     }
 }
