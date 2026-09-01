@@ -20,7 +20,6 @@
             </button>
             <span id="current-category-label" class="active-category" style="display: none;"></span>
             
-            <!-- THÊM MỚI: Nút chuyển đổi giao diện -->
             <button id="btn-toggle-view" class="btn-back-hero" style="display: none; background: #3b82f6;">
                 <i class="fa-solid fa-border-all"></i> Lưới
             </button>
@@ -111,12 +110,14 @@
 
     <div id="viewer-page" class="pptx-layout" style="display: none;">
         
-        <!-- TRẠNG THÁI 1: VIEW DẠNG LIST (Mặc định) -->
         <aside class="pptx-sidebar">
             <h3 class="sidebar-title">Danh sách bài học</h3>
             <ul id="pptx-list" class="pptx-list">
             </ul>
         </aside>
+
+        <!-- THÊM MỚI: Thanh kéo thay đổi kích thước -->
+        <div class="resizer" id="dragMe"></div>
 
         <main class="pptx-main">
             <div id="premium-lock-overlay" class="lock-overlay" style="display: flex;">
@@ -135,7 +136,6 @@
             </div>
         </main>
         
-        <!-- TRẠNG THÁI 2: VIEW DẠNG GRID (Thêm mới) -->
         <div id="grid-view-container" class="grid-view-container" style="display: none;">
         </div>
 
