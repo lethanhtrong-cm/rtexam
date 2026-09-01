@@ -134,8 +134,9 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
             }
 
             const totalTokensUsed = user.totalTokensUsed || 0;
-            const aiDailyCount = user.aiDailyCount || 0;           // DÒNG THÊM MỚI
-            const aiLastUsedDate = user.aiLastUsedDate || '';      // DÒNG THÊM MỚI
+            const aiDailyCount = user.aiDailyCount || 0;           // Đã giữ lại từ file của bạn
+            const aiLastUsedDate = user.aiLastUsedDate || '';      // Đã giữ lại từ file của bạn
+            const viewedLecturesCount = user.viewedLecturesCount || 0; // THÊM MỚI: Trích xuất số bài giảng đã xem
             const finalAvgScore = user.avgScore || 0;
             const finalXp = userState.globalLeaderboardStats[userId] || 0;
 
@@ -160,8 +161,9 @@ export async function fetchAllUserData(forceRefresh = false, callbacks = {}) {
                 isBanned: isBanned,
                 statusKey: statusKey,
                 totalTokensUsed: totalTokensUsed,
-                aiDailyCount: aiDailyCount,          // DÒNG THÊM MỚI
-                aiLastUsedDate: aiLastUsedDate,      // DÒNG THÊM MỚI
+                aiDailyCount: aiDailyCount,          // Đã giữ lại
+                aiLastUsedDate: aiLastUsedDate,      // Đã giữ lại
+                viewedLecturesCount: viewedLecturesCount, // THÊM MỚI
                 avgScore: finalAvgScore, 
                 xp: finalXp, 
                 createdAtMs: createdAtMs, 
