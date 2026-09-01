@@ -92,8 +92,6 @@ function renderAdminTable() {
         
         const itemCat = data.category || 'mri';
         const normalizedCat = itemCat === 'mri' ? 'mri_pptx' : itemCat;
-        
-        // SỬA ĐỔI: Lấy viewCount
         const viewCount = data.viewCount || 0;
 
         const tr = document.createElement('tr');
@@ -102,13 +100,15 @@ function renderAdminTable() {
             <td class="link-cell">${safeUrl}</td>
             <td style="text-align: center; font-weight: bold; color: #3b82f6;"><i class="fa-solid fa-eye"></i> ${viewCount}</td>
             <td style="text-align: center;">
-                <button class="btn-action btn-edit" data-id="${id}" data-title="${safeTitle}" data-url="${safeUrl}" data-category="${normalizedCat}"><i class="fa-solid fa-pen"></i></button>
-                <button class="btn-action btn-delete" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn-action btn-reset" data-id="${id}" title="Khôi phục lượt xem về 0"><i class="fa-solid fa-rotate-left"></i></button>
+                <button class="btn-action btn-edit" data-id="${id}" data-title="${safeTitle}" data-url="${safeUrl}" data-category="${normalizedCat}" title="Sửa bài giảng"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-action btn-delete" data-id="${id}" title="Xóa bài giảng"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 
+    // Cài đặt sự kiện Xóa
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.onclick = async (e) => {
             const id = e.currentTarget.getAttribute('data-id');
@@ -118,6 +118,22 @@ function renderAdminTable() {
         }
     });
 
+    // Cài đặt sự kiện Reset View
+    document.querySelectorAll('.btn-reset').forEach(btn => {
+        btn.onclick = async (e) => {
+            const id = e.currentTarget.getAttribute('data-id');
+            if (confirm('Bạn có chắc chắn muốn khôi phục số lượt xem của bài này về 0?')) {
+                try {
+                    await updateDoc(doc(db, "pptx_lectures", id), { viewCount: 0 });
+                } catch (error) {
+                    console.error("Lỗi reset lượt xem:", error);
+                    alert("Lỗi khi reset: " + error.message);
+                }
+            }
+        }
+    });
+
+    // Cài đặt sự kiện Sửa
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.onclick = (e) => {
             const target = e.currentTarget;
@@ -199,7 +215,6 @@ async function processSave(title, finalUrl, selectedCategory) {
                 category: selectedCategory 
             });
         } else {
-            // Khi thêm mới, khởi tạo viewCount = 0
             await addDoc(collection(db, "pptx_lectures"), {
                 title: title,
                 embedUrl: finalUrl,
