@@ -242,11 +242,11 @@ function renderPptxList() {
         if (item.id === activeItem.id) li.classList.add('active'); 
         
         li.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 12px; max-width: 65%; overflow: hidden;">
-                <i class="fa-solid ${iconClass}"></i> 
-                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.title}">${item.title}</span>
+            <div style="display: flex; align-items: flex-start; gap: 12px; flex: 1; padding-right: 10px;">
+                <i class="fa-solid ${iconClass}" style="margin-top: 3px; flex-shrink: 0;"></i> 
+                <span style="line-height: 1.4; word-break: break-word;">${item.title}</span>
             </div>
-            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
                 <span><i class="fa-solid fa-eye"></i> ${viewCount}</span>
                 <button class="btn-share-item" style="background: none; border: none; color: #3b82f6; cursor: pointer; padding: 5px; font-size: 1rem;" title="Chia sẻ link bài giảng"><i class="fa-solid fa-share-nodes"></i></button>
             </div>
