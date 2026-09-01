@@ -208,6 +208,8 @@ export function exportFilteredUsersToExcel() {
             "Trạng Thái": statusText,
             "Điểm Trung Bình": user.avgScore ? user.avgScore.toFixed(2) : 0,
             "Kinh Nghiệm (XP)": Math.round(user.xp || 0),
+            "Số Bài Giảng Đã Xem": user.viewedLecturesCount || 0, // THÊM CỘT
+            "Lượt dùng AI hôm nay": (user.aiLastUsedDate === new Date().toLocaleDateString('en-CA')) ? (user.aiDailyCount || 0) : 0, // THÊM CỘT TỪ DỮ LIỆU CŨ CỦA BẠN
             "Đang Online": user.isOnline ? "Có" : "Không",
             "Đang Thi": user.examStatus === 'testing' ? "Có" : "Không",
             "Ngày Đăng Ký": regDate
@@ -219,7 +221,8 @@ export function exportFilteredUsersToExcel() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachHocVien");
         
-        worksheet['!cols'] = [{wch: 5}, {wch: 35}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 15}, {wch: 25}];
+        // Mở rộng độ rộng các cột cho vừa nội dung mới
+        worksheet['!cols'] = [{wch: 5}, {wch: 35}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 20}, {wch: 20}, {wch: 15}, {wch: 15}, {wch: 25}];
         
         XLSX.writeFile(workbook, "Danh_Sach_Hoc_Vien_Da_Loc.xlsx");
     } catch (error) {
@@ -434,10 +437,12 @@ export function renderUserList() {
 
         const scoreBadgeHtml = `<span style="font-size: 11px; color: #4338ca; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0e7ff; padding: 2px 6px; border-radius: 6px;" title="Điểm trung bình (ĐTB)"><i class="fa-solid fa-star"></i> ĐTB: ${user.avgScore.toFixed(2)}</span>`;
         const xpBadgeHtml = `<span style="font-size: 11px; color: #a16207; font-weight: 700; margin-left: 8px; display: inline-block; background: #fef08a; padding: 2px 6px; border-radius: 6px;" title="Kinh nghiệm"><i class="fa-solid fa-bolt"></i> XP: ${Math.round(user.xp).toLocaleString()}</span>`;
-
+        
+        // THÊM: HUY HIỆU SỐ BÀI GIẢNG ĐÃ XEM VÀ AI ĐÃ DÙNG
         const todayStr = new Date().toLocaleDateString('en-CA');
         const displayAiCount = (user.aiLastUsedDate === todayStr) ? user.aiDailyCount : 0;
         const aiBadgeHtml = `<span style="font-size: 11px; color: #0284c7; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0f2fe; padding: 2px 6px; border-radius: 6px;" title="Số lượt AI đã dùng hôm nay"><i class="fa-solid fa-robot"></i> AI: ${displayAiCount}</span>`;
+        const viewsBadgeHtml = `<span style="font-size: 11px; color: #0369a1; font-weight: 700; margin-left: 8px; display: inline-block; background: #e0f2fe; padding: 2px 6px; border-radius: 6px;" title="Số bài giảng đã xem"><i class="fa-solid fa-book-open"></i> Đã xem: ${user.viewedLecturesCount || 0}</span>`;
 
         const pendingTier = userState.pendingVIPRequests.get(user.userId);
         const hasPendingRequest = !!pendingTier;
@@ -484,7 +489,6 @@ export function renderUserList() {
         const banBtnClass = user.isBanned ? 'btn-user-unban' : 'btn-user-ban';
         const banBtnText = user.isBanned ? '🔓 Mở Khóa' : '🚫 Khóa TK';
         
-        // TỐI ƯU CỰC KỲ AN TOÀN CHO CỤM NÚT BẤM (BỎ INLINE BLOCK, ÉP FLEX ROW CHO NÚT VÀ CỤM CHỨA)
         const baseBtnStyle = "padding: 5px 9px !important; font-size: 11px !important; border-radius: 6px !important; display: inline-flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 4px !important; border: none !important; font-weight: 600 !important; cursor: pointer !important; transition: all 0.2s ease !important; color: white !important; white-space: nowrap !important; line-height: 1 !important;";
         
         const notifyStyle = `${baseBtnStyle} background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); box-shadow: 0 2px 5px rgba(139,92,246,0.3);`;
@@ -497,11 +501,11 @@ export function renderUserList() {
         let vipActionButtonsHtml = '';
         if (isVipTierActive) {
             if (user.vipTier === 'pro') {
-                const offStylePro = `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3);`;
-                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePro}" ${hoverEffect} title="Đang PRO. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Tắt Gói</button>`;
+                const offStylePro = `${baseBtnStyle} background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 2px 5px rgba(245,158,11,0.3); opacity: 0.9;`;
+                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePro}" ${hoverEffect} title="Đang ở gói PRO. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Hủy Gói</button>`;
             } else {
-                const offStylePlus = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
-                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePlus}" ${hoverEffect} title="Đang PLUS. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Tắt Gói</button>`;
+                const offStylePlus = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3); opacity: 0.9;`;
+                vipActionButtonsHtml = `<button class="btn-user-action btn-user-vip-off btn-toggle-vip" data-id="${user.userId}" data-tier="none" style="${offStylePlus}" ${hoverEffect} title="Đang ở gói PLUS. Nhấn để Tắt"><i class="fa-solid fa-xmark"></i> Hủy Gói</button>`;
             }
         } else {
             const plusStyle = `${baseBtnStyle} background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 2px 5px rgba(59,130,246,0.3);`;
@@ -560,7 +564,7 @@ export function renderUserList() {
                     <div style="flex: 1; min-width: 0;">
                         <div style="font-weight: 600; color: #0f172a; font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
                             <span style="word-break: break-all;">${user.email}</span> 
-                            ${scoreBadgeHtml} ${xpBadgeHtml} ${aiBadgeHtml} ${pendingBadge} ${costBadgeHtml}
+                            ${scoreBadgeHtml} ${xpBadgeHtml} ${viewsBadgeHtml} ${aiBadgeHtml} ${pendingBadge} ${costBadgeHtml}
                         </div>
                         ${datesHtml}
                     </div>
@@ -575,7 +579,6 @@ export function renderUserList() {
                 ${statusBadgeHtml}
             </td>
             <td class="text-center desktop-action-td" style="min-width: 320px;">
-                <!-- Ép cứng bố cục flex-direction: row để chống dồn nút dọc -->
                 <div class="user-action-group" style="display: flex !important; flex-direction: row !important; gap: 4px !important; justify-content: center !important; align-items: center !important; flex-wrap: wrap !important;">
                     ${actionButtonsHtml}
                 </div>
