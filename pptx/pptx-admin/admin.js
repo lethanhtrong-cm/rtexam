@@ -3,7 +3,6 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-// Cấu hình Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
     authDomain: "rt-examination.firebaseapp.com",
@@ -20,7 +19,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 let editingId = null;
-let currentAdminCategory = 'mri_pptx'; // Chuyển default thành nhóm con đầu tiên của MRI
+let currentAdminCategory = 'mri_pptx'; 
 let allAdminPptx = []; 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -46,10 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
             target.classList.add('active');
             
             currentAdminCategory = target.getAttribute('data-cat');
-            const catName = target.getAttribute('data-name');
-            
-            document.getElementById('form-cat-badge').innerText = 'Nhóm: ' + catName;
-            
             resetForm();
             renderAdminTable();
         });
@@ -81,7 +76,6 @@ function renderAdminTable() {
     
     const filteredData = allAdminPptx.filter(item => {
         const itemCat = item.category || 'mri';
-        // Chuẩn hoá: Dữ liệu cũ 'mri' sẽ được xếp tự động vào 'mri_pptx'
         const normalizedCat = itemCat === 'mri' ? 'mri_pptx' : itemCat;
         return normalizedCat === currentAdminCategory;
     });
@@ -95,13 +89,16 @@ function renderAdminTable() {
         const id = data.id;
         const safeTitle = data.title ? data.title.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
         const safeUrl = data.embedUrl ? data.embedUrl.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+        
+        const itemCat = data.category || 'mri';
+        const normalizedCat = itemCat === 'mri' ? 'mri_pptx' : itemCat;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-weight: 600; color: #1e293b;">${safeTitle}</td>
             <td class="link-cell">${safeUrl}</td>
             <td style="text-align: center;">
-                <button class="btn-action btn-edit" data-id="${id}" data-title="${safeTitle}" data-url="${safeUrl}"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-action btn-edit" data-id="${id}" data-title="${safeTitle}" data-url="${safeUrl}" data-category="${normalizedCat}"><i class="fa-solid fa-pen"></i></button>
                 <button class="btn-action btn-delete" data-id="${id}"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
@@ -117,12 +114,14 @@ function renderAdminTable() {
         }
     });
 
+    // Đẩy thông tin Category vào Dropdown khi bấm Sửa
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.onclick = (e) => {
             const target = e.currentTarget;
             editingId = target.getAttribute('data-id');
             document.getElementById('pptx-title').value = target.getAttribute('data-title');
             document.getElementById('pptx-url').value = target.getAttribute('data-url');
+            document.getElementById('pptx-category').value = target.getAttribute('data-category');
             
             document.getElementById('btn-save').innerHTML = '<i class="fa-solid fa-check"></i> Cập nhật';
             document.getElementById('btn-cancel').style.display = 'inline-flex';
@@ -134,6 +133,7 @@ async function handleSavePptx() {
     const title = document.getElementById('pptx-title').value.trim();
     let url = document.getElementById('pptx-url').value.trim();
     const fileInput = document.getElementById('video-upload');
+    const selectedCategory = document.getElementById('pptx-category').value;
     const file = fileInput.files[0];
 
     if (!title) {
@@ -170,7 +170,7 @@ async function handleSavePptx() {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                 progressDiv.style.display = 'none';
                 btnSave.disabled = false;
-                await processSave(title, downloadURL);
+                await processSave(title, downloadURL, selectedCategory);
             }
         );
     } else {
@@ -183,23 +183,23 @@ async function handleSavePptx() {
                 return;
             }
         }
-        await processSave(title, url);
+        await processSave(title, url, selectedCategory);
     }
 }
 
-async function processSave(title, finalUrl) {
+async function processSave(title, finalUrl, selectedCategory) {
     try {
         if (editingId) {
             await updateDoc(doc(db, "pptx_lectures", editingId), { 
                 title: title, 
                 embedUrl: finalUrl,
-                category: currentAdminCategory 
+                category: selectedCategory 
             });
         } else {
             await addDoc(collection(db, "pptx_lectures"), {
                 title: title,
                 embedUrl: finalUrl,
-                category: currentAdminCategory,
+                category: selectedCategory,
                 createdAt: serverTimestamp()
             });
         }
@@ -219,4 +219,7 @@ function resetForm() {
     document.getElementById('btn-save').disabled = false;
     document.getElementById('btn-save').innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Lưu Dữ Liệu';
     document.getElementById('btn-cancel').style.display = 'none';
+    
+    // Đặt Dropdown về đúng với thẻ đang mở ở Sidebar
+    document.getElementById('pptx-category').value = currentAdminCategory;
 }
