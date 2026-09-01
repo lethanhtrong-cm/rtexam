@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// SỬA ĐỔI: Import thêm hàm increment
+import { getFirestore, doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDqdo_DJIWa5iqxiCgBq-0iGX7f9sr6soo",
@@ -86,8 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateAuthUI(currentUserTier, badge);
                     updateQuotaBanner();
                     fetchPptxFromDatabase();
-                    
-                    // Ép đồng bộ dữ liệu ngay khi đăng nhập để Admin luôn xem được số mới nhất
                     syncViewCountToFirestore();
                 } else {
                     currentUserTier = 'free';
@@ -96,8 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateAuthUI('free', badge);
                     updateQuotaBanner();
                     fetchPptxFromDatabase();
-                    
-                    // Ép đồng bộ dữ liệu
                     syncViewCountToFirestore();
                 }
             } catch (err) {
@@ -229,8 +226,18 @@ function renderPptxList() {
         
         const isVideo = item.embedUrl && item.embedUrl.includes('firebasestorage.googleapis.com');
         const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
+        const viewCount = item.viewCount || 0;
         
-        li.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span>${item.title}</span>`;
+        // SỬA ĐỔI: Thêm số lượt xem vào thẻ li
+        li.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid ${iconClass}"></i> <span>${item.title}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 600;">
+                <i class="fa-solid fa-eye"></i> ${viewCount}
+            </div>
+        `;
+        li.style.justifyContent = 'space-between';
         
         li.addEventListener('click', () => {
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
@@ -261,6 +268,17 @@ async function syncViewCountToFirestore() {
     }
 }
 
+// SỬA ĐỔI: Hàm gọi Firebase để tăng view bài giảng
+async function incrementLectureViewCount(itemId) {
+    try {
+        await updateDoc(doc(db, "pptx_lectures", itemId), {
+            viewCount: increment(1)
+        });
+    } catch (e) {
+        console.error("Lỗi tăng lượt xem bài giảng:", e);
+    }
+}
+
 function loadPptx(embedUrl, itemId) {
     const lockOverlay = document.getElementById('premium-lock-overlay');
     const iframeContainer = document.getElementById('iframe-container');
@@ -275,6 +293,7 @@ function loadPptx(embedUrl, itemId) {
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             syncViewCountToFirestore(); 
+            incrementLectureViewCount(itemId); // Tăng view bài giảng
         }
     } else if (viewedLectures.includes(itemId)) {
         canView = true;
@@ -285,12 +304,14 @@ function loadPptx(embedUrl, itemId) {
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             updateQuotaBanner();
             syncViewCountToFirestore(); 
+            incrementLectureViewCount(itemId); // Tăng view bài giảng
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
             localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
             updateQuotaBanner();
             syncViewCountToFirestore(); 
+            incrementLectureViewCount(itemId); // Tăng view bài giảng
         }
     }
 
