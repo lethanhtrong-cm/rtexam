@@ -22,6 +22,10 @@ let editingId = null;
 let currentAdminCategory = 'mri_pptx'; 
 let allAdminPptx = []; 
 
+// THÊM MỚI: Biến trạng thái để phục vụ tính năng Kéo thả (Drag & Drop)
+let draggedRow = null;
+let isReordering = false;
+
 document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, (user) => {
         if (!user) {
@@ -52,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('close-comments-modal').addEventListener('click', () => {
         document.getElementById('comments-modal').style.display = 'none';
-        // Refresh lại dữ liệu cột Đánh giá của bảng khi đóng modal phòng trường hợp Admin vừa xóa bình luận
         renderAdminTable(); 
     });
 });
@@ -69,14 +72,26 @@ function loadPptxData() {
             });
         });
         
-        renderAdminTable(); 
+        // THÊM MỚI: Sắp xếp theo order (vị trí Admin kéo thả), nếu chưa có thì dùng createdAt
+        allAdminPptx.sort((a, b) => {
+            const orderA = a.order !== undefined ? a.order : 999999;
+            const orderB = b.order !== undefined ? b.order : 999999;
+            if (orderA === orderB) {
+                return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+            }
+            return orderA - orderB;
+        });
+
+        // Chỉ vẽ lại bảng nếu Admin không đang trong quá trình update Kéo thả
+        if (!isReordering) {
+            renderAdminTable(); 
+        }
     }, (error) => {
         console.error("Lỗi truy xuất Firestore:", error);
         document.getElementById('pptx-tbody').innerHTML = `<tr><td colspan="5" style="text-align: center; color: #ef4444; font-weight: 600;">Lỗi kết nối Database. Nhấn F12 xem chi tiết.</td></tr>`;
     });
 }
 
-// THÊM MỚI: Hàm fetch nhanh số lượng bình luận và đánh giá cho từng bài giảng
 async function fetchLectureStatsForTable(lectureId) {
     try {
         const q = query(collection(db, `pptx_lectures/${lectureId}/comments`));
@@ -136,9 +151,19 @@ function renderAdminTable() {
         const viewCount = data.viewCount || 0;
 
         const tr = document.createElement('tr');
-        // SỬA ĐỔI: Thêm cột `rating-col-${id}` hiển thị loading chờ fetch data
+        
+        // THÊM MỚI: Khởi tạo các thuộc tính Drag & Drop cho hàng (tr)
+        tr.setAttribute('draggable', 'true');
+        tr.setAttribute('data-id', id);
+        tr.style.transition = 'background-color 0.2s';
+        
         tr.innerHTML = `
-            <td style="font-weight: 600; color: #1e293b;">${safeTitle}</td>
+            <td style="font-weight: 600; color: #1e293b;">
+                <div style="display: flex; align-items: center; gap: 12px; cursor: grab;" title="Kéo thả để đổi vị trí">
+                    <i class="fa-solid fa-grip-vertical" style="color: #94a3b8; font-size: 1.1rem;"></i>
+                    <span>${safeTitle}</span>
+                </div>
+            </td>
             <td class="link-cell">${safeUrl}</td>
             <td style="text-align: center; font-weight: bold; color: #3b82f6;"><i class="fa-solid fa-eye"></i> ${viewCount}</td>
             <td style="text-align: center;" id="rating-col-${id}">
@@ -151,9 +176,73 @@ function renderAdminTable() {
                 <button class="btn-action btn-delete" data-id="${id}" title="Xóa bài giảng"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
-        tbody.appendChild(tr);
 
-        // Kích hoạt hàm đếm bình luận tự động ngầm
+        // THÊM MỚI: Xử lý sự kiện kéo thả (Drag and Drop)
+        tr.addEventListener('dragstart', function(e) {
+            draggedRow = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', id);
+            setTimeout(() => this.style.opacity = '0.4', 0);
+        });
+
+        tr.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            if (this !== draggedRow) this.style.background = '#f1f5f9';
+        });
+
+        tr.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (this !== draggedRow) {
+                const bounding = this.getBoundingClientRect();
+                const offset = e.clientY - bounding.top;
+                if (offset > bounding.height / 2) {
+                    this.style.borderBottom = '2px solid #3b82f6';
+                    this.style.borderTop = '';
+                } else {
+                    this.style.borderTop = '2px solid #3b82f6';
+                    this.style.borderBottom = '';
+                }
+            }
+        });
+
+        tr.addEventListener('dragleave', function(e) {
+            this.style.background = '';
+            this.style.borderTop = '';
+            this.style.borderBottom = '';
+        });
+
+        tr.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.background = '';
+            this.style.borderTop = '';
+            this.style.borderBottom = '';
+            
+            if (this !== draggedRow) {
+                const bounding = this.getBoundingClientRect();
+                const offset = e.clientY - bounding.top;
+                // Nhúng Node HTML vào vị trí mới
+                if (offset > bounding.height / 2) {
+                    this.parentNode.insertBefore(draggedRow, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(draggedRow, this);
+                }
+                
+                // Gọi hàm lưu lại toàn bộ thứ tự mới lên DB
+                updateOrderInFirestore();
+            }
+        });
+
+        tr.addEventListener('dragend', function() {
+            this.style.opacity = '1';
+            document.querySelectorAll('#pptx-tbody tr').forEach(row => {
+                row.style.background = '';
+                row.style.borderTop = '';
+                row.style.borderBottom = '';
+            });
+        });
+
+        tbody.appendChild(tr);
         fetchLectureStatsForTable(id);
     });
 
@@ -200,6 +289,32 @@ function renderAdminTable() {
             openCommentsModal(id, title);
         }
     });
+}
+
+// THÊM MỚI: Hàm lưu lại số thứ tự (index) của tất cả hàng lên Firestore
+async function updateOrderInFirestore() {
+    isReordering = true;
+    const rows = document.querySelectorAll('#pptx-tbody tr');
+    const promises = [];
+    
+    rows.forEach((row, index) => {
+        const id = row.getAttribute('data-id');
+        if (id) {
+            promises.push(updateDoc(doc(db, "pptx_lectures", id), { order: index }));
+        }
+    });
+    
+    try {
+        document.getElementById('pptx-tbody').style.opacity = '0.5';
+        await Promise.all(promises);
+    } catch (err) {
+        console.error("Lỗi cập nhật vị trí:", err);
+        alert("Lỗi cập nhật vị trí: " + err.message);
+    } finally {
+        document.getElementById('pptx-tbody').style.opacity = '1';
+        isReordering = false;
+        renderAdminTable(); 
+    }
 }
 
 async function openCommentsModal(lectureId, lectureTitle) {
