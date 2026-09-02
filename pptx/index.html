@@ -20,7 +20,6 @@
             </button>
             <span id="current-category-label" class="active-category" style="display: none;"></span>
             
-            <!-- THÊM MỚI: NÚT ẨN HIỆN SIDEBAR -->
             <button id="btn-toggle-sidebar" class="btn-back-hero" style="display: none; background: #64748b;" title="Ẩn/Hiện danh sách bài học">
                 <i class="fa-solid fa-list-ul"></i>
             </button>
@@ -74,37 +73,10 @@
             </div>
         </div>
         
-        <div class="category-grid">
-            <div class="category-card" id="card-mri" data-cat="mri_video" data-name="Cộng hưởng từ (MRI)">
-                <div class="card-icon" style="background: #eff6ff; color: #3b82f6;">
-                    <i class="fa-solid fa-magnet"></i>
-                </div>
-                <h3>Cộng hưởng từ (MRI)</h3>
-                <p>Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI</p>
-            </div>
-            
-            <div class="category-card" data-cat="ct" data-name="Cắt lớp vi tính (CT)">
-                <div class="card-icon" style="background: #f0fdf4; color: #22c55e;">
-                    <i class="fa-solid fa-x-ray"></i>
-                </div>
-                <h3>Cắt lớp vi tính (CT)</h3>
-                <p>Bài giảng về nguyên lý và ứng dụng CT Scanner</p>
-            </div>
-            
-            <div class="category-card" data-cat="xray" data-name="X-quang">
-                <div class="card-icon" style="background: #fdf2f8; color: #ec4899;">
-                    <i class="fa-solid fa-person-rays"></i>
-                </div>
-                <h3>X-quang</h3>
-                <p>Kiến thức cơ bản và nâng cao về chẩn đoán X-quang</p>
-            </div>
-            
-            <div class="category-card" data-cat="contrast" data-name="Thuốc tương phản">
-                <div class="card-icon" style="background: #fffbeb; color: #f59e0b;">
-                    <i class="fa-solid fa-syringe"></i>
-                </div>
-                <h3>Thuốc tương phản</h3>
-                <p>Hướng dẫn sử dụng và xử trí tai biến thuốc tương phản</p>
+        <!-- THAY ĐỔI: Khối chứa Category trống để Javascript tự động render cây thư mục -->
+        <div class="category-grid" id="dynamic-category-grid">
+            <div style="text-align: center; color: #94a3b8; width: 100%; grid-column: 1 / -1;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải cấu trúc từ hệ thống...
             </div>
         </div>
     </div>
@@ -142,8 +114,7 @@
             <div id="feedback-section" class="feedback-section" style="display: none;">
                 <div class="feedback-header">
                     <h3><i class="fa-regular fa-comments"></i> Thảo luận & Đánh giá</h3>
-                    <div id="average-rating-display" class="average-rating">
-                    </div>
+                    <div id="average-rating-display" class="average-rating"></div>
                 </div>
                 
                 <div class="feedback-input-box">
@@ -159,15 +130,13 @@
                     <button id="btn-submit-comment" class="btn-submit-comment"><i class="fa-solid fa-paper-plane"></i> Gửi bình luận</button>
                 </div>
 
-                <div id="comments-list" class="comments-list">
-                </div>
+                <div id="comments-list" class="comments-list"></div>
             </div>
 
         </main>
         
         <div id="grid-view-container" class="grid-view-container" style="display: none;">
         </div>
-
     </div>
 
     <script type="module" src="app.js"></script>
