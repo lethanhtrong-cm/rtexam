@@ -1,7 +1,8 @@
 import { auth, db } from "./firebase-config.js";
 import { UI } from "./app-ui.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// THÊM MỚI setDoc để backup Default Tree nếu DB trống
+import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment, addDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FREE_LIMIT = 3;
 const PLUS_LIMIT = 5;
@@ -15,8 +16,29 @@ let currentViewMode = 'list';
 let currentLoadedItemId = null; 
 let viewedLectures = []; 
 let userStorageKey = 'viewedLectures_guest';
-
 let currentCommentsUnsubscribe = null; 
+
+// THÊM MỚI: Cây thư mục Mặc định (Sẽ bị ghi đè nếu Admin đã cấu hình trên Firebase)
+const defaultTree = [
+    { id: 'mri', name: 'Cộng hưởng từ (MRI)', icon: 'fa-magnet', color: '#3b82f6', bg: '#eff6ff', desc: 'Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI', children: [
+        { id: 'mri_video', name: 'Video Clip', icon: 'fa-circle-play' },
+        { id: 'mri_pptx', name: 'Bản thuyết trình', icon: 'fa-file-powerpoint' }
+    ]},
+    { id: 'ct', name: 'Cắt lớp vi tính (CT)', icon: 'fa-x-ray', color: '#22c55e', bg: '#f0fdf4', desc: 'Bài giảng về nguyên lý và ứng dụng CT Scanner', children: [
+        { id: 'ct_video', name: 'Video Clip', icon: 'fa-circle-play' },
+        { id: 'ct_pptx', name: 'Bản thuyết trình', icon: 'fa-file-powerpoint' }
+    ]},
+    { id: 'xray', name: 'X-quang', icon: 'fa-person-rays', color: '#ec4899', bg: '#fdf2f8', desc: 'Kiến thức cơ bản và nâng cao về chẩn đoán X-quang', children: [
+        { id: 'xray_video', name: 'Video Clip', icon: 'fa-circle-play' },
+        { id: 'xray_pptx', name: 'Bản thuyết trình', icon: 'fa-file-powerpoint' }
+    ]},
+    { id: 'contrast', name: 'Thuốc tương phản', icon: 'fa-syringe', color: '#f59e0b', bg: '#fffbeb', desc: 'Hướng dẫn sử dụng và xử trí tai biến thuốc tương phản', children: [
+        { id: 'contrast_video', name: 'Video Clip', icon: 'fa-circle-play' },
+        { id: 'contrast_pptx', name: 'Bản thuyết trình', icon: 'fa-file-powerpoint' }
+    ]}
+];
+
+let globalCategoryTree = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('contextmenu', event => event.preventDefault());
@@ -34,12 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
     UI.initStarRating(); 
     UI.initMobileCommentToggle(); 
 
-    // THÊM MỚI: Bắt sự kiện Tắt/Mở danh sách Sidebar (làm video phóng to)
     document.getElementById('btn-toggle-sidebar').addEventListener('click', (e) => {
         const sidebar = document.querySelector('.pptx-sidebar');
         const resizer = document.getElementById('dragMe');
         const icon = e.currentTarget;
-        
         if (sidebar.style.display === 'none') {
             sidebar.style.display = '';
             if(resizer) resizer.style.display = '';
@@ -47,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             sidebar.style.display = 'none';
             if(resizer) resizer.style.display = 'none';
-            icon.innerHTML = '<i class="fa-solid fa-expand"></i>'; // Thay đổi icon để thể hiện đã ẩn sidebar
+            icon.innerHTML = '<i class="fa-solid fa-expand"></i>';
         }
     });
 
@@ -65,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const text = document.getElementById('comment-textarea').value.trim();
         const rating = UI.getRating();
-        
         if (!text && rating === 0) {
             alert('Vui lòng nhập nội dung bình luận hoặc chọn số sao đánh giá!');
             return;
@@ -94,37 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.querySelectorAll('.category-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const catId = card.getAttribute('data-cat');
-            const catName = card.getAttribute('data-name');
-            if(catId && catName) {
-                currentSelectedCategory = catId;
-                currentLoadedItemId = null; 
-                UI.showViewerPage(catName, currentViewMode);
-                renderPptxList();
-            }
-        });
-    });
-
-    document.querySelectorAll('.btn-sub-cat').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            const catId = btn.getAttribute('data-cat');
-            const catName = btn.getAttribute('data-name');
-            if(catId && catName) {
-                currentSelectedCategory = catId;
-                currentLoadedItemId = null; 
-                UI.showViewerPage(catName, currentViewMode);
-                renderPptxList();
-            }
-        });
-    });
-
     document.getElementById('btn-back-hero').addEventListener('click', () => {
         currentSelectedCategory = null;
         currentLoadedItemId = null; 
-        
         const url = new URL(window.location);
         url.searchParams.delete('lecture');
         window.history.replaceState({}, document.title, url.toString());
@@ -133,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentCommentsUnsubscribe();
             currentCommentsUnsubscribe = null;
         }
-        
         UI.showHeroPage();
     });
 
@@ -150,7 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const userData = docSnap.data();
                     let tier = userData.vipTier;
                     if (!tier && userData.isVip) tier = 'plus'; 
-                    
                     currentUserTier = tier || 'free';
                     currentUserName = userData.fullName || userData.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
                 } else {
@@ -169,7 +158,28 @@ document.addEventListener('DOMContentLoaded', () => {
         
         UI.updateAuthUI(currentUserTier, badge);
         UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
-        fetchPptxFromDatabase();
+        
+        // THÊM MỚI: Lắng nghe cấu hình Cây thư mục thời gian thực từ Firestore
+        onSnapshot(doc(db, "settings", "category_tree"), async (docSnap) => {
+            if(docSnap.exists() && docSnap.data().tree) {
+                globalCategoryTree = docSnap.data().tree;
+            } else {
+                globalCategoryTree = defaultTree;
+                // Nếu chưa có bảng trên server, tự động tạo mới lần đầu bằng bộ Default
+                await setDoc(doc(db, "settings", "category_tree"), { tree: globalCategoryTree });
+            }
+            
+            UI.renderCategoryTree(globalCategoryTree, (catId, catName) => {
+                currentSelectedCategory = catId;
+                currentLoadedItemId = null;
+                UI.showViewerPage(catName, currentViewMode);
+                renderPptxList();
+            });
+            
+            // Xử lý nốt logic Fetch bài giảng
+            fetchPptxFromDatabase();
+        });
+        
         syncViewCountToFirestore();
     });
 });
@@ -183,7 +193,6 @@ function fetchPptxFromDatabase() {
             pptxDataList.push({ id: docSnap.id, ...docSnap.data() });
         });
         
-        // THÊM MỚI: Đồng bộ thứ tự (order) từ trang Admin
         pptxDataList.sort((a, b) => {
             const orderA = a.order !== undefined ? a.order : 999999;
             const orderB = b.order !== undefined ? b.order : 999999;
@@ -192,23 +201,27 @@ function fetchPptxFromDatabase() {
         });
         
         UI.updateStatsUI(pptxDataList);
+
         const urlParams = new URLSearchParams(window.location.search);
         const sharedId = urlParams.get('lecture');
         
         if (sharedId && !currentSelectedCategory) {
             const sharedItem = pptxDataList.find(item => item.id === sharedId);
             if (sharedItem) {
-                let cat = sharedItem.category || 'mri';
-                const normalizedCat = cat === 'mri' ? 'mri_pptx' : cat;
+                let cat = sharedItem.category || 'mri_pptx';
                 let catName = 'Bài giảng được chia sẻ';
                 
-                document.querySelectorAll('.category-card, .btn-sub-cat').forEach(el => {
-                    if (el.getAttribute('data-cat') === normalizedCat) {
-                        catName = el.getAttribute('data-name');
+                // THAY ĐỔI: Dò tìm tên chuyên khoa chính xác từ cây động
+                globalCategoryTree.forEach(mCat => {
+                    if(mCat.id === cat) catName = mCat.name;
+                    if(mCat.children) {
+                        mCat.children.forEach(cCat => {
+                            if(cCat.id === cat) catName = `${mCat.name} - ${cCat.name}`;
+                        });
                     }
                 });
 
-                currentSelectedCategory = normalizedCat;
+                currentSelectedCategory = cat;
                 currentLoadedItemId = sharedId;
                 UI.showViewerPage(catName, currentViewMode);
                 renderPptxList();
@@ -231,14 +244,12 @@ function fetchPptxFromDatabase() {
 function renderPptxList() {
     const listContainer = document.getElementById('pptx-list');
     const gridContainer = document.getElementById('grid-view-container');
-    
     listContainer.innerHTML = '';
     gridContainer.innerHTML = '';
     
     const filteredList = pptxDataList.filter(item => {
-        const itemCat = item.category || 'mri';
-        const normalizedCat = itemCat === 'mri' ? 'mri_pptx' : itemCat;
-        return normalizedCat === currentSelectedCategory;
+        const itemCat = item.category || 'mri_pptx';
+        return itemCat === currentSelectedCategory;
     });
     
     if (filteredList.length === 0) {
@@ -252,9 +263,7 @@ function renderPptxList() {
     }
 
     let activeItem = filteredList.find(item => item.id === currentLoadedItemId);
-    if (!activeItem) {
-        activeItem = filteredList[0];
-    }
+    if (!activeItem) activeItem = filteredList[0];
 
     filteredList.forEach((item) => {
         const isVideo = item.embedUrl && item.embedUrl.includes('firebasestorage.googleapis.com');
@@ -265,7 +274,6 @@ function renderPptxList() {
         li.className = 'pptx-item';
         if (item.id === activeItem.id) li.classList.add('active'); 
         
-        // GIỮ LẠI LOGIC CHỮ XUỐNG HÀNG Ở BƯỚC TRƯỚC
         li.innerHTML = `
             <div style="display: flex; align-items: flex-start; gap: 12px; flex: 1; padding-right: 10px;">
                 <i class="fa-solid ${iconClass}" style="margin-top: 3px; flex-shrink: 0;"></i> 
@@ -306,7 +314,6 @@ function renderPptxList() {
                 </div>
             </div>
         `;
-        
         card.querySelector('.btn-share-item').addEventListener('click', (e) => {
             e.stopPropagation();
             const shareUrl = window.location.origin + window.location.pathname + '?lecture=' + item.id;
@@ -320,7 +327,6 @@ function renderPptxList() {
             
             document.querySelectorAll('.pptx-item').forEach(el => el.classList.remove('active'));
             li.classList.add('active'); 
-            
             loadPptx(item.embedUrl, item.id);
         });
         gridContainer.appendChild(card);
@@ -347,12 +353,8 @@ async function syncViewCountToFirestore() {
 
 async function incrementLectureViewCount(itemId) {
     try {
-        await updateDoc(doc(db, "pptx_lectures", itemId), {
-            viewCount: increment(1)
-        });
-    } catch (e) {
-        console.error("Lỗi tăng lượt xem bài giảng:", e);
-    }
+        await updateDoc(doc(db, "pptx_lectures", itemId), { viewCount: increment(1) });
+    } catch (e) {}
 }
 
 function loadLectureComments(itemId) {
@@ -387,7 +389,6 @@ function loadPptx(embedUrl, itemId) {
     const videoViewer = document.getElementById('video-viewer');
 
     let canView = false;
-
     if (currentUserTier === 'pro') {
         canView = true;
         if (!viewedLectures.includes(itemId)) {
@@ -424,13 +425,11 @@ function loadPptx(embedUrl, itemId) {
         if (isVideoUpload) {
             iframeViewer.style.display = 'none';
             iframeViewer.src = '';
-            
             videoViewer.style.display = 'block';
             videoViewer.src = embedUrl;
         } else {
             videoViewer.style.display = 'none';
             videoViewer.src = '';
-            
             iframeViewer.style.display = 'block';
             iframeViewer.src = embedUrl;
         }
@@ -444,7 +443,6 @@ function loadPptx(embedUrl, itemId) {
         iframeContainer.style.display = 'none';
         iframeViewer.src = ''; 
         videoViewer.src = ''; 
-        
         UI.hideFeedbackSection();
     }
 }
