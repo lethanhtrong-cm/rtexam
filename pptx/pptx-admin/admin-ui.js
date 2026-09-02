@@ -16,27 +16,27 @@ export const UI = {
         sidebarHtml += `<button id="btn-config-tree" style="margin: 0 20px 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;"><i class="fa-solid fa-sitemap"></i> Cấu Hình Menu (User)</button>`;
 
         adminCategoryTree.forEach((cat) => {
-             sidebarHtml += `<div class="admin-menu-parent"><i class="fa-solid ${cat.icon}" style="color: ${cat.color || '#3b82f6'}; width: 16px; text-align: center;"></i> ${cat.name}</div>`;
+             // Cấp 1: Chuyên khoa gốc (Cho phép click)
+             const isActive1 = currentAdminCategory === cat.id ? 'active' : '';
+             selectHtml += `<option value="${cat.id}">${cat.name}</option>`;
+             sidebarHtml += `<div class="admin-menu-item ${isActive1}" data-cat="${cat.id}" style="font-weight: 700;"><i class="fa-solid ${cat.icon}" style="color: ${cat.color || '#3b82f6'}; width: 20px;"></i> ${cat.name}</div>`;
              
              if(cat.children && cat.children.length > 0) {
                  cat.children.forEach(child => {
+                     // Cấp 2: Nhánh con (Cho phép click để xem bài cũ)
+                     const isActive2 = currentAdminCategory === child.id ? 'active' : '';
+                     selectHtml += `<option value="${child.id}">${cat.name} - ${child.name}</option>`;
+                     sidebarHtml += `<div class="admin-menu-item ${isActive2}" data-cat="${child.id}" style="padding-left: 35px; font-size: 0.95rem;"><i class="fa-solid ${child.icon}" style="width: 20px;"></i> ${child.name}</div>`;
+
                      if (child.children && child.children.length > 0) {
-                         sidebarHtml += `<div class="admin-menu-parent" style="padding-left: 45px; font-size: 0.85rem; color: #64748b;"><i class="fa-solid ${child.icon}"></i> ${child.name}</div>`;
+                         // Cấp 3: Nhánh con sâu nhất (Cho phép click)
                          child.children.forEach(sub => {
+                             const isActive3 = currentAdminCategory === sub.id ? 'active' : '';
                              selectHtml += `<option value="${sub.id}">${cat.name} - ${child.name} - ${sub.name}</option>`;
-                             const isActive = currentAdminCategory === sub.id ? 'active' : '';
-                             sidebarHtml += `<div class="admin-menu-item ${isActive}" data-cat="${sub.id}" style="padding-left: 60px; font-size: 0.9rem;"><i class="fa-solid ${sub.icon}"></i> ${sub.name}</div>`;
+                             sidebarHtml += `<div class="admin-menu-item ${isActive3}" data-cat="${sub.id}" style="padding-left: 55px; font-size: 0.9rem; color: #64748b;"><i class="fa-solid ${sub.icon}" style="width: 20px;"></i> ${sub.name}</div>`;
                          });
-                     } else {
-                         selectHtml += `<option value="${child.id}">${cat.name} - ${child.name}</option>`;
-                         const isActive = currentAdminCategory === child.id ? 'active' : '';
-                         sidebarHtml += `<div class="admin-menu-item ${isActive}" data-cat="${child.id}"><i class="fa-solid ${child.icon}"></i> ${child.name}</div>`;
                      }
                  });
-             } else {
-                 selectHtml += `<option value="${cat.id}">${cat.name}</option>`;
-                 const isActive = currentAdminCategory === cat.id ? 'active' : '';
-                 sidebarHtml += `<div class="admin-menu-item ${isActive}" data-cat="${cat.id}"><i class="fa-solid ${cat.icon}"></i> ${cat.name}</div>`;
              }
         });
         return { selectHtml, sidebarHtml };
@@ -92,4 +92,3 @@ export const UI = {
         return html;
     }
 };
-
