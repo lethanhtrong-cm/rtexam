@@ -270,7 +270,6 @@ export const UI = {
         listEl.innerHTML = html;
     },
 
-    // THÊM MỚI: Hàm Render Động cho Cây thư mục chuyên khoa (Từ Firebase)
     renderCategoryTree: (treeData, onBranchClick) => {
         const grid = document.getElementById('dynamic-category-grid');
         if(!grid) return;
@@ -289,11 +288,29 @@ export const UI = {
             
             if(cat.children && cat.children.length > 0) {
                 cat.children.forEach(child => {
-                    html += `
-                    <div class="tree-branch" data-cat="${child.id}" data-name="${cat.name} - ${child.name}">
-                        <i class="fa-solid ${child.icon || 'fa-file-video'}"></i>
-                        <span>${child.name}</span>
-                    </div>`;
+                    // XỬ LÝ NHÁNH CẤP 3 Ở ĐÂY
+                    if (child.children && child.children.length > 0) {
+                        html += `
+                        <div class="tree-sub-wrapper">
+                            <div class="tree-branch-parent">
+                                <i class="fa-solid ${child.icon || 'fa-folder'}"></i> <span>${child.name}</span>
+                            </div>
+                            <div class="tree-sub-container">`;
+                        child.children.forEach(sub => {
+                            html += `
+                            <div class="tree-branch tree-sub-branch" data-cat="${sub.id}" data-name="${cat.name} - ${child.name} - ${sub.name}">
+                                <i class="fa-solid ${sub.icon || 'fa-file-video'}"></i>
+                                <span>${sub.name}</span>
+                            </div>`;
+                        });
+                        html += `</div></div>`;
+                    } else {
+                        html += `
+                        <div class="tree-branch" data-cat="${child.id}" data-name="${cat.name} - ${child.name}">
+                            <i class="fa-solid ${child.icon || 'fa-file-video'}"></i>
+                            <span>${child.name}</span>
+                        </div>`;
+                    }
                 });
             } else {
                 html += `<div style="color: #94a3b8; font-size: 0.9rem; font-style: italic;">Chưa có nhánh con</div>`;
@@ -304,13 +321,12 @@ export const UI = {
         
         grid.innerHTML = html;
 
-        // Cài đặt sự kiện: Nhấn vào Card thì sổ Tree ra, Nhấn nhánh thì chuyển trang
         treeData.forEach(cat => {
             const card = document.getElementById(`card-${cat.id}`);
             const tree = document.getElementById(`tree-${cat.id}`);
             if(card && tree) {
                 card.addEventListener('click', (e) => {
-                    if(e.target.closest('.tree-branch')) return;
+                    if(e.target.closest('.tree-branch') || e.target.closest('.tree-branch-parent')) return;
                     const isHidden = window.getComputedStyle(tree).display === 'none';
                     document.querySelectorAll('.tree-container').forEach(t => t.style.display = 'none'); 
                     tree.style.display = isHidden ? 'flex' : 'none';
