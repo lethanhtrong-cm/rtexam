@@ -127,6 +127,7 @@ export const UI = {
 
     showViewerPage: (categoryName, currentViewMode) => {
         document.getElementById('hero-page').style.display = 'none';
+        document.getElementById('category-detail-page').style.display = 'none'; // Đóng trang Cây
         document.getElementById('viewer-page').style.display = 'flex';
         
         const label = document.getElementById('current-category-label');
@@ -143,6 +144,28 @@ export const UI = {
     showHeroPage: () => {
         document.getElementById('hero-page').style.display = 'flex';
         document.getElementById('viewer-page').style.display = 'none';
+        document.getElementById('category-detail-page').style.display = 'none';
+        
+        document.getElementById('current-category-label').style.display = 'none';
+        document.getElementById('btn-back-hero').style.display = 'none';
+        document.getElementById('btn-toggle-view').style.display = 'none';
+        
+        const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+        if(btnToggleSidebar) btnToggleSidebar.style.display = 'none';
+        
+        const resizer = document.getElementById('dragMe');
+        if(resizer) resizer.style.display = 'none';
+        
+        document.getElementById('pptx-viewer').src = '';
+        document.getElementById('video-viewer').src = '';
+        
+        UI.hideFeedbackSection();
+    },
+
+    // Chuyển từ Trang Viewer ngược về Trang Cây Thư mục
+    showCategoryDetailPageFromViewer: () => {
+        document.getElementById('viewer-page').style.display = 'none';
+        document.getElementById('category-detail-page').style.display = 'block';
         
         document.getElementById('current-category-label').style.display = 'none';
         document.getElementById('btn-back-hero').style.display = 'none';
@@ -270,7 +293,8 @@ export const UI = {
         listEl.innerHTML = html;
     },
 
-    renderCategoryTree: (treeData, onBranchClick) => {
+    // 1. Chỉ vẽ Card Chuyên Khoa ngoài Trang Chủ
+    renderCategoryTree: (treeData, onRootCardClick) => {
         const grid = document.getElementById('dynamic-category-grid');
         if(!grid) return;
         
@@ -283,63 +307,94 @@ export const UI = {
                 </div>
                 <h3>${cat.name}</h3>
                 <p>${cat.desc || 'Khám phá các bài giảng chuyên khoa này'}</p>
-                <div class="tree-container" id="tree-${cat.id}">
-            `;
-            
-            if(cat.children && cat.children.length > 0) {
-                cat.children.forEach(child => {
-                    // XỬ LÝ NHÁNH CẤP 3 Ở ĐÂY
-                    if (child.children && child.children.length > 0) {
-                        html += `
-                        <div class="tree-sub-wrapper">
-                            <div class="tree-branch-parent">
-                                <i class="fa-solid ${child.icon || 'fa-folder'}"></i> <span>${child.name}</span>
-                            </div>
-                            <div class="tree-sub-container">`;
-                        child.children.forEach(sub => {
-                            html += `
-                            <div class="tree-branch tree-sub-branch" data-cat="${sub.id}" data-name="${cat.name} - ${child.name} - ${sub.name}">
-                                <i class="fa-solid ${sub.icon || 'fa-file-video'}"></i>
-                                <span>${sub.name}</span>
-                            </div>`;
-                        });
-                        html += `</div></div>`;
-                    } else {
-                        html += `
-                        <div class="tree-branch" data-cat="${child.id}" data-name="${cat.name} - ${child.name}">
-                            <i class="fa-solid ${child.icon || 'fa-file-video'}"></i>
-                            <span>${child.name}</span>
-                        </div>`;
-                    }
-                });
-            } else {
-                html += `<div style="color: #94a3b8; font-size: 0.9rem; font-style: italic;">Chưa có nhánh con</div>`;
-            }
-            
-            html += `</div></div>`;
+            </div>`;
         });
-        
         grid.innerHTML = html;
 
         treeData.forEach(cat => {
             const card = document.getElementById(`card-${cat.id}`);
-            const tree = document.getElementById(`tree-${cat.id}`);
-            if(card && tree) {
-                card.addEventListener('click', (e) => {
-                    if(e.target.closest('.tree-branch') || e.target.closest('.tree-branch-parent')) return;
-                    const isHidden = window.getComputedStyle(tree).display === 'none';
-                    document.querySelectorAll('.tree-container').forEach(t => t.style.display = 'none'); 
-                    tree.style.display = isHidden ? 'flex' : 'none';
+            if(card) {
+                card.addEventListener('click', () => {
+                    if(onRootCardClick) onRootCardClick(cat);
                 });
             }
         });
+    },
 
-        document.querySelectorAll('.tree-branch').forEach(branch => {
-            branch.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const catId = branch.getAttribute('data-cat');
-                const catName = branch.getAttribute('data-name');
-                if(onBranchClick) onBranchClick(catId, catName);
+    // 2. Render Cây thư mục siêu sâu tại Trang Trung Gian (Detail Page)
+    renderCategoryDetail: (rootCat, pptxDataList, onLectureClick) => {
+        document.getElementById('hero-page').style.display = 'none';
+        const detailPage = document.getElementById('category-detail-page');
+        detailPage.style.display = 'block';
+        document.getElementById('detail-category-title').innerText = rootCat.name;
+
+        const container = document.getElementById('detail-tree-container');
+        let html = '';
+
+        // Hàm đệ quy duyệt vô tận các cấp của Cây thư mục
+        const buildTreeHtml = (nodes, parentName = '') => {
+            let nodeHtml = '';
+            nodes.forEach(node => {
+                const currentFullName = parentName ? `${parentName} - ${node.name}` : node.name;
+
+                if (!node.children || node.children.length === 0) {
+                    // Nếu là lá cuối cùng (Leaf) -> Hiển thị danh sách Bài giảng
+                    const lectures = pptxDataList.filter(item => item.category === node.id);
+                    nodeHtml += `
+                    <div class="large-tree-node">
+                        <div class="large-tree-header"><i class="fa-solid ${node.icon || 'fa-folder'}"></i> ${node.name} <span style="font-size: 0.85rem; font-weight: normal; color: #94a3b8; margin-left: auto;">(${lectures.length} bài)</span></div>
+                        <div class="large-tree-children">
+                    `;
+                    if (lectures.length === 0) {
+                        nodeHtml += `<div style="color: #94a3b8; font-style: italic; padding: 10px 0; font-size: 0.95rem;">Chưa có bài giảng nào trong mục này</div>`;
+                    } else {
+                        lectures.forEach(lec => {
+                            const isVideo = lec.embedUrl && lec.embedUrl.includes('firebasestorage.googleapis.com');
+                            const iconClass = isVideo ? 'fa-circle-play' : 'fa-file-powerpoint';
+                            nodeHtml += `
+                            <div class="lecture-item-card" data-id="${lec.id}" data-cat="${node.id}" data-catname="${rootCat.name} - ${currentFullName}">
+                                <div class="lecture-item-info">
+                                    <i class="fa-solid ${iconClass}"></i>
+                                    <span>${lec.title}</span>
+                                </div>
+                                <div class="lecture-item-stats">
+                                    <i class="fa-solid fa-eye"></i> ${lec.viewCount || 0}
+                                </div>
+                            </div>
+                            `;
+                        });
+                    }
+                    nodeHtml += `</div></div>`;
+                } else {
+                    // Nếu còn Nhánh con (Folder) -> Gọi đệ quy tiếp
+                    nodeHtml += `
+                    <div class="large-tree-node">
+                        <div class="large-tree-header"><i class="fa-solid ${node.icon || 'fa-folder'}"></i> ${node.name}</div>
+                        <div class="large-tree-children">
+                            ${buildTreeHtml(node.children, currentFullName)}
+                        </div>
+                    </div>
+                    `;
+                }
+            });
+            return nodeHtml;
+        };
+
+        if (rootCat.children && rootCat.children.length > 0) {
+            html = buildTreeHtml(rootCat.children);
+        } else {
+            html = `<div style="color: #94a3b8; font-style: italic; padding: 20px;">Chưa có cấu trúc nhánh con. Hãy bổ sung ở trang Admin.</div>`;
+        }
+
+        container.innerHTML = html;
+
+        // Bắt sự kiện Click để chuyển qua trang Viewer
+        document.querySelectorAll('.lecture-item-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const lecId = card.getAttribute('data-id');
+                const catId = card.getAttribute('data-cat');
+                const catName = card.getAttribute('data-catname');
+                if(onLectureClick) onLectureClick(lecId, catId, catName);
             });
         });
     }
