@@ -127,7 +127,6 @@ export const UI = {
 
     showViewerPage: (categoryName, currentViewMode) => {
         document.getElementById('hero-page').style.display = 'none';
-        document.getElementById('category-detail-page').style.display = 'none'; // Đóng trang Cây
         document.getElementById('viewer-page').style.display = 'flex';
         
         const label = document.getElementById('current-category-label');
@@ -144,28 +143,6 @@ export const UI = {
     showHeroPage: () => {
         document.getElementById('hero-page').style.display = 'flex';
         document.getElementById('viewer-page').style.display = 'none';
-        document.getElementById('category-detail-page').style.display = 'none';
-        
-        document.getElementById('current-category-label').style.display = 'none';
-        document.getElementById('btn-back-hero').style.display = 'none';
-        document.getElementById('btn-toggle-view').style.display = 'none';
-        
-        const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
-        if(btnToggleSidebar) btnToggleSidebar.style.display = 'none';
-        
-        const resizer = document.getElementById('dragMe');
-        if(resizer) resizer.style.display = 'none';
-        
-        document.getElementById('pptx-viewer').src = '';
-        document.getElementById('video-viewer').src = '';
-        
-        UI.hideFeedbackSection();
-    },
-
-    // Chuyển từ Trang Viewer ngược về Trang Cây Thư mục
-    showCategoryDetailPageFromViewer: () => {
-        document.getElementById('viewer-page').style.display = 'none';
-        document.getElementById('category-detail-page').style.display = 'block';
         
         document.getElementById('current-category-label').style.display = 'none';
         document.getElementById('btn-back-hero').style.display = 'none';
@@ -321,24 +298,21 @@ export const UI = {
         });
     },
 
-    // 2. Render Cây thư mục siêu sâu tại Trang Trung Gian (Detail Page)
+    // 2. Render Cây thư mục siêu sâu VÀO NGAY SECTION BÊN DƯỚI (Không chuyển trang)
     renderCategoryDetail: (rootCat, pptxDataList, onLectureClick) => {
-        document.getElementById('hero-page').style.display = 'none';
-        const detailPage = document.getElementById('category-detail-page');
-        detailPage.style.display = 'block';
+        const detailSec = document.getElementById('category-detail-section');
+        detailSec.style.display = 'flex';
         document.getElementById('detail-category-title').innerText = rootCat.name;
 
         const container = document.getElementById('detail-tree-container');
         let html = '';
 
-        // Hàm đệ quy duyệt vô tận các cấp của Cây thư mục
         const buildTreeHtml = (nodes, parentName = '') => {
             let nodeHtml = '';
             nodes.forEach(node => {
                 const currentFullName = parentName ? `${parentName} - ${node.name}` : node.name;
 
                 if (!node.children || node.children.length === 0) {
-                    // Nếu là lá cuối cùng (Leaf) -> Hiển thị danh sách Bài giảng
                     const lectures = pptxDataList.filter(item => item.category === node.id);
                     nodeHtml += `
                     <div class="large-tree-node">
@@ -366,7 +340,6 @@ export const UI = {
                     }
                     nodeHtml += `</div></div>`;
                 } else {
-                    // Nếu còn Nhánh con (Folder) -> Gọi đệ quy tiếp
                     nodeHtml += `
                     <div class="large-tree-node">
                         <div class="large-tree-header"><i class="fa-solid ${node.icon || 'fa-folder'}"></i> ${node.name}</div>
@@ -388,7 +361,6 @@ export const UI = {
 
         container.innerHTML = html;
 
-        // Bắt sự kiện Click để chuyển qua trang Viewer
         document.querySelectorAll('.lecture-item-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 const lecId = card.getAttribute('data-id');
@@ -397,5 +369,10 @@ export const UI = {
                 if(onLectureClick) onLectureClick(lecId, catId, catName);
             });
         });
+
+        // Tự động cuộn xuống phần chi tiết sau khi vẽ xong
+        setTimeout(() => {
+            detailSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
     }
 };
