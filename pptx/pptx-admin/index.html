@@ -54,7 +54,6 @@
         </div>
         
         <div class="admin-layout">
-            <!-- Sidebar bây giờ sẽ trống và chờ JS nhúng vào -->
             <div class="admin-sidebar" id="dynamic-admin-sidebar">
                 <h3>Danh mục quản lý</h3>
                 <div style="padding: 20px; text-align: center; color: #64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
@@ -68,7 +67,6 @@
                     
                     <div class="form-group">
                         <label>Nhóm chuyên khoa:</label>
-                        <!-- Select Option cũng sẽ trống và chờ JS nhúng vào -->
                         <select id="pptx-category">
                         </select>
                     </div>
@@ -92,12 +90,23 @@
                     <button id="btn-cancel" class="btn-cancel"><i class="fa-solid fa-xmark"></i> Hủy Sửa</button>
                 </div>
 
-                <h3 style="display: flex; align-items: center; justify-content: space-between;">
+                <h3 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                     <span>Danh sách hiện tại</span>
                 </h3>
+
+                <!-- THÊM MỚI: Bảng điều khiển Chọn nhiều & Di chuyển -->
+                <div id="bulk-action-panel" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 8px; margin-bottom: 15px; align-items: center; gap: 15px;">
+                    <span style="font-weight: bold; color: #1e40af; white-space: nowrap;"><i class="fa-solid fa-check-double"></i> Đã chọn <span id="selected-count">0</span> mục</span>
+                    <select id="bulk-target-category" style="padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; flex: 1; max-width: 350px;">
+                        <!-- JS sẽ điền danh sách thư mục -->
+                    </select>
+                    <button id="btn-bulk-move" class="btn-submit" style="background: #2563eb; padding: 8px 15px; font-size: 0.9rem; margin: 0;"><i class="fa-solid fa-truck-fast"></i> Chuyển thư mục</button>
+                </div>
+
                 <table>
                     <thead>
                         <tr>
+                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all" style="transform: scale(1.2); cursor: pointer;" title="Chọn tất cả"></th>
                             <th>Tên bài giảng</th>
                             <th>Link Nhúng / File Video</th>
                             <th style="width: 100px; text-align: center;">Lượt xem</th>
@@ -106,7 +115,7 @@
                         </tr>
                     </thead>
                     <tbody id="pptx-tbody">
-                        <tr><td colspan="5" style="text-align: center; color: #64748b;">Đang tải dữ liệu...</td></tr>
+                        <tr><td colspan="6" style="text-align: center; color: #64748b;">Đang tải dữ liệu...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -125,7 +134,164 @@
         </div>
     </div>
 
-    <!-- THÊM MỚI: Modal Cấu hình Cây thư mục -->
+    <!-- Modal Cấu hình Cây thư mục -->
+    <div id="tree-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; width: 90%; max-width: 900px; border-radius: 12px; padding: 25px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+                <h2 style="font-size: 1.2rem; color: #0f172a; margin: 0;"><i class="fa-solid fa-sitemap"></i> Cấu hình Cây Thư mục (Hiển thị User)</h2>
+                <button id="close-tree-modal" style="background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="tree-editor-container" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                <!-- JS sẽ render form vào đây -->
+            </div>
+            
+            <div style="text-align: right; border-top: 1px solid #e2e8f0; padding-top: 15px; margin-top: 15px;">
+                <button onclick="window.addMainCat()" class="btn-submit" style="background: #10b981; margin-right: 10px;"><i class="fa-solid fa-plus"></i> Thêm Chuyên Khoa Gốc</button>
+                <button id="btn-save-tree" class="btn-submit"><i class="fa-solid fa-floppy-disk"></i> Lưu & Áp Dụng Ngay</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html><!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Bài giảng PPTX</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: #f1f5f9; color: #1e293b; padding: 30px; display: flex; justify-content: center; }
+        .admin-container { width: 100%; max-width: 1200px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
+        .admin-header { background: #0f172a; color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+        .admin-header a { color: #cbd5e1; text-decoration: none; font-size: 0.95rem; display: flex; align-items: center; gap: 5px; }
+        
+        .admin-layout { display: flex; flex: 1; min-height: 600px; }
+        
+        .admin-sidebar { width: 280px; background: #f8fafc; border-right: 1px solid #e2e8f0; padding: 20px 0; display: flex; flex-direction: column; }
+        .admin-sidebar h3 { padding: 0 20px 15px; font-size: 0.9rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px; }
+        
+        .admin-menu-parent { padding: 10px 20px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        .admin-menu-item { padding: 12px 20px 12px 45px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #475569; font-weight: 600; transition: 0.2s; border-left: 4px solid transparent; font-size: 0.95rem; }
+        .admin-menu-item.root-item { padding-left: 20px; margin-top: 5px; }
+        .admin-menu-item:hover { background: #f1f5f9; }
+        .admin-menu-item.active { background: #eff6ff; color: #3b82f6; border-left-color: #3b82f6; }
+        .admin-menu-item i { width: 16px; text-align: center; }
+        
+        .admin-main { flex: 1; padding: 30px; overflow-y: auto; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #475569; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 1rem; background: white; }
+        .btn-submit { background: #3b82f6; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-submit:hover { background: #2563eb; }
+        .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+        .btn-cancel { background: #ef4444; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; display: none; margin-left: 10px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; font-weight: 600; color: #475569; }
+        td.link-cell { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #64748b; font-size: 0.9rem; }
+        .btn-action { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; color: white; }
+        .btn-comment { background: #3b82f6; margin-right: 5px; } 
+        .btn-reset { background: #64748b; margin-right: 5px; }
+        .btn-edit { background: #f59e0b; margin-right: 5px; }
+        .btn-delete { background: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1><i class="fa-solid fa-file-powerpoint"></i> Quản lý Bài giảng PPTX & Video</h1>
+            <a href="../../dashboard.html"><i class="fa-solid fa-arrow-left"></i> Về Dashboard</a>
+        </div>
+        
+        <div class="admin-layout">
+            <div class="admin-sidebar" id="dynamic-admin-sidebar">
+                <h3>Danh mục quản lý</h3>
+                <div style="padding: 20px; text-align: center; color: #64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
+            </div>
+            
+            <div class="admin-main">
+                <div style="background: #f8fafc; padding: 25px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 20px; color: #334155; display: flex; align-items: center;">
+                        <i class="fa-solid fa-plus-circle" style="margin-right: 10px;"></i> Thêm/Sửa Bài Giảng
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label>Nhóm chuyên khoa:</label>
+                        <select id="pptx-category">
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tên bài giảng:</label>
+                        <input type="text" id="pptx-title" placeholder="VD: Giải phẫu MRI Sọ não cơ bản">
+                    </div>
+                    <div class="form-group">
+                        <label>Link nhúng (Google Slides / Youtube URL):</label>
+                        <input type="text" id="pptx-url" placeholder="VD: https://docs.google.com/presentation/d/e/2PACX.../embed">
+                    </div>
+                    
+                    <div class="form-group" style="border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                        <label><i class="fa-solid fa-upload"></i> Hoặc Tải Video Trực Tiếp (.mp4):</label>
+                        <input type="file" id="video-upload" accept="video/*" style="background: white;">
+                        <div id="upload-progress" style="font-size: 0.95rem; color: #3b82f6; margin-top: 8px; display: none; font-weight: bold;">Đang tải lên: 0%</div>
+                    </div>
+
+                    <button id="btn-save" class="btn-submit"><i class="fa-solid fa-cloud-arrow-up"></i> Lưu Dữ Liệu</button>
+                    <button id="btn-cancel" class="btn-cancel"><i class="fa-solid fa-xmark"></i> Hủy Sửa</button>
+                </div>
+
+                <h3 style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                    <span>Danh sách hiện tại</span>
+                </h3>
+
+                <!-- THÊM MỚI: Bảng điều khiển Chọn nhiều & Di chuyển -->
+                <div id="bulk-action-panel" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; padding: 15px; border-radius: 8px; margin-bottom: 15px; align-items: center; gap: 15px;">
+                    <span style="font-weight: bold; color: #1e40af; white-space: nowrap;"><i class="fa-solid fa-check-double"></i> Đã chọn <span id="selected-count">0</span> mục</span>
+                    <select id="bulk-target-category" style="padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; flex: 1; max-width: 350px;">
+                        <!-- JS sẽ điền danh sách thư mục -->
+                    </select>
+                    <button id="btn-bulk-move" class="btn-submit" style="background: #2563eb; padding: 8px 15px; font-size: 0.9rem; margin: 0;"><i class="fa-solid fa-truck-fast"></i> Chuyển thư mục</button>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all" style="transform: scale(1.2); cursor: pointer;" title="Chọn tất cả"></th>
+                            <th>Tên bài giảng</th>
+                            <th>Link Nhúng / File Video</th>
+                            <th style="width: 100px; text-align: center;">Lượt xem</th>
+                            <th style="width: 120px; text-align: center;">Đánh giá</th>
+                            <th style="width: 200px; text-align: center;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pptx-tbody">
+                        <tr><td colspan="6" style="text-align: center; color: #64748b;">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Bình luận hiện có -->
+    <div id="comments-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; width: 90%; max-width: 600px; border-radius: 12px; padding: 25px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+                <h2 style="font-size: 1.2rem; color: #0f172a; margin: 0;"><i class="fa-solid fa-comments"></i> Bình luận: <span id="modal-lecture-title" style="color: #3b82f6;"></span></h2>
+                <button id="close-comments-modal" style="background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="modal-comments-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 15px; padding-right: 5px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cấu hình Cây thư mục -->
     <div id="tree-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
         <div style="background: white; width: 90%; max-width: 900px; border-radius: 12px; padding: 25px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
