@@ -53,7 +53,6 @@ export const UI = {
             pptxDataList.forEach(item => {
                 totalViews += (item.viewCount || 0);
                 let cat = item.category || 'mri';
-                if (cat === 'mri') cat = 'mri_pptx';
                 const rootCat = cat.split('_')[0]; 
                 uniqueRootCategories.add(rootCat);
             });
@@ -109,7 +108,7 @@ export const UI = {
             document.querySelector('.pptx-main').style.display = 'none';
             const resizer = document.getElementById('dragMe');
             if(resizer) resizer.style.display = 'none';
-            if(btnToggleSidebar) btnToggleSidebar.style.display = 'none'; // Ẩn nút gập sidebar khi ở Lưới
+            if(btnToggleSidebar) btnToggleSidebar.style.display = 'none'; 
             document.getElementById('grid-view-container').style.display = 'grid';
         } else {
             btnToggle.innerHTML = '<i class="fa-solid fa-border-all"></i> Lưới';
@@ -120,7 +119,7 @@ export const UI = {
             if(resizer) resizer.style.display = '';
             if(btnToggleSidebar) {
                 btnToggleSidebar.style.display = 'inline-flex';
-                btnToggleSidebar.innerHTML = '<i class="fa-solid fa-list-ul"></i>'; // Mặc định hiển thị icon list
+                btnToggleSidebar.innerHTML = '<i class="fa-solid fa-list-ul"></i>'; 
             }
             document.getElementById('grid-view-container').style.display = 'none';
         }
@@ -179,7 +178,6 @@ export const UI = {
     },
 
     getRating: () => selectedRating,
-    
     resetRating: () => {
         selectedRating = 0;
         document.querySelectorAll('#star-rating-input i').forEach(s => s.classList.remove('active'));
@@ -209,9 +207,7 @@ export const UI = {
     showFeedbackSection: () => {
         const feedbackSec = document.getElementById('feedback-section');
         const toggleBtn = document.getElementById('mobile-comment-toggle');
-        if(feedbackSec) {
-            feedbackSec.style.display = ''; 
-        }
+        if(feedbackSec) feedbackSec.style.display = ''; 
         if (toggleBtn) {
             toggleBtn.style.display = ''; 
             toggleBtn.innerHTML = '<i class="fa-solid fa-comments"></i> Xem Thảo luận & Đánh giá';
@@ -244,7 +240,6 @@ export const UI = {
         let html = '';
         commentsArr.forEach(c => {
             const letter = (c.userName || 'U').charAt(0).toUpperCase();
-            
             let timeStr = '';
             if (c.createdAt) {
                 const dateObj = (typeof c.createdAt.toDate === 'function') ? c.createdAt.toDate() : new Date(c.createdAt);
@@ -273,5 +268,63 @@ export const UI = {
             `;
         });
         listEl.innerHTML = html;
+    },
+
+    // THÊM MỚI: Hàm Render Động cho Cây thư mục chuyên khoa (Từ Firebase)
+    renderCategoryTree: (treeData, onBranchClick) => {
+        const grid = document.getElementById('dynamic-category-grid');
+        if(!grid) return;
+        
+        let html = '';
+        treeData.forEach(cat => {
+            html += `
+            <div class="category-card" id="card-${cat.id}">
+                <div class="card-icon" style="background: ${cat.bg || '#eff6ff'}; color: ${cat.color || '#3b82f6'};">
+                    <i class="fa-solid ${cat.icon || 'fa-folder'}"></i>
+                </div>
+                <h3>${cat.name}</h3>
+                <p>${cat.desc || 'Khám phá các bài giảng chuyên khoa này'}</p>
+                <div class="tree-container" id="tree-${cat.id}">
+            `;
+            
+            if(cat.children && cat.children.length > 0) {
+                cat.children.forEach(child => {
+                    html += `
+                    <div class="tree-branch" data-cat="${child.id}" data-name="${cat.name} - ${child.name}">
+                        <i class="fa-solid ${child.icon || 'fa-file-video'}"></i>
+                        <span>${child.name}</span>
+                    </div>`;
+                });
+            } else {
+                html += `<div style="color: #94a3b8; font-size: 0.9rem; font-style: italic;">Chưa có nhánh con</div>`;
+            }
+            
+            html += `</div></div>`;
+        });
+        
+        grid.innerHTML = html;
+
+        // Cài đặt sự kiện: Nhấn vào Card thì sổ Tree ra, Nhấn nhánh thì chuyển trang
+        treeData.forEach(cat => {
+            const card = document.getElementById(`card-${cat.id}`);
+            const tree = document.getElementById(`tree-${cat.id}`);
+            if(card && tree) {
+                card.addEventListener('click', (e) => {
+                    if(e.target.closest('.tree-branch')) return;
+                    const isHidden = window.getComputedStyle(tree).display === 'none';
+                    document.querySelectorAll('.tree-container').forEach(t => t.style.display = 'none'); 
+                    tree.style.display = isHidden ? 'flex' : 'none';
+                });
+            }
+        });
+
+        document.querySelectorAll('.tree-branch').forEach(branch => {
+            branch.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const catId = branch.getAttribute('data-cat');
+                const catName = branch.getAttribute('data-name');
+                if(onBranchClick) onBranchClick(catId, catName);
+            });
+        });
     }
 };
