@@ -52,6 +52,45 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('close-tree-modal').addEventListener('click', () => {
         document.getElementById('tree-modal').style.display = 'none';
     });
+
+    // THÊM MỚI: Xử lý sự kiện "Chuyển thư mục" hàng loạt
+    document.getElementById('btn-bulk-move').addEventListener('click', async () => {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const targetCat = document.getElementById('bulk-target-category').value;
+        
+        if (checkedBoxes.length === 0) return;
+        if (!targetCat) return alert("Vui lòng chọn thư mục đích!");
+        if (targetCat === currentAdminCategory) return alert("Các bài giảng này đã nằm trong thư mục đích!");
+
+        if (confirm(`Bạn có chắc chắn muốn chuyển ${checkedBoxes.length} mục đã chọn sang thư mục mới không?`)) {
+            try {
+                const btnMove = document.getElementById('btn-bulk-move');
+                btnMove.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+                btnMove.disabled = true;
+                
+                const promises = [];
+                checkedBoxes.forEach(cb => {
+                    const id = cb.value;
+                    promises.push(updateDoc(doc(db, "pptx_lectures", id), { category: targetCat }));
+                });
+                
+                // Thực thi updateDoc song song
+                await Promise.all(promises);
+                alert("Chuyển thư mục thành công!");
+                
+                // Reset giao diện Bulk Action
+                document.getElementById('bulk-action-panel').style.display = 'none';
+                if (document.getElementById('check-all')) document.getElementById('check-all').checked = false;
+            } catch (error) {
+                console.error("Lỗi khi chuyển thư mục:", error);
+                alert("Lỗi: " + error.message);
+            } finally {
+                const btnMove = document.getElementById('btn-bulk-move');
+                btnMove.innerHTML = '<i class="fa-solid fa-truck-fast"></i> Chuyển thư mục';
+                btnMove.disabled = false;
+            }
+        }
+    });
 });
 
 function listenToCategoryTree() {
@@ -86,6 +125,10 @@ function updateCategorySelectOptions() {
     document.getElementById('pptx-category').innerHTML = dataHtml.selectHtml;
     document.getElementById('dynamic-admin-sidebar').innerHTML = dataHtml.sidebarHtml;
     
+    // Đồng bộ danh sách select cho thanh Bulk Action Panel
+    const bulkSelect = document.getElementById('bulk-target-category');
+    if (bulkSelect) bulkSelect.innerHTML = dataHtml.selectHtml;
+    
     document.querySelectorAll('.admin-menu-item').forEach(item => {
         item.addEventListener('click', (e) => {
             document.querySelectorAll('.admin-menu-item').forEach(el => el.classList.remove('active'));
@@ -93,6 +136,12 @@ function updateCategorySelectOptions() {
             target.classList.add('active');
             currentAdminCategory = target.getAttribute('data-cat');
             UI.resetForm(currentAdminCategory);
+            
+            // Xóa tick "Check All" khi đổi Tab
+            const checkAll = document.getElementById('check-all');
+            if(checkAll) checkAll.checked = false;
+            document.getElementById('bulk-action-panel').style.display = 'none';
+            
             renderAdminTable();
         });
     });
@@ -103,7 +152,6 @@ function updateCategorySelectOptions() {
     });
 }
 
-// CÁC HÀM XỬ LÝ EDITOR TREE TREO VÀO WINDOW
 window.renderTreeEditor = function() {
     document.getElementById('tree-editor-container').innerHTML = UI.renderTreeEditorHtml(adminCategoryTree);
 };
@@ -210,7 +258,8 @@ function renderAdminTable() {
     const filteredData = allAdminPptx.filter(item => item.category === currentAdminCategory);
 
     if (filteredData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b;">Chưa có bài giảng nào trong nhóm này.</td></tr>`;
+        // Tăng colspan lên 6 vì đã có thêm cột Checkbox
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #64748b;">Chưa có bài giảng nào trong nhóm này.</td></tr>`;
         return;
     }
 
@@ -227,6 +276,9 @@ function renderAdminTable() {
         tr.style.transition = 'background-color 0.2s';
         
         tr.innerHTML = `
+            <td style="text-align: center;">
+                <input type="checkbox" class="row-checkbox" value="${id}" style="transform: scale(1.2); cursor: pointer;">
+            </td>
             <td style="font-weight: 600; color: #1e293b;">
                 <div style="display: flex; align-items: center; gap: 12px; cursor: grab;" title="Kéo thả để đổi vị trí">
                     <i class="fa-solid fa-grip-vertical" style="color: #94a3b8; font-size: 1.1rem;"></i>
@@ -349,6 +401,44 @@ function renderAdminTable() {
             openCommentsModal(id, title);
         }
     });
+
+    // THÊM MỚI: Xử lý sự kiện Checkbox cho Bulk Action
+    const checkAll = document.getElementById('check-all');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const bulkPanel = document.getElementById('bulk-action-panel');
+    const selectedCountSpan = document.getElementById('selected-count');
+
+    function updateBulkPanel() {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const count = checkedBoxes.length;
+        if (selectedCountSpan) selectedCountSpan.innerText = count;
+        if (bulkPanel) {
+            if (count > 0) {
+                bulkPanel.style.display = 'flex';
+            } else {
+                bulkPanel.style.display = 'none';
+                if (checkAll) checkAll.checked = false;
+            }
+        }
+    }
+
+    if (checkAll) {
+        checkAll.checked = false;
+        checkAll.onchange = (e) => {
+            rowCheckboxes.forEach(cb => cb.checked = e.target.checked);
+            updateBulkPanel();
+        };
+    }
+
+    rowCheckboxes.forEach(cb => {
+        cb.onchange = () => {
+            if (!cb.checked && checkAll) checkAll.checked = false;
+            else if (document.querySelectorAll('.row-checkbox:checked').length === rowCheckboxes.length && checkAll) checkAll.checked = true;
+            updateBulkPanel();
+        };
+    });
+    
+    if(bulkPanel) bulkPanel.style.display = 'none';
 }
 
 async function updateOrderInFirestore() {
