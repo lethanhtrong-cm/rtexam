@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const userData = docSnap.data();
                     let tier = userData.vipTier;
                     if (!tier && userData.isVip) tier = 'plus'; 
-                    currentUserTier = tier || 'free';
+                    currentUserTier = String(tier || 'free').toLowerCase().trim();
                     currentUserName = userData.fullName || userData.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
                 } else {
                     currentUserTier = 'free';
