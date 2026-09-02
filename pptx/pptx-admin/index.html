@@ -54,28 +54,10 @@
         </div>
         
         <div class="admin-layout">
-            <div class="admin-sidebar">
+            <!-- Sidebar bây giờ sẽ trống và chờ JS nhúng vào -->
+            <div class="admin-sidebar" id="dynamic-admin-sidebar">
                 <h3>Danh mục quản lý</h3>
-                
-                <div class="admin-menu-parent">
-                    <i class="fa-solid fa-magnet" style="color: #3b82f6; width: 16px; text-align: center;"></i> Cộng hưởng từ (MRI)
-                </div>
-                <div class="admin-menu-item active" data-cat="mri_pptx" data-name="MRI - Bản thuyết trình">
-                    <i class="fa-solid fa-file-powerpoint"></i> Bản thuyết trình
-                </div>
-                <div class="admin-menu-item" data-cat="mri_video" data-name="MRI - Video Clip">
-                    <i class="fa-solid fa-circle-play"></i> Video Clip
-                </div>
-                
-                <div class="admin-menu-item root-item" data-cat="ct" data-name="CT">
-                    <i class="fa-solid fa-x-ray" style="color: #22c55e;"></i> Cắt lớp vi tính (CT)
-                </div>
-                <div class="admin-menu-item root-item" data-cat="xray" data-name="X-quang">
-                    <i class="fa-solid fa-person-rays" style="color: #ec4899;"></i> X-quang
-                </div>
-                <div class="admin-menu-item root-item" data-cat="contrast" data-name="Thuốc tương phản">
-                    <i class="fa-solid fa-syringe" style="color: #f59e0b;"></i> Thuốc tương phản
-                </div>
+                <div style="padding: 20px; text-align: center; color: #64748b;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
             </div>
             
             <div class="admin-main">
@@ -86,12 +68,8 @@
                     
                     <div class="form-group">
                         <label>Nhóm chuyên khoa:</label>
+                        <!-- Select Option cũng sẽ trống và chờ JS nhúng vào -->
                         <select id="pptx-category">
-                            <option value="mri_pptx">Cộng hưởng từ (MRI) - Bản thuyết trình</option>
-                            <option value="mri_video">Cộng hưởng từ (MRI) - Video Clip</option>
-                            <option value="ct">Cắt lớp vi tính (CT)</option>
-                            <option value="xray">X-quang</option>
-                            <option value="contrast">Thuốc tương phản</option>
                         </select>
                     </div>
 
@@ -123,7 +101,6 @@
                             <th>Tên bài giảng</th>
                             <th>Link Nhúng / File Video</th>
                             <th style="width: 100px; text-align: center;">Lượt xem</th>
-                            <!-- THÊM MỚI: Cột Đánh giá -->
                             <th style="width: 120px; text-align: center;">Đánh giá</th>
                             <th style="width: 200px; text-align: center;">Thao tác</th>
                         </tr>
@@ -136,6 +113,7 @@
         </div>
     </div>
 
+    <!-- Modal Bình luận hiện có -->
     <div id="comments-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
         <div style="background: white; width: 90%; max-width: 600px; border-radius: 12px; padding: 25px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
@@ -143,6 +121,25 @@
                 <button id="close-comments-modal" style="background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="modal-comments-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 15px; padding-right: 5px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- THÊM MỚI: Modal Cấu hình Cây thư mục -->
+    <div id="tree-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; width: 90%; max-width: 900px; border-radius: 12px; padding: 25px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px;">
+                <h2 style="font-size: 1.2rem; color: #0f172a; margin: 0;"><i class="fa-solid fa-sitemap"></i> Cấu hình Cây Thư mục (Hiển thị User)</h2>
+                <button id="close-tree-modal" style="background: #f1f5f9; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="tree-editor-container" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                <!-- JS sẽ render form vào đây -->
+            </div>
+            
+            <div style="text-align: right; border-top: 1px solid #e2e8f0; padding-top: 15px; margin-top: 15px;">
+                <button onclick="window.addMainCat()" class="btn-submit" style="background: #10b981; margin-right: 10px;"><i class="fa-solid fa-plus"></i> Thêm Chuyên Khoa Gốc</button>
+                <button id="btn-save-tree" class="btn-submit"><i class="fa-solid fa-floppy-disk"></i> Lưu & Áp Dụng Ngay</button>
             </div>
         </div>
     </div>
