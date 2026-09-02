@@ -28,7 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCancel = document.getElementById('btn-cancel');
 
     btnSave.addEventListener('click', handleSavePptx);
-    btnCancel.addEventListener('click', () => UI.resetForm(currentAdminCategory));
+    
+    // FIX 1: Reset editingId khi bấm nút Hủy Sửa
+    btnCancel.addEventListener('click', () => {
+        editingId = null;
+        UI.resetForm(currentAdminCategory);
+    });
 
     document.getElementById('close-comments-modal').addEventListener('click', () => {
         document.getElementById('comments-modal').style.display = 'none';
@@ -53,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('tree-modal').style.display = 'none';
     });
 
-    // THÊM MỚI: Xử lý sự kiện "Chuyển thư mục" hàng loạt
     document.getElementById('btn-bulk-move').addEventListener('click', async () => {
         const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
         const targetCat = document.getElementById('bulk-target-category').value;
@@ -74,11 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     promises.push(updateDoc(doc(db, "pptx_lectures", id), { category: targetCat }));
                 });
                 
-                // Thực thi updateDoc song song
                 await Promise.all(promises);
                 alert("Chuyển thư mục thành công!");
                 
-                // Reset giao diện Bulk Action
                 document.getElementById('bulk-action-panel').style.display = 'none';
                 if (document.getElementById('check-all')) document.getElementById('check-all').checked = false;
             } catch (error) {
@@ -125,7 +127,6 @@ function updateCategorySelectOptions() {
     document.getElementById('pptx-category').innerHTML = dataHtml.selectHtml;
     document.getElementById('dynamic-admin-sidebar').innerHTML = dataHtml.sidebarHtml;
     
-    // Đồng bộ danh sách select cho thanh Bulk Action Panel
     const bulkSelect = document.getElementById('bulk-target-category');
     if (bulkSelect) bulkSelect.innerHTML = dataHtml.selectHtml;
     
@@ -135,9 +136,11 @@ function updateCategorySelectOptions() {
             const target = e.currentTarget;
             target.classList.add('active');
             currentAdminCategory = target.getAttribute('data-cat');
+            
+            // FIX 2: Reset editingId khi chuyển tab thư mục bên Sidebar
+            editingId = null;
             UI.resetForm(currentAdminCategory);
             
-            // Xóa tick "Check All" khi đổi Tab
             const checkAll = document.getElementById('check-all');
             if(checkAll) checkAll.checked = false;
             document.getElementById('bulk-action-panel').style.display = 'none';
@@ -258,7 +261,6 @@ function renderAdminTable() {
     const filteredData = allAdminPptx.filter(item => item.category === currentAdminCategory);
 
     if (filteredData.length === 0) {
-        // Tăng colspan lên 6 vì đã có thêm cột Checkbox
         tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #64748b;">Chưa có bài giảng nào trong nhóm này.</td></tr>`;
         return;
     }
@@ -402,7 +404,6 @@ function renderAdminTable() {
         }
     });
 
-    // THÊM MỚI: Xử lý sự kiện Checkbox cho Bulk Action
     const checkAll = document.getElementById('check-all');
     const rowCheckboxes = document.querySelectorAll('.row-checkbox');
     const bulkPanel = document.getElementById('bulk-action-panel');
@@ -583,6 +584,11 @@ async function processSave(title, finalUrl, selectedCategory) {
                 createdAt: serverTimestamp()
             });
         }
+        
+        // FIX 3: Reset editingId khi lưu thành công
+        editingId = null;
         UI.resetForm(currentAdminCategory);
-    } catch (err) {}
+    } catch (err) {
+        console.error(err);
+    }
 }
