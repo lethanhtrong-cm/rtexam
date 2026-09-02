@@ -33,6 +33,7 @@
         </div>
     </nav>
 
+    <!-- MÀN HÌNH 1: TRANG CHỦ -->
     <div id="hero-page" class="hero-container">
         
         <div id="quota-banner" class="quota-banner free-banner">
@@ -73,7 +74,7 @@
             </div>
         </div>
         
-        <!-- THAY ĐỔI: Khối chứa Category trống để Javascript tự động render cây thư mục -->
+        <!-- Khối chứa Category trống để Javascript tự động render Card -->
         <div class="category-grid" id="dynamic-category-grid">
             <div style="text-align: center; color: #94a3b8; width: 100%; grid-column: 1 / -1;">
                 <i class="fa-solid fa-spinner fa-spin"></i> Đang tải cấu trúc từ hệ thống...
@@ -81,6 +82,20 @@
         </div>
     </div>
 
+    <!-- THÊM MỚI - MÀN HÌNH 2: TRANG CHI TIẾT CÂY THƯ MỤC CHUYÊN KHOA -->
+    <div id="category-detail-page" class="category-detail-container" style="display: none;">
+        <div class="detail-content-wrapper">
+            <div class="detail-header">
+                <button id="btn-back-from-detail" class="btn-back-hero" style="background: #64748b; display: inline-flex;"><i class="fa-solid fa-arrow-left"></i> Quay lại</button>
+                <h2 id="detail-category-title">Tên chuyên khoa</h2>
+            </div>
+            <div id="detail-tree-container" class="detail-tree-container">
+                <!-- Javascript sẽ vẽ toàn bộ thư mục và bài giảng vào đây -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH 3: TRANG XEM VIDEO/PPTX -->
     <div id="viewer-page" class="pptx-layout" style="display: none;">
         
         <aside class="pptx-sidebar">
