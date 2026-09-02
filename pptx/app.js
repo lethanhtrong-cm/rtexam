@@ -17,6 +17,9 @@ let viewedLectures = [];
 let userStorageKey = 'viewedLectures_guest';
 let currentCommentsUnsubscribe = null; 
 
+// Biến lưu trữ Chuyên khoa đang mở để phục vụ tính năng "Quay Lại"
+let currentOpenRootCat = null; 
+
 const defaultTree = [
     { id: 'mri', name: 'Cộng hưởng từ (MRI)', icon: 'fa-magnet', color: '#3b82f6', bg: '#eff6ff', desc: 'Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI', children: [
         { id: 'mri_video', name: 'Video Clip', icon: 'fa-circle-play', children: [
@@ -114,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Sự kiện Nút Quay Lại từ Trang Viewer
     document.getElementById('btn-back-hero').addEventListener('click', () => {
         currentSelectedCategory = null;
         currentLoadedItemId = null; 
@@ -125,6 +129,17 @@ document.addEventListener('DOMContentLoaded', () => {
             currentCommentsUnsubscribe();
             currentCommentsUnsubscribe = null;
         }
+        
+        if (currentOpenRootCat) {
+            UI.showCategoryDetailPageFromViewer();
+        } else {
+            UI.showHeroPage();
+        }
+    });
+
+    // Sự kiện Nút Quay Lại từ Trang Cây Thư mục (Detail Page)
+    document.getElementById('btn-back-from-detail').addEventListener('click', () => {
+        currentOpenRootCat = null;
         UI.showHeroPage();
     });
 
@@ -168,11 +183,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 await setDoc(doc(db, "settings", "category_tree"), { tree: globalCategoryTree });
             }
             
-            UI.renderCategoryTree(globalCategoryTree, (catId, catName) => {
-                currentSelectedCategory = catId;
-                currentLoadedItemId = null;
-                UI.showViewerPage(catName, currentViewMode);
-                renderPptxList();
+            // Xử lý Sự kiện khi Click vào 1 Card ngoài Trang Chủ
+            UI.renderCategoryTree(globalCategoryTree, (rootCat) => {
+                currentOpenRootCat = rootCat;
+                UI.renderCategoryDetail(rootCat, pptxDataList, (lecId, catId, catName) => {
+                    currentSelectedCategory = catId;
+                    currentLoadedItemId = lecId;
+                    UI.showViewerPage(catName, currentViewMode);
+                    renderPptxList();
+                });
             });
             
             fetchPptxFromDatabase();
@@ -200,6 +219,16 @@ function fetchPptxFromDatabase() {
         
         UI.updateStatsUI(pptxDataList);
 
+        // Tự động render lại Trang Cây Thư mục nếu Admin vừa cập nhật bài giảng 
+        if (currentOpenRootCat && document.getElementById('category-detail-page') && document.getElementById('category-detail-page').style.display === 'block') {
+            UI.renderCategoryDetail(currentOpenRootCat, pptxDataList, (lecId, catId, catName) => {
+                currentSelectedCategory = catId;
+                currentLoadedItemId = lecId;
+                UI.showViewerPage(catName, currentViewMode);
+                renderPptxList();
+            });
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const sharedId = urlParams.get('lecture');
         
@@ -209,20 +238,21 @@ function fetchPptxFromDatabase() {
                 let cat = sharedItem.category || 'mri_pptx';
                 let catName = 'Bài giảng được chia sẻ';
                 
-                // THAY ĐỔI: Dò tìm tên chuyên khoa chính xác từ cây 3 cấp
-                globalCategoryTree.forEach(mCat => {
-                    if(mCat.id === cat) catName = mCat.name;
-                    if(mCat.children) {
-                        mCat.children.forEach(cCat => {
-                            if(cCat.id === cat) catName = `${mCat.name} - ${cCat.name}`;
-                            if(cCat.children) {
-                                cCat.children.forEach(sub => {
-                                    if(sub.id === cat) catName = `${mCat.name} - ${cCat.name} - ${sub.name}`;
-                                });
-                            }
-                        });
+                // Dò tìm tên phân nhánh đệ quy
+                const findCatName = (nodes, currentPath = '') => {
+                    for(let i=0; i<nodes.length; i++) {
+                        const path = currentPath ? `${currentPath} - ${nodes[i].name}` : nodes[i].name;
+                        if(nodes[i].id === cat) return path;
+                        if(nodes[i].children) {
+                            const result = findCatName(nodes[i].children, path);
+                            if(result) return result;
+                        }
                     }
-                });
+                    return null;
+                };
+                
+                const foundName = findCatName(globalCategoryTree);
+                if(foundName) catName = foundName;
 
                 currentSelectedCategory = cat;
                 currentLoadedItemId = sharedId;
