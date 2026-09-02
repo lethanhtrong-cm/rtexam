@@ -1,6 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// THÊM MỚI setDoc để lưu cấu hình cây
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, serverTimestamp, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -26,7 +25,6 @@ let allAdminPptx = [];
 let draggedRow = null;
 let isReordering = false;
 
-// Dữ liệu mảng cây thư mục toàn cục của Admin
 let adminCategoryTree = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -35,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Bạn cần đăng nhập bằng tài khoản Quản trị!");
             window.location.href = '../../dashboard.html';
         } else {
-            // Khởi tạo Lắng nghe Cây cấu hình từ DB
             listenToCategoryTree();
             loadPptxData();
         }
@@ -52,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAdminTable(); 
     });
 
-    // Sự kiện Lưu Cây cấu hình
     document.getElementById('btn-save-tree').addEventListener('click', async () => {
         try {
             document.getElementById('btn-save-tree').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...';
@@ -81,9 +77,16 @@ function listenToCategoryTree() {
         }
         
         if (!currentAdminCategory && adminCategoryTree.length > 0) {
-            // Tự động gán category mặc định nếu chưa chọn
             const firstCat = adminCategoryTree[0];
-            currentAdminCategory = (firstCat.children && firstCat.children.length > 0) ? firstCat.children[0].id : firstCat.id;
+            if (firstCat.children && firstCat.children.length > 0) {
+                if (firstCat.children[0].children && firstCat.children[0].children.length > 0) {
+                    currentAdminCategory = firstCat.children[0].children[0].id;
+                } else {
+                    currentAdminCategory = firstCat.children[0].id;
+                }
+            } else {
+                currentAdminCategory = firstCat.id;
+            }
         }
 
         updateCategorySelectOptions();
@@ -91,7 +94,6 @@ function listenToCategoryTree() {
     });
 }
 
-// Render Select Option và Sidebar từ Mảng Tree
 function updateCategorySelectOptions() {
     const select = document.getElementById('pptx-category');
     const sidebar = document.getElementById('dynamic-admin-sidebar');
@@ -105,9 +107,18 @@ function updateCategorySelectOptions() {
          
          if(cat.children && cat.children.length > 0) {
              cat.children.forEach(child => {
-                 select.innerHTML += `<option value="${child.id}">${cat.name} - ${child.name}</option>`;
-                 const isActive = currentAdminCategory === child.id ? 'active' : '';
-                 sidebarHtml += `<div class="admin-menu-item ${isActive}" data-cat="${child.id}"><i class="fa-solid ${child.icon}"></i> ${child.name}</div>`;
+                 if (child.children && child.children.length > 0) {
+                     sidebarHtml += `<div class="admin-menu-parent" style="padding-left: 45px; font-size: 0.85rem; color: #64748b;"><i class="fa-solid ${child.icon}"></i> ${child.name}</div>`;
+                     child.children.forEach(sub => {
+                         select.innerHTML += `<option value="${sub.id}">${cat.name} - ${child.name} - ${sub.name}</option>`;
+                         const isActive = currentAdminCategory === sub.id ? 'active' : '';
+                         sidebarHtml += `<div class="admin-menu-item ${isActive}" data-cat="${sub.id}" style="padding-left: 60px; font-size: 0.9rem;"><i class="fa-solid ${sub.icon}"></i> ${sub.name}</div>`;
+                     });
+                 } else {
+                     select.innerHTML += `<option value="${child.id}">${cat.name} - ${child.name}</option>`;
+                     const isActive = currentAdminCategory === child.id ? 'active' : '';
+                     sidebarHtml += `<div class="admin-menu-item ${isActive}" data-cat="${child.id}"><i class="fa-solid ${child.icon}"></i> ${child.name}</div>`;
+                 }
              });
          } else {
              select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
@@ -134,7 +145,6 @@ function updateCategorySelectOptions() {
     });
 }
 
-// CÁC HÀM XỬ LÝ EDITOR (Treo vào cửa sổ Window để onClick HTML gọi được)
 window.renderTreeEditor = function() {
     const container = document.getElementById('tree-editor-container');
     let html = '';
@@ -142,52 +152,84 @@ window.renderTreeEditor = function() {
         html += `
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="text" value="${cat.name}" placeholder="Tên chuyên khoa" style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, null, 'name', this.value)">
-                <input type="text" value="${cat.id}" placeholder="Mã ID (vd: mri)" style="width: 120px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, null, 'id', this.value)">
-                <input type="text" value="${cat.icon}" placeholder="Icon (vd: fa-magnet)" style="width: 140px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, null, 'icon', this.value)">
+                <input type="text" value="${cat.name}" placeholder="Tên chuyên khoa" style="flex: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: bold;" onchange="updateTreeData(${i}, null, null, 'name', this.value)">
+                <input type="text" value="${cat.id}" placeholder="Mã ID" style="width: 120px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, null, null, 'id', this.value)">
+                <input type="text" value="${cat.icon}" placeholder="Icon" style="width: 140px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, null, null, 'icon', this.value)">
                 <button class="btn-cancel" style="display:inline-flex;" onclick="removeTreeCat(${i})" title="Xóa chuyên khoa"><i class="fa-solid fa-trash"></i></button>
             </div>
             <div style="padding-left: 30px; border-left: 2px dashed #cbd5e1; display: flex; flex-direction: column; gap: 8px;">
         `;
+        
         if (cat.children && cat.children.length > 0) {
             cat.children.forEach((child, j) => {
                 html += `
-                <div style="display: flex; gap: 10px; position: relative; align-items: center;">
-                    <span style="position: absolute; left: -30px; top: 15px; width: 20px; height: 2px; background: #cbd5e1;"></span>
-                    <input type="text" value="${child.name}" placeholder="Tên nhánh con" style="flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, ${j}, 'name', this.value)">
-                    <input type="text" value="${child.id}" placeholder="Mã ID nhánh (vd: mri_video)" style="width: 150px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, ${j}, 'id', this.value)">
-                    <input type="text" value="${child.icon}" placeholder="Icon (fa-circle-play)" style="width: 140px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, ${j}, 'icon', this.value)">
-                    <button class="btn-cancel" style="display:inline-flex; padding: 6px 12px;" onclick="removeTreeChild(${i}, ${j})"><i class="fa-solid fa-xmark"></i></button>
-                </div>`;
+                <div style="display: flex; flex-direction: column; gap: 5px; position: relative; margin-top: 5px;">
+                    <div style="display: flex; gap: 10px; position: relative; align-items: center;">
+                        <span style="position: absolute; left: -30px; top: 15px; width: 20px; height: 2px; background: #cbd5e1;"></span>
+                        <input type="text" value="${child.name}" placeholder="Tên nhánh con cấp 2" style="flex: 1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-weight: 600;" onchange="updateTreeData(${i}, ${j}, null, 'name', this.value)">
+                        <input type="text" value="${child.id}" placeholder="Mã ID nhánh" style="width: 150px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, ${j}, null, 'id', this.value)">
+                        <input type="text" value="${child.icon}" placeholder="Icon" style="width: 140px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="updateTreeData(${i}, ${j}, null, 'icon', this.value)">
+                        <button class="btn-cancel" style="display:inline-flex; padding: 6px 12px;" onclick="removeTreeChild(${i}, ${j}, null)"><i class="fa-solid fa-xmark"></i></button>
+                    </div>`;
+
+                if (child.children && child.children.length > 0) {
+                    html += `<div style="margin-left: 20px; padding-left: 20px; border-left: 2px dotted #cbd5e1; display: flex; flex-direction: column; gap: 8px; margin-top: 5px; margin-bottom: 10px;">`;
+                    child.children.forEach((sub, k) => {
+                        html += `
+                        <div style="display: flex; gap: 10px; position: relative; align-items: center;">
+                            <span style="position: absolute; left: -20px; top: 15px; width: 15px; height: 2px; background: #cbd5e1;"></span>
+                            <input type="text" value="${sub.name}" placeholder="Tên nhánh cấp 3" style="flex: 1; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;" onchange="updateTreeData(${i}, ${j}, ${k}, 'name', this.value)">
+                            <input type="text" value="${sub.id}" placeholder="Mã ID" style="width: 150px; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;" onchange="updateTreeData(${i}, ${j}, ${k}, 'id', this.value)">
+                            <input type="text" value="${sub.icon}" placeholder="Icon" style="width: 140px; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;" onchange="updateTreeData(${i}, ${j}, ${k}, 'icon', this.value)">
+                            <button class="btn-cancel" style="display:inline-flex; padding: 4px 10px;" onclick="removeTreeChild(${i}, ${j}, ${k})"><i class="fa-solid fa-xmark"></i></button>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                }
+                html += `<div style="margin-left: 40px; margin-bottom: 10px;"><button onclick="addTreeSubChild(${i}, ${j})" style="padding: 4px 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">+ Thêm nhánh cấp 3</button></div></div>`;
             });
         }
-        html += `
-                <button onclick="addTreeChild(${i})" style="margin-top: 5px; align-self: flex-start; padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">+ Thêm nhánh con</button>
+        html += `<button onclick="addTreeChild(${i})" style="margin-top: 5px; align-self: flex-start; padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">+ Thêm nhánh cấp 2</button>
             </div>
         </div>`;
     });
     container.innerHTML = html;
 };
 
-window.updateTreeData = (i, j, key, val) => {
+window.updateTreeData = (i, j, k, key, val) => {
     if (j === null) adminCategoryTree[i][key] = val;
-    else adminCategoryTree[i].children[j][key] = val;
+    else if (k === null) adminCategoryTree[i].children[j][key] = val;
+    else adminCategoryTree[i].children[j].children[k][key] = val;
 };
+
 window.removeTreeCat = (i) => {
-    if(confirm('Bạn có chắc muốn xóa toàn bộ chuyên khoa này khỏi Menu? (Không làm mất dữ liệu bài giảng cũ)')) {
+    if(confirm('Bạn có chắc muốn xóa chuyên khoa này?')) {
         adminCategoryTree.splice(i, 1); 
         window.renderTreeEditor();
     }
 };
-window.removeTreeChild = (i, j) => {
-    adminCategoryTree[i].children.splice(j, 1); 
+
+window.removeTreeChild = (i, j, k) => {
+    if (k !== null && k !== undefined) {
+        adminCategoryTree[i].children[j].children.splice(k, 1);
+    } else {
+        adminCategoryTree[i].children.splice(j, 1); 
+    }
     window.renderTreeEditor();
 };
+
 window.addTreeChild = (i) => { 
     if(!adminCategoryTree[i].children) adminCategoryTree[i].children = [];
-    adminCategoryTree[i].children.push({id: `sub_${Date.now()}`, name: 'Nhánh mới', icon: 'fa-circle-play'});
+    adminCategoryTree[i].children.push({id: `sub_${Date.now()}`, name: 'Nhánh cấp 2', icon: 'fa-circle-play'});
     window.renderTreeEditor();
 };
+
+window.addTreeSubChild = (i, j) => {
+    if(!adminCategoryTree[i].children[j].children) adminCategoryTree[i].children[j].children = [];
+    adminCategoryTree[i].children[j].children.push({id: `sub3_${Date.now()}`, name: 'Nhánh cấp 3', icon: 'fa-caret-right'});
+    window.renderTreeEditor();
+};
+
 window.addMainCat = () => {
     adminCategoryTree.push({id: `main_${Date.now()}`, name: 'Chuyên khoa mới', icon: 'fa-folder', color: '#3b82f6', bg: '#eff6ff', desc: 'Mô tả chuyên khoa', children: []});
     window.renderTreeEditor();
@@ -411,9 +453,7 @@ async function updateOrderInFirestore() {
     
     rows.forEach((row, index) => {
         const id = row.getAttribute('data-id');
-        if (id) {
-            promises.push(updateDoc(doc(db, "pptx_lectures", id), { order: index }));
-        }
+        if (id) promises.push(updateDoc(doc(db, "pptx_lectures", id), { order: index }));
     });
     
     try {
