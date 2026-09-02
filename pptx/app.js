@@ -1,7 +1,6 @@
 import { auth, db } from "./firebase-config.js";
 import { UI } from "./app-ui.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// THÊM MỚI setDoc để backup Default Tree nếu DB trống
 import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment, addDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FREE_LIMIT = 3;
@@ -18,10 +17,12 @@ let viewedLectures = [];
 let userStorageKey = 'viewedLectures_guest';
 let currentCommentsUnsubscribe = null; 
 
-// THÊM MỚI: Cây thư mục Mặc định (Sẽ bị ghi đè nếu Admin đã cấu hình trên Firebase)
 const defaultTree = [
     { id: 'mri', name: 'Cộng hưởng từ (MRI)', icon: 'fa-magnet', color: '#3b82f6', bg: '#eff6ff', desc: 'Khám phá các bài giảng giải phẫu và kỹ thuật chụp MRI', children: [
-        { id: 'mri_video', name: 'Video Clip', icon: 'fa-circle-play' },
+        { id: 'mri_video', name: 'Video Clip', icon: 'fa-circle-play', children: [
+            { id: 'mri_video_1', name: 'Video Cơ bản', icon: 'fa-play' },
+            { id: 'mri_video_2', name: 'Video Nâng cao', icon: 'fa-play' }
+        ]},
         { id: 'mri_pptx', name: 'Bản thuyết trình', icon: 'fa-file-powerpoint' }
     ]},
     { id: 'ct', name: 'Cắt lớp vi tính (CT)', icon: 'fa-x-ray', color: '#22c55e', bg: '#f0fdf4', desc: 'Bài giảng về nguyên lý và ứng dụng CT Scanner', children: [
@@ -159,13 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.updateAuthUI(currentUserTier, badge);
         UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
         
-        // THÊM MỚI: Lắng nghe cấu hình Cây thư mục thời gian thực từ Firestore
         onSnapshot(doc(db, "settings", "category_tree"), async (docSnap) => {
             if(docSnap.exists() && docSnap.data().tree) {
                 globalCategoryTree = docSnap.data().tree;
             } else {
                 globalCategoryTree = defaultTree;
-                // Nếu chưa có bảng trên server, tự động tạo mới lần đầu bằng bộ Default
                 await setDoc(doc(db, "settings", "category_tree"), { tree: globalCategoryTree });
             }
             
@@ -176,7 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPptxList();
             });
             
-            // Xử lý nốt logic Fetch bài giảng
             fetchPptxFromDatabase();
         });
         
@@ -211,12 +209,17 @@ function fetchPptxFromDatabase() {
                 let cat = sharedItem.category || 'mri_pptx';
                 let catName = 'Bài giảng được chia sẻ';
                 
-                // THAY ĐỔI: Dò tìm tên chuyên khoa chính xác từ cây động
+                // THAY ĐỔI: Dò tìm tên chuyên khoa chính xác từ cây 3 cấp
                 globalCategoryTree.forEach(mCat => {
                     if(mCat.id === cat) catName = mCat.name;
                     if(mCat.children) {
                         mCat.children.forEach(cCat => {
                             if(cCat.id === cat) catName = `${mCat.name} - ${cCat.name}`;
+                            if(cCat.children) {
+                                cCat.children.forEach(sub => {
+                                    if(sub.id === cat) catName = `${mCat.name} - ${cCat.name} - ${sub.name}`;
+                                });
+                            }
                         });
                     }
                 });
