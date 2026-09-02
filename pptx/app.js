@@ -17,7 +17,6 @@ let viewedLectures = [];
 let userStorageKey = 'viewedLectures_guest';
 let currentCommentsUnsubscribe = null; 
 
-// Biến lưu trữ Chuyên khoa đang mở để phục vụ tính năng "Quay Lại"
 let currentOpenRootCat = null; 
 
 const defaultTree = [
@@ -117,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Sự kiện Nút Quay Lại từ Trang Viewer
+    // SỰ KIỆN QUAY LẠI TỪ TRANG XEM VIDEO
     document.getElementById('btn-back-hero').addEventListener('click', () => {
         currentSelectedCategory = null;
         currentLoadedItemId = null; 
@@ -130,17 +129,23 @@ document.addEventListener('DOMContentLoaded', () => {
             currentCommentsUnsubscribe = null;
         }
         
+        UI.showHeroPage();
+        
+        // Nếu có chuyên khoa đang mở, cuộn ngược lại về vị trí Cây thư mục đó
         if (currentOpenRootCat) {
-            UI.showCategoryDetailPageFromViewer();
+            const detailSec = document.getElementById('category-detail-section');
+            detailSec.style.display = 'flex';
+            setTimeout(() => detailSec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
         } else {
-            UI.showHeroPage();
+            document.getElementById('category-detail-section').style.display = 'none';
         }
     });
 
-    // Sự kiện Nút Quay Lại từ Trang Cây Thư mục (Detail Page)
-    document.getElementById('btn-back-from-detail').addEventListener('click', () => {
+    // SỰ KIỆN ĐÓNG CÂY THƯ MỤC
+    document.getElementById('btn-close-detail').addEventListener('click', () => {
         currentOpenRootCat = null;
-        UI.showHeroPage();
+        document.getElementById('category-detail-section').style.display = 'none';
+        document.getElementById('dynamic-category-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     onAuthStateChanged(auth, async (user) => {
@@ -183,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await setDoc(doc(db, "settings", "category_tree"), { tree: globalCategoryTree });
             }
             
-            // Xử lý Sự kiện khi Click vào 1 Card ngoài Trang Chủ
+            // Xử lý Sự kiện khi Click vào 1 Card ngoài Trang Chủ -> Render Section bên dưới
             UI.renderCategoryTree(globalCategoryTree, (rootCat) => {
                 currentOpenRootCat = rootCat;
                 UI.renderCategoryDetail(rootCat, pptxDataList, (lecId, catId, catName) => {
@@ -219,8 +224,8 @@ function fetchPptxFromDatabase() {
         
         UI.updateStatsUI(pptxDataList);
 
-        // Tự động render lại Trang Cây Thư mục nếu Admin vừa cập nhật bài giảng 
-        if (currentOpenRootCat && document.getElementById('category-detail-page') && document.getElementById('category-detail-page').style.display === 'block') {
+        // Tự động render lại Cây Thư mục nếu Admin cập nhật bài giảng khi Cây đang mở
+        if (currentOpenRootCat && document.getElementById('category-detail-section').style.display !== 'none') {
             UI.renderCategoryDetail(currentOpenRootCat, pptxDataList, (lecId, catId, catName) => {
                 currentSelectedCategory = catId;
                 currentLoadedItemId = lecId;
@@ -238,7 +243,6 @@ function fetchPptxFromDatabase() {
                 let cat = sharedItem.category || 'mri_pptx';
                 let catName = 'Bài giảng được chia sẻ';
                 
-                // Dò tìm tên phân nhánh đệ quy
                 const findCatName = (nodes, currentPath = '') => {
                     for(let i=0; i<nodes.length; i++) {
                         const path = currentPath ? `${currentPath} - ${nodes[i].name}` : nodes[i].name;
