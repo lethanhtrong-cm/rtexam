@@ -26,6 +26,13 @@ function renderFreeBadgeUI() {
     if (elBenefitsFree) elBenefitsFree.style.display = 'block';
     if (elBenefitsPlus) elBenefitsPlus.style.display = 'none';
     if (elBenefitsPro) elBenefitsPro.style.display = 'none';
+
+    // ĐỒNG BỘ TRẠNG THÁI Ở TAB VIP VỀ GÓI FREE
+    const elVipStatusTab3 = document.getElementById("vipStatusTab3");
+    if (elVipStatusTab3) {
+        elVipStatusTab3.innerHTML = '<i class="fa-solid fa-paper-plane" style="color: #22c55e;"></i> GÓI FREE';
+        elVipStatusTab3.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;';
+    }
 }
 
 export function initNotificationListener(auth, db) {
@@ -189,7 +196,7 @@ function fetchUserData(user, auth, db) {
                         let tierIcon = activeTier === 'pro' ? '<i class="fa-solid fa-crown"></i>' : '<i class="fa-solid fa-shield-halved"></i>';
                         let tierColor = activeTier === 'pro' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #3b82f6, #2563eb)';
 
-                        // ĐÃ THÊM: Đồng bộ hiển thị bảng quyền lợi bên tab-profile
+                        // Đồng bộ hiển thị bảng quyền lợi bên tab-profile
                         const elBenefitsFree = document.getElementById("benefits-free");
                         const elBenefitsPlus = document.getElementById("benefits-plus");
                         const elBenefitsPro = document.getElementById("benefits-pro");
@@ -203,7 +210,7 @@ function fetchUserData(user, auth, db) {
                             elVipStatusBadge.className = "status-badge status-active";
                         }
 
-                        // ĐÃ BỎ: Không can thiệp đổi CSS inline cứng nhắc cho Thẻ Trạng Thái Tab 3 ở đây nữa
+                        // ĐÃ KHÔI PHỤC: Cập nhật lại huy hiệu ở tab-vip để đồng bộ với Gói Plus/Pro
                         const elVipStatusTab3 = document.getElementById("vipStatusTab3");
                         if (elVipStatusTab3) {
                             if (activeTier === 'pro') {
