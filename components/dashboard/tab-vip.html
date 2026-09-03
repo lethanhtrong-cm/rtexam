@@ -79,8 +79,8 @@
                     </tr>
                     <tr>
                         <td style="padding: 14px 12px; text-align: left; color: #334155; font-weight: 500;">Truy cập Thư viện bài giảng PPTX</td>
-                        <td style="padding: 14px 12px;"><span style="font-size: 0.85rem; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">3 bài giảng/video</span></td>
-                        <td style="padding: 14px 12px; background: #eff6ff;"><span style="font-size: 0.85rem; font-weight: 700; color: #2563eb; background: #dbeafe; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">5 bài giảng/video</span></td>
+                        <td style="padding: 14px 12px;"><span style="font-size: 0.85rem; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">3 bài</span></td>
+                        <td style="padding: 14px 12px; background: #eff6ff;"><span style="font-size: 0.85rem; font-weight: 700; color: #2563eb; background: #dbeafe; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">5 bài</span></td>
                         <td style="padding: 14px 12px; background: #fff7ed;"><span style="font-size: 0.85rem; font-weight: 700; color: #ea580c; background: #ffedd5; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">Không giới hạn</span></td>
                     </tr>
                 </tbody>
@@ -122,7 +122,7 @@
         
         <!-- Khu vực Mã QR (Có nút Download) -->
         <div style="background: #ffffff; padding: 15px; border-radius: 16px; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); position: relative;">
-            <img id="qr-payment" src="https://img.vietqr.io/image/MB-2070120091994-compact.png?amount=30000&addInfo=NAPTIEN&accountName=LE%20THANH%20TRONG" alt="Mã QR Chuyển khoản" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
+            <img id="qr-payment" src="https://img.vietqr.io/image/MB-2070120091994-compact.png?amount=30000&addInfo=NAP%20TIEN&accountName=LE%20THANH%20TRONG" alt="Mã QR Chuyển khoản" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
             <button onclick="window.downloadQR()" style="margin-top: 15px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;">
                 <i class="fa-solid fa-download"></i> Lưu mã QR
             </button>
@@ -135,7 +135,7 @@
             
             <p style="color: #475569; font-size: 0.95rem; margin: 0 0 10px 0;">Nội dung chuyển khoản (bắt buộc chính xác):</p>
             <div style="background: #ffffff; border: 1.5px dashed #3b82f6; padding: 15px; border-radius: 8px; user-select: all; cursor: pointer; display: inline-block; width: 90%;" title="Bôi đen để copy">
-                <span style="font-weight: 800; color: #1d4ed8; font-size: 1.15rem; letter-spacing: 0.5px;" id="paymentEmailDisplay">NAPTIEN</span>
+                <span style="font-weight: 800; color: #1d4ed8; font-size: 1.15rem; letter-spacing: 0.5px;" id="paymentEmailDisplay">NAP TIEN</span>
             </div>
             
             <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px;">
@@ -158,26 +158,21 @@
     </div>
 </div>
 
-<!-- Đã sửa lỗi: Dùng thẻ img với src là 1px rỗng thay vì thẻ svg bị ẩn để đảm bảo onload luôn kích hoạt trên mọi trình duyệt -->
-<img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" style="display:none;" onload="
+<svg width="0" height="0" style="display:none;" onload="
     window.generateQR = function() {
         const emailEl = document.getElementById('paymentEmail');
         const displayEl = document.getElementById('paymentEmailDisplay');
         const checkedRadio = document.querySelector('input[name=\'packageSelect\']:checked');
         const amount = checkedRadio ? checkedRadio.value : '30000';
         
-        let transferContent = 'NAPTIEN'; 
+        let transferContent = 'NAP TIEN'; 
         
         if(emailEl && emailEl.dataset.originalEmail) {
             let fullEmail = emailEl.dataset.originalEmail;
             let username = fullEmail.split('@')[0].toUpperCase();
             username = username.replace(/[^A-Z0-9]/g, ''); 
-            // Đã sửa lỗi: Đổi thành 'NAPTIEN ' thay vì 'NAP '
-            transferContent = 'NAPTIEN ' + username; 
-        }
-        
-        if(displayEl) {
-            displayEl.innerText = transferContent;
+            transferContent = 'NAP ' + username;
+            if(displayEl) displayEl.innerText = transferContent;
         }
 
         const qrImg = document.getElementById('qr-payment');
@@ -230,19 +225,22 @@
     
     const checkEmailInterval = setInterval(() => {
         const emailEl = document.getElementById('paymentEmail');
-        // Sử dụng textContent thay vì innerText cho element bị display: none
-        if(emailEl && emailEl.textContent && emailEl.textContent.trim() !== '[Email của bạn]') {
-            emailEl.dataset.originalEmail = emailEl.textContent.trim();
+        if(emailEl && emailEl.innerText && emailEl.innerText !== '[Email của bạn]') {
+            emailEl.dataset.originalEmail = emailEl.innerText.trim();
             window.generateQR(); 
             clearInterval(checkEmailInterval); 
         }
     }, 500);
 
+    // ĐÃ SỬA LỖI: Thêm điều kiện if. Chỉ ép thành GÓI FREE nếu phát hiện thấy đoạn text tĩnh "chưa kích hoạt" của mã HTML gốc.
     const overrideStatusInterval = setInterval(() => {
         const statusEl = document.getElementById('vipStatusTab3');
         if (statusEl) {
-            statusEl.innerHTML = '<i class=\'fa-solid fa-paper-plane\' style=\'color: #22c55e;\'></i> GÓI FREE';
-            statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;';
+            const currentText = statusEl.innerText.toLowerCase();
+            if (currentText.includes('chưa kích hoạt')) {
+                statusEl.innerHTML = '<i class="fa-solid fa-paper-plane" style="color: #22c55e;"></i> GÓI FREE';
+                statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;';
+            }
         }
     }, 100);
-">
+"></svg>
