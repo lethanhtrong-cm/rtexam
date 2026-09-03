@@ -232,13 +232,13 @@
         }
     }, 500);
 
-    // ĐÃ SỬA LỖI: Thêm điều kiện if. Chỉ ép thành GÓI FREE nếu phát hiện thấy đoạn text tĩnh "chưa kích hoạt" của mã HTML gốc.
+    // ĐÃ SỬA LỖI TRÀN TEXT: Dùng backtick (`) và nháy đơn (') để không phá vỡ thuộc tính onload
     const overrideStatusInterval = setInterval(() => {
         const statusEl = document.getElementById('vipStatusTab3');
         if (statusEl) {
             const currentText = statusEl.innerText.toLowerCase();
             if (currentText.includes('chưa kích hoạt')) {
-                statusEl.innerHTML = '<i class="fa-solid fa-paper-plane" style="color: #22c55e;"></i> GÓI FREE';
+                statusEl.innerHTML = `<i class='fa-solid fa-paper-plane' style='color: #22c55e;'></i> GÓI FREE`;
                 statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;';
             }
         }
