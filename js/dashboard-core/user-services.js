@@ -18,6 +18,14 @@ function renderFreeBadgeUI() {
             </button>
         `;
     }
+    
+    // ĐỒNG BỘ BẢNG QUYỀN LỢI Ở TAB PROFILE VỀ GÓI FREE
+    const elBenefitsFree = document.getElementById("benefits-free");
+    const elBenefitsPlus = document.getElementById("benefits-plus");
+    const elBenefitsPro = document.getElementById("benefits-pro");
+    if (elBenefitsFree) elBenefitsFree.style.display = 'block';
+    if (elBenefitsPlus) elBenefitsPlus.style.display = 'none';
+    if (elBenefitsPro) elBenefitsPro.style.display = 'none';
 }
 
 export function initNotificationListener(auth, db) {
@@ -181,6 +189,14 @@ function fetchUserData(user, auth, db) {
                         let tierIcon = activeTier === 'pro' ? '<i class="fa-solid fa-crown"></i>' : '<i class="fa-solid fa-shield-halved"></i>';
                         let tierColor = activeTier === 'pro' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #3b82f6, #2563eb)';
 
+                        // ĐÃ THÊM: Đồng bộ hiển thị bảng quyền lợi bên tab-profile
+                        const elBenefitsFree = document.getElementById("benefits-free");
+                        const elBenefitsPlus = document.getElementById("benefits-plus");
+                        const elBenefitsPro = document.getElementById("benefits-pro");
+                        if (elBenefitsFree) elBenefitsFree.style.display = 'none';
+                        if (elBenefitsPlus) elBenefitsPlus.style.display = activeTier === 'plus' ? 'block' : 'none';
+                        if (elBenefitsPro) elBenefitsPro.style.display = activeTier === 'pro' ? 'block' : 'none';
+
                         const elVipStatusBadge = document.getElementById("vipStatusBadge");
                         if (elVipStatusBadge) {
                             elVipStatusBadge.textContent = `Đã kích hoạt ${tierName}`;
@@ -206,7 +222,7 @@ function fetchUserData(user, auth, db) {
                         if (elVipEndDate) elVipEndDate.textContent = expiryDateObj ? formatDate(expiryDateObj) : "Vĩnh viễn / Không xác định";
 
                         // =========================================================================
-                        // ĐÃ SỬA: RENDER HUY HIỆU VÀ CHỈNH SỬA ONCLICK CỦA NÚT NÂNG CẤP PRO
+                        // RENDER HUY HIỆU VÀ CHỈNH SỬA ONCLICK CỦA NÚT NÂNG CẤP PRO
                         // =========================================================================
                         const topbarVipContainer = document.getElementById('topbar-vip-container');
                         if (topbarVipContainer) {
