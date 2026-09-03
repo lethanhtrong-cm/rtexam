@@ -428,6 +428,15 @@
             }
         }
     </script>
+    
+    <script>
+        // Tự động ẩn/hiện thanh Action Bar theo trạng thái của tab Kho Đề Thi
+        new MutationObserver(() => {
+            const isDash = document.getElementById('tab-exams').classList.contains('active');
+            const actionBar = document.querySelector('.dashboard-action-bar');
+            if (actionBar) actionBar.style.display = isDash ? 'flex' : 'none';
+        }).observe(document.getElementById('tab-exams'), { attributes: true, attributeFilter: ['class'] });
+    </script>
 
     <!-- Hệ thống Script Modular -->
     <script src="./js/html-loader.js"></script>
