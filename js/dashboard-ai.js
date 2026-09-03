@@ -170,7 +170,6 @@ document.addEventListener('ComponentsLoaded', () => {
             fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
             isFullscreen = true;
         } else {
-            // ĐÃ SỬA: Tăng kích thước dự phòng lên 550px
             aiSidebar.style.width = savedSidebarWidth || '550px';
             aiSidebar.style.zIndex = ''; 
             if (mainContentWrap) mainContentWrap.style.marginRight = savedSidebarWidth || '550px';
@@ -243,7 +242,7 @@ document.addEventListener('ComponentsLoaded', () => {
                 updateCharCounterUI(); 
 
                 let maxLimit = 1; 
-                if (tier === 'plus') maxLimit = 3;
+                if (tier === 'plus') maxLimit = 5; // ĐÃ SỬA: Tăng từ 3 lên 5 lượt
                 if (tier === 'pro') maxLimit = Infinity;
 
                 let usedCount = 0;
@@ -332,7 +331,6 @@ document.addEventListener('ComponentsLoaded', () => {
             if (!isResizing || isFullscreen) return; 
             let newWidth = window.innerWidth - e.clientX;
             
-            // ĐÃ SỬA: Tăng chiều rộng khi resize tối thiểu lên 550px
             let minWidth = window.innerWidth <= 570 ? window.innerWidth : 550;
             if (newWidth < minWidth) newWidth = minWidth;
             if (newWidth > window.innerWidth * 0.9) newWidth = window.innerWidth * 0.9;
@@ -363,7 +361,6 @@ document.addEventListener('ComponentsLoaded', () => {
                 isFullscreen = false;
                 fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
                 aiSidebar.style.zIndex = '';
-                // ĐÃ SỬA: Phục hồi về 550px
                 aiSidebar.style.width = savedSidebarWidth || '550px';
             }
 
@@ -372,7 +369,6 @@ document.addEventListener('ComponentsLoaded', () => {
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
 
         } else {
-            // ĐÃ SỬA: Kích thước mở mặc định được tăng lên 550px
             let minWidth = window.innerWidth <= 570 ? window.innerWidth : 550;
             let currentWidth = aiSidebar.offsetWidth;
             
@@ -508,7 +504,7 @@ document.addEventListener('ComponentsLoaded', () => {
                     updateCharCounterUI(); 
 
                     let maxLimit = 1; 
-                    if (tier === 'plus') maxLimit = 3;
+                    if (tier === 'plus') maxLimit = 5; // ĐÃ SỬA: Tăng từ 3 lên 5 lượt
                     if (tier === 'pro') maxLimit = Infinity;
 
                     let usedCount = 0;
@@ -570,7 +566,7 @@ document.addEventListener('ComponentsLoaded', () => {
             wrapperDiv.style.display = 'flex';
             wrapperDiv.style.flexDirection = 'column';
             wrapperDiv.style.alignSelf = 'flex-start';
-            wrapperDiv.style.maxWidth = '100%'; // ĐÃ SỬA: Dàn hết 100% chiều ngang khung chat
+            wrapperDiv.style.maxWidth = '100%'; 
             wrapperDiv.style.marginBottom = '15px';
 
             const msgDiv = document.createElement('div');
@@ -661,7 +657,7 @@ document.addEventListener('ComponentsLoaded', () => {
                     updateCharCounterUI(); 
                     
                     isUserPro = (tier === 'pro');
-                    if (tier === 'plus') maxLimit = 3;
+                    if (tier === 'plus') maxLimit = 5; // ĐÃ SỬA: Tăng từ 3 lên 5 lượt
                     if (tier === 'pro') maxLimit = Infinity;
                     
                     if (!isUserPro) {
