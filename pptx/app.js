@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment, addDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FREE_LIMIT = 3;
-const PLUS_LIMIT = 5;
+const PLUS_LIMIT = 10;
 
 let currentUserTier = 'free';
 let currentUserName = 'Bạn'; 
