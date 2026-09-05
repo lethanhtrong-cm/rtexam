@@ -35,32 +35,41 @@ export async function fetchUserResultsCache(user) {
     }
 }
 
-// Tải tổng hợp dữ liệu Đề (Tách riêng Logic Cache)
+// Tải tổng hợp dữ liệu Đề (Đã bổ sung cơ chế Hết hạn Cache sau 10 phút)
 export async function loadAggregatedExamData() {
     try {
         const uid = auth.currentUser ? auth.currentUser.uid : 'guest';
-        
-        // ĐÃ SỬA: Thêm hậu tố _v2 để ép trình duyệt dọn dẹp cache cũ, tự động nạp dữ liệu mới nhất từ Admin
-        const metaCacheKey = `examMetaCache_v2_${uid}`; 
-        const coreCacheKey = `examCoreCache_v2_${uid}`; 
-        const extraCacheKey = `examExtraCache_v2_${uid}`;
+        const metaCacheKey = `examMetaCache_${uid}`; 
+        const coreCacheKey = `examCoreCache_${uid}`; 
+        const extraCacheKey = `examExtraCache_${uid}`;
 
         // =====================================================================
         // KIỂM TRA HÀNH ĐỘNG F5 RELOAD
         // Chỉ xóa Cache để ép tải lại dữ liệu mới từ Firestore khi người dùng F5.
-        // Khi chuyển tab, logic này bị bỏ qua, hệ thống sẽ dùng Cache để tiết kiệm Đọc/Ghi.
         // =====================================================================
         const navEntries = performance.getEntriesByType("navigation");
         if (navEntries.length > 0 && navEntries[0].type === "reload") {
             sessionStorage.removeItem(metaCacheKey);
             sessionStorage.removeItem(coreCacheKey);
             sessionStorage.removeItem(extraCacheKey);
+            sessionStorage.removeItem(`${metaCacheKey}_time`);
+            sessionStorage.removeItem(`${coreCacheKey}_time`);
+            sessionStorage.removeItem(`${extraCacheKey}_time`);
         }
+
+        // =====================================================================
+        // THỜI GIAN HẾT HẠN CACHE (TTL) = 10 PHÚT
+        // Sau 10 phút tự động vô hiệu hóa cache cũ, kéo dữ liệu mới
+        // =====================================================================
+        const CACHE_TTL = 10 * 60 * 1000; 
+        const nowTime = Date.now();
 
         // 1. XỬ LÝ META (RATING & FEEDBACKS)
         let ratingMap = {};
         const cachedMeta = sessionStorage.getItem(metaCacheKey);
-        if (cachedMeta) {
+        const metaTime = sessionStorage.getItem(`${metaCacheKey}_time`);
+
+        if (cachedMeta && metaTime && (nowTime - parseInt(metaTime) < CACHE_TTL)) {
             ratingMap = JSON.parse(cachedMeta);
         } else {
             const fSnap = await getDocs(query(collection(db, "feedbacks"), limit(2500)));
@@ -75,12 +84,15 @@ export async function loadAggregatedExamData() {
                 }
             });
             sessionStorage.setItem(metaCacheKey, JSON.stringify(ratingMap));
+            sessionStorage.setItem(`${metaCacheKey}_time`, nowTime.toString());
         }
 
-        // 2. XỬ LÝ CORE (CẤU HÌNH ĐỀ THI - ĐÃ TỐI ƯU LOẠI BỎ LOAD TOÀN BỘ CÂU HỎI)
+        // 2. XỬ LÝ CORE (CẤU HÌNH ĐỀ THI)
         let examMap = {};
         const cachedCore = sessionStorage.getItem(coreCacheKey);
-        if (cachedCore) {
+        const coreTime = sessionStorage.getItem(`${coreCacheKey}_time`);
+
+        if (cachedCore && coreTime && (nowTime - parseInt(coreTime) < CACHE_TTL)) {
             examMap = JSON.parse(cachedCore);
         } else {
             const eSnap = await getDocs(query(collection(db, "exams"), limit(1500)));
@@ -97,10 +109,7 @@ export async function loadAggregatedExamData() {
                         examName: conf.examName || "",
                         isVip: conf.isVip || false,
                         timeLimit: conf.timeLimit ? parseInt(conf.timeLimit) : 15,
-                        
-                        // ĐÃ SỬA: Loại bỏ logic bơm "timeLimit" vào "questionCount". Giúp bộ lọc xóa đề rác bên UI hoạt động đúng!
-                        questionCount: conf.questionCount || conf.totalQuestions || 0,
-                        
+                        questionCount: conf.questionCount || conf.totalQuestions || (conf.timeLimit ? parseInt(conf.timeLimit) : 0),
                         attemptCount: conf.attemptCount || 0,
                         technique: conf.technique || "Hỗn hợp",
                         level: conf.level || "Trung bình",
@@ -118,23 +127,27 @@ export async function loadAggregatedExamData() {
                 }
             });
             sessionStorage.setItem(coreCacheKey, JSON.stringify(examMap));
+            sessionStorage.setItem(`${coreCacheKey}_time`, nowTime.toString());
         }
 
         // 2.5 TÍNH TOÁN DANH HIỆU (BADGES) & AVATAR NGƯỜI THI
         let badgesMap = {};
         let avatarsMap = {};
+        let dynamicAttemptCounts = {}; 
+        
         const cachedExtra = sessionStorage.getItem(extraCacheKey);
+        const extraTime = sessionStorage.getItem(`${extraCacheKey}_time`);
 
-        if (cachedExtra) {
+        if (cachedExtra && extraTime && (nowTime - parseInt(extraTime) < CACHE_TTL)) {
             const parsed = JSON.parse(cachedExtra);
             badgesMap = parsed.badgesMap || {};
             avatarsMap = parsed.avatarsMap || {};
+            dynamicAttemptCounts = parsed.dynamicAttemptCounts || {};
         } else {
             const resultsQuery = query(collection(db, "results"), limit(2500));
             const resultsSnap = await getDocs(resultsQuery);
             
             const counts = { week: {}, month: {}, year: {} };
-            const dynamicAttemptCounts = {}; 
             
             const usersExamsMap = {}; 
             const allUniqueUids = new Set();
@@ -241,9 +254,8 @@ export async function loadAggregatedExamData() {
             });
 
             sessionStorage.setItem(extraCacheKey, JSON.stringify({ badgesMap, avatarsMap, dynamicAttemptCounts }));
+            sessionStorage.setItem(`${extraCacheKey}_time`, nowTime.toString());
         }
-
-        const dynamicAttemptCounts = cachedExtra ? (JSON.parse(cachedExtra).dynamicAttemptCounts || {}) : {};
 
         // 3. GHÉP NỐI CORE, META VÀ DỮ LIỆU ĐỘNG THÀNH DỮ LIỆU CUỐI CÙNG
         Object.keys(examMap).forEach(eId => {
