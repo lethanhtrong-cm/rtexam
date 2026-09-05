@@ -301,10 +301,13 @@ export function renderExams() {
                     datePillHtml = `<span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-calendar-days" style="font-size: 0.7rem;"></i> ${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()} </span>`;
                 }
 
+                // ĐÃ KHÔI PHỤC: Sử dụng thời gian (timeLimit) làm số câu hỏi dự phòng nếu đề thiếu trường questionCount
+                const displayQuestionCount = exam.questionCount || exam.timeLimit || 0;
+
                 const mergedTagsHtml = `
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px;">
                         <span style="${pillBaseStyle} color: ${levelColor};"> <i class="fa-solid ${levelIcon}" style="font-size: 0.7rem;"></i> ${exam.level === 'Trung bình' ? 'T.Bình' : exam.level} </span>
-                        <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${exam.questionCount} câu </span>
+                        <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-solid fa-list-check" style="font-size: 0.7rem;"></i> ${displayQuestionCount} câu </span>
                         <span style="${pillBaseStyle} color: #4b5563;"> <i class="fa-regular fa-clock" style="font-size: 0.7rem;"></i> ${exam.timeLimit} phút </span>
                         ${datePillHtml}
                     </div>
@@ -322,9 +325,6 @@ export function renderExams() {
                     let displayScore = State.completedExams[exam.id].score || 0;
                     displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
-                    // ==========================================================
-                    // PHÂN QUYỀN NÚT XEM LẠI BÀI NGAY TRÊN CARD DỰA VÀO isUserVip
-                    // ==========================================================
                     let reviewBtnHtml = isUserVip 
                         ? `<button onclick="goToReview('${State.completedExams[exam.id].resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-eye"></i> Xem lại</button>`
                         : `<button onclick="goToUpgrade()" style="flex: 1; padding: 10px 0; border: 1px solid #f59e0b; background: #fffbeb; color: #d97706; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" title="Tính năng dành cho tài khoản PRO"><i class="fa-solid fa-crown"></i> Xem lại (Pro)</button>`;
