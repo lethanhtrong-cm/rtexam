@@ -83,8 +83,11 @@ export function renderExams() {
             if (exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted) {
                 newExamsCount['all']++;
                 if (exam.technique) {
-                    if (!newExamsCount[exam.technique]) newExamsCount[exam.technique] = 0;
-                    newExamsCount[exam.technique]++;
+                    // CHUẨN HÓA CHUỖI: Đổi dấu hai chấm thành gạch ngang để đếm chính xác
+                    let safeTech = exam.technique.includes('ĐGNL:') ? exam.technique.replace('ĐGNL:', 'ĐGNL -') : exam.technique;
+                    
+                    if (!newExamsCount[safeTech]) newExamsCount[safeTech] = 0;
+                    newExamsCount[safeTech]++;
                 }
             }
         });
@@ -98,8 +101,13 @@ export function renderExams() {
                 if (oldBadge) oldBadge.remove();
 
                 let count = 0;
-                if (tech === 'all') count = newExamsCount['all'];
-                else if (tech) count = newExamsCount[tech] || 0;
+                if (tech === 'all') {
+                    count = newExamsCount['all'];
+                } else if (tech) {
+                    // CHUẨN HÓA CHUỖI TỪ HTML: Đổi dấu hai chấm thành gạch ngang để truy xuất đúng key
+                    let lookupTech = tech.includes('ĐGNL:') ? tech.replace('ĐGNL:', 'ĐGNL -') : tech;
+                    count = newExamsCount[lookupTech] || 0;
+                }
                 
                 if (count > 0) {
                     item.insertAdjacentHTML('beforeend', `<span class="tab-new-badge" style="background: #ef4444; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; margin-left: auto; font-weight: 800; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); line-height: 1;">${count}</span>`);
