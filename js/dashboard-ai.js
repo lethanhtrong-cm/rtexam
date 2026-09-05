@@ -113,11 +113,37 @@ document.addEventListener('ComponentsLoaded', () => {
     });
 
     // ==========================================
-    // CÁC NÚT TRÊN HEADER SIDEBAR
+    // CÁC NÚT TRÊN HEADER SIDEBAR & FONT SIZE TÙY CHỈNH
     // ==========================================
+    const dynamicFontStyles = document.createElement('style');
+    dynamicFontStyles.id = 'ai-dynamic-font';
+    document.head.appendChild(dynamicFontStyles);
+
+    let fontSizes = ['0.95rem', '1.05rem', '1.15rem', '1.3rem'];
+    let currentFontIdx = 0;
+
     const queryCounterUI = document.createElement('div');
     queryCounterUI.id = 'aiQueryCounterUI';
     queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap; flex-shrink: 0;";
+
+    // ĐÃ THÊM: Nút chỉnh Font Size
+    const fontSizeAiBtn = document.createElement('button');
+    fontSizeAiBtn.id = 'fontSizeAiBtn';
+    fontSizeAiBtn.title = 'Đổi cỡ chữ';
+    fontSizeAiBtn.innerHTML = '<i class="fa-solid fa-font"></i>';
+    fontSizeAiBtn.style.cssText = "background: transparent; border: none; color: white; font-size: 1.1rem; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0;";
+    
+    fontSizeAiBtn.addEventListener('mouseenter', () => fontSizeAiBtn.style.color = '#cbd5e1');
+    fontSizeAiBtn.addEventListener('mouseleave', () => fontSizeAiBtn.style.color = 'white');
+    fontSizeAiBtn.addEventListener('click', () => {
+        currentFontIdx = (currentFontIdx + 1) % fontSizes.length;
+        const newSize = fontSizes[currentFontIdx];
+        dynamicFontStyles.innerHTML = `
+            #aiChatBox { font-size: ${newSize} !important; }
+            #aiChatBox .chat-message { font-size: ${newSize} !important; line-height: 1.6 !important; }
+            #aiChatBox .quick-prompt-chip { font-size: calc(${newSize} - 0.15rem) !important; }
+        `;
+    });
 
     const clearChatBtn = document.createElement('button');
     clearChatBtn.id = 'clearAiChatBtn';
@@ -151,12 +177,14 @@ document.addEventListener('ComponentsLoaded', () => {
             aiSidebar.style.width = '100vw';
             aiSidebar.style.zIndex = '100000'; 
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
+            document.body.style.paddingRight = '0'; // ĐÃ THÊM
             fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
             isFullscreen = true;
         } else {
             aiSidebar.style.width = savedSidebarWidth || '550px';
             aiSidebar.style.zIndex = ''; 
             if (mainContentWrap) mainContentWrap.style.marginRight = savedSidebarWidth || '550px';
+            if (window.innerWidth > 768) document.body.style.paddingRight = savedSidebarWidth || '550px'; // ĐÃ THÊM
             fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
             isFullscreen = false;
         }
@@ -165,6 +193,7 @@ document.addEventListener('ComponentsLoaded', () => {
     if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
         const sidebarHeader = closeAiSidebarBtn.parentNode;
         sidebarHeader.insertBefore(queryCounterUI, closeAiSidebarBtn);
+        sidebarHeader.insertBefore(fontSizeAiBtn, closeAiSidebarBtn); // ĐÃ THÊM
         sidebarHeader.insertBefore(clearChatBtn, closeAiSidebarBtn);
         sidebarHeader.insertBefore(fullscreenAiBtn, closeAiSidebarBtn);
         
@@ -173,7 +202,6 @@ document.addEventListener('ComponentsLoaded', () => {
         sidebarHeader.style.flexWrap = 'nowrap';
         sidebarHeader.style.gap = '8px'; 
         
-        // ĐÃ SỬA THEO YÊU CẦU TRƯỚC ĐÓ: Tối ưu thanh Header trên Mobile để chống khuất nút Close
         Array.from(sidebarHeader.children).forEach(child => {
             child.style.flexShrink = child.tagName === 'H3' ? '1' : '0';
             child.style.whiteSpace = 'nowrap';
@@ -271,8 +299,10 @@ document.addEventListener('ComponentsLoaded', () => {
             
             aiSidebar.style.width = `${newWidth}px`;
             
-            if (aiSidebar.classList.contains('active') && mainContentWrap) {
-                mainContentWrap.style.marginRight = `${newWidth}px`;
+            if (aiSidebar.classList.contains('active')) {
+                if (mainContentWrap) mainContentWrap.style.marginRight = `${newWidth}px`;
+                // ĐÃ THÊM: Đẩy body sang trái không cho đè lên Profile
+                if (window.innerWidth > 768) document.body.style.paddingRight = `${newWidth}px`; 
             }
         });
 
@@ -303,6 +333,10 @@ document.addEventListener('ComponentsLoaded', () => {
             let currentWidth = aiSidebar.offsetWidth;
             aiSidebar.style.right = `-${currentWidth + 20}px`; 
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
+            
+            // ĐÃ THÊM: Trả body về 0 khi đóng
+            document.body.style.paddingRight = '0';
+            document.body.style.transition = 'padding-right 0.3s ease';
 
         } else {
             let minWidth = window.innerWidth <= 570 ? window.innerWidth : 550;
@@ -316,6 +350,12 @@ document.addEventListener('ComponentsLoaded', () => {
             aiSidebar.classList.add('active');
             aiSidebar.style.right = '0';
             if (mainContentWrap) mainContentWrap.style.marginRight = `${currentWidth}px`;
+            
+            // ĐÃ THÊM: Đẩy body sang trái để chống chồng lấp (ngoại trừ mobile)
+            if (window.innerWidth > 768 && !isFullscreen) {
+                document.body.style.paddingRight = `${currentWidth}px`;
+                document.body.style.transition = 'padding-right 0.3s ease';
+            }
             
             if (isFirstOpen) {
                 const hintDiv = document.createElement('div');
