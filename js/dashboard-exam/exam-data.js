@@ -39,8 +39,11 @@ export async function fetchUserResultsCache(user) {
 export async function loadAggregatedExamData() {
     try {
         const uid = auth.currentUser ? auth.currentUser.uid : 'guest';
-        const metaCacheKey = `examMetaCache_${uid}`; 
-        const coreCacheKey = `examCoreCache_${uid}`; 
+        
+        // ĐÃ SỬA: Thêm hậu tố _v2 để ép trình duyệt dọn dẹp cache cũ, tự động nạp dữ liệu mới nhất từ Admin
+        const metaCacheKey = `examMetaCache_v2_${uid}`; 
+        const coreCacheKey = `examCoreCache_v2_${uid}`; 
+        const extraCacheKey = `examExtraCache_v2_${uid}`;
 
         // =====================================================================
         // KIỂM TRA HÀNH ĐỘNG F5 RELOAD
@@ -51,7 +54,7 @@ export async function loadAggregatedExamData() {
         if (navEntries.length > 0 && navEntries[0].type === "reload") {
             sessionStorage.removeItem(metaCacheKey);
             sessionStorage.removeItem(coreCacheKey);
-            sessionStorage.removeItem(`examExtraCache_${uid}`);
+            sessionStorage.removeItem(extraCacheKey);
         }
 
         // 1. XỬ LÝ META (RATING & FEEDBACKS)
@@ -94,7 +97,10 @@ export async function loadAggregatedExamData() {
                         examName: conf.examName || "",
                         isVip: conf.isVip || false,
                         timeLimit: conf.timeLimit ? parseInt(conf.timeLimit) : 15,
-                        questionCount: conf.questionCount || conf.totalQuestions || (conf.timeLimit ? parseInt(conf.timeLimit) : 0),
+                        
+                        // ĐÃ SỬA: Loại bỏ logic bơm "timeLimit" vào "questionCount". Giúp bộ lọc xóa đề rác bên UI hoạt động đúng!
+                        questionCount: conf.questionCount || conf.totalQuestions || 0,
+                        
                         attemptCount: conf.attemptCount || 0,
                         technique: conf.technique || "Hỗn hợp",
                         level: conf.level || "Trung bình",
@@ -117,7 +123,6 @@ export async function loadAggregatedExamData() {
         // 2.5 TÍNH TOÁN DANH HIỆU (BADGES) & AVATAR NGƯỜI THI
         let badgesMap = {};
         let avatarsMap = {};
-        const extraCacheKey = `examExtraCache_${uid}`;
         const cachedExtra = sessionStorage.getItem(extraCacheKey);
 
         if (cachedExtra) {
