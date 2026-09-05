@@ -18,6 +18,16 @@ export function injectAICSS() {
         
         .scroll-bottom-btn { position: absolute; bottom: 120px; right: 20px; background: rgba(59, 130, 246, 0.9); color: white; border: none; border-radius: 50%; width: 35px; height: 35px; display: none; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; transition: 0.2s; backdrop-filter: blur(4px); }
         .scroll-bottom-btn:hover { background: #2563eb; transform: scale(1.1); }
+
+        /* BỔ SUNG: Tối ưu hóa giao diện hiển thị trên màn hình Mobile/Tablet */
+        @media (max-width: 768px) {
+            #aiSidebar { width: 100vw !important; }
+            .chat-message { max-width: 92% !important; font-size: 0.95rem !important; padding: 10px 14px !important; }
+            #aiChatInput { font-size: 1rem !important; } /* Ngăn iOS Safari tự động Zoom khi click vào input */
+            .quick-prompt-chip { padding: 6px 10px; font-size: 0.75rem; }
+            .scroll-bottom-btn { bottom: 90px; right: 15px; width: 32px; height: 32px; }
+            #aiQueryCounterUI { font-size: 0.75rem !important; padding: 4px 8px !important; }
+        }
     `;
     document.head.appendChild(style);
 }
