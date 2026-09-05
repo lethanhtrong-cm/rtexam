@@ -126,7 +126,6 @@ document.addEventListener('ComponentsLoaded', () => {
     queryCounterUI.id = 'aiQueryCounterUI';
     queryCounterUI.style.cssText = "font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; display: none; align-items: center; gap: 8px; font-weight: 700; margin-left: auto; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white; white-space: nowrap; flex-shrink: 0;";
 
-    // ĐÃ THÊM: Nút chỉnh Font Size
     const fontSizeAiBtn = document.createElement('button');
     fontSizeAiBtn.id = 'fontSizeAiBtn';
     fontSizeAiBtn.title = 'Đổi cỡ chữ';
@@ -177,14 +176,14 @@ document.addEventListener('ComponentsLoaded', () => {
             aiSidebar.style.width = '100vw';
             aiSidebar.style.zIndex = '100000'; 
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
-            document.body.style.paddingRight = '0'; // ĐÃ THÊM
+            document.body.style.paddingRight = '0'; 
             fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
             isFullscreen = true;
         } else {
             aiSidebar.style.width = savedSidebarWidth || '550px';
             aiSidebar.style.zIndex = ''; 
-            if (mainContentWrap) mainContentWrap.style.marginRight = savedSidebarWidth || '550px';
-            if (window.innerWidth > 768) document.body.style.paddingRight = savedSidebarWidth || '550px'; // ĐÃ THÊM
+            if (mainContentWrap) mainContentWrap.style.marginRight = '0';
+            if (window.innerWidth > 768) document.body.style.paddingRight = savedSidebarWidth || '550px'; 
             fullscreenAiBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
             isFullscreen = false;
         }
@@ -193,7 +192,7 @@ document.addEventListener('ComponentsLoaded', () => {
     if (closeAiSidebarBtn && closeAiSidebarBtn.parentNode) {
         const sidebarHeader = closeAiSidebarBtn.parentNode;
         sidebarHeader.insertBefore(queryCounterUI, closeAiSidebarBtn);
-        sidebarHeader.insertBefore(fontSizeAiBtn, closeAiSidebarBtn); // ĐÃ THÊM
+        sidebarHeader.insertBefore(fontSizeAiBtn, closeAiSidebarBtn);
         sidebarHeader.insertBefore(clearChatBtn, closeAiSidebarBtn);
         sidebarHeader.insertBefore(fullscreenAiBtn, closeAiSidebarBtn);
         
@@ -300,8 +299,9 @@ document.addEventListener('ComponentsLoaded', () => {
             aiSidebar.style.width = `${newWidth}px`;
             
             if (aiSidebar.classList.contains('active')) {
-                if (mainContentWrap) mainContentWrap.style.marginRight = `${newWidth}px`;
-                // ĐÃ THÊM: Đẩy body sang trái không cho đè lên Profile
+                // SỬA LỖI ĐẨY KÉP: Loại bỏ hoàn toàn padding/margin của mainContentWrap
+                if (mainContentWrap) mainContentWrap.style.marginRight = '0';
+                
                 if (window.innerWidth > 768) document.body.style.paddingRight = `${newWidth}px`; 
             }
         });
@@ -332,9 +332,10 @@ document.addEventListener('ComponentsLoaded', () => {
 
             let currentWidth = aiSidebar.offsetWidth;
             aiSidebar.style.right = `-${currentWidth + 20}px`; 
+            
+            // SỬA LỖI ĐẨY KÉP: Dọn dẹp khoảng trống
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
             
-            // ĐÃ THÊM: Trả body về 0 khi đóng
             document.body.style.paddingRight = '0';
             document.body.style.transition = 'padding-right 0.3s ease';
 
@@ -349,9 +350,10 @@ document.addEventListener('ComponentsLoaded', () => {
 
             aiSidebar.classList.add('active');
             aiSidebar.style.right = '0';
-            if (mainContentWrap) mainContentWrap.style.marginRight = `${currentWidth}px`;
             
-            // ĐÃ THÊM: Đẩy body sang trái để chống chồng lấp (ngoại trừ mobile)
+            // SỬA LỖI ĐẨY KÉP: Dọn dẹp khoảng trống
+            if (mainContentWrap) mainContentWrap.style.marginRight = '0';
+            
             if (window.innerWidth > 768 && !isFullscreen) {
                 document.body.style.paddingRight = `${currentWidth}px`;
                 document.body.style.transition = 'padding-right 0.3s ease';
