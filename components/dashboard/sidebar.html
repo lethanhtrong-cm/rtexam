@@ -1,111 +1,165 @@
-<div class="sidebar-header">
-    <div class="sidebar-title">Admin Panel</div>
-    <div class="sidebar-subtitle">Hệ thống thi trắc nghiệm</div>
-</div>
-<nav class="sidebar-menu">
-
-    <div class="menu-group">
-        <button class="menu-parent">
-            <span class="parent-title">📊 Bảng Điều Khiển</span>
-            <span class="arrow-icon">▼</span>
-        </button>
-        <div class="submenu">
-            <button class="menu-item" data-target="tab-dashboard" data-title="Thống Kê Tổng Quan Hệ Thống">
-                📈 Tổng quan Thống kê
-            </button>
-        </div>
-    </div>
+<div class="sidebar">
     
-    <div class="menu-group">
-        <button class="menu-parent">
-            <span class="parent-title">📋 Quản Lý Đề Thi</span>
-            <span class="arrow-icon">▼</span>
-        </button>
-        <div class="submenu">
-            <button class="menu-item" data-target="tab-exam-list" data-tech="Chưa phân loại" data-title="Danh Sách Đề Mới Thêm (Chờ Phân Bổ)">
-                🆕 Đề mới thêm (Chờ phân bổ)
-            </button>
-            <!-- ĐÁNH GIÁ NĂNG LỰC ĐÃ ĐƯỢC CHUYỂN LÊN ĐÂY -->
-            <button class="menu-item" data-target="tab-exam-list" data-tech="Đánh giá năng lực" data-title="Danh Sách Đề Thi: Đánh Giá Năng Lực">
-                📄 Danh sách: Đánh giá năng lực
-            </button>
-            <button class="menu-item" data-target="tab-exam-list" data-tech="MRI" data-title="Danh Sách Đề Thi: Chuyên Khoa MRI">
-                📄 Danh sách: MRI
-            </button>
-            <button class="menu-item" data-target="tab-exam-list" data-tech="CT" data-title="Danh Sách Đề Thi: Chuyên Khoa CT">
-                📄 Danh sách: CT
-            </button>
-            <button class="menu-item" data-target="tab-exam-list" data-tech="X quang" data-title="Danh Sách Đề Thi: Chuyên Khoa X quang">
-                📄 Danh sách: X quang
-            </button>
-            <button class="menu-item" data-target="tab-exam-list" data-tech="Thuốc tương phản" data-title="Danh Sách Đề Thi: Chuyên Khoa Thuốc tương phản">
-                📄 Danh sách: Thuốc tương phản
-            </button>
-            <button class="menu-item" data-target="tab-exam-list" data-tech="Hỗn hợp" data-title="Danh Sách Đề Thi: Hệ Hỗn Hợp">
-                📄 Danh sách: Hỗn hợp
-            </button>
-            <button class="menu-item" data-target="tab-exam-import" data-title="Import Đề Thi Vào Hệ Thống">
-                🚀 Import đề thi
-            </button>
+    <!-- KHỐI CSS NÂNG CẤP GIAO DIỆN (LUXURY UI) -->
+    <style>
+        .sidebar { padding-top: 15px; }
+        .sidebar-menu { padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
+        
+        /* Style cho Menu chính */
+        .sidebar-menu .menu-item {
+            padding: 12px 16px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            color: #475569;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .sidebar-menu .menu-item:hover { 
+            background-color: #f8fafc; 
+            color: #0f172a; 
+            border-color: #e2e8f0;
+        }
+        .sidebar-menu .menu-item.active {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1d4ed8;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.1);
+            border-color: #bfdbfe;
+        }
+        
+        /* Icon của Menu chính */
+        .sidebar-menu .menu-item .header-content { display: flex; align-items: center; gap: 12px; }
+        .sidebar-menu .menu-item .header-content i { font-size: 1.15rem; color: #64748b; transition: 0.3s; width: 22px; text-align: center; }
+        .sidebar-menu .menu-item.active .header-content i { color: #2563eb; }
+        
+        /* Style cho Sub-menu (Cây thư mục) */
+        .accordion-content { position: relative; padding: 6px 0 12px 0; }
+        
+        /* Đường kẻ dọc nối các sub-menu */
+        .accordion-content::before {
+            content: '';
+            position: absolute;
+            left: 27px;
+            top: 0;
+            bottom: 15px;
+            width: 2px;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+        
+        .sidebar-menu .sub-menu-item {
+            padding: 10px 15px 10px 45px;
+            margin: 4px 12px;
+            border-radius: 10px;
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Đường kẻ ngang trỏ vào từng sub-menu */
+        .sidebar-menu .sub-menu-item::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            width: 12px;
+            height: 2px;
+            background: #e2e8f0;
+            transform: translateY(-50%);
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+        
+        .sidebar-menu .sub-menu-item:hover { 
+            color: #0f172a; 
+            background: #f8fafc; 
+            transform: translateX(4px); 
+        }
+        .sidebar-menu .sub-menu-item:hover::before { background: #cbd5e1; }
+        
+        .sidebar-menu .sub-menu-item.active {
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 #3b82f6;
+        }
+        .sidebar-menu .sub-menu-item.active::before { background: #3b82f6; }
+        
+        .sidebar-menu .sub-menu-item i { width: 22px; margin-right: 8px; font-size: 0.95rem; text-align: center; transition: 0.3s; }
+        .sidebar-menu .sub-menu-item.active i { color: #2563eb !important; }
+        
+        /* Hover hiệu ứng cho Zalo box */
+        #zalo-qr-sidebar { transition: all 0.3s ease; border: 1px solid #e2e8f0 !important; }
+        #zalo-qr-sidebar:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); border-color: #cbd5e1 !important; }
+        #zalo-qr-sidebar a:hover { background: #0056b3 !important; transform: scale(1.02); }
+    </style>
+    <!-- KẾT THÚC KHỐI CSS -->
+
+    <div class="sidebar-menu">
+        <div class="menu-accordion">
+            <div class="menu-item accordion-header active" data-target="tab-exams">
+                <div class="header-content">
+                    <i class="fa-solid fa-book"></i> <span>Kho Đề Thi</span>
+                </div>
+                <i class="fa-solid fa-chevron-down accordion-icon" style="transform: rotate(180deg);"></i>
+            </div>
+            <div class="accordion-content show">
+                <div class="sub-menu-item active" data-technique="all">
+                    <i class="fa-solid fa-list-ul"></i> Tất cả
+                </div>
+                <div class="sub-menu-item" data-technique="MRI">
+                    <i class="fa-solid fa-magnet"></i> MRI
+                </div>
+                <div class="sub-menu-item" data-technique="CT">
+                    <i class="fa-solid fa-radiation"></i> CT
+                </div>
+                <div class="sub-menu-item" data-technique="X quang">
+                    <i class="fa-solid fa-x-ray"></i> X quang
+                </div>
+                
+                <div class="sub-menu-item" data-technique="Thuốc tương phản">
+                    <i class="fa-solid fa-syringe"></i> Thuốc tương phản
+                </div>
+
+                <div class="sub-menu-item" data-technique="Hỗn hợp">
+                    <i class="fa-solid fa-layer-group"></i> Hỗn hợp
+                </div>
+                
+                <div class="sub-menu-item" data-technique="AI Tự Động">
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #8b5cf6;"></i> Đề ngẫu nhiên
+                </div>
+
+                <div class="sub-menu-item" id="menu-saved-exams" data-technique="saved" style="border-top: 1px dashed var(--border-color); margin-top: 5px;">
+                    <i class="fa-solid fa-bookmark" style="color: var(--star-color);"></i> Đề thi đã lưu
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-item" data-target="tab-history">
+            <div class="header-content">
+                <i class="fa-solid fa-clock-rotate-left"></i> <span>Lịch sử làm bài</span>
+            </div>
+        </div>
+
+        <div class="menu-item" data-target="leaderboard">
+            <div class="header-content">
+                <i class="fa-solid fa-trophy" style="color: var(--warning-orange);"></i> <span>Bảng Xếp Hạng</span>
+            </div>
         </div>
     </div>
 
-    <div class="menu-group">
-        <button class="menu-parent">
-            <span class="parent-title">🎲 Quản Lý Đề Ngẫu Nhiên</span>
-            <span class="arrow-icon">▼</span>
-        </button>
-        <div class="submenu">
-            <button class="menu-item" data-target="tab-exam-list" data-tech="Đề Ngẫu Nhiên" data-title="Danh Sách Đề Ngẫu Nhiên (Người Dùng Tạo)">
-                🎲 Danh sách đề ngẫu nhiên
-            </button>
-        </div>
+    <!-- KHỐI THAM GIA NHÓM ZALO QUIZPAGE -->
+    <div id="zalo-qr-sidebar" style="margin: 20px 15px 90px 15px; padding: 12px; background: #f8fafc; border-radius: 12px; text-align: center; border: 1px dashed #cbd5e1;">
+        <h6 style="font-size: 0.85rem; font-weight: 700; color: #0f172a; margin-bottom: 10px;">Cộng đồng QUIZPAGE</h6>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://zalo.me/g/3b44he0tkfq8e0v9dibo" alt="Zalo QR" style="width: 100%; max-width: 100px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <a href="https://zalo.me/g/3b44he0tkfq8e0v9dibo" target="_blank" style="display: block; padding: 8px; background: #0068ff; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">Tham gia nhóm</a>
     </div>
-
-    <div class="menu-group">
-        <button class="menu-parent open">
-            <span class="parent-title">👥 Quản Lý Người Dùng</span>
-            <span class="arrow-icon">▼</span>
-        </button>
-        <button class="menu-item" data-target="tab-vouchers" data-title="Quản Lý Mã Voucher Nâng Cấp VIP">
-            🎟️ Quản lý mã Voucher
-        </button>
-        <div class="submenu show">
-            <button class="menu-item active" data-target="tab-user-list" data-title="Danh Sách Thành Viên & Cấp Quyền VIP">
-                📄 Danh sách người dùng
-            </button>
-            <button class="menu-item" data-target="tab-user-list" data-filter="has_payment" data-title="Danh Sách Lịch Sử Yêu Cầu Chuyển Khoản">
-                💳 Lịch sử báo CK 
-                <span id="pending-vip-badge" style="display:none; background:#ef4444; color:white; border-radius:50%; padding:2px 6px; font-size:10.5px; margin-left:6px; font-weight:bold; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">0</span>
-            </button>
-        </div>
-    </div>
-
-    <div class="menu-group">
-        <button class="menu-parent">
-            <span class="parent-title">🤖 Quản Lý Đề AI</span>
-            <span class="arrow-icon">▼</span>
-        </button>
-        <div class="submenu">
-            <button class="menu-item" data-target="tab-admin" data-title="Quản Lý Ngân Hàng Đề AI">
-                📊 Quản lý đề AI & Xuất Excel
-            </button>
-        </div>
-    </div>
-
-    <div class="menu-group">
-        <button class="menu-parent">
-            <span class="parent-title">⚠️ Quản Lý Phản Hồi</span>
-            <span class="arrow-icon">▼</span>
-        </button>
-        <div class="submenu">
-            <button class="menu-item" data-target="tab-reports" data-title="Quản Lý Lỗi & Góp Ý">
-                🚩 Báo cáo lỗi câu hỏi
-            </button>
-        </div>
-    </div>
-
-</nav>
-<div class="sidebar-footer">
-    <button id="btnLogout" class="btn-logout">Đăng Xuất</button>
 </div>
