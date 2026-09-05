@@ -185,6 +185,12 @@ function fetchUserData(user, auth, db) {
                         }
                     }
                     
+                    // TÍNH TOÁN SỐ NGÀY HIỆU LỰC CỦA GÓI ĐỂ HIỂN THỊ POPUP PHÙ HỢP
+                    let diffDays = 0;
+                    if (startDateObj && expiryDateObj) {
+                        diffDays = Math.ceil((expiryDateObj.getTime() - startDateObj.getTime()) / (1000 * 3600 * 24));
+                    }
+                    
                     if (isExpired) {
                         setDoc(userDocRef, { vipTier: null, isVip: false }, { merge: true }).catch(err => console.error(err));
                         setVipInactive();
@@ -210,7 +216,7 @@ function fetchUserData(user, auth, db) {
                             elVipStatusBadge.className = "status-badge status-active";
                         }
 
-                        // ĐÃ KHÔI PHỤC: Cập nhật lại huy hiệu ở tab-vip để đồng bộ với Gói Plus/Pro
+                        // Cập nhật lại huy hiệu ở tab-vip để đồng bộ với Gói Plus/Pro
                         const elVipStatusTab3 = document.getElementById("vipStatusTab3");
                         if (elVipStatusTab3) {
                             if (activeTier === 'pro') {
@@ -293,6 +299,19 @@ function fetchUserData(user, auth, db) {
                             const existingModal = document.getElementById('vipSuccessModalCustom');
                             if (existingModal) existingModal.remove();
 
+                            // ĐÃ SỬA: Phân loại nội dung Popup
+                            // Mặc định luôn là "Nâng cấp thành công"
+                            let popupTag = '👑 Nâng Cấp Thành Công';
+                            let popupTitle = 'Chúc mừng bạn!';
+                            let popupMessage = `Tài khoản của bạn đã được kích hoạt gói <span style="background: #ffedd5; color: #c2410c; font-weight: 800; padding: 2px 8px; border-radius: 6px;">${tierName}</span>. Bạn đã mở khóa toàn bộ đặc quyền cao cấp của hệ thống. Cùng học tập ngay nhé!`;
+
+                            // CHỈ ÁP DỤNG NGOẠI LỆ 5 NGÀY NẾU GÓI ĐÓ LÀ GÓI "PLUS"
+                            if (activeTier === 'plus' && diffDays > 0 && diffDays <= 7) {
+                                popupTag = '🎁 Quà Tặng Tân Thủ';
+                                popupTitle = 'Chào mừng bạn!';
+                                popupMessage = `Hệ thống đã tự động tặng bạn <span style="background: #dbeafe; color: #1d4ed8; font-weight: 800; padding: 2px 8px; border-radius: 6px;">5 NGÀY</span> trải nghiệm gói <span style="background: #ffedd5; color: #c2410c; font-weight: 800; padding: 2px 8px; border-radius: 6px;">PLUS</span> hoàn toàn miễn phí. Cùng bắt đầu học tập ngay nhé!`;
+                            }
+
                             const popupHTML = `
                                 <div class="custom-modal-overlay" id="vipSuccessModalCustom" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); justify-content: center; align-items: center; padding: 15px;">
                                     <div class="custom-modal-content" style="max-width: 400px; width: 100%; background: #ffffff; border-radius: 24px; text-align: center; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); overflow: hidden; position: relative;">
@@ -311,12 +330,12 @@ function fetchUserData(user, auth, db) {
                                         
                                         <!-- Vùng nội dung chữ và nút bấm -->
                                         <div style="padding: 0 30px 35px 30px;">
-                                            <span style="display: inline-block; background: #fef08a; color: #854d0e; font-size: 0.75rem; font-weight: 800; padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(254, 240, 138, 0.5);">🎁 Quà Tặng Tân Thủ</span>
+                                            <span style="display: inline-block; background: #fef08a; color: #854d0e; font-size: 0.75rem; font-weight: 800; padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(254, 240, 138, 0.5);">${popupTag}</span>
                                             
-                                            <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.8rem; line-height: 1.2;">Chào mừng bạn!</h2>
+                                            <h2 style="color: #0f172a; margin: 0 0 12px 0; font-weight: 800; font-size: 1.8rem; line-height: 1.2;">${popupTitle}</h2>
                                             
                                             <p style="color: #475569; font-size: 1.05rem; line-height: 1.6; margin-bottom: 25px;">
-                                                Hệ thống đã tự động tặng bạn <span style="background: #dbeafe; color: #1d4ed8; font-weight: 800; padding: 2px 8px; border-radius: 6px;">5 NGÀY</span> trải nghiệm gói <span style="background: #ffedd5; color: #c2410c; font-weight: 800; padding: 2px 8px; border-radius: 6px;">${tierName}</span> hoàn toàn miễn phí. Cùng bắt đầu học tập ngay nhé!
+                                                ${popupMessage}
                                             </p>
                                             
                                             <button id="closeVipSuccessBtn" style="width: 100%; padding: 16px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 14px; font-size: 1.15rem; font-weight: bold; cursor: pointer; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35); transition: transform 0.2s, box-shadow 0.2s;">
