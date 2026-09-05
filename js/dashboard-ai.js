@@ -1,7 +1,7 @@
 import { auth, db } from "./dashboard-core.js";
 import { doc, updateDoc, increment, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// ĐÃ SỬA: Import 2 module vừa được chia nhỏ
+// Import 2 module vừa được chia nhỏ
 import { injectAICSS, updateQueryCounterDisplay, showRemainingQueriesPopup, showOutOfQueriesPopup } from "./dashboard-ai/ui-modals.js";
 import { appendMessage, saveChatHistory, loadChatHistory } from "./dashboard-ai/chat-logic.js";
 
@@ -173,9 +173,14 @@ document.addEventListener('ComponentsLoaded', () => {
         sidebarHeader.style.flexWrap = 'nowrap';
         sidebarHeader.style.gap = '8px'; 
         
+        // ĐÃ SỬA THEO YÊU CẦU TRƯỚC ĐÓ: Tối ưu thanh Header trên Mobile để chống khuất nút Close
         Array.from(sidebarHeader.children).forEach(child => {
-            child.style.flexShrink = '0';
+            child.style.flexShrink = child.tagName === 'H3' ? '1' : '0';
             child.style.whiteSpace = 'nowrap';
+            if (child.tagName === 'H3') {
+                child.style.overflow = 'hidden';
+                child.style.textOverflow = 'ellipsis';
+            }
         });
     }
 
