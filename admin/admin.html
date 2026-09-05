@@ -14,15 +14,6 @@
         * { box-sizing: border-box !important; }
         html, body { max-width: 100vw; overflow-x: hidden; margin: 0; padding: 0; }
 
-        /* TỰ ĐỘNG THU NHỎ TỶ LỆ TRÊN MÀN HÌNH VỪA VÀ NHỎ ĐỂ CHỐNG DỒN NÚT */
-        @media (min-width: 769px) and (max-width: 1440px) { body { zoom: 0.85; } }
-        @media (min-width: 769px) and (max-width: 1100px) { body { zoom: 0.75; } }
-        
-        /* CHỐNG DỒN Ô, CHỐNG RỚT DÒNG CHO CÁC BẢNG NẾU THIẾU CHIỀU NGANG */
-        .table-container { overflow-x: auto !important; max-width: 100%; width: 100%; }
-        .admin-table { min-width: 1100px !important; }
-        .admin-table th, .admin-table td { white-space: nowrap !important; }
-
         /* MÀN HÌNH KHÓA ĐĂNG NHẬP ADMIN */
         #admin-login-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -185,7 +176,6 @@
                     <h2 style="font-size: 1.25rem; color: #1e293b; margin: 0;">⚡ 50 Lượt Thi Gần Nhất</h2>
                     
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <!-- NÚT TẢI LẠI THỦ CÔNG -->
                         <button id="btn-refresh-recent" class="btn-modern-action" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 12.5px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(16,185,129,0.2);" onmouseover="this.style.transform='translateY(-1.5px)'" onmouseout="this.style.transform='translateY(0)'">
                             <i class="fa-solid fa-rotate"></i> Tải lại
                         </button>
@@ -542,6 +532,51 @@
                     </div>
                 </div>
             </section>
+            
+            <!-- THÊM MỚI BỘ CÔNG CỤ QUẢN LÝ VIDEO SHORTS VÀO ĐÂY -->
+            <section id="tab-shorts" class="content-section">
+                <div class="card" style="padding: 25px; border-radius: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <h3 style="margin-top: 0; color: #0f172a; font-size: 1.3rem; margin-bottom: 5px;">
+                                <i class="fa-brands fa-youtube" style="color: #ef4444;"></i> Quản lý Wikirad Shorts
+                            </h3>
+                            <p style="color: #64748b; font-size: 0.95rem; margin: 0;">Thêm video từ YouTube để nhúng vào giao diện học viên.</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 5px;">Tiêu đề hiển thị</label>
+                            <input type="text" id="adminShortTitle" placeholder="VD: Ca lâm sàng nhồi máu não..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; outline: none; box-sizing: border-box;">
+                        </div>
+                        <div style="flex: 2; min-width: 300px;">
+                            <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 5px;">Đường link YouTube</label>
+                            <input type="text" id="adminShortLink" placeholder="Dán link YouTube (Shorts hoặc Thường) vào đây..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; outline: none; box-sizing: border-box;">
+                        </div>
+                        <div style="display: flex; align-items: flex-end;">
+                            <button id="btnAdminAddShort" style="background: #3b82f6; color: white; border: none; padding: 10px 25px; height: 42px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-plus"></i> Đăng Video</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container" style="max-height: 500px;">
+                        <table class="admin-table">
+                            <thead style="position: sticky; top: 0; z-index: 10;">
+                                <tr>
+                                    <th style="width: 35%;">Tiêu đề Video</th>
+                                    <th style="width: 20%;">YouTube ID</th>
+                                    <th style="width: 15%;">Ngày đăng</th>
+                                    <th class="text-center" style="width: 15%;">Trạng thái</th>
+                                    <th class="text-center" style="width: 15%;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminShortsTableBody">
+                                <tr><td colspan="5" style="text-align: center; padding: 20px; color: #64748b;">Đang tải dữ liệu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
 
         </div>
     </main>
@@ -595,16 +630,14 @@
             let recentCurrentPage = 1;
             const recentItemsPerPage = 10;
             
-            // Dùng Map để lưu chính xác tier của từng email
-            let vipStatusMap = new Map();
+            let vipStatusMap = new Set();
 
             onSnapshot(collection(db, "users"), (snap) => {
                 vipStatusMap.clear();
                 snap.forEach(docSnap => {
                     const u = docSnap.data();
-                    let tier = u.vipTier || (u.isVip ? 'plus' : null); // Fallback sang plus nếu là vip cũ
-                    if (tier && u.email) {
-                        vipStatusMap.set(u.email.toLowerCase(), tier);
+                    if (u.isVip && u.email) {
+                        vipStatusMap.add(u.email.toLowerCase());
                     }
                 });
                 if (allRecentResults.length > 0) renderRecentExams();
@@ -682,17 +715,10 @@
                     const examCode = data.examId || data.examCode || 'Không rõ';
                     const email = data.email || 'Ẩn danh';
 
-                    // CẬP NHẬT RENDER HUY HIỆU THEO TRẠNG THÁI MỚI (THƯỜNG/PLUS/PRO)
                     const isVip = email !== 'Ẩn danh' && vipStatusMap.has(email.toLowerCase());
-                    const userTier = isVip ? vipStatusMap.get(email.toLowerCase()) : null;
-
-                    let vipBadge = `<span style="background: #f8fafc !important; color: #64748b !important; padding: 4px 8px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 700 !important; border: 1px solid #e2e8f0 !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; margin-left: 8px; line-height: 1 !important;"><i class="fa-solid fa-user" style="color: #94a3b8; margin-right: 4px;"></i>Thường</span>`;
-                    
-                    if (userTier === 'pro') {
-                        vipBadge = `<span style="background: #ffedd5 !important; color: #b45309 !important; padding: 4px 8px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 800 !important; border: 1px solid #fed7aa !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; margin-left: 8px; line-height: 1 !important;"><i class="fa-solid fa-crown" style="color: #f59e0b; margin-right: 4px;"></i>PRO</span>`;
-                    } else if (userTier === 'plus') {
-                        vipBadge = `<span style="background: #e0f2fe !important; color: #0369a1 !important; padding: 4px 8px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 800 !important; border: 1px solid #bae6fd !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; margin-left: 8px; line-height: 1 !important;"><i class="fa-solid fa-star" style="color: #0ea5e9; margin-right: 4px;"></i>PLUS</span>`;
-                    }
+                    const vipBadge = isVip 
+                        ? `<span style="background: #fef08a; color: #a16207; font-size: 10.5px; font-weight: 800; padding: 3px 6px; border-radius: 6px; margin-left: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: nowrap;">VIP 👑</span>`
+                        : `<span style="background: #f1f5f9; color: #64748b; font-size: 10.5px; font-weight: 700; padding: 3px 6px; border-radius: 6px; margin-left: 8px; border: 1px solid #e2e8f0; white-space: nowrap;">Thường 👤</span>`;
 
                     tbody.innerHTML += `
                         <tr style="transition: background 0.2s; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
@@ -804,6 +830,136 @@
                             deleteBtn.style.opacity = '1';
                             deleteBtn.style.pointerEvents = 'auto';
                         }
+                    }
+                }
+            });
+        });
+    </script>
+    
+    <!-- SCRIPT QUẢN LÝ WIKIRAD SHORTS -->
+    <script type="module">
+        import { db } from './firebase-config.js';
+        import { collection, addDoc, serverTimestamp, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        document.addEventListener('componentsLoaded', () => {
+            const btnAddShort = document.getElementById('btnAdminAddShort');
+            const inputTitle = document.getElementById('adminShortTitle');
+            const inputLink = document.getElementById('adminShortLink');
+            const tableBody = document.getElementById('adminShortsTableBody');
+
+            if (!btnAddShort || !tableBody) return;
+
+            // Hàm tự động trích xuất ID Video từ bất kỳ định dạng link YouTube nào
+            function extractYouTubeId(url) {
+                const regex = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|shorts\/|watch\?v=|watch\?.+&v=))([^&?\n]{11})/;
+                const match = url.match(regex);
+                return match ? match[1] : null;
+            }
+
+            // Lắng nghe Realtime dữ liệu từ Firestore
+            const shortsQuery = query(collection(db, "wikirad_shorts"), orderBy("createdAt", "desc"));
+            
+            onSnapshot(shortsQuery, (snapshot) => {
+                if (snapshot.empty) {
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #64748b;">Chưa có video nào trong hệ thống.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const docId = docSnap.id;
+                    
+                    let dateStr = "Chưa rõ";
+                    if (data.createdAt) {
+                        const d = typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate() : new Date(data.createdAt);
+                        dateStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
+                    }
+
+                    const statusBadge = data.isActive 
+                        ? `<span style="background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;">Đang hiện</span>` 
+                        : `<span style="background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700;">Đang ẩn</span>`;
+
+                    const btnToggleStr = data.isActive ? 'Ẩn video' : 'Bật hiển thị';
+                    const btnToggleColor = data.isActive ? '#f59e0b' : '#10b981';
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                            <td style="padding: 12px 15px; font-weight: 600; color: #1e293b;">${data.title || 'Không có tiêu đề'}</td>
+                            <td style="padding: 12px 15px; color: #3b82f6; font-family: monospace;">${data.youtubeId}</td>
+                            <td style="padding: 12px 15px; color: #64748b;">${dateStr}</td>
+                            <td style="padding: 12px 15px; text-align: center;">${statusBadge}</td>
+                            <td style="padding: 12px 15px; text-align: center;">
+                                <button class="btn-toggle-short" data-id="${docId}" data-status="${data.isActive}" style="background: ${btnToggleColor}; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; margin-right: 5px; transition: 0.2s;">${btnToggleStr}</button>
+                                <button class="btn-delete-short" data-id="${docId}" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tableBody.innerHTML = html;
+            });
+
+            // Sự kiện Thêm Video
+            btnAddShort.addEventListener('click', async () => {
+                const title = inputTitle.value.trim();
+                const link = inputLink.value.trim();
+
+                if (!link) return alert("Bạn phải nhập Link YouTube!");
+                
+                const ytId = extractYouTubeId(link);
+                if (!ytId) return alert("Link không hợp lệ. Vui lòng dán đúng link YouTube hoặc YouTube Shorts!");
+
+                btnAddShort.disabled = true;
+                btnAddShort.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+                try {
+                    await addDoc(collection(db, "wikirad_shorts"), {
+                        title: title || "Wikirad Shorts",
+                        youtubeId: ytId,
+                        isActive: true, // Mặc định hiển thị luôn
+                        createdAt: serverTimestamp()
+                    });
+
+                    inputTitle.value = '';
+                    inputLink.value = '';
+                    alert("Thêm video thành công!");
+                } catch (error) {
+                    console.error(error);
+                    alert("Lỗi kết nối CSDL!");
+                } finally {
+                    btnAddShort.disabled = false;
+                    btnAddShort.innerHTML = '<i class="fa-solid fa-plus"></i> Đăng Video';
+                }
+            });
+
+            // Sử dụng Event Delegation để xử lý các nút bấm Bật/Tắt/Xóa
+            tableBody.addEventListener('click', async (e) => {
+                const btnToggle = e.target.closest('.btn-toggle-short');
+                const btnDelete = e.target.closest('.btn-delete-short');
+
+                if (btnToggle) {
+                    const docId = btnToggle.getAttribute('data-id');
+                    const currentStatus = btnToggle.getAttribute('data-status') === 'true';
+                    btnToggle.disabled = true;
+                    btnToggle.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    try {
+                        await updateDoc(doc(db, "wikirad_shorts", docId), { isActive: !currentStatus });
+                    } catch (error) {
+                        alert("Lỗi cập nhật trạng thái!");
+                        btnToggle.disabled = false;
+                    }
+                }
+
+                if (btnDelete) {
+                    const docId = btnDelete.getAttribute('data-id');
+                    if (!confirm("Hệ thống cảnh báo: Bạn có chắc chắn muốn XÓA VĨNH VIỄN video này khỏi hệ thống không?")) return;
+                    btnDelete.disabled = true;
+                    btnDelete.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    try {
+                        await deleteDoc(doc(db, "wikirad_shorts", docId));
+                    } catch (error) {
+                        alert("Lỗi khi xóa video!");
+                        btnDelete.disabled = false;
                     }
                 }
             });
