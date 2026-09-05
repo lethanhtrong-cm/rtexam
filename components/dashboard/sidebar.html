@@ -36,7 +36,8 @@
         .sidebar-menu .menu-item.active .header-content i { color: #2563eb; }
         
         /* Style cho Sub-menu (Cây thư mục) */
-        .accordion-content { position: relative; padding: 6px 0 12px 0; }
+        .accordion-content { position: relative; padding: 6px 0 12px 0; display: none; }
+        .accordion-content.show { display: block; }
         
         /* Đường kẻ dọc nối các sub-menu */
         .accordion-content::before {
@@ -139,6 +140,27 @@
 
                 <div class="sub-menu-item" id="menu-saved-exams" data-technique="saved" style="border-top: 1px dashed var(--border-color); margin-top: 5px;">
                     <i class="fa-solid fa-bookmark" style="color: var(--star-color);"></i> Đề thi đã lưu
+                </div>
+            </div>
+        </div>
+
+        <!-- KHỐI MỚI: ĐÁNH GIÁ NĂNG LỰC -->
+        <div class="menu-accordion">
+            <div class="menu-item accordion-header" data-target="tab-exams">
+                <div class="header-content">
+                    <i class="fa-solid fa-trophy" style="color: #d97706;"></i> <span style="font-weight: 700;">Đánh Giá Năng Lực</span>
+                </div>
+                <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </div>
+            <div class="accordion-content">
+                <div class="sub-menu-item" data-technique="ĐGNL: MRI">
+                    <i class="fa-solid fa-bullseye" style="color: #ec4899;"></i> ĐGNL: MRI
+                </div>
+                <div class="sub-menu-item" data-technique="ĐGNL: CT">
+                    <i class="fa-solid fa-bullseye" style="color: #ec4899;"></i> ĐGNL: CT
+                </div>
+                <div class="sub-menu-item" data-technique="ĐGNL: X quang">
+                    <i class="fa-solid fa-bullseye" style="color: #ec4899;"></i> ĐGNL: X quang
                 </div>
             </div>
         </div>
