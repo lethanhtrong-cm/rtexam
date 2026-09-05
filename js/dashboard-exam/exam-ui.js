@@ -126,9 +126,15 @@ export function renderExams() {
             // 1. Lọc Đề AI/Ngẫu nhiên (Chỉ hiển thị của chính user)
             if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) return false;
 
+            // --- ĐỒNG BỘ CHUỖI TÊN CHUYÊN KHOA (Fix lỗi gõ sai ĐGNL: CT và ĐGNL - CT) ---
+            let reqTech = State.currentTechnique;
+            let examTech = exam.technique || '';
+            if (reqTech.includes('ĐGNL:')) reqTech = reqTech.replace('ĐGNL:', 'ĐGNL -');
+            if (examTech.includes('ĐGNL:')) examTech = examTech.replace('ĐGNL:', 'ĐGNL -');
+
             // 2. Lọc theo Kỹ thuật / Đề đã lưu (Saved)
             if (State.currentTechnique === 'saved' && !userBookmarks.includes(exam.id)) return false;
-            if (State.currentTechnique !== 'all' && State.currentTechnique !== 'saved' && exam.technique !== State.currentTechnique) return false;
+            if (State.currentTechnique !== 'all' && State.currentTechnique !== 'saved' && examTech !== reqTech) return false;
             
             // 3. Lọc theo Mức độ
             if (State.currentLevel !== 'all' && exam.level !== State.currentLevel) return false;
@@ -178,8 +184,8 @@ export function renderExams() {
 
         let groups = [];
         
-        // Mảng chứa các danh mục kỹ thuật đã định nghĩa rõ ràng
-        const definedTechs = ['MRI', 'CT', 'X quang', 'Thuốc tương phản', 'ĐGNL - MRI', 'ĐGNL - CT', 'ĐGNL - X quang'];
+        // Mảng chứa các danh mục kỹ thuật đã định nghĩa rõ ràng (Bao gồm cả ĐGNL)
+        const definedTechs = ['MRI', 'CT', 'X quang', 'Thuốc tương phản', 'ĐGNL - MRI', 'ĐGNL - CT', 'ĐGNL - X quang', 'ĐGNL: MRI', 'ĐGNL: CT', 'ĐGNL: X quang'];
 
         if (State.currentTechnique === 'all') {
             groups.push(
@@ -188,22 +194,24 @@ export function renderExams() {
                 { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && State.completedExams[exam.id].score < 7).slice(0, 10) }
             );
         } else if (definedTechs.includes(State.currentTechnique)) {
-            groups.push({ mainCategory: null, title: `⭐ Đề HOT ${State.currentTechnique}`, data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) });
+            // Thay thế ":" thành "-" cho title hiển thị đẹp
+            const displayTechTitle = State.currentTechnique.replace('ĐGNL:', 'ĐGNL -');
+            groups.push({ mainCategory: null, title: `⭐ Đề HOT ${displayTechTitle}`, data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) });
         }
 
         groups.push(
             // --- NHÓM ĐÁNH GIÁ NĂNG LỰC (ĐGNL) ---
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'ĐGNL - MRI' && exam.level === 'Dễ') },
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: MRI", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'ĐGNL - MRI' && exam.level === 'Trung bình') },
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: MRI", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'ĐGNL - MRI' && exam.level === 'Khó') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: MRI", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'ĐGNL - MRI' || exam.technique === 'ĐGNL: MRI') && exam.level === 'Dễ') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: MRI", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'ĐGNL - MRI' || exam.technique === 'ĐGNL: MRI') && exam.level === 'Trung bình') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: MRI", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'ĐGNL - MRI' || exam.technique === 'ĐGNL: MRI') && exam.level === 'Khó') },
 
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: CT SCANNER", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'ĐGNL - CT' && exam.level === 'Dễ') },
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: CT SCANNER", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'ĐGNL - CT' && exam.level === 'Trung bình') },
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: CT SCANNER", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'ĐGNL - CT' && exam.level === 'Khó') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: CT SCANNER", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'ĐGNL - CT' || exam.technique === 'ĐGNL: CT') && exam.level === 'Dễ') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: CT SCANNER", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'ĐGNL - CT' || exam.technique === 'ĐGNL: CT') && exam.level === 'Trung bình') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: CT SCANNER", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'ĐGNL - CT' || exam.technique === 'ĐGNL: CT') && exam.level === 'Khó') },
 
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: X-QUANG", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'ĐGNL - X quang' && exam.level === 'Dễ') },
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: X-QUANG", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'ĐGNL - X quang' && exam.level === 'Trung bình') },
-            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: X-QUANG", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'ĐGNL - X quang' && exam.level === 'Khó') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: X-QUANG", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'ĐGNL - X quang' || exam.technique === 'ĐGNL: X quang') && exam.level === 'Dễ') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: X-QUANG", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'ĐGNL - X quang' || exam.technique === 'ĐGNL: X quang') && exam.level === 'Trung bình') },
+            { mainCategory: "🎯 ĐÁNH GIÁ NĂNG LỰC: X-QUANG", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'ĐGNL - X quang' || exam.technique === 'ĐGNL: X quang') && exam.level === 'Khó') },
 
             // --- CÁC NHÓM CŨ ---
             { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
