@@ -189,14 +189,19 @@ export function renderExams() {
 
         if (State.currentTechnique === 'all') {
             groups.push(
-                { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
+                // Bổ sung điều kiện attemptCount > 0 để lọt vào Đề HOT
+                { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].filter(e => e.attemptCount > 0).sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
                 { mainCategory: null, title: "✨ Đề Mới", data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10) },
                 { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && State.completedExams[exam.id].score < 7).slice(0, 10) }
             );
         } else if (definedTechs.includes(State.currentTechnique)) {
             // Thay thế ":" thành "-" cho title hiển thị đẹp
             const displayTechTitle = State.currentTechnique.replace('ĐGNL:', 'ĐGNL -');
-            groups.push({ mainCategory: null, title: `⭐ Đề HOT ${displayTechTitle}`, data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) });
+            groups.push(
+                // Bổ sung nhóm Đề Mới và bộ lọc attemptCount > 0 cho Đề HOT tại từng tab chuyên khoa
+                { mainCategory: null, title: `⭐ Đề HOT ${displayTechTitle}`, data: [...displayData].filter(e => e.attemptCount > 0).sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
+                { mainCategory: null, title: `✨ Đề Mới ${displayTechTitle}`, data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10) }
+            );
         }
 
         groups.push(
