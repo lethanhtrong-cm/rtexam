@@ -78,6 +78,9 @@ export function renderExams() {
             if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) {
                 return; 
             }
+            
+            // ĐÃ SỬA: Loại bỏ đếm số đề mới nếu số câu hỏi bằng 0 (đề rác/lỗi)
+            if (!exam.questionCount || exam.questionCount <= 0) return;
 
             const isCompleted = !!State.completedExams[exam.id];
             if (exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted) {
@@ -123,6 +126,9 @@ export function renderExams() {
         // ==========================================================
         let displayData = State.allExamsData.filter(exam => {
             
+            // ĐÃ SỬA: Loại bỏ toàn bộ đề thi rỗng/lỗi (không có câu hỏi)
+            if (!exam.questionCount || exam.questionCount <= 0) return false;
+
             // 1. Lọc Đề AI/Ngẫu nhiên (Chỉ hiển thị của chính user)
             if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) return false;
 
@@ -181,36 +187,43 @@ export function renderExams() {
         if (State.currentTechnique === 'all') {
             groups.push(
                 { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
-                // ĐÃ SỬA: Đổi slice(0, 5) thành slice(0, 10) để hiển thị tối đa 10 đề mới
                 { mainCategory: null, title: "✨ Đề Mới", data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10) },
-                // ĐÃ SỬA: Sửa lại logic điểm số, chỉ lấy những đề đã làm có điểm chuẩn < 7
                 { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && State.completedExams[exam.id].score < 7).slice(0, 10) }
             );
         } else if (['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(State.currentTechnique)) {
             groups.push({ mainCategory: null, title: `⭐ Đề HOT ${State.currentTechnique}`, data: [...displayData].sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) });
         }
 
-        groups.push(
-            { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
-            { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Trung bình') },
-            { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Khó') },
-            
-            { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Dễ') },
-            { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Trung bình') },
-            { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Khó') },
-            
-            { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Dễ') },
-            { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Trung bình') },
-            { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Khó') },
-            
-            { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Dễ') },
-            { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Trung bình') },
-            { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Khó') },
+        // ĐÃ THÊM: Nếu Kỹ thuật hiện tại thuộc nhóm ĐGNL, tạo nhóm riêng
+        if (State.currentTechnique.startsWith('ĐGNL:')) {
+            const shortTech = State.currentTechnique.replace('ĐGNL: ', '');
+            groups.push(
+                { mainCategory: `🎯 ĐÁNH GIÁ NĂNG LỰC ${shortTech}`, title: "Toàn bộ bài test", data: displayData }
+            );
+        } else {
+            // Nhóm mặc định
+            groups.push(
+                { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Dễ') },
+                { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Trung bình') },
+                { mainCategory: "🧲 KHỐI KIẾN THỨC MRI", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'MRI' && exam.level === 'Khó') },
+                
+                { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Dễ') },
+                { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Trung bình') },
+                { mainCategory: "☢️ KHỐI KIẾN THỨC CT SCANNER", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'CT' && exam.level === 'Khó') },
+                
+                { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Dễ') },
+                { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Trung bình') },
+                { mainCategory: "🩻 KHỐI KIẾN THỨC X-QUANG", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'X quang' && exam.level === 'Khó') },
+                
+                { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Dễ') },
+                { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Trung bình') },
+                { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Khó') },
 
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Dễ') },
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Trung bình') },
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique)) && exam.level === 'Khó') }
-        );
+                { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || (!['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique) && !exam.technique.startsWith('ĐGNL:'))) && exam.level === 'Dễ') },
+                { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || (!['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique) && !exam.technique.startsWith('ĐGNL:'))) && exam.level === 'Trung bình') },
+                { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || (!['MRI', 'CT', 'X quang', 'Thuốc tương phản'].includes(exam.technique) && !exam.technique.startsWith('ĐGNL:'))) && exam.level === 'Khó') }
+            );
+        }
 
         let currentMainCategoryTracker = null;
         let finalHtmlBuffer = ""; // TỐI ƯU DOM: Bộ đệm chứa toàn bộ HTML để render 1 lần
@@ -307,9 +320,6 @@ export function renderExams() {
                     let displayScore = State.completedExams[exam.id].score || 0;
                     displayScore = Number.isInteger(displayScore) ? displayScore : parseFloat(displayScore.toFixed(1));
 
-                    // ==========================================================
-                    // PHÂN QUYỀN NÚT XEM LẠI BÀI NGAY TRÊN CARD DỰA VÀO isUserVip
-                    // ==========================================================
                     let reviewBtnHtml = isUserVip 
                         ? `<button onclick="goToReview('${State.completedExams[exam.id].resultId}')" style="flex: 1; padding: 10px 0; border: 1px solid #adb5bd; background: transparent; color: #495057; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-eye"></i> Xem lại</button>`
                         : `<button onclick="goToUpgrade()" style="flex: 1; padding: 10px 0; border: 1px solid #f59e0b; background: #fffbeb; color: #d97706; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" title="Tính năng dành cho tài khoản PRO"><i class="fa-solid fa-crown"></i> Xem lại (Pro)</button>`;
