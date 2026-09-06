@@ -29,15 +29,16 @@ document.addEventListener('ComponentsLoaded', () => {
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 if (data.youtubeId) {
+                    // ĐÃ SỬA: Tăng kích thước width lên 280px và height lên 498px (chuẩn tỷ lệ 9:16)
                     htmlBuffer += `
-                        <div style="flex: 0 0 220px; border-radius: 12px; overflow: hidden; background: #000; border: 1px solid #cbd5e1; position: relative;">
-                            <iframe width="220" height="390" src="https://www.youtube.com/embed/${data.youtubeId}" title="${data.title || 'Wikirad Shorts'}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="display: block;"></iframe>
+                        <div style="flex: 0 0 280px; border-radius: 12px; overflow: hidden; background: #000; border: 1px solid #cbd5e1; position: relative;">
+                            <iframe width="280" height="498" src="https://www.youtube.com/embed/${data.youtubeId}" title="${data.title || 'Wikirad Shorts'}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="display: block;"></iframe>
                         </div>
                     `;
                 }
             });
 
-            // Ghi đè các video mẫu (tĩnh) bằng video lấy từ Firebase
+            // Ghi đè các video bằng video lấy từ Firebase
             shortsContainer.innerHTML = htmlBuffer;
             
         }, (error) => {
