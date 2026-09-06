@@ -191,6 +191,15 @@
         <i class="fa-solid fa-headset" style="font-size: 1.6rem;"></i>
     </button>
 
+    <!-- Nút Floating Back to Top -->
+    <button id="btn-back-to-top" onclick="window.scrollTo({top:0, behavior:'smooth'}); document.querySelector('.main-content')?.scrollTo({top:0, behavior:'smooth'});" style="position: fixed; bottom: 30px; left: 30px; z-index: 9999; background: #64748b; color: white; width: 44px; height: 44px; border: none; border-radius: 50%; display: none; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.3s;" title="Lên đầu trang" onmouseover="this.style.transform='translateY(-5px)';" onmouseout="this.style.transform='translateY(0)';"><i class="fa-solid fa-arrow-up"></i></button>
+    <script>
+        document.addEventListener('scroll', (e) => {
+            const scrollPos = e.target.scrollTop || window.scrollY || 0;
+            document.getElementById('btn-back-to-top').style.display = scrollPos > 300 ? 'flex' : 'none';
+        }, true);
+    </script>
+
     <div id="modals-container"></div>
 
     <!-- Modal: Góp ý / Liên hệ Admin -->
