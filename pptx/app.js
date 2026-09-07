@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment, addDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FREE_LIMIT = 3;
-const PLUS_LIMIT = 10;
+const PLUS_LIMIT = 10; // Đã cấu hình lên 10 bài ở bước trước
 
 let currentUserTier = 'free';
 let currentUserName = 'Bạn'; 
@@ -150,7 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (user) {
             userStorageKey = 'viewedLectures_' + user.uid;
-            viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
+            // Bọc try catch xử lý lỗi Safari chặn LocalStorage
+            try {
+                viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
+            } catch(e) {
+                viewedLectures = [];
+                console.warn("Safari blocked localStorage read, falling back to memory array.");
+            }
 
             try {
                 const docSnap = await getDoc(doc(db, "users", user.uid));
@@ -158,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const userData = docSnap.data();
                     let tier = userData.vipTier;
                     if (!tier && userData.isVip) tier = 'plus'; 
-                    // CHỈNH SỬA: Bảo vệ và đồng bộ hóa chữ thường cho Gói Cước
                     currentUserTier = String(tier || 'free').toLowerCase().trim();
                     currentUserName = userData.fullName || userData.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'Bạn');
                 } else {
@@ -170,7 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             userStorageKey = 'viewedLectures_guest';
-            viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
+            try {
+                viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
+            } catch(e) {
+                viewedLectures = [];
+            }
             window.location.href = '../dashboard.html';
             return;
         }
@@ -183,16 +192,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 globalCategoryTree = docSnap.data().tree;
             } else {
                 globalCategoryTree = defaultTree;
-                await setDoc(doc(db, "settings", "category_tree"), { tree: globalCategoryTree });
+                // Bọc try catch để tránh lỗi Permission Denied trên trình duyệt cache rỗng
+                try {
+                    await setDoc(doc(db, "settings", "category_tree"), { tree: globalCategoryTree });
+                } catch(err) {
+                    console.warn("User has no permission to init tree, using memory fallback.");
+                }
             }
             
             UI.renderCategoryTree(globalCategoryTree, (rootCat) => {
                 currentOpenRootCat = rootCat;
                 UI.renderCategoryDetail(rootCat, pptxDataList, (lecId, catId, catName) => {
                     currentSelectedCategory = catId;
-                    // CHỈNH SỬA: Xóa lệnh ghi đè currentLoadedItemId để loadPptx không bị skip
                     UI.showViewerPage(catName, currentViewMode);
-                    renderPptxList(lecId); // Truyền lecId sang hàm render để bôi xanh thẻ
+                    renderPptxList(lecId); 
                 });
             });
             
@@ -224,7 +237,6 @@ function fetchPptxFromDatabase() {
         if (currentOpenRootCat && document.getElementById('category-detail-section').style.display !== 'none') {
             UI.renderCategoryDetail(currentOpenRootCat, pptxDataList, (lecId, catId, catName) => {
                 currentSelectedCategory = catId;
-                // CHỈNH SỬA: Xóa ghi đè ID để loadPptx hoạt động trơn tru
                 UI.showViewerPage(catName, currentViewMode);
                 renderPptxList(lecId);
             });
@@ -255,7 +267,6 @@ function fetchPptxFromDatabase() {
                 if(foundName) catName = foundName;
 
                 currentSelectedCategory = cat;
-                // CHỈNH SỬA: Xóa lệnh ghi đè ID
                 UI.showViewerPage(catName, currentViewMode);
                 renderPptxList(sharedId);
                 return;
@@ -274,7 +285,6 @@ function fetchPptxFromDatabase() {
     });
 }
 
-// CHỈNH SỬA: Hàm nhận thêm tham số forceActiveId để biết chính xác bài nào vừa được Click từ trang ngoài
 function renderPptxList(forceActiveId = null) {
     const listContainer = document.getElementById('pptx-list');
     const gridContainer = document.getElementById('grid-view-container');
@@ -296,7 +306,6 @@ function renderPptxList(forceActiveId = null) {
         return;
     }
 
-    // Ưu tiên chọn bài giảng ID được gửi tới, nếu không thì lấy bài giảng đang mở, nếu không có nữa thì lấy bài đầu tiên
     let activeItem = filteredList.find(item => item.id === (forceActiveId || currentLoadedItemId));
     if (!activeItem) activeItem = filteredList[0];
 
@@ -428,7 +437,7 @@ function loadPptx(embedUrl, itemId) {
         canView = true;
         if (!viewedLectures.includes(itemId)) {
             viewedLectures.push(itemId);
-            localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
+            try { localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures)); } catch(e){}
             syncViewCountToFirestore(); 
         }
     } else if (viewedLectures.includes(itemId)) {
@@ -437,27 +446,25 @@ function loadPptx(embedUrl, itemId) {
         if (currentUserTier === 'plus' && viewedLectures.length < PLUS_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
-            localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
+            try { localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures)); } catch(e){}
             UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
             syncViewCountToFirestore(); 
         } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
             canView = true;
             viewedLectures.push(itemId);
-            localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures));
+            try { localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures)); } catch(e){}
             UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
             syncViewCountToFirestore(); 
         }
     }
 
     if (canView) {
-        // CHỈNH SỬA: Chỉ chính thức gán ID đã xem khi vượt qua được màng lọc phân quyền
         currentLoadedItemId = itemId;
         incrementLectureViewCount(itemId);
 
         lockOverlay.style.display = 'none';
         iframeContainer.style.display = 'block';
         
-        // CHỈNH SỬA: Bọc Link bằng SafeString phòng hờ Admin quên nhập Link mà web vẫn không sập
         const safeUrl = embedUrl || '';
         const isVideoUpload = safeUrl.includes('firebasestorage.googleapis.com');
         
