@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, addDoc, serverTimestamp, getDoc, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showToast, redirect } from './quiz-utils.js';
 
 export function initQuizUI(db, ctx, actions) {
@@ -47,7 +47,6 @@ export function initQuizUI(db, ctx, actions) {
         if (badge) badge.innerText = `Câu ${ctx.currentIndex + 1}`;
         
         const textContainer = document.getElementById('question-text');
-        // Render trực tiếp văn bản gốc, xóa bỏ hàm obfuscateText gây đứt gãy chữ
         if (textContainer) textContainer.innerHTML = questionText;
         
         const container = document.getElementById('options-container');
@@ -61,7 +60,6 @@ export function initQuizUI(db, ctx, actions) {
                 if (ctx.userAnswers[ctx.currentIndex] === idx) extraClasses += ' selected';
 
                 div.className = 'option-item' + extraClasses;
-                // Render trực tiếp tùy chọn đáp án, xóa bỏ obfuscateText
                 div.innerHTML = `<div class="option-label">${['A','B','C','D', 'E', 'F'][idx]}</div><div>${opt}</div>`;
                 
                 div.onclick = () => handleOptionSelect(idx);
@@ -147,7 +145,7 @@ export function initQuizUI(db, ctx, actions) {
         
         if (!isAutoSubmit) {
             const confirmModal = document.getElementById('confirm-submit-modal');
-            if (!confirmModal) { actions.executeSubmit(); return; } // Fallback an toàn nếu Modal bị thiếu
+            if (!confirmModal) { actions.executeSubmit(); return; } 
             
             const confirmText = document.getElementById('confirm-submit-text');
             if (confirmText) confirmText.innerText = `Bạn đã hoàn thành ${answeredCount}/${total} câu hỏi.\nBạn có chắc chắn muốn nộp bài lúc này?`;
@@ -423,7 +421,6 @@ export function initQuizUI(db, ctx, actions) {
 
         const btnExplain = document.getElementById('btn-modal-explain');
         if (btnExplain) {
-            // ĐÃ SỬA: Chấp nhận cả gói Plus và gói Pro
             if (['plus', 'pro'].includes(ctx.currentUserVipTier)) {
                 btnExplain.innerText = "Xem lại ĐÁP ÁN và GIẢI THÍCH";
                 btnExplain.removeAttribute("style");
@@ -445,12 +442,28 @@ export function initQuizUI(db, ctx, actions) {
         }
 
         // ==========================================
-        // MODULE CẤU TRÚC LẠI NÚT VÀ CHỨNG NHẬN
+        // GHI ĐÈ NÚT FLASHCARD CŨ SANG AI SUMMARY
         // ==========================================
+        let btnCreateFlashcard = document.getElementById('btn-create-flashcard');
+        if (btnCreateFlashcard) {
+            // Đổi giao diện nút
+            btnCreateFlashcard.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Tóm tắt kiến thức';
+            btnCreateFlashcard.style.background = 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)';
+            btnCreateFlashcard.style.color = 'white';
+            
+            // Xóa hết Event Listener cũ (nếu có từ quiz-flashcard.js) bằng cách thay thế Node
+            let newBtn = btnCreateFlashcard.cloneNode(true);
+            btnCreateFlashcard.parentNode.replaceChild(newBtn, btnCreateFlashcard);
+            
+            newBtn.addEventListener('click', () => {
+                document.getElementById('result-modal').classList.remove('active'); 
+                executeAiSummary(ctx.currentExamId, ctx.questions);
+            });
+        }
+
         const btnRetry = document.getElementById('btn-modal-retry');
         const btnDashModal = document.getElementById('btn-modal-dashboard-modal');
         
-        // Nhóm "Làm lại" và "Phòng chờ" vào chung 1 hàng (chia đôi)
         let btnRow = document.getElementById('modal-btn-row');
         if (!btnRow && btnRetry && btnDashModal) {
             const parent = btnRetry.parentNode;
@@ -458,7 +471,6 @@ export function initQuizUI(db, ctx, actions) {
             btnRow.id = 'modal-btn-row';
             btnRow.style.cssText = "display: flex; gap: 10px; width: 100%; margin-top: 10px;";
             
-            // Xóa margin cũ, setup flex chia đôi
             btnRetry.style.flex = '1'; btnRetry.style.margin = '0'; btnRetry.style.padding = '12px 10px'; btnRetry.style.whiteSpace = 'nowrap';
             btnDashModal.style.flex = '1'; btnDashModal.style.margin = '0'; btnDashModal.style.padding = '12px 10px'; btnDashModal.style.whiteSpace = 'nowrap';
             
@@ -467,9 +479,7 @@ export function initQuizUI(db, ctx, actions) {
             btnRow.appendChild(btnDashModal);
         }
 
-        // Chèn nút Tải Chứng Nhận LÊN TRÊN hàng nút gộp kia
         let certBtn = document.getElementById('btn-download-cert');
-        // ĐÃ SỬA: Chấp nhận cả gói Plus và gói Pro
         if (score > 8 && ['plus', 'pro'].includes(ctx.currentUserVipTier)) {
             if (!certBtn && btnRow) {
                 certBtn = document.createElement('button');
@@ -480,18 +490,15 @@ export function initQuizUI(db, ctx, actions) {
                 certBtn.onmouseover = () => certBtn.style.transform = 'translateY(-2px)';
                 certBtn.onmouseout = () => certBtn.style.transform = 'translateY(0)';
                 
-                // Gọi hành động downloadCert truyền từ file quiz.js sang
                 certBtn.onclick = () => {
                     if (actions.downloadCert) actions.downloadCert(score);
                 };
                 
-                // Chèn lên ngay sát trên cái div btnRow
                 btnRow.parentNode.insertBefore(certBtn, btnRow);
             } else if (certBtn) {
                 certBtn.style.display = 'flex';
             }
         } else {
-            // Ẩn đi nếu thi lại bị rớt điểm hoặc hết VIP
             if (certBtn) certBtn.style.display = 'none';
         }
 
@@ -523,7 +530,140 @@ export function initQuizUI(db, ctx, actions) {
     const btnRetry = document.getElementById('btn-modal-retry');
     if (btnRetry) btnRetry.onclick = () => { closeModal(); actions.initExamState(); };
 
-    // Trả về các hàm Controller (quiz.js) cần dùng
+    // ==========================================
+    // LOGIC GỌI API: AI SUMMARY (NGAY TẠI BÀI THI)
+    // ==========================================
+    async function executeAiSummary(examId, loadedQuestions) {
+        if (!ctx.currentUser) {
+            showToast("Vui lòng đăng nhập để sử dụng tính năng này!");
+            return;
+        }
+
+        const uid = ctx.currentUser.uid;
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        let currentSummaryCount = 0;
+        let maxLimit = 1;
+        let isUserPro = false;
+
+        try {
+            const userSnap = await getDoc(doc(db, "users", uid));
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                let globalAiTier = userData.vipTier || 'free';
+                isUserPro = (globalAiTier === 'pro');
+                
+                if (globalAiTier === 'plus') maxLimit = 5;
+                if (globalAiTier === 'pro') maxLimit = Infinity;
+
+                if (!isUserPro) {
+                    const lastDate = userData.aiSummaryLastUsedDate || '';
+                    currentSummaryCount = (lastDate === todayStr) ? (userData.aiSummaryDailyCount || 0) : 0;
+                    if (currentSummaryCount >= maxLimit) {
+                        alert(`Bạn đã hết lượt Tóm tắt kiến thức trong ngày (${maxLimit}/${maxLimit}). Nâng cấp PRO để sử dụng không giới hạn!`);
+                        document.getElementById('result-modal').classList.add('active');
+                        return;
+                    }
+                }
+            }
+        } catch (e) {
+            showToast("Lỗi kiểm tra quyền hạn AI.");
+            document.getElementById('result-modal').classList.add('active');
+            return;
+        }
+
+        let modal = document.getElementById('aiSummaryModalQuiz');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'aiSummaryModalQuiz';
+            modal.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 100000; display: flex; align-items: center; justify-content: center; padding: 15px;";
+            modal.innerHTML = `
+                <div style="background: #fff; width: 100%; max-width: 700px; height: 85vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); animation: scaleIn 0.2s ease-out;">
+                    <style>@keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }</style>
+                    <div style="padding: 18px 24px; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;"><i class="fa-solid fa-bolt" style="color: #fde047;"></i> Tóm tắt kiến thức cốt lõi</h3>
+                        <button id="closeAiSumModal" style="background: transparent; border: none; color: white; font-size: 1.4rem; cursor: pointer; transition: 0.2s;" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='white'"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div id="aiSummaryContentQuiz" style="padding: 24px; overflow-y: auto; flex: 1; font-size: 1rem; line-height: 1.7; color: #334155; background: #f8fafc;">
+                        <div style="text-align: center; padding: 50px 0;">
+                            <i class="fa-solid fa-wand-magic-sparkles fa-spin fa-2x" style="color: #7c3aed; margin-bottom: 15px;"></i>
+                            <p style="margin: 0; color: #475569; font-weight: 600; font-size: 1.05rem;">AI đang đọc đề và tổng hợp kiến thức...</p>
+                            <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 0.9rem;">Quá trình này có thể mất vài giây tùy thuộc vào độ dài của đề thi.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('closeAiSumModal').onclick = () => {
+                modal.remove();
+                document.getElementById('result-modal').classList.add('active');
+            };
+        }
+
+        const contentBox = document.getElementById('aiSummaryContentQuiz');
+
+        try {
+            let questionsText = loadedQuestions.map((q, i) => `${i+1}. ${q.text || q.questionText || q.content || q.question || ''}`).join('\n');
+            if (!questionsText.trim()) throw new Error("Đề thi này trống hoặc không có nội dung văn bản để tổng hợp.");
+            
+            questionsText = questionsText.substring(0, 15000); 
+
+            const prompt = `Đóng vai trò là một giảng viên y khoa giàu kinh nghiệm. Hãy đọc nội dung các câu hỏi của đề thi "${examId}" dưới đây và TỔNG HỢP KIẾN THỨC CỐT LÕI nhất.\n\nYêu cầu:\n- Trình bày dạng các gạch đầu dòng (bullet points) dễ học, dễ nhớ.\n- Không chép lại nguyên văn câu hỏi, hãy rút ra bản chất kiến thức/đáp án đúng từ các câu hỏi đó.\n- Trình bày khoa học, hệ thống.\n\nNội dung đề:\n${questionsText}`;
+
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    history: [{ role: "user", parts: [{ text: prompt }] }]
+                })
+            });
+
+            const usedTokens = parseInt(response.headers.get('X-Token-Usage')) || 0;
+
+            if (!response.ok) {
+                const errData = await response.text();
+                if (response.status === 429 || errData.includes('RESOURCE_EXHAUSTED')) throw new Error("Hệ thống AI đang quá tải lượt dùng. Vui lòng thử lại sau ít phút!");
+                throw new Error("Lỗi kết nối máy chủ AI.");
+            }
+
+            const data = await response.json();
+            const resultText = data.response || "Lỗi: Không có dữ liệu trả về.";
+
+            let formattedText = resultText
+                .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#0f172a;">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>')
+                .replace(/- /g, '<span style="color:#7c3aed; font-weight:bold; margin-right:5px;">•</span>');
+
+            contentBox.innerHTML = `
+                <div style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: justify;">
+                    ${formattedText}
+                </div>
+                <div style="margin-top: 15px; text-align: right; font-size: 0.85rem; color: #64748b; font-weight: 600;">
+                    ${isUserPro ? '<i class="fa-solid fa-infinity" style="color: #8b5cf6;"></i> Gói Pro: Không giới hạn' : `Lượt dùng trong ngày: ${currentSummaryCount + 1} / ${maxLimit}`}
+                </div>
+            `;
+
+            if (usedTokens > 0) {
+                let updateData = { totalTokensUsed: increment(usedTokens) };
+                if (!isUserPro) {
+                    updateData.aiSummaryDailyCount = currentSummaryCount + 1;
+                    updateData.aiSummaryLastUsedDate = todayStr;
+                }
+                await updateDoc(doc(db, "users", uid), updateData);
+            }
+
+        } catch (error) {
+            contentBox.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px;">
+                    <i class="fa-solid fa-triangle-exclamation fa-3x" style="color: #ef4444; margin-bottom: 15px;"></i>
+                    <h4 style="margin: 0 0 10px 0; color: #b91c1c;">Lỗi xử lý</h4>
+                    <p style="margin: 0; color: #475569;">${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
     return {
         renderAll,
         submitExam,
