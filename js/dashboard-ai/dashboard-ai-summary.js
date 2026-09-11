@@ -93,7 +93,7 @@ window.generateExamSummary = async function(examId) {
 
     try {
         // 3. CƠ CHẾ CACHE: Kiểm tra xem đề thi đã được tóm tắt trước đó chưa
-        const summaryRef = doc(db, "exam_summaries", examId);
+        const summaryRef = doc(db, "summaries", examId);
         const summarySnap = await getDoc(summaryRef);
 
         if (summarySnap.exists()) {
