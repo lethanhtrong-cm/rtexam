@@ -1,4 +1,4 @@
-import { auth, db } from "./dashboard-core.js";
+import { auth, db } from "../dashboard-core.js";
 import { doc, updateDoc, increment, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // ==========================================
