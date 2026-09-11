@@ -70,6 +70,8 @@ export function renderExams() {
         // ==========================================================
         // LOGIC: TÍNH TOÁN & HIỂN THỊ BADGE BÁO ĐỀ MỚI TRÊN TAB
         // ==========================================================
+        const nowMs = Date.now();
+        const oneDayMs = 24 * 60 * 60 * 1000; // Giới hạn 24 giờ
         let newExamsCount = { 'all': 0 };
 
         State.allExamsData.forEach(exam => {
@@ -79,13 +81,17 @@ export function renderExams() {
 
             const isCompleted = !!State.completedExams[exam.id];
             
-            // ĐÃ SỬA: Bỏ giới hạn 24 giờ. Đề sẽ giữ nhãn "Mới" cho đến khi người dùng làm (isCompleted = true).
-            if (exam.createdAt && !isCompleted) {
+            // Xử lý chuyển đổi thời gian an toàn để tránh lỗi NaN
+            let createdTimeMs = 0;
+            if (exam.createdAt) {
+                createdTimeMs = (typeof exam.createdAt.toMillis === 'function') ? exam.createdAt.toMillis() : new Date(exam.createdAt).getTime();
+            }
+
+            // Đề mới = Tạo trong 24h VÀ chưa làm
+            if (createdTimeMs > 0 && (nowMs - createdTimeMs < oneDayMs) && !isCompleted) {
                 newExamsCount['all']++;
                 if (exam.technique) {
-                    // CHUẨN HÓA CHUỖI: Đổi dấu hai chấm thành gạch ngang để đếm chính xác
                     let safeTech = exam.technique.includes('ĐGNL:') ? exam.technique.replace('ĐGNL:', 'ĐGNL -') : exam.technique;
-                    
                     if (!newExamsCount[safeTech]) newExamsCount[safeTech] = 0;
                     newExamsCount[safeTech]++;
                 }
@@ -104,7 +110,6 @@ export function renderExams() {
                 if (tech === 'all') {
                     count = newExamsCount['all'];
                 } else if (tech) {
-                    // CHUẨN HÓA CHUỖI TỪ HTML: Đổi dấu hai chấm thành gạch ngang để truy xuất đúng key
                     let lookupTech = tech.includes('ĐGNL:') ? tech.replace('ĐGNL:', 'ĐGNL -') : tech;
                     count = newExamsCount[lookupTech] || 0;
                 }
@@ -134,7 +139,7 @@ export function renderExams() {
             // 1. Lọc Đề AI/Ngẫu nhiên (Chỉ hiển thị của chính user)
             if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) return false;
 
-            // --- ĐỒNG BỘ CHUỖI TÊN CHUYÊN KHOA (Fix lỗi gõ sai ĐGNL: CT và ĐGNL - CT) ---
+            // --- ĐỒNG BỘ CHUỖI TÊN CHUYÊN KHOA ---
             let reqTech = State.currentTechnique;
             let examTech = exam.technique || '';
             if (reqTech.includes('ĐGNL:')) reqTech = reqTech.replace('ĐGNL:', 'ĐGNL -');
@@ -284,8 +289,14 @@ export function renderExams() {
                 const isSaved = userBookmarks.includes(exam.id);
                 const isCompleted = !!State.completedExams[exam.id];
                 
-                // ĐÃ SỬA: Đề giữ nhãn "Mới" cho đến khi hoàn thành (Bỏ giới hạn thời gian)
-                const isExamNew = exam.createdAt && !isCompleted;
+                let createdTimeMs = 0;
+                if (exam.createdAt) {
+                    createdTimeMs = (typeof exam.createdAt.toMillis === 'function') ? exam.createdAt.toMillis() : new Date(exam.createdAt).getTime();
+                }
+
+                // Đề mới = Tạo trong 24h VÀ chưa làm
+                const isExamNew = createdTimeMs > 0 && (nowMs - createdTimeMs < oneDayMs) && !isCompleted;
+                
                 const newBadgeHtml = isExamNew ? `<span style="background: linear-gradient(135deg, #ef4444, #f97316); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 900; animation: pulseNewBadge 1.2s infinite; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); letter-spacing: 0.5px; z-index: 10;"><i class="fa-solid fa-bolt"></i> MỚI</span>` : ``;
                 
                 const cardOutlineStyle = isExamNew ? `border: 2px solid #ef4444; animation: cardPulseGlow 2s infinite;` : `border: 1px solid #eef0f2;`;
