@@ -369,7 +369,7 @@ export function renderExams() {
                         </div>
                         <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
                             <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 4px;">
-                                <button onclick="goToFlashcard('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-bolt"></i> Flashcard</button>
+                                <button onclick="generateExamSummary('${safeExamId}')" style="flex: 1; padding: 10px 0; border: none; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-wand-magic-sparkles"></i> Tóm tắt kiến thức</button>
                             </div>
                             <div style="display: flex; gap: 8px; width: 100%;">
                                 ${reviewBtnHtml}
