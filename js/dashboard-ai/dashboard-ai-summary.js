@@ -77,9 +77,13 @@ window.generateExamSummary = async function(examId) {
         const examData = examSnap.data();
         let questionsText = "";
         
-        // Hỗ trợ cả 2 cấu trúc: Mảng câu hỏi nhúng trực tiếp hoặc Bảng questions rời
+        // ĐÃ SỬA: Lấy đúng trường "text" và bổ sung thêm Đáp án đúng để AI học chuẩn xác
         if (examData.questions && Array.isArray(examData.questions)) {
-            questionsText = examData.questions.map((q, i) => `${i+1}. ${q.questionText || q.content || q.question || ''}`).join('\n');
+            questionsText = examData.questions.map((q, i) => {
+                const text = q.text || q.questionText || q.content || q.question || '';
+                const correctOpt = (q.options && q.correctAnswer !== undefined) ? q.options[q.correctAnswer] : 'Không rõ';
+                return `${i+1}. Hỏi: ${text} | Đáp án đúng: ${correctOpt}`;
+            }).join('\n');
         } else {
             const qRef = collection(db, "questions");
             const qQuery = query(qRef, where("examId", "==", examId));
@@ -87,7 +91,9 @@ window.generateExamSummary = async function(examId) {
             let idx = 1;
             qSnap.forEach(document => {
                 const q = document.data();
-                questionsText += `${idx++}. ${q.questionText || q.content || q.question || ''}\n`;
+                const text = q.text || q.questionText || q.content || q.question || '';
+                const correctOpt = (q.options && q.correctAnswer !== undefined) ? q.options[q.correctAnswer] : 'Không rõ';
+                questionsText += `${idx++}. Hỏi: ${text} | Đáp án đúng: ${correctOpt}\n`;
             });
         }
 
@@ -97,7 +103,7 @@ window.generateExamSummary = async function(examId) {
         questionsText = questionsText.substring(0, 15000); 
 
         // 4. Gửi Request API
-        const prompt = `Đóng vai trò là một giảng viên y khoa giàu kinh nghiệm. Hãy đọc nội dung các câu hỏi của đề thi "${examData.examName || examId}" dưới đây và TỔNG HỢP KIẾN THỨC CỐT LÕI nhất.\n\nYêu cầu:\n- Trình bày dạng các gạch đầu dòng (bullet points) dễ học, dễ nhớ.\n- Không chép lại nguyên văn câu hỏi, hãy rút ra bản chất kiến thức/đáp án đúng từ các câu hỏi đó.\n- Trình bày khoa học, hệ thống.\n\nNội dung đề:\n${questionsText}`;
+        const prompt = `Đóng vai trò là một giảng viên y khoa giàu kinh nghiệm. Hãy đọc nội dung các câu hỏi và đáp án đúng của đề thi "${examData.examName || examId}" dưới đây và TỔNG HỢP KIẾN THỨC CỐT LÕI nhất.\n\nYêu cầu:\n- Trình bày dạng các gạch đầu dòng (bullet points) dễ học, dễ nhớ.\n- Không chép lại nguyên văn câu hỏi, hãy rút ra bản chất kiến thức/lý thuyết y khoa từ các câu hỏi và đáp án đó.\n- Trình bày khoa học, hệ thống.\n\nNội dung đề:\n${questionsText}`;
 
         const response = await fetch('/api/generate', {
             method: 'POST',
