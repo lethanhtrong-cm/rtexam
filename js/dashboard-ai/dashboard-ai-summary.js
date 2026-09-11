@@ -13,7 +13,9 @@ window.generateExamSummary = async function(examId) {
     const uid = auth.currentUser.uid;
     const todayStr = new Date().toLocaleDateString('en-CA');
     let currentSummaryCount = 0;
-    let maxLimit = 1;
+    
+    // ĐÃ SỬA: Mặc định tài khoản Free được 5 lượt
+    let maxLimit = 5; 
     let isUserPro = false;
 
     // 1. Kiểm tra giới hạn (Tách biệt bộ đếm với AI Chat)
@@ -22,16 +24,17 @@ window.generateExamSummary = async function(examId) {
         if (userSnap.exists()) {
             const userData = userSnap.data();
             let globalAiTier = userData.vipTier || 'free';
-            isUserPro = (globalAiTier === 'pro');
             
-            if (globalAiTier === 'plus') maxLimit = 5;
-            if (globalAiTier === 'pro') maxLimit = Infinity;
+            // ĐÃ SỬA: Gộp chung Plus và Pro thành nhóm không giới hạn
+            isUserPro = (globalAiTier === 'pro' || globalAiTier === 'plus'); 
+            
+            if (isUserPro) maxLimit = Infinity;
 
             if (!isUserPro) {
                 const lastDate = userData.aiSummaryLastUsedDate || '';
                 currentSummaryCount = (lastDate === todayStr) ? (userData.aiSummaryDailyCount || 0) : 0;
                 if (currentSummaryCount >= maxLimit) {
-                    alert(`Bạn đã hết lượt Tóm tắt kiến thức trong ngày (${maxLimit}/${maxLimit}). Nâng cấp PRO để sử dụng không giới hạn!`);
+                    alert(`Bạn đã hết lượt Tóm tắt kiến thức trong ngày (${maxLimit}/${maxLimit}). Nâng cấp gói Plus/Pro để sử dụng không giới hạn!`);
                     return;
                 }
             }
@@ -42,7 +45,7 @@ window.generateExamSummary = async function(examId) {
         return;
     }
 
-    // 2. Hiển thị UI Loading kèm Nút Copy (Ẩn mặc định)
+    // 2. Hiển thị UI Loading kèm Nút Copy & Nút Word (Ẩn mặc định)
     let modal = document.getElementById('aiSummaryModal');
     if (!modal) {
         modal = document.createElement('div');
@@ -53,9 +56,10 @@ window.generateExamSummary = async function(examId) {
                 <style>@keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }</style>
                 <div style="padding: 18px 24px; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                     <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;"><i class="fa-solid fa-bolt" style="color: #fde047;"></i> Tóm tắt kiến thức cốt lõi</h3>
-                    <div style="display: flex; gap: 15px; align-items: center;">
-                        <button id="btnCopySummary" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; display: none; align-items: center; gap: 6px;"><i class="fa-regular fa-copy"></i> Copy</button>
-                        <button onclick="document.getElementById('aiSummaryModal').remove()" style="background: transparent; border: none; color: white; font-size: 1.4rem; cursor: pointer; transition: 0.2s;" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='white'"><i class="fa-solid fa-xmark"></i></button>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="btnExportWordSummary" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; display: none; align-items: center; gap: 6px;" title="Xuất thành file Word"><i class="fa-solid fa-file-word"></i> Word</button>
+                        <button id="btnCopySummary" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; display: none; align-items: center; gap: 6px;" title="Copy văn bản"><i class="fa-regular fa-copy"></i> Copy</button>
+                        <button onclick="document.getElementById('aiSummaryModal').remove()" style="background: transparent; border: none; color: white; font-size: 1.4rem; cursor: pointer; transition: 0.2s; margin-left: 5px;" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='white'"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                 </div>
                 <div id="aiSummaryContent" style="padding: 24px; overflow-y: auto; flex: 1; font-size: 1rem; line-height: 1.7; color: #334155; background: #f8fafc;">
@@ -76,10 +80,12 @@ window.generateExamSummary = async function(examId) {
                 <p style="margin: 0; color: #475569; font-weight: 600; font-size: 1.05rem;">Đang tải dữ liệu kiến thức...</p>
             </div>`;
         document.getElementById('btnCopySummary').style.display = 'none';
+        document.getElementById('btnExportWordSummary').style.display = 'none';
     }
 
     const contentBox = document.getElementById('aiSummaryContent');
     const btnCopy = document.getElementById('btnCopySummary');
+    const btnWord = document.getElementById('btnExportWordSummary');
     
     let resultText = "";
     let usedTokens = 0;
@@ -168,7 +174,7 @@ window.generateExamSummary = async function(examId) {
             }
         }
 
-        // 4. Định dạng Markdown (ĐÃ SỬA: XÓA CÁC DẤU THĂNG VÀ BIẾN THÀNH TIÊU ĐỀ IN ĐẬM ĐẸP MẮT)
+        // 4. Định dạng Markdown
         let formattedText = resultText
             // Xóa dấu # (từ 1 đến 6 dấu) ở đầu dòng và bọc bằng thẻ HTML tiêu đề
             .replace(/^#{1,6}\s+(.*)$/gm, '<strong style="display:block; margin-top: 18px; margin-bottom: 8px; color: #4338ca; font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.5px;">$1</strong>')
@@ -181,6 +187,9 @@ window.generateExamSummary = async function(examId) {
             // Tùy biến dấu gạch đầu dòng
             .replace(/- /g, '<span style="color:#7c3aed; font-weight:bold; margin-right:5px;">•</span>');
 
+        // Tính toán lượt hiển thị lên giao diện (Nếu dùng cache thì không tăng số lượt để người dùng khỏi hoang mang)
+        const displayCount = isCached ? currentSummaryCount : currentSummaryCount + 1;
+
         contentBox.innerHTML = `
             <div style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: justify;">
                 ${formattedText}
@@ -190,7 +199,7 @@ window.generateExamSummary = async function(examId) {
                     ${isCached ? '<i class="fa-solid fa-bolt"></i> Tải nhanh từ CSDL' : '<i class="fa-solid fa-microchip"></i> Phân tích bởi Trợ lý AI'}
                 </span>
                 <span style="color: #64748b;">
-                    ${isUserPro ? '<i class="fa-solid fa-infinity" style="color: #8b5cf6;"></i> Gói Pro: Không giới hạn' : `Lượt dùng trong ngày: ${currentSummaryCount + 1} / ${maxLimit}`}
+                    ${isUserPro ? '<i class="fa-solid fa-infinity" style="color: #8b5cf6;"></i> Plus/Pro: Không giới hạn' : `Lượt dùng trong ngày: ${displayCount} / ${maxLimit}`}
                 </span>
             </div>
         `;
@@ -199,7 +208,9 @@ window.generateExamSummary = async function(examId) {
         if (btnCopy) {
             btnCopy.style.display = 'flex';
             btnCopy.onclick = () => {
-                navigator.clipboard.writeText(resultText).then(() => {
+                // Xóa định dạng markdown khi copy text thô
+                const cleanRawText = resultText.replace(/^#{1,6}\s+(.*)$/gm, '$1').replace(/\*\*/g, '').replace(/\*/g, '');
+                navigator.clipboard.writeText(cleanRawText).then(() => {
                     btnCopy.innerHTML = '<i class="fa-solid fa-check"></i> Đã copy';
                     btnCopy.style.background = '#10b981';
                     btnCopy.style.borderColor = '#10b981';
@@ -213,14 +224,33 @@ window.generateExamSummary = async function(examId) {
             };
         }
 
-        // 6. Cập nhật lượt dùng lên Firestore
-        // Vẫn trừ lượt dùng trong ngày để tránh user lạm dụng ấn liên tục, nhưng nếu có Token mới cộng vào tổng
+        // 6. Kích hoạt tính năng XUẤT FILE WORD
+        if (btnWord) {
+            btnWord.style.display = 'flex';
+            btnWord.onclick = () => {
+                const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Tom Tat Kien Thuc</title></head><body>";
+                const footer = "</body></html>";
+                const sourceHTML = header + `<div style="font-family: Arial, sans-serif; line-height: 1.6;">` + formattedText + `</div>` + footer;
+                
+                const blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Tom_tat_kien_thuc_${examId}.doc`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+        }
+
+        // 7. Cập nhật lượt dùng lên Firestore
         try {
             let updateData = {};
             if (usedTokens > 0) {
                 updateData.totalTokensUsed = increment(usedTokens);
             }
-            if (!isUserPro) {
+            if (!isUserPro && usedTokens > 0) { // Chỉ trừ lượt dùng ngày nếu thực sự gọi API (chưa có cache)
                 updateData.aiSummaryDailyCount = currentSummaryCount + 1;
                 updateData.aiSummaryLastUsedDate = todayStr;
             }
