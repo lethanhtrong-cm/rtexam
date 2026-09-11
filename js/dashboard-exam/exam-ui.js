@@ -70,8 +70,6 @@ export function renderExams() {
         // ==========================================================
         // LOGIC: TÍNH TOÁN & HIỂN THỊ BADGE BÁO ĐỀ MỚI TRÊN TAB
         // ==========================================================
-        const nowMs = Date.now();
-        const oneDayMs = 24 * 60 * 60 * 1000;
         let newExamsCount = { 'all': 0 };
 
         State.allExamsData.forEach(exam => {
@@ -80,7 +78,9 @@ export function renderExams() {
             }
 
             const isCompleted = !!State.completedExams[exam.id];
-            if (exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted) {
+            
+            // ĐÃ SỬA: Bỏ giới hạn 24 giờ. Đề sẽ giữ nhãn "Mới" cho đến khi người dùng làm (isCompleted = true).
+            if (exam.createdAt && !isCompleted) {
                 newExamsCount['all']++;
                 if (exam.technique) {
                     // CHUẨN HÓA CHUỖI: Đổi dấu hai chấm thành gạch ngang để đếm chính xác
@@ -284,7 +284,8 @@ export function renderExams() {
                 const isSaved = userBookmarks.includes(exam.id);
                 const isCompleted = !!State.completedExams[exam.id];
                 
-                const isExamNew = exam.createdAt && (nowMs - exam.createdAt < oneDayMs) && !isCompleted;
+                // ĐÃ SỬA: Đề giữ nhãn "Mới" cho đến khi hoàn thành (Bỏ giới hạn thời gian)
+                const isExamNew = exam.createdAt && !isCompleted;
                 const newBadgeHtml = isExamNew ? `<span style="background: linear-gradient(135deg, #ef4444, #f97316); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 900; animation: pulseNewBadge 1.2s infinite; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); letter-spacing: 0.5px; z-index: 10;"><i class="fa-solid fa-bolt"></i> MỚI</span>` : ``;
                 
                 const cardOutlineStyle = isExamNew ? `border: 2px solid #ef4444; animation: cardPulseGlow 2s infinite;` : `border: 1px solid #eef0f2;`;
