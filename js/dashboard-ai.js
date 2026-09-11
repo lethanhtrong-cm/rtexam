@@ -299,9 +299,7 @@ document.addEventListener('ComponentsLoaded', () => {
             aiSidebar.style.width = `${newWidth}px`;
             
             if (aiSidebar.classList.contains('active')) {
-                // SỬA LỖI ĐẨY KÉP: Loại bỏ hoàn toàn padding/margin của mainContentWrap
                 if (mainContentWrap) mainContentWrap.style.marginRight = '0';
-                
                 if (window.innerWidth > 768) document.body.style.paddingRight = `${newWidth}px`; 
             }
         });
@@ -333,7 +331,6 @@ document.addEventListener('ComponentsLoaded', () => {
             let currentWidth = aiSidebar.offsetWidth;
             aiSidebar.style.right = `-${currentWidth + 20}px`; 
             
-            // SỬA LỖI ĐẨY KÉP: Dọn dẹp khoảng trống
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
             
             document.body.style.paddingRight = '0';
@@ -351,7 +348,6 @@ document.addEventListener('ComponentsLoaded', () => {
             aiSidebar.classList.add('active');
             aiSidebar.style.right = '0';
             
-            // SỬA LỖI ĐẨY KÉP: Dọn dẹp khoảng trống
             if (mainContentWrap) mainContentWrap.style.marginRight = '0';
             
             if (window.innerWidth > 768 && !isFullscreen) {
