@@ -27,16 +27,14 @@ export const UI = {
         const tierName = tier.toUpperCase();
         statusText.innerHTML = `Bạn đang sử dụng quyền lợi của gói: <strong>${tierName}</strong>`;
 
+        // CHỈNH SỬA: Free toàn bộ lượt xem cho tất cả các gói
+        remainingText.innerHTML = `Lượt xem bài giảng: <strong>Không giới hạn</strong>`;
+
         if (tier === 'pro') {
-            remainingText.innerHTML = `Lượt xem bài giảng: <strong>Không giới hạn</strong>`;
             banner.className = 'quota-banner pro-banner';
         } else if (tier === 'plus') {
-            const remaining = PLUS_LIMIT - viewedCount;
-            remainingText.innerHTML = `Lượt mở xem bài giảng còn lại: <strong>${remaining > 0 ? remaining : 0} bài</strong>`;
             banner.className = 'quota-banner plus-banner';
         } else {
-            const remaining = FREE_LIMIT - viewedCount;
-            remainingText.innerHTML = `Lượt mở xem bài giảng còn lại: <strong>${remaining > 0 ? remaining : 0} bài</strong>`;
             banner.className = 'quota-banner free-banner';
         }
     },
@@ -270,7 +268,6 @@ export const UI = {
         listEl.innerHTML = html;
     },
 
-    // 1. Chỉ vẽ Card Chuyên Khoa ngoài Trang Chủ
     renderCategoryTree: (treeData, onRootCardClick) => {
         const grid = document.getElementById('dynamic-category-grid');
         if(!grid) return;
@@ -298,7 +295,6 @@ export const UI = {
         });
     },
 
-    // 2. Render Cây thư mục siêu sâu VÀO NGAY SECTION BÊN DƯỚI (Không chuyển trang)
     renderCategoryDetail: (rootCat, pptxDataList, onLectureClick) => {
         const detailSec = document.getElementById('category-detail-section');
         detailSec.style.display = 'flex';
@@ -370,7 +366,6 @@ export const UI = {
             });
         });
 
-        // Tự động cuộn xuống phần chi tiết sau khi vẽ xong
         setTimeout(() => {
             detailSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 100);
