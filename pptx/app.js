@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, increment, addDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FREE_LIMIT = 3;
-const PLUS_LIMIT = 10; // Đã cấu hình lên 10 bài ở bước trước
+const PLUS_LIMIT = 10;
 
 let currentUserTier = 'free';
 let currentUserName = 'Bạn'; 
@@ -150,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (user) {
             userStorageKey = 'viewedLectures_' + user.uid;
-            // Bọc try catch xử lý lỗi Safari chặn LocalStorage
             try {
                 viewedLectures = JSON.parse(localStorage.getItem(userStorageKey)) || [];
             } catch(e) {
@@ -187,20 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
         UI.updateAuthUI(currentUserTier, badge);
         UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
         
-        onSnapshot(doc(db, "settings", "category_tree"), async (docSnap) => {
-            if(docSnap.exists() && docSnap.data().tree) {
-                globalCategoryTree = docSnap.data().tree;
-            } else {
-                globalCategoryTree = defaultTree;
-                // Bọc try catch để tránh lỗi Permission Denied trên trình duyệt cache rỗng
-                try {
-                    await setDoc(doc(db, "settings", "category_tree"), { tree: globalCategoryTree });
-                } catch(err) {
-                    console.warn("User has no permission to init tree, using memory fallback.");
-                }
-            }
-            
-            UI.renderCategoryTree(globalCategoryTree, (rootCat) => {
+        const handleTreeRender = (tree) => {
+            UI.renderCategoryTree(tree, (rootCat) => {
                 currentOpenRootCat = rootCat;
                 UI.renderCategoryDetail(rootCat, pptxDataList, (lecId, catId, catName) => {
                     currentSelectedCategory = catId;
@@ -208,8 +195,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderPptxList(lecId); 
                 });
             });
-            
             fetchPptxFromDatabase();
+        };
+
+        onSnapshot(doc(db, "settings", "category_tree"), async (docSnap) => {
+            if(docSnap.exists() && docSnap.data().tree) {
+                globalCategoryTree = docSnap.data().tree;
+            } else {
+                globalCategoryTree = defaultTree;
+                try {
+                    await setDoc(doc(db, "settings", "category_tree"), { tree: globalCategoryTree });
+                } catch(err) {
+                }
+            }
+            handleTreeRender(globalCategoryTree);
+        }, (error) => {
+            console.warn("Cảnh báo: Firebase từ chối quyền đọc do Rules, tự động nạp danh mục mặc định.", error);
+            globalCategoryTree = defaultTree;
+            handleTreeRender(globalCategoryTree);
         });
         
         syncViewCountToFirestore();
@@ -432,30 +435,14 @@ function loadPptx(embedUrl, itemId) {
     const iframeViewer = document.getElementById('pptx-viewer');
     const videoViewer = document.getElementById('video-viewer');
 
-    let canView = false;
-    if (currentUserTier === 'pro') {
-        canView = true;
-        if (!viewedLectures.includes(itemId)) {
-            viewedLectures.push(itemId);
-            try { localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures)); } catch(e){}
-            syncViewCountToFirestore(); 
-        }
-    } else if (viewedLectures.includes(itemId)) {
-        canView = true;
-    } else {
-        if (currentUserTier === 'plus' && viewedLectures.length < PLUS_LIMIT) {
-            canView = true;
-            viewedLectures.push(itemId);
-            try { localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures)); } catch(e){}
-            UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
-            syncViewCountToFirestore(); 
-        } else if (currentUserTier === 'free' && viewedLectures.length < FREE_LIMIT) {
-            canView = true;
-            viewedLectures.push(itemId);
-            try { localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures)); } catch(e){}
-            UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
-            syncViewCountToFirestore(); 
-        }
+    // CHỈNH SỬA: Mặc định luôn luôn cho phép mở xem video với mọi tài khoản
+    let canView = true;
+    
+    if (!viewedLectures.includes(itemId)) {
+        viewedLectures.push(itemId);
+        try { localStorage.setItem(userStorageKey, JSON.stringify(viewedLectures)); } catch(e){}
+        UI.updateQuotaBanner(currentUserTier, currentUserName, viewedLectures.length, FREE_LIMIT, PLUS_LIMIT);
+        syncViewCountToFirestore(); 
     }
 
     if (canView) {
