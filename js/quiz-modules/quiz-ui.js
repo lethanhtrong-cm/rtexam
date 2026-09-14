@@ -554,7 +554,7 @@ export function initQuizUI(db, ctx, actions) {
                 globalAiTier = userData.vipTier || 'free';
                 isUserPro = (globalAiTier === 'pro');
                 
-                if (globalAiTier === 'plus') maxLimit = 1;
+                if (globalAiTier === 'plus') maxLimit = 3;
                 else if (globalAiTier === 'pro') maxLimit = Infinity;
                 else maxLimit = 0;
 
