@@ -542,24 +542,33 @@ export function initQuizUI(db, ctx, actions) {
         const uid = ctx.currentUser.uid;
         const todayStr = new Date().toLocaleDateString('en-CA');
         let currentSummaryCount = 0;
-        let maxLimit = 1;
+        
+        let maxLimit = 0;
         let isUserPro = false;
+        let globalAiTier = 'free';
 
         try {
             const userSnap = await getDoc(doc(db, "users", uid));
             if (userSnap.exists()) {
                 const userData = userSnap.data();
-                let globalAiTier = userData.vipTier || 'free';
+                globalAiTier = userData.vipTier || 'free';
                 isUserPro = (globalAiTier === 'pro');
                 
-                if (globalAiTier === 'plus') maxLimit = 5;
-                if (globalAiTier === 'pro') maxLimit = Infinity;
+                if (globalAiTier === 'plus') maxLimit = 1;
+                else if (globalAiTier === 'pro') maxLimit = Infinity;
+                else maxLimit = 0;
 
-                if (!isUserPro) {
+                if (maxLimit === 0) {
+                    alert("Tính năng Tóm tắt kiến thức không khả dụng cho tài khoản Free. Vui lòng nâng cấp gói Plus hoặc Pro để sử dụng!");
+                    document.getElementById('result-modal').classList.add('active');
+                    return;
+                }
+
+                if (maxLimit !== Infinity) {
                     const lastDate = userData.aiSummaryLastUsedDate || '';
                     currentSummaryCount = (lastDate === todayStr) ? (userData.aiSummaryDailyCount || 0) : 0;
                     if (currentSummaryCount >= maxLimit) {
-                        alert(`Bạn đã hết lượt Tóm tắt kiến thức trong ngày (${maxLimit}/${maxLimit}). Nâng cấp PRO để sử dụng không giới hạn!`);
+                        alert(`Bạn đã hết lượt Tóm tắt kiến thức trong ngày (${maxLimit}/${maxLimit}). Nâng cấp gói Pro để sử dụng không giới hạn!`);
                         document.getElementById('result-modal').classList.add('active');
                         return;
                     }
@@ -635,12 +644,14 @@ export function initQuizUI(db, ctx, actions) {
                 .replace(/\n/g, '<br>')
                 .replace(/- /g, '<span style="color:#7c3aed; font-weight:bold; margin-right:5px;">•</span>');
 
+            const displayCount = currentSummaryCount + 1;
+
             contentBox.innerHTML = `
                 <div style="background: #ffffff; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: justify;">
                     ${formattedText}
                 </div>
                 <div style="margin-top: 15px; text-align: right; font-size: 0.85rem; color: #64748b; font-weight: 600;">
-                    ${isUserPro ? '<i class="fa-solid fa-infinity" style="color: #8b5cf6;"></i> Gói Pro: Không giới hạn' : `Lượt dùng trong ngày: ${currentSummaryCount + 1} / ${maxLimit}`}
+                    ${isUserPro ? '<i class="fa-solid fa-infinity" style="color: #8b5cf6;"></i> Plus/Pro: Không giới hạn' : `Lượt dùng trong ngày: ${displayCount} / ${maxLimit}`}
                 </div>
             `;
 
