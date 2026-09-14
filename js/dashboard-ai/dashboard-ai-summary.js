@@ -14,27 +14,33 @@ window.generateExamSummary = async function(examId) {
     const todayStr = new Date().toLocaleDateString('en-CA');
     let currentSummaryCount = 0;
     
-    // ĐÃ SỬA: Mặc định tài khoản Free được 5 lượt
-    let maxLimit = 5; 
+    let maxLimit = 0; 
     let isUserPro = false;
+    let globalAiTier = 'free';
 
     // 1. Kiểm tra giới hạn (Tách biệt bộ đếm với AI Chat)
     try {
         const userSnap = await getDoc(doc(db, "users", uid));
         if (userSnap.exists()) {
             const userData = userSnap.data();
-            let globalAiTier = userData.vipTier || 'free';
+            globalAiTier = userData.vipTier || 'free';
             
-            // ĐÃ SỬA: Gộp chung Plus và Pro thành nhóm không giới hạn
-            isUserPro = (globalAiTier === 'pro' || globalAiTier === 'plus'); 
+            isUserPro = (globalAiTier === 'pro'); 
             
-            if (isUserPro) maxLimit = Infinity;
+            if (globalAiTier === 'plus') maxLimit = 1;
+            else if (globalAiTier === 'pro') maxLimit = Infinity;
+            else maxLimit = 0;
 
-            if (!isUserPro) {
+            if (maxLimit === 0) {
+                alert("Tính năng Tóm tắt kiến thức không khả dụng cho tài khoản Free. Vui lòng nâng cấp gói Plus hoặc Pro để sử dụng!");
+                return;
+            }
+
+            if (maxLimit !== Infinity) {
                 const lastDate = userData.aiSummaryLastUsedDate || '';
                 currentSummaryCount = (lastDate === todayStr) ? (userData.aiSummaryDailyCount || 0) : 0;
                 if (currentSummaryCount >= maxLimit) {
-                    alert(`Bạn đã hết lượt Tóm tắt kiến thức trong ngày (${maxLimit}/${maxLimit}). Nâng cấp gói Plus/Pro để sử dụng không giới hạn!`);
+                    alert(`Bạn đã hết lượt Tóm tắt kiến thức trong ngày (${maxLimit}/${maxLimit}). Nâng cấp gói Pro để sử dụng không giới hạn!`);
                     return;
                 }
             }
@@ -187,7 +193,7 @@ window.generateExamSummary = async function(examId) {
             // Tùy biến dấu gạch đầu dòng
             .replace(/- /g, '<span style="color:#7c3aed; font-weight:bold; margin-right:5px;">•</span>');
 
-        // Tính toán lượt hiển thị lên giao diện (Nếu dùng cache thì không tăng số lượt để người dùng khỏi hoang mang)
+        // Tính toán lượt hiển thị lên giao diện
         const displayCount = isCached ? currentSummaryCount : currentSummaryCount + 1;
 
         contentBox.innerHTML = `
@@ -199,7 +205,7 @@ window.generateExamSummary = async function(examId) {
                     ${isCached ? '<i class="fa-solid fa-bolt"></i> Tải nhanh từ CSDL' : '<i class="fa-solid fa-microchip"></i> Phân tích bởi Trợ lý AI'}
                 </span>
                 <span style="color: #64748b;">
-                    ${isUserPro ? '<i class="fa-solid fa-infinity" style="color: #8b5cf6;"></i> Plus/Pro: Không giới hạn' : `Lượt dùng trong ngày: ${displayCount} / ${maxLimit}`}
+                    ${isUserPro ? '<i class="fa-solid fa-infinity" style="color: #8b5cf6;"></i> Gói Pro: Không giới hạn' : `Lượt dùng trong ngày: ${displayCount} / ${maxLimit}`}
                 </span>
             </div>
         `;
