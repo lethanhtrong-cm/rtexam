@@ -77,6 +77,7 @@
                         <td style="padding: 14px 12px; background: #eff6ff;"><span style="font-size: 0.85rem; font-weight: 700; color: #2563eb; background: #dbeafe; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">5 lượt/ngày</span></td>
                         <td style="padding: 14px 12px; background: #fff7ed;"><span style="font-size: 0.85rem; font-weight: 700; color: #ea580c; background: #ffedd5; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">Không giới hạn</span></td>
                     </tr>
+                    <!-- BỔ SUNG: Quyền lợi AI tóm tắt kiến thức -->
                     <tr style="border-bottom: 1px solid #f1f5f9;">
                         <td style="padding: 14px 12px; text-align: left; color: #334155; font-weight: 500;">AI tóm tắt kiến thức từ đề thi</td>
                         <td style="padding: 14px 12px;"><span style="font-size: 0.85rem; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 6px; white-space: nowrap;">0 đề</span></td>
@@ -114,14 +115,14 @@
             <i class="fa-solid fa-qrcode" style="color: #2563eb;"></i> Thanh toán mã QR
         </h3>
 
-        <!-- KHU VỰC CHỌN GÓI ĐỂ ĐỔI GIÁ TIỀN -->
-        <div style="display: flex; gap: 12px; width: 100%; margin-bottom: 20px;">
-            <label class="package-radio" style="flex: 1; border: 2px solid #3b82f6; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #eff6ff; transition: 0.2s;">
-                <input type="radio" name="packageSelect" value="30000" checked onchange="window.updatePaymentUI('30000')" style="display: none;"> 
+        <!-- KHU VỰC CHỌN GÓI ĐỂ ĐỔI GIÁ TIỀN (ĐÃ SỬA LỖI CLICK) -->
+        <div id="vip-package-selector" style="display: flex; gap: 12px; width: 100%; margin-bottom: 20px;">
+            <label for="pkgPlus" class="package-radio" style="flex: 1; border: 2px solid #3b82f6; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #eff6ff; transition: 0.2s; position: relative;">
+                <input type="radio" id="pkgPlus" name="packageSelect" value="30000" checked onchange="window.updatePaymentUI('30000')" style="position: absolute; opacity: 0; margin: 0; z-index: -1;"> 
                 <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Gói Plus</span>
             </label>
-            <label class="package-radio" style="flex: 1; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #f8fafc; transition: 0.2s;">
-                <input type="radio" name="packageSelect" value="50000" onchange="window.updatePaymentUI('50000')" style="display: none;"> 
+            <label for="pkgPro" class="package-radio" style="flex: 1; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #f8fafc; transition: 0.2s; position: relative;">
+                <input type="radio" id="pkgPro" name="packageSelect" value="50000" onchange="window.updatePaymentUI('50000')" style="position: absolute; opacity: 0; margin: 0; z-index: -1;"> 
                 <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Gói Pro</span>
             </label>
         </div>
@@ -192,8 +193,10 @@
     };
 
     window.updatePaymentUI = function(amount) {
-        const labels = document.querySelectorAll('.package-radio');
-        const radios = document.querySelectorAll('input[name=\'packageSelect\']');
+        // Tối ưu hóa DOM, chỉ tìm nhãn bên trong khung selector
+        const container = document.getElementById('vip-package-selector');
+        const labels = container ? container.querySelectorAll('.package-radio') : document.querySelectorAll('.package-radio');
+        const radios = container ? container.querySelectorAll('input[name=\'packageSelect\']') : document.querySelectorAll('input[name=\'packageSelect\']');
         
         radios.forEach((radio, index) => {
             if(radio.checked) {
@@ -238,7 +241,6 @@
         }
     }, 500);
 
-    // ĐÃ SỬA LỖI TRÀN TEXT: Dùng backtick (`) và nháy đơn (') để không phá vỡ thuộc tính onload
     const overrideStatusInterval = setInterval(() => {
         const statusEl = document.getElementById('vipStatusTab3');
         if (statusEl) {
