@@ -1,0 +1,140 @@
+<!-- CỘT PHẢI: HƯỚNG DẪN THANH TOÁN QR -->
+<div class="card vip-card-box" style="flex: 1.2; min-width: 350px; background: #fff; border-radius: 16px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center;">
+    <h3 style="color: #1e293b; font-size: 1.4rem; margin-top: 0; margin-bottom: 20px; width: 100%; text-align: left; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-qrcode" style="color: #2563eb;"></i> Thanh toán mã QR
+    </h3>
+
+    <!-- KHU VỰC CHỌN GÓI ĐỂ ĐỔI GIÁ TIỀN -->
+    <div style="display: flex; gap: 12px; width: 100%; margin-bottom: 20px;">
+        <label class="package-radio" style="flex: 1; border: 2px solid #3b82f6; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #eff6ff; transition: 0.2s;">
+            <input type="radio" name="packageSelect" value="30000" checked onchange="window.updatePaymentUI('30000')" style="display: none;"> 
+            <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Gói Plus</span>
+        </label>
+        <label class="package-radio" style="flex: 1; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #f8fafc; transition: 0.2s;">
+            <input type="radio" name="packageSelect" value="50000" onchange="window.updatePaymentUI('50000')" style="display: none;"> 
+            <span style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">Gói Pro</span>
+        </label>
+    </div>
+    
+    <!-- Khu vực Mã QR (Có nút Download) -->
+    <div style="background: #ffffff; padding: 15px; border-radius: 16px; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); position: relative;">
+        <img id="qr-payment" src="https://img.vietqr.io/image/MB-2070120091994-compact.png?amount=30000&addInfo=NAP%20TIEN&accountName=LE%20THANH%20TRONG" alt="Mã QR Chuyển khoản" style="width: 220px; height: 220px; display: block; border-radius: 8px;">
+        <button onclick="window.downloadQR()" style="margin-top: 15px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;">
+            <i class="fa-solid fa-download"></i> Lưu mã QR
+        </button>
+    </div>
+    
+    <!-- Khung Hướng dẫn chuyển khoản -->
+    <div style="background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 12px; padding: 25px 20px; width: 100%; text-align: center; margin-bottom: 25px;">
+        <p style="color: #047857; margin: 0 0 5px 0; font-size: 0.95rem; font-weight: 600;">Mức phí nâng cấp:</p>
+        <div id="displayPrice" style="font-size: 2.2rem; font-weight: 800; color: #059669; margin-bottom: 20px; letter-spacing: -0.5px;">30.000 ₫<span style="font-size: 1.1rem; color: #047857;">/tháng</span></div>
+        
+        <p style="color: #475569; font-size: 0.95rem; margin: 0 0 10px 0;">Nội dung chuyển khoản (bắt buộc chính xác):</p>
+        <div style="background: #ffffff; border: 1.5px dashed #3b82f6; padding: 15px; border-radius: 8px; user-select: all; cursor: pointer; display: inline-block; width: 90%;" title="Bôi đen để copy">
+            <span style="font-weight: 800; color: #1d4ed8; font-size: 1.15rem; letter-spacing: 0.5px;" id="paymentEmailDisplay">NAP TIEN</span>
+        </div>
+        
+        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px;">
+            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i>
+            <span style="color: #64748b; font-size: 0.85rem; font-style: italic;">Hệ thống sẽ tự động đối soát và mở khóa sau 1-3 phút.</span>
+        </div>
+        
+        <span id="paymentEmail" style="display: none;">[Email của bạn]</span>
+    </div>
+    
+    <!-- NÚT XÁC NHẬN VÀ HỦY -->
+    <div style="display: flex; gap: 12px; width: 100%;">
+        <button id="btnConfirmPayment" class="btn-primary" style="flex: 1; padding: 16px; font-size: 1.1rem; border-radius: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+            <i class="fa-regular fa-circle-check" style="font-size: 1.2rem;"></i> Xác nhận tôi đã chuyển khoản
+        </button>
+        <button id="btnCancelPayment" style="display: none; padding: 16px 24px; font-size: 1.1rem; border-radius: 10px; font-weight: 600; background: #ef4444; color: white; border: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);" title="Hủy yêu cầu">
+            <i class="fa-solid fa-xmark"></i> Hủy
+        </button>
+    </div>
+</div>
+
+<svg width="0" height="0" style="display:none;" onload="
+    window.generateQR = function() {
+        const emailEl = document.getElementById('paymentEmail');
+        const displayEl = document.getElementById('paymentEmailDisplay');
+        const checkedRadio = document.querySelector('input[name=\'packageSelect\']:checked');
+        const amount = checkedRadio ? checkedRadio.value : '30000';
+        
+        let transferContent = 'NAP TIEN'; 
+        
+        if(emailEl && emailEl.dataset.originalEmail) {
+            let fullEmail = emailEl.dataset.originalEmail;
+            let username = fullEmail.split('@')[0].toUpperCase();
+            username = username.replace(/[^A-Z0-9]/g, ''); 
+            transferContent = 'NAP ' + username;
+            if(displayEl) displayEl.innerText = transferContent;
+        }
+
+        const qrImg = document.getElementById('qr-payment');
+        if(qrImg) {
+            const baseUrl = 'https://img.vietqr.io/image/MB-2070120091994-compact.png';
+            const newSrc = baseUrl + '?amount=' + amount + '&addInfo=' + encodeURIComponent(transferContent) + '&accountName=LE%20THANH%20TRONG';
+            if(qrImg.src !== newSrc) {
+                qrImg.src = newSrc;
+            }
+        }
+    };
+
+    window.updatePaymentUI = function(amount) {
+        const labels = document.querySelectorAll('.package-radio');
+        const radios = document.querySelectorAll('input[name=\'packageSelect\']');
+        
+        radios.forEach((radio, index) => {
+            if(radio.checked) {
+                labels[index].style.borderColor = '#3b82f6';
+                labels[index].style.background = '#eff6ff';
+            } else {
+                labels[index].style.borderColor = '#e2e8f0';
+                labels[index].style.background = '#f8fafc';
+            }
+        });
+
+        const priceFormatted = parseInt(amount).toLocaleString('vi-VN');
+        document.getElementById('displayPrice').innerHTML = priceFormatted + ' ₫<span style=\'font-size: 1.1rem; color: #047857;\'>/tháng</span>';
+        window.generateQR();
+    };
+
+    window.downloadQR = async function() {
+        const qrImg = document.getElementById('qr-payment');
+        if (!qrImg || !qrImg.src) return;
+        try {
+            const response = await fetch(qrImg.src);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = 'ma-qr-thanh-toan-KTV3Mien.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            alert('Không thể tải mã QR trực tiếp. Bạn vui lòng ấn giữ vào ảnh (hoặc click chuột phải) và chọn Lưu hình ảnh.');
+        }
+    };
+    
+    const checkEmailInterval = setInterval(() => {
+        const emailEl = document.getElementById('paymentEmail');
+        if(emailEl && emailEl.innerText && emailEl.innerText !== '[Email của bạn]') {
+            emailEl.dataset.originalEmail = emailEl.innerText.trim();
+            window.generateQR(); 
+            clearInterval(checkEmailInterval); 
+        }
+    }, 500);
+
+    const overrideStatusInterval = setInterval(() => {
+        const statusEl = document.getElementById('vipStatusTab3');
+        if (statusEl) {
+            const currentText = statusEl.innerText.toLowerCase();
+            if (currentText.includes('chưa kích hoạt')) {
+                statusEl.innerHTML = `<i class='fa-solid fa-paper-plane' style='color: #22c55e;'></i> GÓI FREE`;
+                statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;';
+            }
+        }
+    }, 100);
+"></svg>
