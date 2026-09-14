@@ -132,6 +132,25 @@
             .dash-btn { flex: 1; min-width: 140px; font-size: 0.85rem; padding: 10px; }
             .dash-divider { display: none; } /* Ẩn vạch kẻ trên mobile */
         }
+        
+        /* ========================================================
+           ĐÃ FIX: BỔ SUNG TRỞ LẠI CSS LAYOUT CHO TAB VIP VÀ CÁC NÚT RADIO
+           ======================================================== */
+        .vip-layout { display: flex; flex-wrap: wrap; gap: 24px; max-width: 1200px; margin: 0 auto; padding: 10px 0; }
+        .vip-col-left { flex: 1.6; min-width: 550px; } /* Cột bảng rộng hơn để không bị ép chữ */
+        .vip-col-right { flex: 1; min-width: 350px; }
+        
+        /* Hiệu ứng viền xanh cho nút chọn gói Plus / Pro */
+        .package-radio {
+            flex: 1; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; background: #f8fafc; transition: 0.2s; position: relative;
+        }
+        .package-radio:has(input:checked) {
+            border-color: #3b82f6; background: #eff6ff;
+        }
+
+        @media (max-width: 992px) {
+            .vip-col-left, .vip-col-right { min-width: 100%; flex: 1; }
+        }
     </style>
 </head>
 <body>
@@ -175,11 +194,11 @@
                 <div id="tab-history" class="tab-pane"></div>
                 <div id="leaderboard" class="tab-pane"></div>
                 
-                <!-- ĐÃ FIX: Nhúng 2 file VIP con bằng data-include -->
+                <!-- ĐÃ FIX: Áp dụng CSS Layout chuẩn để nhúng 2 file VIP con -->
                 <div id="tab-vip" class="tab-pane">
-                    <div style="display: flex; flex-wrap: wrap; gap: 24px; max-width: 1100px; margin: 0 auto; padding: 10px 0;">
-                        <div data-include="components/dashboard/tab-vip-info.html" style="flex: 1; min-width: 350px;"></div>
-                        <div data-include="components/dashboard/tab-vip-payment.html" style="flex: 1.2; min-width: 350px;"></div>
+                    <div class="vip-layout">
+                        <div data-include="components/dashboard/tab-vip-info.html" class="vip-col-left"></div>
+                        <div data-include="components/dashboard/tab-vip-payment.html" class="vip-col-right"></div>
                     </div>
                 </div>
             </div>
@@ -474,7 +493,7 @@
     <script type="module" src="./js/dashboard-shorts.js"></script>
     <script type="module" src="./js/dashboard-ai/dashboard-ai-summary.js"></script>
     
-    <!-- ĐÃ FIX: SCRIPT XỬ LÝ THANH TOÁN VIP (CHUYỂN TỪ SVG VÀO ĐÂY ĐỂ TRÁNH LỖI SCOPE) -->
+    <!-- ĐÃ FIX: SCRIPT XỬ LÝ THANH TOÁN VIP -->
     <script>
         window.generateQR = function() {
             const emailEl = document.getElementById('paymentEmail');
