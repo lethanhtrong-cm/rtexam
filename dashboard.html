@@ -169,18 +169,20 @@
             <!-- KẾT THÚC THANH CÔNG CỤ -->
 
             <div class="tab-content-container">
-    <div id="tab-exams" class="tab-pane active"></div>
-    <div id="tab-shorts" class="tab-pane"></div> <!-- THÊM DÒNG NÀY -->
-    <div id="tab-profile" class="tab-pane"></div>
-    <div id="tab-history" class="tab-pane"></div>
-    <div id="leaderboard" class="tab-pane"></div>
-    <div id="tab-vip" class="tab-pane">
-        <div style="display: flex; flex-wrap: wrap; gap: 24px; max-width: 1100px; margin: 0 auto; padding: 10px 0;">
-            <div data-include="components/dashboard/tab-vip-info.html" style="flex: 1; min-width: 350px;"></div>
-            <div data-include="components/dashboard/tab-vip-payment.html" style="flex: 1.2; min-width: 350px;"></div>
-        </div>
-    </div>
-</div>
+                <div id="tab-exams" class="tab-pane active"></div>
+                <div id="tab-shorts" class="tab-pane"></div> 
+                <div id="tab-profile" class="tab-pane"></div>
+                <div id="tab-history" class="tab-pane"></div>
+                <div id="leaderboard" class="tab-pane"></div>
+                
+                <!-- ĐÃ FIX: Nhúng 2 file VIP con bằng data-include -->
+                <div id="tab-vip" class="tab-pane">
+                    <div style="display: flex; flex-wrap: wrap; gap: 24px; max-width: 1100px; margin: 0 auto; padding: 10px 0;">
+                        <div data-include="components/dashboard/tab-vip-info.html" style="flex: 1; min-width: 350px;"></div>
+                        <div data-include="components/dashboard/tab-vip-payment.html" style="flex: 1.2; min-width: 350px;"></div>
+                    </div>
+                </div>
+            </div>
             
             <div class="sticky-user-rank" id="stickyUserRank" style="display: none;">
                 <p><i class="fa-solid fa-user-astronaut"></i> Thành tích của bạn:</p>
@@ -471,5 +473,94 @@
     <script type="module" src="./js/dashboard-ai.js"></script>
     <script type="module" src="./js/dashboard-shorts.js"></script>
     <script type="module" src="./js/dashboard-ai/dashboard-ai-summary.js"></script>
+    
+    <!-- ĐÃ FIX: SCRIPT XỬ LÝ THANH TOÁN VIP (CHUYỂN TỪ SVG VÀO ĐÂY ĐỂ TRÁNH LỖI SCOPE) -->
+    <script>
+        window.generateQR = function() {
+            const emailEl = document.getElementById('paymentEmail');
+            const displayEl = document.getElementById('paymentEmailDisplay');
+            const checkedRadio = document.querySelector('input[name=\'packageSelect\']:checked');
+            const amount = checkedRadio ? checkedRadio.value : '30000';
+            
+            let transferContent = 'NAP TIEN'; 
+            
+            if(emailEl && emailEl.dataset.originalEmail) {
+                let fullEmail = emailEl.dataset.originalEmail;
+                let username = fullEmail.split('@')[0].toUpperCase();
+                username = username.replace(/[^A-Z0-9]/g, ''); 
+                transferContent = 'NAP ' + username;
+                if(displayEl) displayEl.innerText = transferContent;
+            }
+
+            const qrImg = document.getElementById('qr-payment');
+            if(qrImg) {
+                const baseUrl = 'https://img.vietqr.io/image/MB-2070120091994-compact.png';
+                const newSrc = baseUrl + '?amount=' + amount + '&addInfo=' + encodeURIComponent(transferContent) + '&accountName=LE%20THANH%20TRONG';
+                if(qrImg.src !== newSrc) {
+                    qrImg.src = newSrc;
+                }
+            }
+        };
+
+        window.updatePaymentUI = function(amount) {
+            const labels = document.querySelectorAll('.package-radio');
+            const radios = document.querySelectorAll('input[name=\'packageSelect\']');
+            
+            radios.forEach((radio, index) => {
+                if(radio.checked) {
+                    labels[index].style.borderColor = '#3b82f6';
+                    labels[index].style.background = '#eff6ff';
+                } else {
+                    labels[index].style.borderColor = '#e2e8f0';
+                    labels[index].style.background = '#f8fafc';
+                }
+            });
+
+            const priceFormatted = parseInt(amount).toLocaleString('vi-VN');
+            const displayPriceEl = document.getElementById('displayPrice');
+            if (displayPriceEl) {
+                displayPriceEl.innerHTML = priceFormatted + ' ₫<span style=\'font-size: 1.1rem; color: #047857;\'>/tháng</span>';
+            }
+            window.generateQR();
+        };
+
+        window.downloadQR = async function() {
+            const qrImg = document.getElementById('qr-payment');
+            if (!qrImg || !qrImg.src) return;
+            try {
+                const response = await fetch(qrImg.src);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = 'ma-qr-thanh-toan-KTV3Mien.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                alert('Không thể tải mã QR trực tiếp. Bạn vui lòng ấn giữ vào ảnh (hoặc click chuột phải) và chọn Lưu hình ảnh.');
+            }
+        };
+        
+        setInterval(() => {
+            const emailEl = document.getElementById('paymentEmail');
+            if(emailEl && emailEl.innerText && emailEl.innerText !== '[Email của bạn]' && emailEl.dataset.originalEmail !== emailEl.innerText.trim()) {
+                emailEl.dataset.originalEmail = emailEl.innerText.trim();
+                window.generateQR(); 
+            }
+        }, 500);
+
+        setInterval(() => {
+            const statusEl = document.getElementById('vipStatusTab3');
+            if (statusEl) {
+                const currentText = statusEl.innerText.toLowerCase();
+                if (currentText.includes('chưa kích hoạt')) {
+                    statusEl.innerHTML = `<i class='fa-solid fa-paper-plane' style='color: #22c55e;'></i> GÓI FREE`;
+                    statusEl.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; padding: 8px 18px; border-radius: 20px; font-weight: 700; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;';
+                }
+            }
+        }, 500);
+    </script>
 </body>
 </html>
