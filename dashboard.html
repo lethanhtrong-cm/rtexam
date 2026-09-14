@@ -174,7 +174,12 @@
     <div id="tab-profile" class="tab-pane"></div>
     <div id="tab-history" class="tab-pane"></div>
     <div id="leaderboard" class="tab-pane"></div>
-    <div id="tab-vip" class="tab-pane"></div>
+    <div id="tab-vip" class="tab-pane">
+        <div style="display: flex; flex-wrap: wrap; gap: 24px; max-width: 1100px; margin: 0 auto; padding: 10px 0;">
+            <div data-include="components/dashboard/tab-vip-info.html" style="flex: 1; min-width: 350px;"></div>
+            <div data-include="components/dashboard/tab-vip-payment.html" style="flex: 1.2; min-width: 350px;"></div>
+        </div>
+    </div>
 </div>
             
             <div class="sticky-user-rank" id="stickyUserRank" style="display: none;">
