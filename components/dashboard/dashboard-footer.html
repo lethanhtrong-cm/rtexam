@@ -55,6 +55,12 @@
         font-size: 0.8rem;
     }
 
+    #zalo-qr-footer:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+        border-color: #cbd5e1;
+    }
+
     /* Tự động dàn dọc và căn giữa khi xem trên điện thoại */
     @media (max-width: 640px) {
         .dashboard-footer {
@@ -72,12 +78,22 @@
 </style>
 
 <footer class="dashboard-footer">
-    <div class="footer-copyright">
-        © 2026 MedQuiz Pro. Hệ thống ôn thi Hình ảnh Y học.
+    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;">
+        <div class="footer-copyright">
+            © 2026 MedQuiz Pro. Hệ thống ôn thi Hình ảnh Y học.
+        </div>
+        
+        <!-- KHỐI THAM GIA NHÓM ZALO QUIZPAGE (Chuyển từ Sidebar xuống) -->
+        <div id="zalo-qr-footer" style="display: flex; align-items: center; gap: 10px; background: #f8fafc; padding: 8px 12px; border-radius: 10px; border: 1px dashed #cbd5e1; transition: all 0.3s ease;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://zalo.me/g/3b44he0tkfq8e0v9dibo" alt="Zalo QR" style="width: 40px; height: 40px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <div>
+                <h6 style="font-size: 0.8rem; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">Cộng đồng QUIZPAGE</h6>
+                <a href="https://zalo.me/g/3b44he0tkfq8e0v9dibo" target="_blank" style="display: inline-block; padding: 3px 10px; background: #0068ff; color: #fff; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.75rem; transition: 0.2s;" onmouseover="this.style.background='#0056b3'" onmouseout="this.style.background='#0068ff'">Tham gia ngay</a>
+            </div>
+        </div>
     </div>
     
     <div class="dashboard-footer-links">
-        
         <!-- BỘ ĐẾM NÂNG CẤP ĐA CHỈ SỐ -->
         <div class="visitor-stats-wrapper">
             <span class="visitor-counter-badge" title="Tổng lượt truy cập"><i class="fa-solid fa-globe"></i> Tổng: <span id="global-visitor-count">...</span></span>
