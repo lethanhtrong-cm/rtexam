@@ -62,12 +62,6 @@ export function renderExams() {
         }
 
         // ==========================================================
-        // LOGIC KHÔI PHỤC: LẤY EMAIL NGƯỜI DÙNG ĐỂ LỌC ĐỀ RIÊNG TƯ
-        // ==========================================================
-        const displayEmailEl = document.getElementById("displayEmail");
-        const currentUserEmail = (displayEmailEl && displayEmailEl.textContent !== "...") ? displayEmailEl.textContent.trim() : "";
-
-        // ==========================================================
         // LOGIC: TÍNH TOÁN & HIỂN THỊ BADGE BÁO ĐỀ MỚI TRÊN TAB
         // ==========================================================
         const nowMs = Date.now();
@@ -75,10 +69,6 @@ export function renderExams() {
         let newExamsCount = { 'all': 0 };
 
         State.allExamsData.forEach(exam => {
-            if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) {
-                return; 
-            }
-
             const isCompleted = !!State.completedExams[exam.id];
             
             // Xử lý chuyển đổi thời gian an toàn để tránh lỗi NaN
@@ -136,26 +126,23 @@ export function renderExams() {
         // ==========================================================
         let displayData = State.allExamsData.filter(exam => {
             
-            // 1. Lọc Đề AI/Ngẫu nhiên (Chỉ hiển thị của chính user)
-            if ((exam.technique === 'AI Tự Động' || (exam.id && exam.id.startsWith('RD-'))) && exam.authorEmail !== currentUserEmail) return false;
-
             // --- ĐỒNG BỘ CHUỖI TÊN CHUYÊN KHOA ---
             let reqTech = State.currentTechnique;
             let examTech = exam.technique || '';
             if (reqTech.includes('ĐGNL:')) reqTech = reqTech.replace('ĐGNL:', 'ĐGNL -');
             if (examTech.includes('ĐGNL:')) examTech = examTech.replace('ĐGNL:', 'ĐGNL -');
 
-            // 2. Lọc theo Kỹ thuật / Đề đã lưu (Saved)
+            // 1. Lọc theo Kỹ thuật / Đề đã lưu (Saved)
             if (State.currentTechnique === 'saved' && !userBookmarks.includes(exam.id)) return false;
             if (State.currentTechnique !== 'all' && State.currentTechnique !== 'saved' && examTech !== reqTech) return false;
             
-            // 3. Lọc theo Mức độ
+            // 2. Lọc theo Mức độ
             if (State.currentLevel !== 'all' && exam.level !== State.currentLevel) return false;
             
-            // 4. Lọc theo Thời gian
+            // 3. Lọc theo Thời gian
             if (State.currentTime !== 'all' && exam.timeLimit !== parseInt(State.currentTime)) return false;
             
-            // 5. Lọc theo Từ khóa tìm kiếm
+            // 4. Lọc theo Từ khóa tìm kiếm
             if (State.currentSearchQuery !== '') {
                 const q = State.currentSearchQuery;
                 if (!exam.id.toLowerCase().includes(q) && 
@@ -165,7 +152,7 @@ export function renderExams() {
                 }
             }
 
-            // 6. Lọc theo SortDropdown (Chỉ lấy Free/Vip nếu yêu cầu)
+            // 5. Lọc theo SortDropdown (Chỉ lấy Free/Vip nếu yêu cầu)
             if (sortFilter) {
                 const filterType = sortFilter.value;
                 if (filterType === 'only_vip' && !exam.isVip) return false;
@@ -197,8 +184,8 @@ export function renderExams() {
 
         let groups = [];
         
-        // Mảng chứa các danh mục kỹ thuật đã định nghĩa rõ ràng (Bao gồm cả ĐGNL)
-        const definedTechs = ['MRI', 'CT', 'X quang', 'Thuốc tương phản', 'ĐGNL - MRI', 'ĐGNL - CT', 'ĐGNL - X quang', 'ĐGNL: MRI', 'ĐGNL: CT', 'ĐGNL: X quang'];
+        // Mảng chứa các danh mục kỹ thuật đã định nghĩa rõ ràng
+        const definedTechs = ['MRI', 'CT', 'X quang', 'Thuốc tương phản', 'ĐGNL - MRI', 'ĐGNL - CT', 'ĐGNL - X quang', 'ĐGNL: MRI', 'ĐGNL: CT', 'ĐGNL: X quang', 'Đề Ngẫu Nhiên'];
 
         if (State.currentTechnique === 'all') {
             groups.push(
@@ -248,9 +235,14 @@ export function renderExams() {
             { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Trung bình') },
             { mainCategory: "💉 KHỐI KIẾN THỨC THUỐC TƯƠNG PHẢN", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'Thuốc tương phản' && exam.level === 'Khó') },
 
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !definedTechs.includes(exam.technique)) && exam.level === 'Dễ') },
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !definedTechs.includes(exam.technique)) && exam.level === 'Trung bình') },
-            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || exam.technique === 'AI Tự Động' || !definedTechs.includes(exam.technique)) && exam.level === 'Khó') }
+            // --- NHÓM ĐỀ NGẪU NHIÊN ---
+            { mainCategory: "🎲 ĐỀ NGẪU NHIÊN", title: "Mức độ Dễ", data: displayData.filter(exam => exam.technique === 'Đề Ngẫu Nhiên' && exam.level === 'Dễ') },
+            { mainCategory: "🎲 ĐỀ NGẪU NHIÊN", title: "Mức độ Trung bình", data: displayData.filter(exam => exam.technique === 'Đề Ngẫu Nhiên' && exam.level === 'Trung bình') },
+            { mainCategory: "🎲 ĐỀ NGẪU NHIÊN", title: "Mức độ Khó", data: displayData.filter(exam => exam.technique === 'Đề Ngẫu Nhiên' && exam.level === 'Khó') },
+
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Dễ", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || !definedTechs.includes(exam.technique)) && exam.level === 'Dễ') },
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Trung bình", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || !definedTechs.includes(exam.technique)) && exam.level === 'Trung bình') },
+            { mainCategory: "🧩 KHỐI KIẾN THỨC HỖN HỢP", title: "Mức độ Khó", data: displayData.filter(exam => (exam.technique === 'Hỗn hợp' || !definedTechs.includes(exam.technique)) && exam.level === 'Khó') }
         );
 
         let currentMainCategoryTracker = null;
@@ -385,7 +377,7 @@ export function renderExams() {
                         </div>`;
                 }
                 
-                const hideBtnHtml = exam.technique === 'AI Tự Động' ? `<button class="btn-hide-exam" onclick="hideExam(event, '${safeExamId}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` : '';
+                const hideBtnHtml = exam.technique === 'Đề Ngẫu Nhiên' ? `<button class="btn-hide-exam" onclick="hideExam(event, '${safeExamId}')" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #fff; border: 2px solid #fff; border-radius: 50%; width: 28px; height: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;" title="Xóa đề này khỏi danh sách của bạn"><i class="fa-solid fa-xmark"></i></button>` : '';
 
                 let avatarStackHtml = `<div class="attempts" style="display: flex; align-items: center; gap: 10px;">`;
                 
