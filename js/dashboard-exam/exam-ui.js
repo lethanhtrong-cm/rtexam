@@ -146,7 +146,6 @@ export function renderExams() {
             if (examTech === 'Đề Ngẫu Nhiên' && reqTech !== 'Đề Ngẫu Nhiên' && reqTech !== 'saved') return false;
 
             // 2. BẢO MẬT: Đề Ngẫu Nhiên CHỈ HIỂN THỊ CHO CHÍNH NGƯỜI TẠO RA NÓ
-            if (examTech === 'Đề Ngẫu Nhiên' && currentUserEmail && exam.authorEmail !== currentUserEmail) return false;
 
             // 3. Lọc theo Kỹ thuật / Đề đã lưu (Saved)
             if (reqTech === 'saved' && !userBookmarks.includes(exam.id)) return false;
