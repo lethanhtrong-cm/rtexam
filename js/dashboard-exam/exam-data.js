@@ -84,10 +84,21 @@ export async function loadAggregatedExamData() {
             eSnap.forEach((doc) => {
                 const eId = doc.id;
                 const conf = doc.data();
-                const isPublicExam = conf.isPublic === true || (conf.isPublic === undefined && conf.creatorId === undefined);
-                const isMyExam = auth.currentUser && conf.creatorId === auth.currentUser.uid;
+                
+                // ĐÃ SỬA: Chuẩn hóa nhãn cũ và bảo mật Đề ngẫu nhiên
+                let tech = conf.technique || "Hỗn hợp";
+                if (tech === "AI Tự Động") tech = "Đề Ngẫu Nhiên"; // Cứu lại các đề cũ
 
-                if (isPublicExam || isMyExam) {
+                // Phân loại Đề Ngẫu Nhiên (CHỈ cho phép tải của chính mình)
+                const isRandomExam = (tech === "Đề Ngẫu Nhiên");
+                const isMyRandom = isRandomExam && auth.currentUser && (conf.authorEmail === auth.currentUser.email || conf.creatorId === auth.currentUser.uid);
+                
+                // Phân loại Đề Công Khai và Đề tự tạo thông thường
+                const isPublicExam = !isRandomExam && (conf.isPublic === true || (conf.isPublic === undefined && conf.creatorId === undefined));
+                const isMyExam = !isRandomExam && auth.currentUser && conf.creatorId === auth.currentUser.uid;
+
+                // Chỉ đưa vào Map nếu thỏa mãn 1 trong 3 điều kiện trên
+                if (isPublicExam || isMyExam || isMyRandom) {
                     examMap[eId] = {
                         id: eId,
                         isValid: true,
@@ -96,7 +107,7 @@ export async function loadAggregatedExamData() {
                         timeLimit: conf.timeLimit ? parseInt(conf.timeLimit) : 15,
                         questionCount: conf.questionCount || conf.totalQuestions || (conf.timeLimit ? parseInt(conf.timeLimit) : 0),
                         attemptCount: conf.attemptCount || 0,
-                        technique: conf.technique || "Hỗn hợp",
+                        technique: tech, // Dùng nhãn đã được chuẩn hóa
                         level: conf.level || "Trung bình",
                         description: conf.description || ""
                     };
@@ -265,7 +276,6 @@ export async function loadAggregatedExamData() {
 
         const hiddenExamsList = (State.currentUserData && State.currentUserData.hiddenExams) ? State.currentUserData.hiddenExams : [];
         
-        // ĐÃ SỬA: Lọc chính xác theo nhãn Đề Ngẫu Nhiên và đồng bộ biến mảng gộp ở cuối
         const randomExams = State.allExamsData.filter(e => e.technique === "Đề Ngẫu Nhiên" && !hiddenExamsList.includes(e.id)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
         const otherExams = State.allExamsData.filter(e => e.technique !== "Đề Ngẫu Nhiên" && !hiddenExamsList.includes(e.id));
         
