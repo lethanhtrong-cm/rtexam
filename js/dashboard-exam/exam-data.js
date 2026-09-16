@@ -264,8 +264,12 @@ export async function loadAggregatedExamData() {
         State.allExamsData = Object.values(examMap);
 
         const hiddenExamsList = (State.currentUserData && State.currentUserData.hiddenExams) ? State.currentUserData.hiddenExams : [];
-        const aiExams = State.allExamsData.filter(e => e.technique === "AI Tự Động" && !hiddenExamsList.includes(e.id)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
-        const otherExams = State.allExamsData.filter(e => e.technique !== "AI Tự Động" && !hiddenExamsList.includes(e.id));
+        // Lọc các Đề Ngẫu Nhiên (Thay cho AI Tự Động), hiển thị tối đa 10 đề mới nhất
+        const randomExams = State.allExamsData.filter(e => e.technique === "Đề Ngẫu Nhiên" && !hiddenExamsList.includes(e.id)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
+        // Lọc các đề thi thông thường (KHÔNG bao gồm Đề Ngẫu Nhiên)
+        const otherExams = State.allExamsData.filter(e => e.technique !== "Đề Ngẫu Nhiên" && !hiddenExamsList.includes(e.id));
+        
+        State.allExamsData = [...otherExams, ...randomExams];
         
         State.allExamsData = [...otherExams, ...aiExams];
 
