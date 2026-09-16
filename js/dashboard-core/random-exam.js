@@ -118,6 +118,34 @@ export function initRandomExam(auth, db) {
 
                     const randomExamId = "RD-" + Math.floor(100000 + Math.random() * 900000);
                     const batch = writeBatch(db);
+
+                    // ==========================================================
+                    // TÍNH NĂNG MỚI: AUTO XÓA ĐỀ NGẪU NHIÊN CŨ (TỐI ĐA 10 ĐỀ/USER)
+                    // ==========================================================
+                    try {
+                        const qOld = query(collection(db, "exams"), where("technique", "==", "Đề Ngẫu Nhiên"), where("authorEmail", "==", auth.currentUser.email));
+                        const snapOld = await getDocs(qOld);
+                        let arrOld = [];
+                        snapOld.forEach(d => arrOld.push({ id: d.id, createdAt: d.data().createdAt || 0 }));
+                        
+                        // Sắp xếp giảm dần (mới nhất lên đầu)
+                        arrOld.sort((a, b) => b.createdAt - a.createdAt);
+                        
+                        // Giữ lại 9 đề mới nhất, nếu mảng >= 10 thì xóa từ phần tử thứ 9 trở đi
+                        if (arrOld.length >= 10) {
+                            const examsToDelete = arrOld.slice(9);
+                            for (let ex of examsToDelete) {
+                                // Xóa dữ liệu Info đề thi
+                                batch.delete(doc(db, "exams", ex.id));
+                                // Quét và xóa các câu hỏi thuộc đề đó
+                                const snapQs = await getDocs(query(collection(db, "questions"), where("examId", "==", ex.id)));
+                                snapQs.forEach(qDoc => batch.delete(doc(db, "questions", qDoc.id)));
+                            }
+                        }
+                    } catch (cleanupErr) {
+                        console.error("Lỗi khi tự động dọn dẹp đề cũ:", cleanupErr);
+                    }
+                    // ==========================================================
                     
                     const examRef = doc(db, "exams", randomExamId);
                     batch.set(examRef, {
@@ -142,7 +170,7 @@ export function initRandomExam(auth, db) {
                     
                     await batch.commit();
 
-                    // BỔ SUNG: Xóa bộ nhớ đệm để trang Dashboard tự tải đề mới nhất
+                    // Xóa bộ nhớ đệm để trang Dashboard tự tải đề mới nhất và lọc các đề vừa xóa
                     sessionStorage.removeItem(`examCoreCache_${auth.currentUser.uid}`);
 
                     closeModal();
