@@ -264,14 +264,12 @@ export async function loadAggregatedExamData() {
         State.allExamsData = Object.values(examMap);
 
         const hiddenExamsList = (State.currentUserData && State.currentUserData.hiddenExams) ? State.currentUserData.hiddenExams : [];
-        // Lọc các Đề Ngẫu Nhiên (Thay cho AI Tự Động), hiển thị tối đa 10 đề mới nhất
+        
+        // ĐÃ SỬA: Lọc chính xác theo nhãn Đề Ngẫu Nhiên và đồng bộ biến mảng gộp ở cuối
         const randomExams = State.allExamsData.filter(e => e.technique === "Đề Ngẫu Nhiên" && !hiddenExamsList.includes(e.id)).sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
-        // Lọc các đề thi thông thường (KHÔNG bao gồm Đề Ngẫu Nhiên)
         const otherExams = State.allExamsData.filter(e => e.technique !== "Đề Ngẫu Nhiên" && !hiddenExamsList.includes(e.id));
         
         State.allExamsData = [...otherExams, ...randomExams];
-        
-        State.allExamsData = [...otherExams, ...aiExams];
 
         document.dispatchEvent(new CustomEvent("examsReady", { detail: { allExamsData: State.allExamsData } }));
         renderExams();
