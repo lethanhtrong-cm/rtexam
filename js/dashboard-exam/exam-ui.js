@@ -62,6 +62,12 @@ export function renderExams() {
         }
 
         // ==========================================================
+        // LOGIC KHÔI PHỤC: LẤY EMAIL NGƯỜI DÙNG ĐỂ LỌC ĐỀ RIÊNG TƯ
+        // ==========================================================
+        const displayEmailEl = document.getElementById("displayEmail");
+        const currentUserEmail = (displayEmailEl && displayEmailEl.textContent !== "...") ? displayEmailEl.textContent.trim() : "";
+
+        // ==========================================================
         // LOGIC: TÍNH TOÁN & HIỂN THỊ BADGE BÁO ĐỀ MỚI TRÊN TAB
         // ==========================================================
         const nowMs = Date.now();
@@ -69,6 +75,9 @@ export function renderExams() {
         let newExamsCount = { 'all': 0 };
 
         State.allExamsData.forEach(exam => {
+            // Không đếm huy hiệu "Đề Mới" màu đỏ ở Menu Sidebar cho Đề Ngẫu Nhiên
+            if (exam.technique === 'Đề Ngẫu Nhiên') return; 
+
             const isCompleted = !!State.completedExams[exam.id];
             
             // Xử lý chuyển đổi thời gian an toàn để tránh lỗi NaN
@@ -132,17 +141,24 @@ export function renderExams() {
             if (reqTech.includes('ĐGNL:')) reqTech = reqTech.replace('ĐGNL:', 'ĐGNL -');
             if (examTech.includes('ĐGNL:')) examTech = examTech.replace('ĐGNL:', 'ĐGNL -');
 
-            // 1. Lọc theo Kỹ thuật / Đề đã lưu (Saved)
-            if (State.currentTechnique === 'saved' && !userBookmarks.includes(exam.id)) return false;
-            if (State.currentTechnique !== 'all' && State.currentTechnique !== 'saved' && examTech !== reqTech) return false;
+            // 1. CHẶN ĐỀ NGẪU NHIÊN: Đề Ngẫu Nhiên CHỈ ĐƯỢC HIỂN THỊ khi chọn đúng tab 'Đề Ngẫu Nhiên' (hoặc Đề đã lưu)
+            // Lệnh này loại bỏ hoàn toàn Đề Ngẫu Nhiên khỏi tab 'Tất cả'
+            if (examTech === 'Đề Ngẫu Nhiên' && reqTech !== 'Đề Ngẫu Nhiên' && reqTech !== 'saved') return false;
+
+            // 2. BẢO MẬT: Đề Ngẫu Nhiên CHỈ HIỂN THỊ CHO CHÍNH NGƯỜI TẠO RA NÓ
+            if (examTech === 'Đề Ngẫu Nhiên' && currentUserEmail && exam.authorEmail !== currentUserEmail) return false;
+
+            // 3. Lọc theo Kỹ thuật / Đề đã lưu (Saved)
+            if (reqTech === 'saved' && !userBookmarks.includes(exam.id)) return false;
+            if (reqTech !== 'all' && reqTech !== 'saved' && examTech !== reqTech) return false;
             
-            // 2. Lọc theo Mức độ
+            // 4. Lọc theo Mức độ
             if (State.currentLevel !== 'all' && exam.level !== State.currentLevel) return false;
             
-            // 3. Lọc theo Thời gian
+            // 5. Lọc theo Thời gian
             if (State.currentTime !== 'all' && exam.timeLimit !== parseInt(State.currentTime)) return false;
             
-            // 4. Lọc theo Từ khóa tìm kiếm
+            // 6. Lọc theo Từ khóa tìm kiếm
             if (State.currentSearchQuery !== '') {
                 const q = State.currentSearchQuery;
                 if (!exam.id.toLowerCase().includes(q) && 
@@ -152,7 +168,7 @@ export function renderExams() {
                 }
             }
 
-            // 5. Lọc theo SortDropdown (Chỉ lấy Free/Vip nếu yêu cầu)
+            // 7. Lọc theo SortDropdown (Chỉ lấy Free/Vip nếu yêu cầu)
             if (sortFilter) {
                 const filterType = sortFilter.value;
                 if (filterType === 'only_vip' && !exam.isVip) return false;
@@ -189,16 +205,15 @@ export function renderExams() {
 
         if (State.currentTechnique === 'all') {
             groups.push(
-                // Bổ sung điều kiện attemptCount > 0 để lọt vào Đề HOT
+                // Do Đề Ngẫu Nhiên đã bị ẩn khỏi displayData ở bước lọc trên, các mục HOT/Mới ở tab Tất Cả tự động sạch sẽ
                 { mainCategory: null, title: "⭐ Đề HOT", data: [...displayData].filter(e => e.attemptCount > 0).sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
                 { mainCategory: null, title: "✨ Đề Mới", data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10) },
                 { mainCategory: null, title: "📝 Đề cần ôn tập", data: displayData.filter(exam => State.completedExams[exam.id] && State.completedExams[exam.id].score < 7).slice(0, 10) }
             );
-        } else if (definedTechs.includes(State.currentTechnique)) {
-            // Thay thế ":" thành "-" cho title hiển thị đẹp
+        } else if (definedTechs.includes(State.currentTechnique) && State.currentTechnique !== 'Đề Ngẫu Nhiên') { 
+            // ĐÃ SỬA: Chặn không cho render tiêu đề Đề HOT và Đề Mới khi người dùng đang ở tab Đề Ngẫu Nhiên
             const displayTechTitle = State.currentTechnique.replace('ĐGNL:', 'ĐGNL -');
             groups.push(
-                // Bổ sung nhóm Đề Mới và bộ lọc attemptCount > 0 cho Đề HOT tại từng tab chuyên khoa
                 { mainCategory: null, title: `⭐ Đề HOT ${displayTechTitle}`, data: [...displayData].filter(e => e.attemptCount > 0).sort((a, b) => b.attemptCount !== a.attemptCount ? b.attemptCount - a.attemptCount : b.rating - a.rating).slice(0, 5) },
                 { mainCategory: null, title: `✨ Đề Mới ${displayTechTitle}`, data: [...displayData].sort((a, b) => b.createdAt - a.createdAt).slice(0, 10) }
             );
@@ -286,8 +301,8 @@ export function renderExams() {
                     createdTimeMs = (typeof exam.createdAt.toMillis === 'function') ? exam.createdAt.toMillis() : new Date(exam.createdAt).getTime();
                 }
 
-                // Đề mới = Tạo trong 24h VÀ chưa làm
-                const isExamNew = createdTimeMs > 0 && (nowMs - createdTimeMs < oneDayMs) && !isCompleted;
+                // Chặn hiệu ứng nhấp nháy Đề Mới (Đỏ) cho các đề thuộc nhóm Ngẫu Nhiên
+                const isExamNew = createdTimeMs > 0 && (nowMs - createdTimeMs < oneDayMs) && !isCompleted && exam.technique !== 'Đề Ngẫu Nhiên';
                 
                 const newBadgeHtml = isExamNew ? `<span style="background: linear-gradient(135deg, #ef4444, #f97316); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 900; animation: pulseNewBadge 1.2s infinite; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); letter-spacing: 0.5px; z-index: 10;"><i class="fa-solid fa-bolt"></i> MỚI</span>` : ``;
                 
